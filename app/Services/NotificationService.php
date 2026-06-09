@@ -140,14 +140,71 @@ class NotificationService
 
     private function dispatchSms(SmsLog $smsLog): void
     {
-        // TODO: Implement actual SMS sending via Twilio or configured provider
-        // For now, mark as sent immediately (placeholder)
+        $provider = config('services.sms.provider', 'twilio');
+
+        if ($provider === 'twilio') {
+            $this->sendViaTwilio($smsLog);
+        } else {
+            $this->sendViaPlaceholder($smsLog);
+        }
+    }
+
+    private function sendViaTwilio(SmsLog $smsLog): void
+    {
+        try {
+            $accountSid = config('services.twilio.account_sid');
+            $authToken = config('services.twilio.auth_token');
+            $twilioPhone = config('services.twilio.phone_number');
+
+            if (!$accountSid || !$authToken || !$twilioPhone) {
+                throw new \Exception('Twilio configuration incomplete. Check .env');
+            }
+
+            $twilio = new \Twilio\Rest\Client($accountSid, $authToken);
+
+            $message = $twilio->messages->create(
+                $smsLog->recipient_phone,
+                [
+                    'from' => $twilioPhone,
+                    'body' => $smsLog->message,
+                ]
+            );
+
+            $smsLog->update([
+                'status' => SmsLogStatus::Sent->value,
+                'sent_at' => now(),
+                'provider_message_id' => $message->sid,
+                'provider_response' => [
+                    'status' => $message->status,
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            $smsLog->update([
+                'status' => SmsLogStatus::Failed->value,
+                'failed_at' => now(),
+                'provider_response' => [
+                    'error' => $e->getMessage(),
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+
+            \Log::error('SMS dispatch failed', [
+                'sms_log_id' => $smsLog->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendViaPlaceholder(SmsLog $smsLog): void
+    {
         $smsLog->update([
             'status' => SmsLogStatus::Sent->value,
             'sent_at' => now(),
             'provider_message_id' => 'msg_' . uniqid(),
             'provider_response' => [
-                'status' => 'queued',
+                'status' => 'queued_placeholder',
+                'note' => 'Using placeholder SMS dispatcher. Configure Twilio in .env to send real SMS.',
                 'timestamp' => now()->toIso8601String(),
             ],
         ]);
