@@ -1,0 +1,170 @@
+:root {
+    --raniag-primary: #0b5ed7;
+    --raniag-primary-dark: #084298;
+    --raniag-accent: #20c997;
+    --raniag-surface: #f4f7fb;
+    --raniag-card-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08);
+}
+
+body.raniag-public {
+    font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+    background: var(--raniag-surface);
+    color: #1e293b;
+}
+
+.raniag-navbar {
+    background: linear-gradient(135deg, var(--raniag-primary-dark), var(--raniag-primary));
+}
+
+.raniag-brand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.raniag-footer {
+    background: #0f172a;
+}
+
+.raniag-hero {
+    background: linear-gradient(135deg, #0f172a 0%, var(--raniag-primary-dark) 55%, var(--raniag-primary) 100%);
+    color: #fff;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.raniag-card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: var(--raniag-card-shadow);
+}
+
+.raniag-card-header {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+}
+
+.raniag-step-badge {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--raniag-primary);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+#incident-map {
+    height: 320px;
+    border-radius: 0.75rem;
+    border: 1px solid #cbd5e1;
+    z-index: 1;
+}
+
+.raniag-tracking-number {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.08em;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--raniag-primary-dark);
+}
+
+.raniag-status-badge {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.raniag-timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.raniag-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.4rem;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    width: 2px;
+    background: #cbd5e1;
+}
+
+.raniag-timeline-item {
+    position: relative;
+    padding-bottom: 1.25rem;
+}
+
+.raniag-timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -1.22rem;
+    top: 0.35rem;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: var(--raniag-primary);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--raniag-primary);
+}
+
+.raniag-timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.raniag-type-card {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    border: 2px solid transparent;
+}
+
+.raniag-type-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--raniag-card-shadow);
+}
+
+.raniag-type-card.selected {
+    border-color: var(--raniag-primary);
+    background: #eff6ff;
+}
+
+.raniag-type-card input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gps-camera-viewport {
+    background: #0f172a;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    min-height: 240px;
+}
+
+.gps-camera-viewport video {
+    display: block;
+    max-height: 420px;
+    object-fit: cover;
+}
+
+.gps-capture-thumb img {
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+}
+
+#gps-camera-coords {
+    word-break: break-all;
+}
+
+.reporter-fields.disabled {
+    opacity: 0.55;
+    pointer-events: none;
+}

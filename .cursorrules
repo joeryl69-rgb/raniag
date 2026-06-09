@@ -1,0 +1,22 @@
+Rules for RANIAG Laravel 11 Project:
+
+- Use Laravel 11 conventions only
+- Use Blade + Bootstrap 5 only
+- Do NOT use React
+- Do NOT use Vue
+- Do NOT modify vendor files
+- Do NOT rewrite .env automatically
+- Use MVC architecture
+- Use service classes for business logic
+- Use repository pattern only when needed
+- Use migrations properly
+- Use Eloquent relationships
+- Follow RESTful controller structure
+- Separate Admin and Agency controllers
+- Keep public reporting routes separate
+- Use Form Request validation
+- Use middleware for RBAC
+- Use clean code principles
+- Avoid duplicate logic
+- Ask before installing additional packages
+- Never regenerate existing migrations
