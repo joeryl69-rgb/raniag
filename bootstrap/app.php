@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,
         ]);
+
+        // Trust all proxies (Railway, Render, etc. sit behind a load balancer
+        // that terminates SSL). Without this, Laravel thinks requests are
+        // plain HTTP, which breaks HTTPS asset URLs, secure cookies, and CSRF.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -9,6 +9,7 @@ use App\Policies\IncidentPolicy;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Repositories\IncidentRepository;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +23,13 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register policies for authorization
         $this->registerPolicies();
+
+        // Force HTTPS URLs in production so assets, camera access (which
+        // requires a secure context), and CSRF/session cookies all work
+        // correctly behind a hosting provider's proxy.
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
     }
 
     protected function registerPolicies(): void
