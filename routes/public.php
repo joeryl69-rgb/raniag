@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::name('public.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
+    Route::view('/offline', 'public.offline')->name('offline');
 
     Route::prefix('report')->name('report.')->group(function () {
         Route::get('/', [IncidentReportController::class, 'create'])->name('create');
         Route::post('/', [IncidentReportController::class, 'store'])
             ->middleware('throttle:10,1')
             ->name('store');
-        Route::get('/success/{trackingNumber}', [IncidentReportController::class, 'success'])
+        Route::get('/{trackingNumber}/success', [IncidentReportController::class, 'success'])
             ->name('success');
     });
 

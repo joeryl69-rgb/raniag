@@ -24,6 +24,16 @@ test('anonymous users can submit an incident report via web', function () {
     Storage::fake('public');
     $type = IncidentType::factory()->create();
 
+    $gpsLog = json_encode([
+        [
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ],
+    ]);
+
     $response = $this->post(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Test incident report for RANIAG public module.',
@@ -31,6 +41,8 @@ test('anonymous users can submit an incident report via web', function () {
         'is_anonymous' => '1',
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => $gpsLog],
+        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
     ]);
 
     $incident = Incident::query()->first();
@@ -40,13 +52,30 @@ test('anonymous users can submit an incident report via web', function () {
 });
 
 test('anonymous users can submit an incident report via json', function () {
+    Storage::fake('public');
     $type = IncidentType::factory()->create();
+
+    $gpsLog = json_encode([
+        [
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ],
+    ]);
 
     $response = $this->postJson(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Test incident report for RANIAG foundation.',
         'barangay' => 'Sample Barangay',
         'is_anonymous' => true,
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => $gpsLog],
+        'evidence' => [
+            UploadedFile::fake()->image('gps-123.jpg'),
+        ],
     ]);
 
     $response
@@ -55,12 +84,28 @@ test('anonymous users can submit an incident report via json', function () {
 });
 
 test('users can track an incident by tracking number via web', function () {
+    Storage::fake('public');
     $type = IncidentType::factory()->create();
+
+    $gpsLog = json_encode([
+        [
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ],
+    ]);
 
     $this->post(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Trackable incident report with enough detail.',
+        'barangay' => 'Sample Barangay',
         'is_anonymous' => '1',
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => $gpsLog],
+        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
     ]);
 
     $trackingNumber = Incident::query()->value('tracking_number');
@@ -76,10 +121,25 @@ test('users can track an incident by tracking number via web', function () {
 test('users can track an incident by tracking number via json', function () {
     $type = IncidentType::factory()->create();
 
+    Storage::fake('public');
+    $gpsLog = json_encode([
+        [
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ],
+    ]);
+
     $submit = $this->postJson(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Trackable incident report.',
         'is_anonymous' => true,
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => $gpsLog],
+        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
     ]);
 
     $trackingNumber = $submit->json('tracking_number');
@@ -104,6 +164,8 @@ test('report submission stores gps capture metadata', function () {
         ],
     ]);
 
+    Storage::fake('public');
+
     $this->post(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Incident with GPS camera metadata attached.',
@@ -111,6 +173,7 @@ test('report submission stores gps capture metadata', function () {
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
         'meta' => ['gps_captures' => $gpsLog],
+        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
     ])->assertRedirect();
 
     $incident = Incident::query()->first();
@@ -123,12 +186,25 @@ test('report submission accepts optional evidence files', function () {
     Storage::fake('public');
     $type = IncidentType::factory()->create();
 
+    $gpsLog = json_encode([
+        [
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ],
+    ]);
+
     $this->post(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Incident with photo evidence attached for review.',
         'is_anonymous' => '1',
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => $gpsLog],
         'evidence' => [
-            UploadedFile::fake()->create('scene.pdf', 100, 'application/pdf'),
+            UploadedFile::fake()->image('scene.jpg'),
         ],
     ])->assertRedirect();
 

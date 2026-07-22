@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('assignments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('incident_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('agency_id')->constrained()->restrictOnDelete();
+            $table->foreignId('agency_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('assigned_by')->constrained('users')->restrictOnDelete();
             $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
             $table->text('notes')->nullable();

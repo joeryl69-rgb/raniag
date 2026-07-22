@@ -12,7 +12,9 @@ return new class extends Migration
             $table->string('role', 32)->default('agency')->after('email');
             $table->foreignId('agency_id')->nullable()->after('role')->constrained()->nullOnDelete();
             $table->string('phone', 32)->nullable()->after('agency_id');
-            $table->boolean('is_active')->default(true)->after('phone');
+            $table->string('role_title')->nullable()->after('phone');
+            $table->string('team_assignment')->nullable()->after('role_title');
+            $table->boolean('is_active')->default(true)->after('team_assignment');
         });
     }
 

@@ -64,11 +64,11 @@
             <div class="card raniag-card">
                 <div class="card-header raniag-card-header">Status Timeline</div>
                 <div class="card-body">
-                    @if ($incident->statusUpdates->isEmpty())
+                    @if ($incident->statusTimeline->isEmpty())
                         <p class="text-muted mb-0">No public updates yet. Please check back later.</p>
                     @else
                         <div class="raniag-timeline">
-                            @foreach ($incident->statusUpdates as $update)
+                            @foreach ($incident->statusTimeline as $update)
                                 <div class="raniag-timeline-item">
                                     <div class="d-flex flex-wrap justify-content-between gap-2 mb-1">
                                         <x-public.status-badge :status="$update->to_status" />

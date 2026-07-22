@@ -24,7 +24,7 @@
         </div>
     @endif
 
-    <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form" novalidate>
+    <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
         <div class="card raniag-card mb-4">
@@ -74,18 +74,7 @@
                                placeholder="Brief summary of the incident">
                         @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-md-4">
-                        <label for="priority" class="form-label">Priority</label>
-                        <select class="form-select @error('priority') is-invalid @enderror" id="priority" name="priority">
-                            @foreach ($priorities as $priority)
-                                <option value="{{ $priority->value }}" @selected(old('priority', 'medium') === $priority->value)>
-                                    {{ $priority->label() }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('priority')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12">
+                </div>
                         <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
                         <textarea class="form-control @error('description') is-invalid @enderror" id="description"
                                   name="description" rows="5" required minlength="10" maxlength="5000"
@@ -182,7 +171,7 @@
         <div class="card raniag-card mb-4">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">5</span>
-                <span>Evidence <span class="text-muted fw-normal">(optional)</span></span>
+                <span>Evidence <span class="text-danger">*</span></span>
             </div>
             <div class="card-body">
                 <input type="hidden" name="meta[gps_captures]" id="gps-capture-log" value="">

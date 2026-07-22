@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    'textbee' => [
+        'device_id' => env('TEXTBEE_DEVICE_ID'),
+        'api_key' => env('TEXTBEE_API_KEY'),
+    ],
+
+    'sms' => [
+        'provider' => env('SMS_PROVIDER', 'textbee'),
+    ],
+
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'phone_number' => env('TWILIO_PHONE_NUMBER'),
+    ],
+
 ];

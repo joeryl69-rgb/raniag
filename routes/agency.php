@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Agency\DashboardController;
+use App\Http\Controllers\Agency\DocumentRequestController;
 use App\Http\Controllers\Agency\IncidentController;
 use App\Http\Controllers\Agency\ResolutionController;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,9 @@ Route::prefix('agency')
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
 
+        Route::get('/document-requests', [DocumentRequestController::class, 'index'])->name('document_requests.index');
+        Route::post('/incidents/{incident}/print-requests', [DocumentRequestController::class, 'store'])->name('incidents.print_requests.store');
+
         Route::prefix('incidents')->name('incidents.')->group(function () {
             Route::get('/', [IncidentController::class, 'index'])->name('index');
             Route::get('/{incident}', [IncidentController::class, 'show'])->name('show');
@@ -19,9 +23,6 @@ Route::prefix('agency')
             Route::post('/{incident}/accept', [IncidentController::class, 'acceptAssignment'])->name('accept');
         });
 
-        Route::prefix('resolutions')->name('resolutions.')->group(function () {
-            Route::post('/{incident}', [ResolutionController::class, 'store'])->name('store');
-        });
+        Route::post('/incidents/{incident}/resolution', [ResolutionController::class, 'store'])->name('incidents.resolution');
+        Route::put('/incidents/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('incidents.resolution.update');
     });
-
-

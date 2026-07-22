@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\IncidentType;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class IncidentTypeSeeder extends Seeder
 {

@@ -20,6 +20,7 @@ return [
     'roles' => [
         'administrator' => 'administrator',
         'agency' => 'agency',
+        'personnel' => 'personnel',
     ],
 
     'map' => [

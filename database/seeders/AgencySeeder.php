@@ -19,27 +19,31 @@ class AgencySeeder extends Seeder
             return;
         }
 
-        $agency = Agency::query()->updateOrCreate(
-            ['code' => 'MDRRMO'],
-            [
-                'name' => 'Municipal Disaster Risk Reduction and Management Office',
-                'description' => 'Sample agency for development testing.',
-                'email' => 'mdrrmo@pamplona.gov.ph',
-                'phone' => null,
-                'is_active' => true,
-            ]
-        );
+        // Test users for existing agencies.
+        // IMPORTANT: This seeder must NOT create new rows in `agencies`.
+        // It only creates/updates users for agencies that already exist.
+        // Skip MDRRMO entirely to avoid duplication.
+        $testAgencyCodes = ['PNP', 'BFP', 'BHW'];
 
-        User::query()->updateOrCreate(
-            ['email' => env('RANIAG_AGENCY_EMAIL', 'agency@raniag.pamplona.gov.ph')],
-            [
-                'name' => env('RANIAG_AGENCY_NAME', 'MDRRMO Officer'),
-                'password' => Hash::make(env('RANIAG_AGENCY_PASSWORD', 'password')),
-                'role' => UserRole::Agency,
-                'agency_id' => $agency->id,
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
+        foreach ($testAgencyCodes as $code) {
+            $agency = Agency::query()->where('code', $code)->first();
+            if (! $agency) {
+                // If the agency row doesn't exist in `agencies`, skip it.
+                continue;
+            }
+
+            User::query()->updateOrCreate(
+                ['email' => 'agent_'.strtolower($code).'@raniag.local'],
+                [
+                    'name' => $agency->name.' Officer',
+                    'password' => Hash::make('password'),
+                    'role' => UserRole::Agency,
+                    'agency_id' => $agency->id,
+                    'is_active' => true,
+                    'email_verified_at' => now(),
+                ]
+            );
+        }
+
     }
 }

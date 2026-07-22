@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\NotificationChannel;
 use App\Enums\SmsLogStatus;
+use App\Enums\UserRole;
 use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\Resolution;
@@ -11,15 +12,46 @@ use App\Models\SmsLog;
 use App\Models\SystemNotification;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Twilio\Rest\Client;
 
 class NotificationService
 {
+    public function notifyAdminNewIncident(Incident $incident): void
+    {
+        $admins = User::where('role', UserRole::Administrator)->where('is_active', true)->get();
+        foreach ($admins as $admin) {
+            if ($admin->phone) {
+                $message = "RANIAG Alert: New incident submitted [Tracking: {$incident->tracking_number}]. Please review and assign.";
+                $this->sendSms(
+                    recipientPhone: $admin->phone,
+                    message: $message,
+                    incident: $incident,
+                    user: $admin,
+                );
+            }
+        }
+    }
+
+    public function notifyReporterStatusUpdate(Incident $incident, string $updateMessage): void
+    {
+        if (! $incident->is_anonymous && $incident->reporter_phone) {
+            $message = "RANIAG Alert: Your report [Tracking: {$incident->tracking_number}] status is updated: {$updateMessage}";
+            $this->sendSms(
+                recipientPhone: $incident->reporter_phone,
+                message: $message,
+                incident: $incident,
+            );
+        }
+    }
+
     public function notifyAgencyAssigned(Assignment $assignment): void
     {
         $incident = $assignment->incident;
         $agency = $assignment->agency;
 
-        if (!$agency->phone) {
+        if (! $agency?->phone) {
             return;
         }
 
@@ -41,6 +73,38 @@ class NotificationService
             'data' => [
                 'incident_id' => $incident->id,
                 'agency_id' => $agency->id,
+            ],
+        ]);
+    }
+
+    public function notifyPersonnelAssigned(Assignment $assignment): void
+    {
+        $incident = $assignment->incident;
+        $personnel = $assignment->assignee;
+
+        if (! $personnel || ! $personnel->phone) {
+            return;
+        }
+
+        $message = "RANIAG Alert: New incident assigned [{$incident->tracking_number}]. Check system for details.";
+
+        $this->sendSms(
+            recipientPhone: $personnel->phone,
+            message: $message,
+            incident: $incident,
+            user: $personnel,
+        );
+
+        SystemNotification::create([
+            'user_id' => $personnel->id,
+            'incident_id' => $incident->id,
+            'type' => 'assignment',
+            'title' => 'New Assignment',
+            'message' => "New incident assigned to {$personnel->display_title}: {$incident->tracking_number}",
+            'channel' => NotificationChannel::Database->value,
+            'data' => [
+                'incident_id' => $incident->id,
+                'assigned_to' => $personnel->id,
             ],
         ]);
     }
@@ -119,7 +183,7 @@ class NotificationService
                 'recipient_phone' => $recipientPhone,
                 'message' => $message,
                 'status' => SmsLogStatus::Pending->value,
-                'provider' => config('services.sms.provider', 'twilio'),
+                'provider' => config('services.sms.provider', env('SMS_PROVIDER', 'textbee')),
                 'sent_at' => null,
                 'failed_at' => null,
             ]);
@@ -140,12 +204,61 @@ class NotificationService
 
     private function dispatchSms(SmsLog $smsLog): void
     {
-        $provider = config('services.sms.provider', 'twilio');
+        $provider = config('services.sms.provider', env('SMS_PROVIDER', 'textbee'));
 
-        if ($provider === 'twilio') {
+        if ($provider === 'textbee') {
+            $this->sendViaTextBee($smsLog);
+        } elseif ($provider === 'twilio') {
             $this->sendViaTwilio($smsLog);
         } else {
             $this->sendViaPlaceholder($smsLog);
+        }
+    }
+
+    private function sendViaTextBee(SmsLog $smsLog): void
+    {
+        try {
+            $deviceId = config('services.textbee.device_id');
+            $apiKey = config('services.textbee.api_key');
+
+            if (! $deviceId || ! $apiKey) {
+                throw new \Exception('TextBee configuration incomplete. Check services.php and .env');
+            }
+
+            $response = Http::withHeaders([
+                'x-api-key' => $apiKey,
+            ])->post("https://api.textbee.dev/api/v1/gateway/devices/{$deviceId}/send-sms", [
+                'recipients' => [$smsLog->recipient_phone],
+                'message' => $smsLog->message,
+            ]);
+
+            if ($response->failed()) {
+                throw new \Exception('TextBee API response failed: '.$response->body());
+            }
+
+            $smsLog->update([
+                'status' => SmsLogStatus::Sent->value,
+                'sent_at' => now(),
+                'provider_message_id' => $response->json('data.messageId') ?? $response->json('messageId') ?? 'textbee_'.uniqid(),
+                'provider_response' => [
+                    'body' => $response->json(),
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            $smsLog->update([
+                'status' => SmsLogStatus::Failed->value,
+                'failed_at' => now(),
+                'provider_response' => [
+                    'error' => $e->getMessage(),
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+
+            Log::error('SMS dispatch via TextBee failed', [
+                'sms_log_id' => $smsLog->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -156,11 +269,11 @@ class NotificationService
             $authToken = config('services.twilio.auth_token');
             $twilioPhone = config('services.twilio.phone_number');
 
-            if (!$accountSid || !$authToken || !$twilioPhone) {
+            if (! $accountSid || ! $authToken || ! $twilioPhone) {
                 throw new \Exception('Twilio configuration incomplete. Check .env');
             }
 
-            $twilio = new \Twilio\Rest\Client($accountSid, $authToken);
+            $twilio = new Client($accountSid, $authToken);
 
             $message = $twilio->messages->create(
                 $smsLog->recipient_phone,
@@ -189,7 +302,7 @@ class NotificationService
                 ],
             ]);
 
-            \Log::error('SMS dispatch failed', [
+            Log::error('SMS dispatch failed', [
                 'sms_log_id' => $smsLog->id,
                 'error' => $e->getMessage(),
             ]);
@@ -201,10 +314,10 @@ class NotificationService
         $smsLog->update([
             'status' => SmsLogStatus::Sent->value,
             'sent_at' => now(),
-            'provider_message_id' => 'msg_' . uniqid(),
+            'provider_message_id' => 'msg_'.uniqid(),
             'provider_response' => [
                 'status' => 'queued_placeholder',
-                'note' => 'Using placeholder SMS dispatcher. Configure Twilio in .env to send real SMS.',
+                'note' => 'Using placeholder SMS dispatcher. Configure TextBee or Twilio to send real SMS.',
                 'timestamp' => now()->toIso8601String(),
             ],
         ]);
