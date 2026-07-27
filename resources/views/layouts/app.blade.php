@@ -288,7 +288,7 @@
                         <a class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
                             <i class="bi bi-bell"></i><span>Notifications</span>
                             @if($notificationCount > 0)
-                                <span class="badge bg-danger rounded-pill fs-8">{{ $notificationCount }}</span>
+                                <span class="badge bg-primary rounded-pill fs-8">{{ $notificationCount }}</span>
                             @endif
                         </a>
                     </li>
@@ -299,7 +299,7 @@
                                 <i class="bi bi-exclamation-circle"></i>
                                 <span class="flex-grow-1">Incidents</span>
                                 @if($badgeCount > 0)
-                                    <span class="badge bg-danger rounded-pill fs-8" id="sidebar-badge-count">{{ $badgeCount }}</span>
+                                    <span class="badge bg-primary rounded-pill fs-8">{{ $badgeCount }}</span>
                                 @endif
                             </a>
                         </li>
@@ -322,7 +322,7 @@
                             <a class="nav-link {{ request()->routeIs('admin.document_requests.*') ? 'active' : '' }}" href="{{ route('admin.document_requests.index') }}">
                                 <i class="bi bi-file-earmark-pdf"></i><span>Document Requests</span>
                                 @if(isset($adminDocumentRequestAlertCount) && $adminDocumentRequestAlertCount > 0)
-                                    <span class="badge bg-danger rounded-pill fs-8">{{ $adminDocumentRequestAlertCount }}</span>
+                                    <span class="badge bg-primary rounded-pill fs-8">{{ $adminDocumentRequestAlertCount }}</span>
                                 @endif
                             </a>
                         </li>
@@ -337,7 +337,7 @@
                                 <i class="bi card-checklist"></i>
                                 <span class="flex-grow-1">Dispatches</span>
                                 @if($badgeCount > 0)
-                                    <span class="badge bg-danger rounded-pill fs-8" id="sidebar-badge-count">{{ $badgeCount }}</span>
+                                    <span class="badge bg-primary rounded-pill fs-8">{{ $badgeCount }}</span>
                                 @endif
                             </a>
                         </li>
@@ -346,7 +346,7 @@
                                 <a class="nav-link {{ request()->routeIs('agency.document_requests.*') || request()->routeIs('agency.document_requests.index') ? 'active' : '' }}" href="{{ route('agency.document_requests.index') }}">
                                     <i class="bi bi-file-earmark-pdf"></i><span>Document Requests</span>
                                     @if($documentRequestAlertCount > 0)
-                                        <span class="badge bg-danger rounded-pill fs-8">{{ $documentRequestAlertCount }}</span>
+                                        <span class="badge bg-primary rounded-pill fs-8">{{ $documentRequestAlertCount }}</span>
                                     @endif
                                 </a>
                             </li>
@@ -361,7 +361,7 @@
                     <li class="nav-item">
                         <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form">
                             @csrf
-                            <a class="nav-link text-danger" href="#" onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
+                            <a class="nav-link text-danger" href="#" onclick="event.preventDefault(); if(this.dataset.submitted) return; this.dataset.submitted='1'; document.getElementById('sidebar-logout-form').submit();">
                                 <i class="bi bi-box-arrow-right"></i><span>Log Out</span>
                             </a>
                         </form>
@@ -442,14 +442,58 @@
                 overlay.classList.add('d-none');
             }
         }
+
+        function setButtonLoading(button, message = 'Processing, please wait...') {
+            if (!button) return;
+            if (!button.dataset.originalText) {
+                button.dataset.originalText = button.innerHTML;
+            }
+            button.disabled = true;
+            button.classList.add('disabled');
+            const spinner = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>';
+            button.innerHTML = spinner + (message || 'Processing...');
+        }
+
+        function resetButtonLoading(button) {
+            if (!button) return;
+            button.disabled = false;
+            button.classList.remove('disabled');
+            if (button.dataset.originalText) {
+                button.innerHTML = button.dataset.originalText;
+            }
+        }
  
         document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('form').forEach(form => {
+            document.querySelectorAll('form').forEach(function (form) {
                 form.addEventListener('submit', function () {
-                    if (!this.classList.contains('no-loading')) {
-                        showLoadingOverlay();
+                    if (this.classList.contains('no-loading')) return;
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    const message = this.dataset.loadingMessage || 'Processing, please wait...';
+                    showLoadingOverlay(message);
+                    if (submitButton) {
+                        setButtonLoading(submitButton, message);
                     }
                 });
+            });
+
+            document.querySelectorAll('[data-loading-link]').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    const href = this.getAttribute('href');
+                    if (!href || href.startsWith('#')) return;
+                    showLoadingOverlay(this.dataset.loadingMessage || 'Loading, please wait...');
+                });
+            });
+
+            window.addEventListener('load', function () {
+                hideLoadingOverlay();
+            });
+
+            window.addEventListener('pageshow', function () {
+                hideLoadingOverlay();
+            });
+
+            window.addEventListener('focus', function () {
+                hideLoadingOverlay();
             });
         });
     </script>

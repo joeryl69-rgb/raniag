@@ -7,8 +7,15 @@
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white py-3 border-0">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-shield-shaded text-primary me-2"></i>System Activity Logs</h5>
-                    <p class="text-muted small mb-0">Track all major state transformations, admin assignments, and agency investigations.</p>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold"><i class="bi bi-shield-shaded text-primary me-2"></i>System Activity Logs</h5>
+                            <p class="text-muted small mb-0">Track assignments, updates, and investigation changes across the portal.</p>
+                        </div>
+                        <a href="{{ route('admin.audit-logs') }}" class="btn btn-sm btn-outline-primary" data-loading-link data-loading-message="Refreshing activity logs...">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">

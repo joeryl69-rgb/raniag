@@ -8,6 +8,14 @@ test('login screen can be rendered', function () {
     $response->assertStatus(200);
 });
 
+test('login screen shows the updated sign-in experience', function () {
+    $response = $this->get('/login');
+
+    $response->assertStatus(200)
+        ->assertSee('Sign in to your account')
+        ->assertSee('Show password');
+});
+
 test('administrators are redirected to the admin dashboard after login', function () {
     $user = User::factory()->administrator()->create();
 

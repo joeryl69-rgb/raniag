@@ -6,19 +6,22 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header bg-white py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary">
-                            <i class="bi bi-file-earmark-text me-2"></i>Generate Incident Report
-                        </h5>
-                        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold text-primary">
+                                <i class="bi bi-file-earmark-text me-2"></i>Generate Incident Report
+                            </h5>
+                            <p class="text-muted small mb-0">Select your filters and generate a downloadable PDF report for the requested period.</p>
+                        </div>
+                        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm" data-loading-link data-loading-message="Returning to the dashboard...">
                             <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
                         </a>
                     </div>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('admin.reports.generate') }}" method="POST" class="row g-3">
+                    <form action="{{ route('admin.reports.generate') }}" method="POST" class="row g-3" data-loading-message="Generating your PDF report...">
                         @csrf
 
                         <div class="col-md-6">
@@ -80,7 +83,7 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF Report
                             </button>
-                            <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                            <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary ms-2" data-loading-link data-loading-message="Returning to the dashboard...">Cancel</a>
                         </div>
                     </form>
                 </div>

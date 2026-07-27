@@ -18,6 +18,12 @@
     <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
     @stack('styles')
     <link href="{{ asset('css/public.css') }}" rel="stylesheet">
+    <style>
+        #global-loading-overlay { position: fixed; inset: 0; z-index: 2000; background-color: rgba(15, 23, 42, 0.65); display: flex; align-items: center; justify-content: center; padding: 1rem; transition: opacity 0.2s ease; }
+        #global-loading-overlay.d-none { display: none !important; }
+        #global-loading-overlay .spinner-border { width: 3rem; height: 3rem; }
+        #global-loading-overlay .loading-text { margin-top: 1rem; color: #f8fafc; font-weight: 600; }
+    </style>
 </head>
 <body class="raniag-public d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark raniag-navbar shadow-sm">
@@ -77,8 +83,25 @@
         </div>
     </footer>
 
+    <div id="global-loading-overlay" class="d-none">
+        <div class="text-center">
+            <div class="spinner-border text-white" role="status" aria-hidden="true"></div>
+            <div class="loading-text">Processing, please wait...</div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
+    function showLoadingOverlay(message = 'Processing, please wait...') {
+        const overlay = document.getElementById('global-loading-overlay');
+        if (!overlay) return;
+        const label = overlay.querySelector('.loading-text');
+        if (label) { label.textContent = message; }
+        overlay.classList.remove('d-none');
+    }
+    function hideLoadingOverlay() {
+        document.getElementById('global-loading-overlay')?.classList.add('d-none');
+    }
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')

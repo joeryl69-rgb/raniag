@@ -5,9 +5,14 @@
 
     <div class="row">
         <div class="col-12">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-card-checklist me-2 text-primary"></i>Assigned Emergency Responses</h5>
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 1rem; border: 1px solid #e7f1ea;">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                        <div>
+                            <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-card-checklist me-2 text-primary"></i>Assigned Emergency Responses</h5>
+                            <p class="small text-muted mb-0 mt-1">Dispatches currently assigned to your agency</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -26,13 +31,13 @@
                             <tbody>
                                 @forelse ($incidents as $inc)
                                     @php
-                                        // Get assignment timestamps
                                         $assignment = $inc->currentAssignments()->where('agency_id', auth()->user()->agency_id)->where('is_active', true)->first();
-                                    @endphp                                    <tr class="{{ $inc->status->value === 'assigned' ? 'table-warning bg-opacity-25' : '' }}">
+                                    @endphp
+                                    <tr class="{{ $inc->status->value === 'assigned' ? 'table-light' : '' }}">
                                         <td class="px-4 py-3 fw-bold text-primary">
                                             {{ $inc->tracking_number }}
                                             @if($inc->status->value === 'assigned')
-                                                <span class="badge bg-danger ms-1" style="font-size: 0.65rem;">NEW</span>
+                                                <span class="badge bg-primary-subtle text-primary ms-1" style="font-size: 0.65rem;">NEW</span>
                                             @endif
                                         </td>
                                         <td class="py-3">
@@ -67,7 +72,7 @@
                                             @endif
                                         </td>
                                         <td class="px-4 py-3 text-end">
-                                            <a href="{{ route('agency.incidents.show', $inc->id) }}" class="btn btn-sm btn-primary shadow-sm">
+                                            <a href="{{ route('agency.incidents.show', $inc->id) }}" class="btn btn-sm btn-outline-primary shadow-sm">
                                                 <i class="bi bi-folder2-open me-1"></i>Process Case
                                             </a>
                                         </td>
@@ -86,7 +91,12 @@
                 </div>
                 @if ($incidents->hasPages())
                     <div class="card-footer bg-white border-0 py-3">
-                        {!! $incidents->links('pagination::bootstrap-5') !!}
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3">
+                            <small class="text-muted">Showing {{ $incidents->firstItem() }} to {{ $incidents->lastItem() }} of {{ $incidents->total() }} results</small>
+                            <div>
+                                {!! $incidents->links('pagination::bootstrap-5') !!}
+                            </div>
+                        </div>
                     </div>
                 @endif
             </div>

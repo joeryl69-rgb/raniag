@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreIncidentReportRequest;
 use App\Models\IncidentType;
+use App\Services\GeofenceService;
 use App\Services\IncidentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,7 @@ class IncidentReportController extends Controller
 {
     public function __construct(
         private readonly IncidentService $incidentService,
+        private readonly GeofenceService $geofence,
     ) {}
 
     public function create(): View
@@ -26,6 +28,8 @@ class IncidentReportController extends Controller
                 ->get(),
             'barangays' => config('raniag.barangays', []),
             'mapConfig' => config('raniag.map'),
+            'boundaryGeometry' => $this->geofence->boundaryGeometry(),
+            'barangayBoundaries' => $this->geofence->barangayBoundaries(),
             'evidenceConfig' => config('raniag.evidence'),
             'gpsConfig' => [
                 'max_captures' => config('raniag.gps_camera.max_captures'),

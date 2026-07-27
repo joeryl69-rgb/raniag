@@ -20,6 +20,7 @@ class IncidentService
         private readonly ActivityLogService $activityLogs,
         private readonly EvidenceService $evidenceService,
         private readonly NotificationService $notifications,
+        private readonly GeofenceService $geofence,
     ) {}
 
     /**
@@ -34,6 +35,18 @@ class IncidentService
             if (isset($meta['gps_captures']) && is_string($meta['gps_captures'])) {
                 $decoded = json_decode($meta['gps_captures'], true);
                 $meta['gps_captures'] = is_array($decoded) ? $decoded : [];
+            }
+
+            // Geofence check: flag whether the pinned coordinates fall inside
+            // Pamplona municipality limits. null = boundary file not
+            // configured yet / no coordinates given, so it's left out of
+            // meta entirely rather than recorded as a false "outside".
+            $lat = isset($payload['latitude']) ? (float) $payload['latitude'] : null;
+            $lng = isset($payload['longitude']) ? (float) $payload['longitude'] : null;
+            $withinJurisdiction = $this->geofence->isWithinPamplona($lat, $lng);
+
+            if ($withinJurisdiction !== null) {
+                $meta['within_jurisdiction'] = $withinJurisdiction;
             }
 
             $incident = $this->incidents->create([

@@ -40,6 +40,7 @@
     const latInput = document.getElementById('latitude');
     const lngInput = document.getElementById('longitude');
     const mapElement = document.getElementById('incident-map');
+    const barangayDisplayInput = document.getElementById('barangay-display');
     const barangayInput = document.getElementById('barangay');
     const addressInput = document.getElementById('location_address');
     const resolveStatusEl = document.getElementById('location-resolve-status');
@@ -129,7 +130,8 @@
 
         // Clear stale results from the previous position immediately, so
         // nothing left over from an earlier fix is ever shown next to a
-        // new one — this is the "old barangay stuck on screen" bug.
+        // new one.
+        if (barangayDisplayInput) barangayDisplayInput.value = '';
         if (barangayInput) barangayInput.value = '';
         if (addressInput) addressInput.value = 'Locating…';
         setResolveStatus('Locating…', 'arrow-repeat', 'text-primary');
@@ -139,11 +141,9 @@
         // and always fully overwrites whatever was there before.
         const geofenced = resolveBarangayFromBoundaries(lat, lng);
 
-        if (barangayInput) {
-            barangayInput.value = geofenced || '';
-        }
-
         if (geofenced) {
+            if (barangayDisplayInput) barangayDisplayInput.value = geofenced;
+            if (barangayInput) barangayInput.value = geofenced;
             setResolveStatus(`Detected: Barangay ${geofenced}, Pamplona`, 'check-circle', 'text-success');
         }
 
@@ -151,10 +151,12 @@
             detail: { lat, lng, barangay: geofenced, municipality: 'Pamplona', label: geofenced ? `Detected: Barangay ${geofenced}, Pamplona` : null },
         }));
 
-        // Address text-fill (and barangay fallback only if the geofence
-        // truly has no data loaded): ask Nominatim as a secondary source.
-        // Always overwrites the field once it resolves — never left stuck
-        // on an address from a previous, different position.
+        // Secondary: ask Nominatim. Used (a) as a text-match fallback for
+        // Pamplona barangays if the geofence had no boundary data loaded,
+        // and (b) — regardless of jurisdiction — to show whatever real
+        // barangay/village name the pin is actually in, so the Barangay
+        // field stays recognizable even outside Pamplona. Only a genuine
+        // Pamplona match is ever written to the hidden, submitted field.
         geocodeTimer = setTimeout(async () => {
             try {
                 const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
@@ -163,43 +165,36 @@
                 const data = await res.json();
                 const addr = data.address || {};
                 const municipality = addr.city || addr.town || addr.municipality || 'Pamplona';
-                const locationCandidates = [
-                    addr.village,
-                    addr.suburb,
-                    addr.hamlet,
-                    addr.neighbourhood,
-                    addr.city_district,
-                    addr.city,
-                    addr.town,
-                    addr.municipality,
-                    data.display_name || '',
-                ].filter(Boolean);
-                const areaName = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || null;
-                const textMatched = locationCandidates.map((candidate) => matchBarangay(candidate)).find(Boolean) || null;
-                const matched = geofenced || textMatched;
-                // Outside Pamplona's mapped barangays, "areaName" (e.g. "Langagan")
-                // is still a real barangay — just of a neighboring municipality —
-                // so it belongs in the Barangay field, not buried in Street/Landmark.
-                const barangayDisplay = matched || (!geofenced ? areaName : null);
+                const rawBarangayGuess = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || null;
+                const textMatched = matchBarangay(rawBarangayGuess) || matchBarangay(data.display_name || '');
+                const officialMatch = geofenced || textMatched;
 
-                if (barangayInput) {
-                    barangayInput.value = barangayDisplay || '';
+                if (officialMatch) {
+                    if (barangayDisplayInput) barangayDisplayInput.value = officialMatch;
+                    if (barangayInput) barangayInput.value = officialMatch;
+                } else if (rawBarangayGuess) {
+                    // Real place, just not one of Pamplona's — show it for
+                    // recognition, but never submit it as the barangay.
+                    if (barangayDisplayInput) barangayDisplayInput.value = `${rawBarangayGuess} (${municipality} — outside Pamplona)`;
+                    if (barangayInput) barangayInput.value = '';
+                } else {
+                    if (barangayDisplayInput) barangayDisplayInput.value = '';
+                    if (barangayInput) barangayInput.value = '';
                 }
+
                 if (addressInput) {
-                    // Street/Landmark never repeats the barangay/area name —
-                    // just the road (if OSM has one) plus the municipality.
-                    addressInput.value = [addr.road, municipality].filter(Boolean).join(', ') || municipality || 'Unknown';
+                    addressInput.value = [addr.road, municipality].filter(Boolean).join(', ') || municipality;
                 }
 
-                const label = matched
-                    ? `Detected: Barangay ${matched}, ${municipality}`
-                    : barangayDisplay
-                        ? `Near ${municipality} (outside Pamplona — closest area: ${barangayDisplay})`
-                        : `Near ${municipality} (outside mapped barangays — pin closer to a known barangay)`;
-                setResolveStatus(label, barangayDisplay ? 'check-circle' : 'exclamation-circle', barangayDisplay ? 'text-success' : 'text-warning');
+                const label = officialMatch
+                    ? `Detected: Barangay ${officialMatch}, ${municipality}`
+                    : rawBarangayGuess
+                        ? `Barangay ${rawBarangayGuess}, ${municipality} (outside Pamplona)`
+                        : `Near ${municipality} (barangay could not be auto-detected)`;
+                setResolveStatus(label, officialMatch ? 'check-circle' : 'exclamation-circle', officialMatch ? 'text-success' : 'text-warning');
 
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                    detail: { lat, lng, barangay: barangayDisplay, municipality, label },
+                    detail: { lat, lng, barangay: officialMatch, barangayDisplay: officialMatch || rawBarangayGuess, municipality, label },
                 }));
             } catch (err) {
                 if (myToken !== geocodeToken) return;
@@ -246,7 +241,7 @@
         const defaultLat = parseFloat(latInput?.value) || mapConfig.default_lat;
         const defaultLng = parseFloat(lngInput?.value) || mapConfig.default_lng;
 
-        mapInstance = L.map('incident-map', { attributionControl: false }).setView([defaultLat, defaultLng], mapConfig.default_zoom || 13);
+        mapInstance = L.map('incident-map').setView([defaultLat, defaultLng], mapConfig.default_zoom || 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,

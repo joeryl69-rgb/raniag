@@ -187,6 +187,13 @@
                     @endif
 
                     @if ($incident->latitude && $incident->longitude)
+                        @php $withinJurisdiction = $incident->meta['within_jurisdiction'] ?? null; @endphp
+                        @if ($withinJurisdiction === false)
+                            <div class="alert alert-warning py-2 px-3 mb-2 small">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Pinned location is outside Pamplona municipality limits.
+                            </div>
+                        @endif
                         <div id="show-incident-map" class="mb-2"></div>
                         <div class="text-muted font-monospace small text-center mt-1">
                             Coordinates: {{ $incident->latitude }}, {{ $incident->longitude }}

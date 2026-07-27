@@ -4,22 +4,6 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<style>
-    .raniag-map-overlay {
-        position: absolute;
-        inset: 0;
-        z-index: 500; /* above Leaflet's own panes (max ~400), below page modals */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: .5rem;
-        background: rgba(255, 255, 255, 0.85);
-        border-radius: .375rem;
-    }
-    .raniag-map-overlay.d-none { display: none !important; }
-    .raniag-map-overlay-text { font-weight: 600; color: #212529; }
-</style>
 @endpush
 
 @section('content')
@@ -114,13 +98,7 @@
                         <i class="bi bi-crosshair me-1"></i>Use Current Location
                     </button>
                 </div>
-                <div class="position-relative mb-2">
-                    <div id="incident-map"></div>
-                    <div id="map-locating-overlay" class="raniag-map-overlay d-none">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <div class="raniag-map-overlay-text">Pinpointing your location…</div>
-                    </div>
-                </div>
+                <div id="incident-map" class="mb-2"></div>
                 <p class="small mb-2 d-none" id="jurisdiction-warning">
                     <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
                     <span class="text-warning">Pinned location looks like it's outside Pamplona municipality limits. You can still submit, but please double-check the pin.</span>
@@ -130,17 +108,18 @@
                 </p>
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label for="barangay" class="form-label">Barangay</label>
+                        <label for="barangay-display" class="form-label">Barangay</label>
                         <input class="form-control @error('barangay') is-invalid @enderror" list="barangay-list"
-                               id="barangay" name="barangay" value="{{ old('barangay') }}" placeholder="Auto-filled from GPS"
+                               id="barangay-display" value="{{ old('barangay') }}" placeholder="Auto-filled from GPS"
                                readonly aria-readonly="true">
+                        <input type="hidden" id="barangay" name="barangay" value="{{ old('barangay') }}">
                         <datalist id="barangay-list">
                             @foreach ($barangays as $barangay)
                                 <option value="{{ $barangay }}">
                             @endforeach
                         </datalist>
-                        <div class="form-text">Locked until you use GPS to resolve the location.</div>
-                        @error('barangay')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="form-text">Shows the barangay you're in, even outside Pamplona — only official Pamplona barangays can be submitted.</div>
+                        @error('barangay')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-8">
                         <label for="location_address" class="form-label">Street / Landmark</label>

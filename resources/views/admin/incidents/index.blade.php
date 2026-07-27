@@ -6,14 +6,18 @@
     <div class="row">
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-filter-left me-2 text-primary"></i>All Incident Reports</h5>
+                <div class="card-header raniag-card-header bg-white py-3 border-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold"><i class="bi bi-filter-left me-2 text-primary"></i>All Incident Reports</h5>
+                            <p class="text-muted small mb-0">Review submitted and assigned incident reports in one consistent view.</p>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary border">Live queue</span>
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div class="p-3 border-bottom">
-                        <form method="GET" class="row g-2">
+                    <div class="p-3 border-bottom bg-light-subtle">
+                        <form method="GET" class="row g-2 align-items-end" data-loading-message="Filtering incident reports...">
                             <div class="col-md-4">
                                 <input type="search" name="q" value="{{ request('q') }}" class="form-control" placeholder="Search tracking #, title, description, reporter">
                             </div>
@@ -33,8 +37,17 @@
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="col-md-2">
+                                <select name="jurisdiction" class="form-select">
+                                    <option value="">All Locations</option>
+                                    <option value="outside" {{ request('jurisdiction') === 'outside' ? 'selected' : '' }}>Outside Pamplona</option>
+                                    <option value="inside" {{ request('jurisdiction') === 'inside' ? 'selected' : '' }}>Inside Pamplona</option>
+                                </select>
+                            </div>
                             <div class="col-md-2 d-grid">
-                                <button class="btn btn-primary">Search</button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search me-1"></i>Search
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -54,11 +67,11 @@
                             </thead>
                             <tbody>
                                 @forelse ($incidents as $inc)
-                                    <tr class="{{ $inc->status->value === 'submitted' ? 'table-warning bg-opacity-25' : '' }}">
+                                    <tr class="{{ $inc->status->value === 'submitted' ? 'table-light' : '' }}">
                                         <td class="px-4 py-3 fw-bold text-primary">
                                             {{ $inc->tracking_number }}
                                             @if($inc->status->value === 'submitted')
-                                                <span class="badge bg-danger ms-1" style="font-size: 0.65rem;">NEW</span>
+                                                <span class="badge bg-primary-subtle text-primary ms-1" style="font-size: 0.65rem;">NEW</span>
                                             @endif
                                         </td>
                                         <td class="py-3">
@@ -84,7 +97,14 @@
                                                 {{ $inc->priority->label() ?? $inc->priority }}
                                             </span>
                                         </td>
-                                        <td class="py-3">{{ $inc->barangay ?? 'N/A' }}</td>
+                                        <td class="py-3">
+                                            {{ $inc->barangay ?? 'N/A' }}
+                                            @if (($inc->meta['within_jurisdiction'] ?? null) === false)
+                                                <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;" title="Pinned location is outside Pamplona municipality limits">
+                                                    <i class="bi bi-exclamation-triangle-fill"></i> Outside
+                                                </span>
+                                            @endif
+                                        </td>
                                         <td class="py-3 text-muted">
                                             <i class="bi bi-clock me-1"></i>
                                             {{ $inc->reported_at->format('M d, Y h:i A') }}

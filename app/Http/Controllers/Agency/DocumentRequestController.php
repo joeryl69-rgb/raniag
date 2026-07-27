@@ -28,17 +28,23 @@ class DocumentRequestController extends Controller
             ->with(['incident'])
             ->where('requesting_agency_id', $agencyId)
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate(10)
+            ->appends($request->query());
 
-        // Mark any document-request notifications for this agency as read when viewing the list
-        $docIds = $documentRequests->pluck('id')->all();
-        if (! empty($docIds)) {
-            SystemNotification::query()
-                ->whereNull('read_at')
-                ->where('type', 'document_request')
-                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.document_request_id')) IN (".implode(',', array_map('intval', $docIds)).')')
-                ->update(['read_at' => now()]);
-        }
+        // Mark ALL unread document_request notifications for this agency/user as read.
+        // Previously this only covered document_request_ids on the current paginated page
+        // (10 per page), so notifications for older requests on later pages never cleared,
+        // and the badge could stay stuck or reappear inconsistently with what was on screen.
+        SystemNotification::query()
+            ->whereNull('read_at')
+            ->where('type', 'document_request')
+            ->where(function ($q) use ($agencyId, $request) {
+                $q->where('user_id', $request->user()->id)
+                    ->orWhere(function ($q2) use ($agencyId) {
+                        $q2->whereNull('user_id')->where('data->agency_id', $agencyId);
+                    });
+            })
+            ->update(['read_at' => now()]);
 
         return view('agency.document_requests.index', compact('documentRequests'));
     }

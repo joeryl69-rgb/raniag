@@ -8,13 +8,21 @@
         <style>
             #agency-incident-map {
                 height: 250px;
-                border-radius: 0.5rem;
-                border: 1px solid #dee2e6;
+                border-radius: 0.75rem;
+                border: 1px solid #dcefe1;
                 z-index: 1;
+                background: linear-gradient(180deg, #f9fdf9 0%, #eef8f0 100%);
             }
             .evidence-thumb {
                 aspect-ratio: 4 / 3;
                 object-fit: cover;
+            }
+            .agency-detail-card {
+                border-radius: 1rem;
+                border: 1px solid #e7f1ea;
+            }
+            .agency-detail-card .card-header {
+                border-bottom: 1px solid #eef5ee;
             }
         </style>
     @endpush
@@ -74,7 +82,7 @@
 
             <!-- Evidence / Media -->
             <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
+                <div class="card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-images text-primary me-2"></i>Attached Evidence</h5>
                 </div>
                 <div class="card-body">
@@ -108,7 +116,7 @@
 
             <!-- History Timeline -->
             <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
+                <div class="card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Investigation updates Log</h5>
                 </div>
                 <div class="card-body">
@@ -139,8 +147,8 @@
         <!-- Sidebar Actions Column -->
         <div class="col-lg-4">
             <!-- Map Location -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
+            <div class="card shadow-sm border-0 mb-4 agency-detail-card">
+                <div class="card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt text-primary me-2"></i>Map Coordinates</h5>
                 </div>
                 <div class="card-body">
@@ -162,9 +170,9 @@
             </div>
 
             <!-- Case Action Terminal -->
-            <div class="card raniag-card shadow-sm border-primary border-0">
-                <div class="card-header bg-primary text-white py-3 rounded-top">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-play-circle me-2"></i>Case Action Control</h5>
+            <div class="card shadow-sm border-0 agency-detail-card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-play-circle text-primary me-2"></i>Case Action Control</h5>
                 </div>
                 <div class="card-body">
                     @if ($incident->status->value === 'assigned')

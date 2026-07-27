@@ -69,6 +69,16 @@ body.raniag-public {
     z-index: 1;
 }
 
+#map-locating-overlay {
+    border-radius: 0.75rem;
+}
+
+.leaflet-control-attribution {
+    font-size: 0.65rem;
+    padding: 0 4px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
 .raniag-tracking-number {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     letter-spacing: 0.08em;
@@ -142,6 +152,11 @@ body.raniag-public {
     pointer-events: none;
 }
 
+.form-control[readonly] {
+    background-color: #f8fafc;
+    color: #334155;
+}
+
 .gps-camera-viewport {
     background: #0f172a;
     border-radius: 0.75rem;
@@ -153,6 +168,10 @@ body.raniag-public {
     display: block;
     max-height: 420px;
     object-fit: cover;
+}
+
+.gps-camera-viewport video.gps-mirrored {
+    transform: scaleX(-1);
 }
 
 .gps-capture-thumb img {
@@ -167,4 +186,69 @@ body.raniag-public {
 .reporter-fields.disabled {
     opacity: 0.55;
     pointer-events: none;
+}
+
+/* Dynamic GPS watermark overlay on the live camera view */
+.gps-watermark-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.15));
+    color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    line-height: 1.35;
+    pointer-events: none;
+}
+
+.gps-watermark-title {
+    color: var(--raniag-accent);
+    font-weight: 700;
+    font-size: clamp(0.65rem, 2vw, 0.8rem);
+    letter-spacing: 0.03em;
+}
+
+.gps-watermark-line {
+    font-size: clamp(0.6rem, 1.8vw, 0.78rem);
+    word-break: break-word;
+    white-space: normal;
+}
+
+.gps-accuracy-pill {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.7rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 767.98px) {
+    #incident-map {
+        height: 220px;
+    }
+
+    .gps-camera-viewport {
+        min-height: 200px;
+    }
+
+    .gps-camera-viewport video {
+        max-height: 60vh;
+    }
+
+    .raniag-step-badge {
+        width: 1.6rem;
+        height: 1.6rem;
+        font-size: 0.75rem;
+    }
+
+    .raniag-type-card {
+        padding: 0.5rem !important;
+    }
+}
+
+@media (orientation: portrait) and (max-width: 575.98px) {
+    .gps-camera-viewport video {
+        max-height: 50vh;
+    }
 }

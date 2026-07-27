@@ -12,6 +12,93 @@
                 border: 1px solid #dee2e6;
                 z-index: 1;
             }
+
+            .dashboard-analytics-card .chart-wrapper {
+                position: relative;
+                height: 250px;
+                min-height: 220px;
+            }
+
+            .dashboard-map-pin {
+                position: relative;
+                width: 20px;
+                height: 20px;
+                border-radius: 50% 50% 50% 0;
+                background: #dc3545;
+                border: 2px solid #fff;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                transform: rotate(-45deg);
+                overflow: hidden;
+            }
+
+            .dashboard-map-pin::after {
+                content: '';
+                position: absolute;
+                inset: 4px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.9);
+            }
+
+            .dashboard-fallback-card {
+                display: flex;
+                flex-direction: column;
+                gap: 0.7rem;
+                padding: 0.75rem 0.25rem 0.25rem;
+            }
+
+            .dashboard-fallback-bar {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .dashboard-fallback-bar .progress {
+                height: 8px;
+                border-radius: 999px;
+                background: #e9ecef;
+            }
+
+            .dashboard-fallback-bar .progress-bar {
+                border-radius: 999px;
+                background: linear-gradient(90deg, #0d6efd, #20c997);
+            }
+
+            .dashboard-fallback-donut {
+                width: 110px;
+                height: 110px;
+                border-radius: 50%;
+                background: conic-gradient(#0d6efd 0 35%, #20c997 35% 65%, #f59e0b 65% 100%);
+                position: relative;
+                flex-shrink: 0;
+            }
+
+            .dashboard-fallback-donut::after {
+                content: '';
+                position: absolute;
+                inset: 16px;
+                border-radius: 50%;
+                background: #fff;
+            }
+
+            @media (max-width: 767.98px) {
+                #admin-dashboard-map {
+                    height: 280px;
+                }
+
+                .dashboard-analytics-card .card-body {
+                    padding: 0.85rem;
+                }
+
+                .dashboard-analytics-card .chart-wrapper {
+                    height: 220px;
+                    min-height: 200px;
+                }
+
+                .dashboard-fallback-donut {
+                    width: 90px;
+                    height: 90px;
+                }
+            }
         </style>
     @endpush
 
@@ -88,6 +175,13 @@
                             </div>
                             <span class="badge bg-warning text-dark rounded-pill fs-7" id="control-avg-resolution">— hrs</span>
                         </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <div class="fw-semibold small text-dark">Outside Jurisdiction</div>
+                                <div class="text-muted small">Pinned outside Pamplona limits</div>
+                            </div>
+                            <a href="{{ route('admin.incidents.index', ['jurisdiction' => 'outside']) }}" class="badge bg-warning text-dark rounded-pill fs-7 text-decoration-none" id="control-out-of-jurisdiction">—</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -114,7 +208,7 @@
                     <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-graph-up text-primary me-2"></i>Weekly Incident Volume Trends</h6>
                 </div>
                 <div class="card-body">
-                    <div style="position: relative; height: 250px;">
+                    <div class="chart-wrapper">
                         <canvas id="weeklyTrendsChart"></canvas>
                     </div>
                 </div>
@@ -123,12 +217,12 @@
 
         <!-- Incident Categories Doughnut -->
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 dashboard-analytics-card">
                 <div class="card-header bg-white py-3 border-0">
                     <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Category Distribution</h6>
                 </div>
                 <div class="card-body">
-                    <div style="position: relative; height: 250px;">
+                    <div class="chart-wrapper">
                         <canvas id="categoryDistributionChart"></canvas>
                     </div>
                 </div>
@@ -137,12 +231,12 @@
 
         <!-- Barangay Frequency Bar -->
         <div class="col-12 col-md-6 col-xl-4">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 dashboard-analytics-card">
                 <div class="card-header bg-white py-3 border-0">
                     <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Barangay Hot Spots</h6>
                 </div>
                 <div class="card-body">
-                    <div style="position: relative; height: 250px;">
+                    <div class="chart-wrapper">
                         <canvas id="barangayFrequencyChart"></canvas>
                     </div>
                 </div>
@@ -158,12 +252,12 @@
         
         <!-- Agency Response Time Bar Chart -->
         <div class="col-12 col-lg-5">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 dashboard-analytics-card">
                 <div class="card-header bg-white py-3 border-0">
                     <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-stopwatch text-primary me-2"></i>Avg. Resolution Time by Agency (Hours)</h6>
                 </div>
                 <div class="card-body">
-                    <div style="position: relative; height: 250px;">
+                    <div class="chart-wrapper">
                         <canvas id="responseTimesChart"></canvas>
                     </div>
                 </div>
@@ -172,12 +266,12 @@
 
         <!-- Seasonal Trends Doughnut -->
         <div class="col-12 col-md-5 col-lg-3">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 dashboard-analytics-card">
                 <div class="card-header bg-white py-3 border-0">
                     <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-cloud-sun text-primary me-2"></i>Seasonal Analysis</h6>
                 </div>
                 <div class="card-body">
-                    <div style="position: relative; height: 250px;">
+                    <div class="chart-wrapper">
                         <canvas id="seasonalChart"></canvas>
                     </div>
                 </div>
@@ -289,13 +383,71 @@
                     }
                 }
 
+                function getMarkerIcon() {
+                    return L.divIcon({
+                        html: '<div class="dashboard-map-pin"></div>',
+                        className: 'dashboard-map-marker',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 20],
+                        popupAnchor: [0, -16],
+                    });
+                }
+
                 // Initialize Map
                 function initMap() {
-                    mapInstance = L.map('admin-dashboard-map').setView([18.4720, 121.3250], 12);
+                    mapInstance = L.map('admin-dashboard-map', {
+                        zoomControl: true,
+                        scrollWheelZoom: false,
+                    }).setView([18.4720, 121.3250], 12);
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(mapInstance);
+                    setTimeout(() => mapInstance.invalidateSize(), 200);
+                }
+
+                function renderFallbackChart(container, labels, values, kind = 'bar') {
+                    if (!container) return;
+                    if (!labels || labels.length === 0 || !values || values.length === 0) {
+                        container.innerHTML = '<div class="text-muted small">No analytics data available yet.</div>';
+                        return;
+                    }
+
+                    const maxValue = Math.max(...values.map(Number), 1);
+                    if (kind === 'doughnut') {
+                        const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+                        const legendItems = labels.map((label, index) => {
+                            const value = Number(values[index] || 0);
+                            const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                            return `<div class="d-flex justify-content-between align-items-center small"><span><span class="me-2" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${['#0d6efd','#20c997','#f59e0b','#8b5cf6','#e83e8c','#6c757d'][index % 6]}"></span>${label}</span><span class="fw-semibold">${value} (${pct}%)</span></div>`;
+                        }).join('');
+
+                        container.innerHTML = `
+                            <div class="dashboard-fallback-card">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="dashboard-fallback-donut"></div>
+                                    <div class="w-100">${legendItems}</div>
+                                </div>
+                            </div>`;
+                        return;
+                    }
+
+                    const bars = labels.map((label, index) => {
+                        const value = Number(values[index] || 0);
+                        const width = Math.max(8, Math.round((value / maxValue) * 100));
+                        return `
+                            <div class="dashboard-fallback-bar">
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span>${label}</span>
+                                    <span class="fw-semibold text-dark">${value}</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width:${width}%"></div>
+                                </div>
+                            </div>`;
+                    }).join('');
+
+                    container.innerHTML = `<div class="dashboard-fallback-card">${bars}</div>`;
                 }
 
                 // Update Map Pins
@@ -311,7 +463,7 @@
                         const lat = parseFloat(inc.latitude);
                         const lng = parseFloat(inc.longitude);
                         if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                            const marker = L.marker([lat, lng]).addTo(mapInstance);
+                            const marker = L.marker([lat, lng], { icon: getMarkerIcon() }).addTo(mapInstance);
                             const type = inc.incident_type?.name ?? 'Incident';
                             const status = inc.status?.toUpperCase() ?? 'SUBMITTED';
                             marker.bindPopup(`
@@ -328,7 +480,7 @@
                     if (bounds.length === 1) {
                         mapInstance.setView(bounds[0], 12);
                     } else if (bounds.length > 1) {
-                        mapInstance.fitBounds(bounds, { padding: [40, 40] });
+                        mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
                     }
                 }
 
@@ -362,6 +514,7 @@
 
                         // Update System Controls
                         document.getElementById('control-agencies').textContent = data.active_agencies;
+                        document.getElementById('control-out-of-jurisdiction').textContent = data.analytics?.out_of_jurisdiction_count ?? 0;
                         document.getElementById('control-assignments').textContent = data.active_assignments;
                         document.getElementById('control-sms-sent').textContent = data.sms_stats?.sent ?? 0;
                         document.getElementById('control-avg-resolution').textContent = (data.analytics?.avg_resolution_hours ?? 0) + ' hrs';
@@ -383,17 +536,23 @@
                 function updateCharts(analytics) {
                     if (!analytics) return;
 
+                    const hasChartLibrary = typeof Chart !== 'undefined';
+
                     // 1. Weekly Trends Chart
                     const weeklyData = analytics.weekly_trends || [];
                     const weeklyLabels = weeklyData.map(item => item.label);
                     const weeklyValues = weeklyData.map(item => item.count);
 
-                    if (weeklyTrendsChart) {
+                    const weeklyCanvas = document.getElementById('weeklyTrendsChart');
+                    const weeklyWrap = weeklyCanvas?.parentElement;
+                    if (!hasChartLibrary) {
+                        renderFallbackChart(weeklyWrap, weeklyLabels, weeklyValues, 'bar');
+                    } else if (weeklyTrendsChart) {
                         weeklyTrendsChart.data.labels = weeklyLabels;
                         weeklyTrendsChart.data.datasets[0].data = weeklyValues;
                         weeklyTrendsChart.update();
                     } else {
-                        const ctx = document.getElementById('weeklyTrendsChart').getContext('2d');
+                        const ctx = weeklyCanvas.getContext('2d');
                         weeklyTrendsChart = new Chart(ctx, {
                             type: 'line',
                             data: {
@@ -411,15 +570,8 @@
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        ticks: { precision: 0 }
-                                    }
-                                }
+                                plugins: { legend: { display: false } },
+                                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
                             }
                         });
                     }
@@ -429,12 +581,16 @@
                     const categoryLabels = Object.keys(categoryData);
                     const categoryValues = Object.values(categoryData);
 
-                    if (categoryDistributionChart) {
+                    const categoryCanvas = document.getElementById('categoryDistributionChart');
+                    const categoryWrap = categoryCanvas?.parentElement;
+                    if (!hasChartLibrary) {
+                        renderFallbackChart(categoryWrap, categoryLabels, categoryValues, 'doughnut');
+                    } else if (categoryDistributionChart) {
                         categoryDistributionChart.data.labels = categoryLabels;
                         categoryDistributionChart.data.datasets[0].data = categoryValues;
                         categoryDistributionChart.update();
                     } else {
-                        const ctx = document.getElementById('categoryDistributionChart').getContext('2d');
+                        const ctx = categoryCanvas.getContext('2d');
                         categoryDistributionChart = new Chart(ctx, {
                             type: 'doughnut',
                             data: {
@@ -464,12 +620,16 @@
                     const barangayLabels = Object.keys(barangayData);
                     const barangayValues = Object.values(barangayData);
 
-                    if (barangayFrequencyChart) {
+                    const barangayCanvas = document.getElementById('barangayFrequencyChart');
+                    const barangayWrap = barangayCanvas?.parentElement;
+                    if (!hasChartLibrary) {
+                        renderFallbackChart(barangayWrap, barangayLabels, barangayValues, 'bar');
+                    } else if (barangayFrequencyChart) {
                         barangayFrequencyChart.data.labels = barangayLabels;
                         barangayFrequencyChart.data.datasets[0].data = barangayValues;
                         barangayFrequencyChart.update();
                     } else {
-                        const ctx = document.getElementById('barangayFrequencyChart').getContext('2d');
+                        const ctx = barangayCanvas.getContext('2d');
                         barangayFrequencyChart = new Chart(ctx, {
                             type: 'bar',
                             data: {
@@ -485,15 +645,8 @@
                                 indexAxis: 'y',
                                 responsive: true,
                                 maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    x: {
-                                        beginAtZero: true,
-                                        ticks: { precision: 0 }
-                                    }
-                                }
+                                plugins: { legend: { display: false } },
+                                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
                             }
                         });
                     }
@@ -503,12 +656,16 @@
                     const rtLabels = Object.keys(responseTimeData);
                     const rtValues = Object.values(responseTimeData);
 
-                    if (responseTimesChart) {
+                    const responseCanvas = document.getElementById('responseTimesChart');
+                    const responseWrap = responseCanvas?.parentElement;
+                    if (!hasChartLibrary) {
+                        renderFallbackChart(responseWrap, rtLabels, rtValues, 'bar');
+                    } else if (responseTimesChart) {
                         responseTimesChart.data.labels = rtLabels;
                         responseTimesChart.data.datasets[0].data = rtValues;
                         responseTimesChart.update();
                     } else {
-                        const ctx = document.getElementById('responseTimesChart').getContext('2d');
+                        const ctx = responseCanvas.getContext('2d');
                         responseTimesChart = new Chart(ctx, {
                             type: 'bar',
                             data: {
@@ -534,12 +691,16 @@
                     const sLabels = Object.keys(seasonData);
                     const sValues = Object.values(seasonData);
 
-                    if (seasonalChart) {
+                    const seasonalCanvas = document.getElementById('seasonalChart');
+                    const seasonalWrap = seasonalCanvas?.parentElement;
+                    if (!hasChartLibrary) {
+                        renderFallbackChart(seasonalWrap, sLabels, sValues, 'doughnut');
+                    } else if (seasonalChart) {
                         seasonalChart.data.labels = sLabels;
                         seasonalChart.data.datasets[0].data = sValues;
                         seasonalChart.update();
                     } else {
-                        const ctx = document.getElementById('seasonalChart').getContext('2d');
+                        const ctx = seasonalCanvas.getContext('2d');
                         seasonalChart = new Chart(ctx, {
                             type: 'pie',
                             data: {
@@ -635,6 +796,12 @@
 
                     // Load dashboard immediately
                     initDashboard();
+
+                    window.addEventListener('resize', function () {
+                        if (mapInstance) {
+                            mapInstance.invalidateSize();
+                        }
+                    });
                     
                     // Setup 60-second polling for real-time dashboard updates (reduced from 10s for better performance)
                     // Only poll when tab is visible to save resources

@@ -53,8 +53,9 @@
     window.addEventListener('raniag:location-resolved', (event) => {
         lastResolved = event.detail;
         if (placeEl && event.detail) {
-            const { barangay, municipality } = event.detail;
-            placeEl.textContent = barangay ? `Barangay ${barangay}, ${municipality}` : `${municipality} (barangay pending)`;
+            const { barangay, barangayDisplay, municipality } = event.detail;
+            const shown = barangayDisplay || barangay;
+            placeEl.textContent = shown ? `Barangay ${shown}, ${municipality}` : `${municipality} (barangay pending)`;
         }
     });
 
@@ -407,7 +408,6 @@
     // feedback right where the person is looking, instead of only
     // changing the gps-camera-status badge down in Section 5.
     const locationResolveStatusEl = document.getElementById('location-resolve-status');
-    const mapLocatingOverlay = document.getElementById('map-locating-overlay');
 
     function setLocationButtonStatus(text, icon, tone) {
         if (!locationResolveStatusEl) return;
@@ -426,59 +426,44 @@
 
         if (useLocationBtn) {
             useLocationBtn.disabled = true;
+            useLocationBtn.dataset.originalHtml = useLocationBtn.dataset.originalHtml || useLocationBtn.innerHTML;
+            useLocationBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Locating…';
         }
-        // Spinner lives on the map itself (not the button, not a full-screen
-        // overlay) — scoped feedback right where the pin is about to appear.
-        if (mapLocatingOverlay) mapLocatingOverlay.classList.remove('d-none');
+        if (typeof window.showLoadingOverlay === 'function') {
+            window.showLoadingOverlay('Getting your current location, please wait...');
+        }
 
         function finishLocating() {
             if (useLocationBtn) {
                 useLocationBtn.disabled = false;
+                useLocationBtn.innerHTML = useLocationBtn.dataset.originalHtml;
             }
-            if (mapLocatingOverlay) mapLocatingOverlay.classList.add('d-none');
-        }
-
-        function onSuccess(position) {
-            lastPosition = position;
-            updateCoordsDisplay(position);
-            applyPositionToMap(position, true);
-            setStatus('Location set', 'success');
-            setError('');
-            finishLocating();
-            // applyPositionToMap triggers public-report.js's resolveLocation(),
-            // which will overwrite setLocationButtonStatus with the
-            // barangay result — no need to set it again here.
-        }
-
-        function onFail(error) {
-            onGeoError(error);
-            const messages = {
-                1: 'Location permission denied. Enable GPS/location access in your browser or device settings, then try again.',
-                2: 'Location unavailable — this can happen indoors where GPS signal is weak. Move near a window or outdoors and try again.',
-                3: 'Location request timed out. Please try again.',
-            };
-            setLocationButtonStatus(messages[error.code] || 'Unable to read your location.', 'exclamation-triangle', 'text-warning');
-            finishLocating();
+            if (typeof window.hideLoadingOverlay === 'function') {
+                window.hideLoadingOverlay();
+            }
         }
 
         navigator.geolocation.getCurrentPosition(
-            onSuccess,
+            (position) => {
+                lastPosition = position;
+                updateCoordsDisplay(position);
+                applyPositionToMap(position, true);
+                setStatus('Location set', 'success');
+                setError('');
+                finishLocating();
+                // applyPositionToMap triggers public-report.js's resolveLocation(),
+                // which will overwrite setLocationButtonStatus with the
+                // barangay result — no need to set it again here.
+            },
             (error) => {
-                // A high-accuracy GPS fix can take longer than our timeout on
-                // real phones (cold-start satellite lock). Rather than fail
-                // outright on a timeout, retry once using network-based
-                // positioning with a longer window — less precise, but far
-                // more likely to actually return a fix.
-                if (error.code === error.TIMEOUT) {
-                    setLocationButtonStatus('Still locating… retrying with a wider search.', 'arrow-repeat', 'text-primary');
-                    navigator.geolocation.getCurrentPosition(onSuccess, onFail, {
-                        enableHighAccuracy: false,
-                        timeout: 20000,
-                        maximumAge: 60000,
-                    });
-                    return;
-                }
-                onFail(error);
+                onGeoError(error);
+                const messages = {
+                    1: 'Location permission denied. Enable GPS/location access in your browser or device settings, then try again.',
+                    2: 'Location unavailable — this can happen indoors where GPS signal is weak. Move near a window or outdoors and try again.',
+                    3: 'Location request timed out. Please try again.',
+                };
+                setLocationButtonStatus(messages[error.code] || 'Unable to read your location.', 'exclamation-triangle', 'text-warning');
+                finishLocating();
             },
             geoOptions
         );

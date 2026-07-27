@@ -7,37 +7,97 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
         <style>
             #agency-dashboard-map {
-                height: 320px;
-                border-radius: 0.75rem;
-                border: 1px solid #dee2e6;
+                height: 360px;
+                border-radius: 1rem;
+                border: 1px solid #dcefe1;
                 z-index: 1;
+                background: linear-gradient(180deg, #f9fdf9 0%, #eef8f0 100%);
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+            }
+
+            .agency-dashboard-card {
+                border-radius: 1rem;
+                border: 1px solid #e7f1ea;
+            }
+
+            .agency-kpi-card {
+                border-radius: 1rem;
+                border: 1px solid #e7f1ea;
+                background: linear-gradient(180deg, #ffffff 0%, #f8fcf9 100%);
+            }
+
+            .agency-kpi-icon {
+                width: 42px;
+                height: 42px;
+                border-radius: 0.75rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(46, 139, 87, 0.12);
+                color: #1f7a3d;
+                font-size: 1.05rem;
+            }
+
+            .agency-map-pin {
+                position: relative;
+                width: 20px;
+                height: 20px;
+                border-radius: 50% 50% 50% 0;
+                background: #dc3545;
+                border: 2px solid #fff;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                transform: rotate(-45deg);
+                overflow: hidden;
+            }
+
+            .agency-map-pin::after {
+                content: '';
+                position: absolute;
+                inset: 4px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.9);
+            }
+
+            @media (max-width: 767.98px) {
+                #agency-dashboard-map {
+                    height: 300px;
+                }
             }
         </style>
     @endpush
 
     <!-- Status KPI Grid -->
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 border-start border-primary border-4">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Assigned Incident Cases</div>
-                    <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-assigned">—</h2>
+        <div class="col-12 col-md-4">
+            <div class="card h-100 shadow-sm border-0 agency-kpi-card">
+                <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">Assigned Incident Cases</div>
+                        <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-assigned">—</h2>
+                    </div>
+                    <div class="agency-kpi-icon"><i class="bi bi-clipboard2-pulse"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 border-start border-warning border-4">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Pending Resolutions</div>
-                    <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-pending">—</h2>
+        <div class="col-12 col-md-4">
+            <div class="card h-100 shadow-sm border-0 agency-kpi-card">
+                <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">Pending Resolutions</div>
+                        <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-pending">—</h2>
+                    </div>
+                    <div class="agency-kpi-icon"><i class="bi bi-hourglass-split"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 border-start border-success border-4">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">SMS Alerts Received (This Week)</div>
-                    <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-sms">—</h2>
+        <div class="col-12 col-md-4">
+            <div class="card h-100 shadow-sm border-0 agency-kpi-card">
+                <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">SMS Alerts Received (This Week)</div>
+                        <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-sms">—</h2>
+                    </div>
+                    <div class="agency-kpi-icon"><i class="bi bi-chat-left-text"></i></div>
                 </div>
             </div>
         </div>
@@ -46,9 +106,12 @@
     <!-- Active Details Grid -->
     <div class="row g-4 mb-4">
         <div class="col-lg-7">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3 border-0">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Active Emergency Dispatches Map</h6>
+            <div class="card shadow-sm border-0 h-100 agency-dashboard-card">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Active Emergency Dispatches Map</h6>
+                        <p class="small text-muted mb-0 mt-1">Live dispatch locations and case movement</p>
+                    </div>
                 </div>
                 <div class="card-body p-2">
                     <div id="agency-dashboard-map"></div>
@@ -57,12 +120,15 @@
         </div>
 
         <div class="col-lg-5">
-            <div class="card h-100 shadow-sm border-0">
+            <div class="card h-100 shadow-sm border-0 agency-dashboard-card">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Recent Status Changes Feed</h6>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Recent Status Changes Feed</h6>
+                        <p class="small text-muted mb-0 mt-1">Latest updates from the assigned incidents</p>
+                    </div>
                 </div>
                 <div class="card-body p-0">
-                    <div class="list-group list-group-flush" id="agency-status-feed" style="max-height: 320px; overflow-y: auto;">
+                    <div class="list-group list-group-flush" id="agency-status-feed" style="max-height: 360px; overflow-y: auto;">
                         <div class="text-center py-5 text-muted small">Loading live activity feed...</div>
                     </div>
                 </div>
@@ -73,10 +139,13 @@
     <!-- Active Emergency Dispatches List -->
     <div class="row">
         <div class="col-12">
-            <div class="card shadow-sm border-0 mb-4">
+            <div class="card shadow-sm border-0 mb-4 agency-dashboard-card">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-card-checklist text-primary me-2"></i>Active Emergency Dispatches</h6>
-                    <a href="{{ route('agency.incidents.index') }}" class="btn btn-sm btn-link p-0 text-decoration-none">Open Full List</a>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-card-checklist text-primary me-2"></i>Active Emergency Dispatches</h6>
+                        <p class="small text-muted mb-0 mt-1">Priority dispatches currently assigned to your agency</p>
+                    </div>
+                    <a href="{{ route('agency.incidents.index') }}" class="btn btn-sm btn-outline-primary">Open Full List</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -254,14 +323,14 @@
                         const time = new Date(up.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         const date = new Date(up.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
                         div.innerHTML = `
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-primary px-2 py-1">${up.to_status.replace('_', ' ').toUpperCase()}</span>
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                <span class="badge bg-primary-subtle text-primary px-2 py-1">${up.to_status.replace('_', ' ').toUpperCase()}</span>
                                 <small class="text-muted">${date} at ${time}</small>
                             </div>
                             <p class="mb-0 text-muted small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 ${up.comment ?? 'No comment provided.'}
                             </p>
-                            <a href="/agency/incidents/${up.incident_id}" class="fs-8 text-decoration-none mt-1 d-inline-block">Open Case File</a>
+                            <a href="/agency/incidents/${up.incident_id}" class="fs-8 text-decoration-none mt-1 d-inline-block text-primary">Open Case File</a>
                         `;
                         feed.appendChild(div);
                     });
@@ -284,13 +353,20 @@
                         const lat = parseFloat(inc.latitude);
                         const lng = parseFloat(inc.longitude);
                         if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                            const marker = L.marker([lat, lng]).addTo(mapInstance);
+                            const marker = L.marker([lat, lng], {
+                                icon: L.divIcon({
+                                    className: 'agency-map-marker',
+                                    html: '<div class="agency-map-pin"></div>',
+                                    iconSize: [20, 20],
+                                    iconAnchor: [10, 20]
+                                })
+                            }).addTo(mapInstance);
                             const type = inc.incident_type?.name ?? 'Incident';
                             marker.bindPopup(`
                                 <strong>Tracking #: ${inc.tracking_number}</strong><br>
                                 Type: ${type}<br>
                                 Status: <span class="badge bg-secondary">${(inc.status||'').toUpperCase()}</span><br>
-                                <a href="/agency/incidents/${inc.id}" class="btn btn-xs btn-primary text-white py-0 px-2 mt-1 fs-8" style="font-size: 0.75rem;">Process Case</a>
+                                <a href="/agency/incidents/${inc.id}" class="btn btn-xs btn-success text-white py-0 px-2 mt-1 fs-8" style="font-size: 0.75rem;">Process Case</a>
                             `);
                             mapMarkers.push(marker);
                             bounds.push([lat, lng]);

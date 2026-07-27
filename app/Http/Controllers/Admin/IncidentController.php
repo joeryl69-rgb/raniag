@@ -34,6 +34,7 @@ class IncidentController extends Controller
             'q' => $request->string('q')->trim()->value(),
             'status' => $request->string('status')->value(),
             'incident_type_id' => $request->integer('incident_type_id') ?: null,
+            'jurisdiction' => $request->string('jurisdiction')->value(),
         ];
 
         $incidents = $this->incidents->paginateAll(array_filter($filters), $perPage);

@@ -43,20 +43,29 @@ class PrintableReportRequestController extends Controller
             ]);
         }
 
-        $documentRequests = $query->get();
+        $documentRequests = $query->paginate(10)->appends($request->query());
 
-        // Mark related document_request notifications as read for admin when viewing the list
-        $docIds = $documentRequests->pluck('id')->all();
-        if (! empty($docIds)) {
-            try {
-                SystemNotification::query()
-                    ->whereNull('read_at')
-                    ->where('type', 'document_request')
-                    ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.document_request_id')) IN (".implode(',', array_map('intval', $docIds)).')')
-                    ->update(['read_at' => now()]);
-            } catch (\Throwable $e) {
-                // best-effort: don't block view if DB JSON functions are missing
-            }
+        // Mark ALL unread document_request notifications visible to this admin as read.
+        // Previously this only covered document_request_ids present on the current
+        // status-filtered/paginated page (default filter = pending). That meant:
+        //  - approving/rejecting moves a request out of the default "pending" view, so the
+        //    "approved"/"rejected" notification for it was never marked read -> the sidebar
+        //    badge kept counting it even while the pending list showed nothing.
+        //  - merely opening the page marked the on-screen pending items read immediately,
+        //    before any action was taken, hiding the badge too early.
+        // Scoping to "all notifications addressed to this admin" instead of "notifications
+        // for whatever happens to be on screen" keeps the badge consistent with what the
+        // admin has actually opened this section to check.
+        try {
+            SystemNotification::query()
+                ->whereNull('read_at')
+                ->where('type', 'document_request')
+                ->where(function ($q) {
+                    $q->whereNull('user_id')->orWhere('user_id', auth()->id());
+                })
+                ->update(['read_at' => now()]);
+        } catch (\Throwable $e) {
+            // best-effort: don't block view if DB JSON functions are missing
         }
 
         return view('admin.document_requests.index', [
@@ -100,9 +109,9 @@ class PrintableReportRequestController extends Controller
             try {
                 $existsAdmin = SystemNotification::query()
                     ->where('type', 'document_request')
-                    ->whereNull('user_id')
-                    ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.document_request_id')) = ?", [$documentRequest->id])
-                    ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.action')) = 'rejected'")
+                    ->where('user_id', null)
+                    ->where('data->document_request_id', $documentRequest->id)
+                    ->where('data->action', 'rejected')
                     ->exists();
 
                 if (! $existsAdmin) {
@@ -131,8 +140,8 @@ class PrintableReportRequestController extends Controller
                     $existsUser = SystemNotification::query()
                         ->where('type', 'document_request')
                         ->where('user_id', $documentRequest->requested_by)
-                        ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.document_request_id')) = ?", [$documentRequest->id])
-                        ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.action')) = 'rejected'")
+                        ->where('data->document_request_id', $documentRequest->id)
+                        ->where('data->action', 'rejected')
                         ->exists();
 
                     if (! $existsUser) {

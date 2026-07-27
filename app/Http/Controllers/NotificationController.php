@@ -33,7 +33,7 @@ class NotificationController extends Controller
             });
         }
 
-        $notifications = $query->latest('created_at')->get();
+        $notifications = $query->latest('created_at')->paginate(10)->appends($request->query());
 
         return view('notifications.index', compact('notifications'));
     }
@@ -61,7 +61,7 @@ class NotificationController extends Controller
             });
         }
 
-        $query->whereNull('read_at')->update(['read_at' => now()]);
+        $query->where('read_at', null)->update(['read_at' => now()]);
 
         return redirect()->route('notifications.index')->with('success', 'All notifications marked as read.');
     }
@@ -86,16 +86,18 @@ class NotificationController extends Controller
 
         $notification->markAsRead();
 
-        if ($notification->data['incident_id'] ?? false) {
+        $incidentId = $notification->data['incident_id'] ?? null;
+
+        if ($incidentId) {
             if ($user->isAdministrator()) {
-                return redirect()->route('admin.incidents.show', $notification->data['incident_id']);
+                return redirect()->route('admin.incidents.show', $incidentId);
             }
 
             if ($user->isPersonnel()) {
-                return redirect()->route('personnel.incidents.show', $notification->data['incident_id']);
+                return redirect()->route('personnel.incidents.show', $incidentId);
             }
 
-            return redirect()->route('agency.incidents.show', $notification->data['incident_id']);
+            return redirect()->route('agency.incidents.show', $incidentId);
         }
 
         return redirect()->route('notifications.index');

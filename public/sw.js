@@ -1,11 +1,10 @@
-const CACHE_NAME = 'raniag-cache-dev-v1';
+const CACHE_NAME = 'raniag-cache-dev-v2';
 const OFFLINE_URL = '/offline';
 
 // DEV SAFETY: keep cache minimal so ngrok always shows latest UI/JS.
 // If you want full offline later, revert this section.
 const ASSETS_TO_CACHE = [
     OFFLINE_URL,
-    '/',
     // DEV NOTE: do not cache CSS/JS aggressively; prevents “different UI / dead buttons” on ngrok.
     // '/css/public.css',
     // '/js/public-report.js',
@@ -59,7 +58,9 @@ self.addEventListener('fetch', (event) => {
                     caches.open(CACHE_NAME).then((cache) => {
                         // Do not cache backend API queries or dashboard pages dynamically
                         const path = new URL(event.request.url).pathname;
-                        if (!path.includes('/admin') && !path.includes('/agency') && !path.includes('/dashboard')) {
+                        if (!path.includes('/admin') && !path.includes('/agency') && !path.includes('/dashboard')
+                            && !path.includes('/login') && !path.includes('/logout') && !path.includes('/register')
+                            && path !== '/') {
                             cache.put(event.request, responseToCache);
                         }
                     });

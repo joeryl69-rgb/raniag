@@ -269,32 +269,6 @@ class EvidenceService
             $width = imagesx($image);
             $height = imagesy($image);
 
-            // Banner height dynamically adjusted relative to the image height
-            $bannerHeight = (int) ($height * 0.12);
-            if ($bannerHeight < 60) {
-                $bannerHeight = 60;
-            }
-            if ($bannerHeight > 180) {
-                $bannerHeight = 180;
-            }
-
-            // Semi-transparent black banner box at the bottom
-            $bannerColor = imagecolorallocatealpha($image, 15, 23, 42, 60);
-            imagefilledrectangle($image, 0, $height - $bannerHeight, $width, $height, $bannerColor);
-
-            // Standard GD built-in fonts (white and teal accent)
-            $textColor = imagecolorallocate($image, 255, 255, 255);
-            $accentColor = imagecolorallocate($image, 32, 201, 151);
-
-            $startY = $height - $bannerHeight + 6;
-
-            // Title Line
-            imagestring($image, 4, 12, $startY, 'RANIAG GPS CAMERA', $accentColor);
-
-            // Info lines (using slightly smaller font)
-            $coordsText = sprintf('GPS COORDINATES: %f, %f', $latitude, $longitude);
-            imagestring($image, 2, 12, $startY + 16, $coordsText, $textColor);
-
             // Determine a concise, accurate location string
             $place = null;
             if (! empty($locationAddress)) {
@@ -343,19 +317,24 @@ class EvidenceService
             }
 
             if (! $place) {
-                // Fallback: use barangay if present, otherwise keep a short fallback label
-                if (! empty($barangay)) {
-                    $place = 'Barangay '.strtoupper($barangay).', Pamplona, Cagayan, PH';
-                } else {
-                    $place = 'Pamplona, Cagayan, PH';
-                }
+                $place = 'Pamplona, Cagayan, PH';
             }
 
-            $locationText = 'LOCATION: '.$place;
-            imagestring($image, 2, 12, $startY + 28, $locationText, $textColor);
+            // Always surface the barangay explicitly, not just the municipality
+            if (! empty($barangay) && stripos($place, $barangay) === false) {
+                $place = 'Barangay '.$barangay.', '.$place;
+            }
 
+            $coordsText = sprintf('GPS COORDINATES: %f, %f', $latitude, $longitude);
+            $locationText = 'LOCATION: '.$place;
             $timeText = 'DATE/TIME: '.$timestamp;
-            imagestring($image, 2, 12, $startY + 40, $timeText, $textColor);
+
+            $this->compositeWatermarkLayer($image, $width, $height, [
+                ['text' => 'RANIAG GPS CAMERA', 'accent' => true],
+                ['text' => $coordsText, 'accent' => false],
+                ['text' => $locationText, 'accent' => false],
+                ['text' => $timeText, 'accent' => false],
+            ]);
 
             // Overwrite original photo
             switch ($mime) {
@@ -380,5 +359,73 @@ class EvidenceService
 
             return null;
         }
+    }
+
+    /**
+     * Draws the watermark at a fixed reference size (crisp bitmap fonts), then scales
+     * that layer to match the actual photo's resolution before blending it onto the
+     * bottom of the image. This keeps the watermark legible and proportionate whether
+     * the source photo is a small desktop capture or a full-resolution phone photo,
+     * and preserves the semi-transparent gradient look used in the live preview.
+     *
+     * @param  array<int, array{text: string, accent: bool}>  $lines
+     */
+    private function compositeWatermarkLayer($image, int $width, int $height, array $lines): void
+    {
+        $refWidth = 640;
+        $refBannerHeight = 130;
+
+        $layer = imagecreatetruecolor($refWidth, $refBannerHeight);
+        imagealphablending($layer, false);
+        imagesavealpha($layer, true);
+        $transparent = imagecolorallocatealpha($layer, 0, 0, 0, 127);
+        imagefilledrectangle($layer, 0, 0, $refWidth, $refBannerHeight, $transparent);
+
+        // Soft top-to-bottom gradient (transparent -> semi-opaque), matching the
+        // live CSS overlay: linear-gradient(to top, rgba(15,23,42,.85), rgba(15,23,42,.15))
+        for ($y = 0; $y < $refBannerHeight; $y++) {
+            $t = $y / max(1, $refBannerHeight - 1);
+            $opacity = 0.15 + (0.85 - 0.15) * $t;
+            $gdAlpha = (int) round(127 * (1 - $opacity));
+            $gdAlpha = max(0, min(127, $gdAlpha));
+            $rowColor = imagecolorallocatealpha($layer, 15, 23, 42, $gdAlpha);
+            imageline($layer, 0, $y, $refWidth, $y, $rowColor);
+        }
+
+        imagealphablending($layer, true);
+
+        $accentColor = imagecolorallocate($layer, 74, 222, 128);
+        $textColor = imagecolorallocate($layer, 255, 255, 255);
+
+        $pad = 14;
+        $y = 14;
+        foreach ($lines as $index => $line) {
+            $font = $index === 0 ? 5 : 3;
+            $color = ! empty($line['accent']) ? $accentColor : $textColor;
+            imagestring($layer, $font, $pad, $y, $line['text'], $color);
+            $y += $index === 0 ? 22 : 20;
+        }
+
+        // Scale proportionally to the actual photo width so the watermark stays
+        // legible on any device resolution, capped so it can never dominate a
+        // very short/cropped image.
+        $targetBannerHeight = (int) round($refBannerHeight * ($width / $refWidth));
+        $targetBannerHeight = max(60, min($targetBannerHeight, (int) round($height * 0.35)));
+
+        imagealphablending($image, true);
+        imagecopyresampled(
+            $image,
+            $layer,
+            0,
+            $height - $targetBannerHeight,
+            0,
+            0,
+            $width,
+            $targetBannerHeight,
+            $refWidth,
+            $refBannerHeight
+        );
+
+        imagedestroy($layer);
     }
 }

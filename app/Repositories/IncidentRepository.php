@@ -115,6 +115,14 @@ class IncidentRepository implements IncidentRepositoryInterface
             $query->where('incident_type_id', (int) $filters['incident_type_id']);
         }
 
+        if (! empty($filters['jurisdiction'] ?? null)) {
+            if ($filters['jurisdiction'] === 'outside') {
+                $query->where('meta->within_jurisdiction', false);
+            } elseif ($filters['jurisdiction'] === 'inside') {
+                $query->where('meta->within_jurisdiction', true);
+            }
+        }
+
         return $query->latest('reported_at')->paginate($perPage);
     }
 }

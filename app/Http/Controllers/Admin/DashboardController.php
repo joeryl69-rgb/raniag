@@ -147,7 +147,10 @@ class DashboardController extends Controller
             'Wet Season' => Incident::whereRaw('MONTH(reported_at) IN (6, 7, 8, 9, 10, 11)')->count(),
         ];
 
-        // 7. Redundancy Tracker (Hotspots by Barangay and Type)
+        // 7. Out-of-Jurisdiction Reports (pinned outside Pamplona municipality limits)
+        $outOfJurisdictionCount = Incident::where('meta->within_jurisdiction', false)->count();
+
+        // 8. Redundancy Tracker (Hotspots by Barangay and Type)
         $redundancyData = Incident::selectRaw('barangay, incident_types.name as incident_type, COUNT(*) as count')
             ->join('incident_types', 'incidents.incident_type_id', '=', 'incident_types.id')
             ->whereNotNull('barangay')
@@ -179,6 +182,7 @@ class DashboardController extends Controller
                 'avg_resolution_hours' => $avgResolutionHours,
                 'agency_response_times' => $agencyResponseTimes,
                 'seasonal_counts' => $seasonalCounts,
+                'out_of_jurisdiction_count' => $outOfJurisdictionCount,
                 'redundancy_hotspots' => $redundancyData,
             ],
         ]);

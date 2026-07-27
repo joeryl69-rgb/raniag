@@ -27,4 +27,19 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('notifications.show');
 });
 
+Route::get('/debug-session', function () {
+    return response()->json([
+        'session_id'          => session()->getId(),
+        'csrf_token'          => csrf_token(),
+        'is_secure'           => request()->isSecure(),
+        'x_forwarded_proto'   => request()->header('X-Forwarded-Proto'),
+        'scheme'              => request()->getScheme(),
+        'session_cookie_seen' => request()->hasCookie(config('session.cookie')),
+        'session_cookie_name' => config('session.cookie'),
+        'session_driver'      => config('session.driver'),
+        'session_secure_cfg'  => config('session.secure'),
+        'app_url'             => config('app.url'),
+    ]);
+});
+
 require __DIR__.'/auth.php';

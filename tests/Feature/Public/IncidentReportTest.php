@@ -37,7 +37,7 @@ test('anonymous users can submit an incident report via web', function () {
     $response = $this->post(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Test incident report for RANIAG public module.',
-        'barangay' => 'Sample Barangay',
+        'barangay' => 'Santa Cruz',
         'is_anonymous' => '1',
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
@@ -68,7 +68,7 @@ test('anonymous users can submit an incident report via json', function () {
     $response = $this->postJson(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Test incident report for RANIAG foundation.',
-        'barangay' => 'Sample Barangay',
+        'barangay' => 'Santa Cruz',
         'is_anonymous' => true,
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
@@ -100,7 +100,7 @@ test('users can track an incident by tracking number via web', function () {
     $this->post(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Trackable incident report with enough detail.',
-        'barangay' => 'Sample Barangay',
+        'barangay' => 'Santa Cruz',
         'is_anonymous' => '1',
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
@@ -212,4 +212,59 @@ test('report submission accepts optional evidence files', function () {
 
     expect($incident->evidence)->toHaveCount(1);
     Storage::disk('public')->assertExists($incident->evidence->first()->file_path);
+});
+
+test('report submission rejects a barangay not on the official list', function () {
+    Storage::fake('public');
+    $type = IncidentType::factory()->create();
+
+    $gpsLog = json_encode([
+        [
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ],
+    ]);
+
+    $this->post(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'Incident with a barangay value that does not exist.',
+        'barangay' => 'Not A Real Barangay',
+        'is_anonymous' => '1',
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => $gpsLog],
+        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
+    ])->assertSessionHasErrors('barangay');
+
+    expect(Incident::query()->count())->toBe(0);
+});
+
+test('report submission accepts a blank barangay', function () {
+    Storage::fake('public');
+    $type = IncidentType::factory()->create();
+
+    $gpsLog = json_encode([
+        [
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ],
+    ]);
+
+    $this->post(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'Incident submitted without a barangay value at all.',
+        'is_anonymous' => '1',
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => $gpsLog],
+        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
+    ])->assertSessionDoesntHaveErrors('barangay');
+
+    expect(Incident::query()->count())->toBe(1);
 });
