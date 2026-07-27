@@ -11,6 +11,8 @@ FROM richarvey/nginx-php-fpm:latest
 
 COPY . .
 COPY --from=assets /app/public/build ./public/build
+COPY conf.d/laravel.conf /etc/nginx/conf.d/laravel.conf
+COPY conf.d/laravel.conf /etc/nginx/sites-available/default.conf
 RUN chmod +x scripts/00-laravel-deploy.sh
 
 ENV SKIP_COMPOSER=1
