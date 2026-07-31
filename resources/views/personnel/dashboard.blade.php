@@ -122,6 +122,7 @@
                 let mapInstance = null;
                 let mapMarkers = [];
                 let lastAssignmentCount = null;
+                let mapHasBeenCentered = false;
 
                 // Audio tone synthesizer using Web Audio API
                 function playAlertTone() {
@@ -147,10 +148,45 @@
                 // Initialize Map
                 function initMap() {
                     mapInstance = L.map('personnel-dashboard-map').setView([18.4720, 121.3250], 12);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+                    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(mapInstance);
+
+                    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
+                    });
+
+                    L.control.layers({
+                        'Street Map': streetLayer,
+                        'Satellite': satelliteLayer
+                    }, null, { position: 'topright' }).addTo(mapInstance);
+
+                    loadBoundary();
+                }
+
+                // Fetch and draw the Pamplona municipal boundary as a dashed overlay
+                async function loadBoundary() {
+                    try {
+                        const res = await fetch('/personnel/dashboard/boundary.json', {
+                            headers: { 'Accept': 'application/json' },
+                            credentials: 'same-origin'
+                        });
+                        if (!res.ok) return;
+                        const geojson = await res.json();
+                        L.geoJSON(geojson, {
+                            style: {
+                                color: '#0d6efd',
+                                weight: 2,
+                                dashArray: '6, 6',
+                                fill: false
+                            }
+                        }).addTo(mapInstance);
+                    } catch (e) {
+                        console.log('Unable to load boundary overlay', e);
+                    }
                 }
 
                 // Fetch metrics from Agency Dashboard API
@@ -297,10 +333,15 @@
                         }
                     });
 
-                    if (bounds.length === 1) {
-                        mapInstance.setView(bounds[0], 14);
-                    } else if (bounds.length > 1) {
-                        mapInstance.fitBounds(bounds, { padding: [40, 40] });
+                    // Only auto-recenter on the first load. After that, respect
+                    // whatever pan/zoom the user has set instead of snapping back.
+                    if (!mapHasBeenCentered) {
+                        if (bounds.length === 1) {
+                            mapInstance.setView(bounds[0], 14);
+                        } else if (bounds.length > 1) {
+                            mapInstance.fitBounds(bounds, { padding: [40, 40] });
+                        }
+                        mapHasBeenCentered = true;
                     }
                 }
 

@@ -164,7 +164,7 @@
                         <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                             <div>
                                 <div class="fw-semibold small text-dark">SMS Sent Alerts</div>
-                                <div class="text-muted small">Delivered via TextBee gateway</div>
+                                <div class="text-muted small">Delivered via {{ ucfirst(config('services.sms.provider', 'disabled')) }} gateway</div>
                             </div>
                             <span class="badge bg-success rounded-pill fs-7" id="control-sms-sent">—</span>
                         </div>
@@ -397,13 +397,48 @@
                 function initMap() {
                     mapInstance = L.map('admin-dashboard-map', {
                         zoomControl: true,
-                        scrollWheelZoom: false,
+                        scrollWheelZoom: true,
                     }).setView([18.4720, 121.3250], 12);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+                    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(mapInstance);
+
+                    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
+                    });
+
+                    L.control.layers({
+                        'Street Map': streetLayer,
+                        'Satellite': satelliteLayer
+                    }, null, { position: 'topright' }).addTo(mapInstance);
+
+                    loadBoundary();
                     setTimeout(() => mapInstance.invalidateSize(), 200);
+                }
+
+                // Fetch and draw the Pamplona municipal boundary as a dashed overlay
+                async function loadBoundary() {
+                    try {
+                        const res = await fetch('/admin/dashboard/boundary.json', {
+                            headers: { 'Accept': 'application/json' },
+                            credentials: 'same-origin'
+                        });
+                        if (!res.ok) return;
+                        const geojson = await res.json();
+                        L.geoJSON(geojson, {
+                            style: {
+                                color: '#0d6efd',
+                                weight: 2,
+                                dashArray: '6, 6',
+                                fill: false
+                            }
+                        }).addTo(mapInstance);
+                    } catch (e) {
+                        console.log('Unable to load boundary overlay', e);
+                    }
                 }
 
                 function renderFallbackChart(container, labels, values, kind = 'bar') {

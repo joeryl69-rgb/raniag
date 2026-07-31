@@ -23,10 +23,11 @@
                 <div class="card-body">
                     <form action="{{ route('admin.reports.generate') }}" method="POST" class="row g-3" data-loading-message="Generating your PDF report...">
                         @csrf
+                        <input type="hidden" name="download_token" id="download_token">
 
                         <div class="col-md-6">
                             <label for="date_from" class="form-label fw-semibold">Date From</label>
-                            <input type="date" class="form-control @error('date_from') is-invalid @enderror" id="date_from" name="date_from" value="{{ old('date_from', now()->subDays(30)->format('Y-m-d')) }}" required>
+                            <input type="date" class="form-control @error('date_from') is-invalid @enderror" id="date_from" name="date_from" value="{{ old('date_from', now()->subDays(30)->format('Y-m-d')) }}" max="{{ now()->format('Y-m-d') }}" required>
                             @error('date_from')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -34,7 +35,7 @@
 
                         <div class="col-md-6">
                             <label for="date_to" class="form-label fw-semibold">Date To</label>
-                            <input type="date" class="form-control @error('date_to') is-invalid @enderror" id="date_to" name="date_to" value="{{ old('date_to', now()->format('Y-m-d')) }}" required>
+                            <input type="date" class="form-control @error('date_to') is-invalid @enderror" id="date_to" name="date_to" value="{{ old('date_to', now()->format('Y-m-d')) }}" max="{{ now()->format('Y-m-d') }}" required>
                             @error('date_to')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

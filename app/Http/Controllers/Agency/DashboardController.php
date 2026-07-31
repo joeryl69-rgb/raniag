@@ -11,6 +11,7 @@ use App\Models\SmsLog;
 use App\Models\StatusUpdate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -18,6 +19,21 @@ class DashboardController extends Controller
     public function index(Request $request): View
     {
         return view('agency.dashboard');
+    }
+
+    /**
+     * Serve the Pamplona municipal boundary as GeoJSON so the
+     * dashboard map can draw it as an overlay.
+     */
+    public function boundary(): JsonResponse
+    {
+        $path = 'geo/pamplona_boundary.geojson';
+
+        abort_unless(Storage::disk('local')->exists($path), 404);
+
+        return response()->json(
+            json_decode(Storage::disk('local')->get($path), true)
+        );
     }
 
     public function api(Request $request): JsonResponse

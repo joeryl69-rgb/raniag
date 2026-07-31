@@ -194,12 +194,20 @@ body.raniag-public {
     left: 0;
     right: 0;
     bottom: 0;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.6rem;
     padding: 0.5rem 0.75rem;
     background: linear-gradient(to top, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.15));
     color: #fff;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     line-height: 1.35;
     pointer-events: none;
+}
+
+.gps-watermark-text {
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .gps-watermark-title {
@@ -213,6 +221,47 @@ body.raniag-public {
     font-size: clamp(0.6rem, 1.8vw, 0.78rem);
     word-break: break-word;
     white-space: normal;
+}
+
+/* Map preview thumbnail: a single OSM tile centered on the fix, with a
+   pin placed at the exact fractional pixel position within that tile —
+   mirrors the crop used server-side when the photo is watermarked, so
+   the live preview and the final baked image stay visually consistent. */
+.gps-watermark-map {
+    position: relative;
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.gps-watermark-map img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.gps-watermark-map-pin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    margin: -9px 0 0 -5px;
+    background: var(--raniag-accent);
+    border: 1.5px solid #fff;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    display: none;
+}
+
+.gps-watermark-map-pin.is-visible {
+    display: block;
 }
 
 .gps-accuracy-pill {
@@ -234,6 +283,11 @@ body.raniag-public {
 
     .gps-camera-viewport video {
         max-height: 60vh;
+    }
+
+    .gps-watermark-map {
+        width: 44px;
+        height: 44px;
     }
 
     .raniag-step-badge {

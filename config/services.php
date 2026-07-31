@@ -40,6 +40,11 @@ return [
         'api_key' => env('TEXTBEE_API_KEY'),
     ],
 
+    'philsms' => [
+        'api_token' => env('PHILSMS_API_TOKEN'),
+        'sender_id' => env('PHILSMS_SENDER_ID', 'PhilSMS'),
+    ],
+
     'sms' => [
         'provider' => env('SMS_PROVIDER', 'textbee'),
     ],

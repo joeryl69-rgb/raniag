@@ -24,8 +24,8 @@ class ReportController extends Controller
     public function generate(Request $Request)
     {
         $validated = $Request->validate([
-            'date_from' => 'required|date',
-            'date_to' => 'required|date|after_or_equal:date_from',
+            'date_from' => 'required|date|before_or_equal:today',
+            'date_to' => 'required|date|after_or_equal:date_from|before_or_equal:today',
             'barangay' => 'nullable|string|in:'.implode(',', config('raniag.barangays')),
             'agency_id' => 'nullable|exists:agencies,id',
             'incident_type_id' => 'nullable|exists:incident_types,id',
@@ -57,6 +57,7 @@ class ReportController extends Controller
             'generated_at' => now(),
         ]);
 
-        return $pdf->download('raniag-report-'.now()->format('Y-m-d').'.pdf');
+        return $pdf->download('raniag-report-'.now()->format('Y-m-d').'.pdf')
+            ->cookie('download_token', $Request->input('download_token'), 1, null, null, null, false);
     }
 }

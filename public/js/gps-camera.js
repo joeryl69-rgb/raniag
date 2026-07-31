@@ -27,6 +27,8 @@
     const coordsEl = document.getElementById('gps-camera-coords');
     const placeEl = document.getElementById('gps-camera-place');
     const timeEl = document.getElementById('gps-camera-time');
+    const mapThumbImg = document.getElementById('gps-watermark-map-img');
+    const mapThumbPin = document.getElementById('gps-watermark-map-pin');
     const accuracyEl = document.getElementById('gps-camera-accuracy');
     const errorEl = document.getElementById('gps-camera-error');
     const evidenceInput = document.getElementById('evidence');
@@ -36,6 +38,7 @@
 
     let mediaStream = null;
     let watchId = null;
+    let bestAccuracy = Infinity;
     let clockTimer = null;
     let facingMode = 'environment';
     let lastPosition = null;
@@ -44,17 +47,76 @@
     const captures = [];
     const manualFiles = [];
 
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const MAP_THUMB_ZOOM = 16;
+
+    // Formats as: "Monday, 27/07/2026 08:23 PM GMT +08:00" using the
+    // device's local time/offset, so the timestamp always matches what
+    // the reporter's clock actually says at the moment of capture.
+    function formatRaniagDateTime(date) {
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        let hours = date.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        const hh = String(hours).padStart(2, '0');
+        const min = String(date.getMinutes()).padStart(2, '0');
+
+        const offsetMin = -date.getTimezoneOffset();
+        const sign = offsetMin >= 0 ? '+' : '-';
+        const offH = String(Math.floor(Math.abs(offsetMin) / 60)).padStart(2, '0');
+        const offM = String(Math.abs(offsetMin) % 60).padStart(2, '0');
+
+        return `${DAY_NAMES[date.getDay()]}, ${dd}/${mm}/${yyyy} ${hh}:${min} ${ampm} GMT ${sign}${offH}:${offM}`;
+    }
+
     function tickClock() {
         if (timeEl) {
-            timeEl.textContent = new Date().toLocaleString('en-PH', { hour12: true });
+            timeEl.textContent = formatRaniagDateTime(new Date());
+        }
+    }
+
+    // Renders a single OpenStreetMap tile as a small preview thumbnail
+    // and drops a pin at the exact fractional pixel position of the fix
+    // within that tile (standard slippy-map tile math). This is a
+    // lightweight preview only — the authoritative, pixel-matched
+    // thumbnail is baked server-side into the submitted photo.
+    function updateMapThumbnail(latitude, longitude) {
+        if (!mapThumbImg) {
+            return;
+        }
+
+        const n = 2 ** MAP_THUMB_ZOOM;
+        const latRad = (latitude * Math.PI) / 180;
+        const xFloat = ((longitude + 180) / 360) * n;
+        const yFloat = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
+        const xTile = Math.floor(xFloat);
+        const yTile = Math.floor(yFloat);
+
+        const url = `https://tile.openstreetmap.org/${MAP_THUMB_ZOOM}/${xTile}/${yTile}.png`;
+        if (mapThumbImg.dataset.tileUrl !== url) {
+            mapThumbImg.dataset.tileUrl = url;
+            mapThumbImg.src = url;
+        }
+
+        if (mapThumbPin) {
+            mapThumbPin.style.left = `${(xFloat - xTile) * 100}%`;
+            mapThumbPin.style.top = `${(yFloat - yTile) * 100}%`;
+            mapThumbPin.classList.add('is-visible');
         }
     }
 
     window.addEventListener('raniag:location-resolved', (event) => {
         lastResolved = event.detail;
         if (placeEl && event.detail) {
-            const { barangay, municipality } = event.detail;
-            placeEl.textContent = barangay ? `Barangay ${barangay}, ${municipality}` : `${municipality} (barangay pending)`;
+            const { barangay, municipality, province, country } = event.detail;
+            const parts = [];
+            if (barangay) parts.push(`Barangay ${barangay}`);
+            if (municipality) parts.push(municipality);
+            if (province) parts.push(province);
+            if (country) parts.push(country);
+            placeEl.textContent = parts.length ? parts.join(', ') : 'Resolving location…';
         }
     });
 
@@ -98,6 +160,7 @@
                 ? `±${Math.round(accuracy)} m`
                 : 'Accuracy unknown';
         }
+        updateMapThumbnail(latitude, longitude);
 
         // Re-resolve barangay periodically so the overlay stays dynamic, not static
         const now = Date.now();
@@ -214,6 +277,26 @@
     }
 
     function onGeoSuccess(position) {
+        const accuracy = position.coords.accuracy;
+
+        // Browsers often report a fast, coarse (Wi-Fi/cell-tower) fix first,
+        // then correct to a precise GPS fix seconds later. Without this
+        // check, every incoming reading — coarse or precise — overwrites the
+        // map pin, so it visibly jumps between the two. Only accept a new
+        // reading if it's the first one we've seen, or it's as good/better
+        // than the best accuracy seen so far (with a little slack so a
+        // temporarily noisier-but-still-good fix isn't dropped).
+        const isFirstReading = bestAccuracy === Infinity;
+        const isAcceptable = accuracy == null || accuracy <= bestAccuracy * 1.2;
+
+        if (!isFirstReading && !isAcceptable) {
+            return;
+        }
+
+        if (accuracy != null) {
+            bestAccuracy = Math.min(bestAccuracy, accuracy);
+        }
+
         lastPosition = position;
         updateCoordsDisplay(position);
         setStatus('GPS active', 'success');
@@ -237,6 +320,7 @@
         }
 
         setStatus('Acquiring GPS…', 'warning');
+        bestAccuracy = Infinity;
         watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, geoOptions);
     }
 

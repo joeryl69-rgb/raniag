@@ -473,6 +473,23 @@
                     if (submitButton) {
                         setButtonLoading(submitButton, message);
                     }
+
+                    // For forms that trigger a file download (e.g. PDF export), the browser
+                    // never fires a new 'load' event, so poll for a cookie set by the server
+                    // once the download response has actually started.
+                    const tokenInput = this.querySelector('#download_token');
+                    if (tokenInput) {
+                        const token = Date.now().toString();
+                        tokenInput.value = token;
+                        const check = setInterval(function () {
+                            if (document.cookie.includes('download_token=' + token)) {
+                                clearInterval(check);
+                                hideLoadingOverlay();
+                                resetButtonLoading(submitButton);
+                                document.cookie = 'download_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                            }
+                        }, 300);
+                    }
                 });
             });
 

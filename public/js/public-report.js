@@ -47,6 +47,7 @@
     const barangayList = window.RANIAG_BARANGAYS || [];
     const boundaryGeometry = window.RANIAG_BOUNDARY || null;
     const barangayBoundaries = window.RANIAG_BARANGAY_BOUNDARIES || null;
+    const addressDefaults = window.RANIAG_ADDRESS || { municipality: 'Pamplona', province: 'Cagayan', country: 'Philippines' };
 
     // Mirrors App\Services\GeofenceService::pointInRing (ray-casting, [lng, lat] pairs).
     function pointInRing(lng, lat, ring) {
@@ -148,7 +149,15 @@
         }
 
         window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-            detail: { lat, lng, barangay: geofenced, municipality: 'Pamplona', label: geofenced ? `Detected: Barangay ${geofenced}, Pamplona` : null },
+            detail: {
+                lat,
+                lng,
+                barangay: geofenced,
+                municipality: geofenced ? addressDefaults.municipality : null,
+                province: geofenced ? addressDefaults.province : null,
+                country: geofenced ? addressDefaults.country : null,
+                label: geofenced ? `Detected: Barangay ${geofenced}, ${addressDefaults.municipality}` : null,
+            },
         }));
 
         // Address text-fill (and barangay fallback only if the geofence
@@ -162,7 +171,9 @@
                 if (myToken !== geocodeToken) return;
                 const data = await res.json();
                 const addr = data.address || {};
-                const municipality = addr.city || addr.town || addr.municipality || 'Pamplona';
+                const municipality = addr.city || addr.town || addr.municipality || addressDefaults.municipality;
+                const province = addr.state || addr.province || addressDefaults.province;
+                const country = addr.country || addressDefaults.country;
                 const locationCandidates = [
                     addr.village,
                     addr.suburb,
@@ -199,7 +210,7 @@
                 setResolveStatus(label, barangayDisplay ? 'check-circle' : 'exclamation-circle', barangayDisplay ? 'text-success' : 'text-warning');
 
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                    detail: { lat, lng, barangay: barangayDisplay, municipality, label },
+                    detail: { lat, lng, barangay: barangayDisplay, municipality, province, country, label },
                 }));
             } catch (err) {
                 if (myToken !== geocodeToken) return;

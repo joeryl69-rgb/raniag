@@ -24,12 +24,22 @@ class DocumentRequestController extends Controller
         $agencyId = $request->user()->agency_id;
         abort_if(! $agencyId, 403, 'No agency associated with this account.');
 
-        $documentRequests = DocumentRequest::query()
+        $query = DocumentRequest::query()
             ->with(['incident'])
             ->where('requesting_agency_id', $agencyId)
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->appends($request->query());
+            ->orderByDesc('created_at');
+
+        $status = $request->input('status');
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $requestType = $request->input('request_type');
+        if ($requestType && $requestType !== 'all') {
+            $query->where('request_type', $requestType);
+        }
+
+        $documentRequests = $query->paginate(10)->appends($request->query());
 
         // Mark ALL unread document_request notifications for this agency/user as read.
         // Previously this only covered document_request_ids on the current paginated page
@@ -46,7 +56,19 @@ class DocumentRequestController extends Controller
             })
             ->update(['read_at' => now()]);
 
-        return view('agency.document_requests.index', compact('documentRequests'));
+        $requestedIncidentIds = DocumentRequest::query()
+            ->where('requesting_agency_id', $agencyId)
+            ->whereIn('status', ['pending', 'approved', 'sent'])
+            ->pluck('incident_id');
+
+        $eligibleIncidents = Incident::query()
+            ->whereIn('status', ['resolved', 'closed'])
+            ->whereHas('currentAssignments', fn ($q) => $q->where('agency_id', $agencyId))
+            ->whereNotIn('id', $requestedIncidentIds)
+            ->orderByDesc('created_at')
+            ->get(['id', 'tracking_number']);
+
+        return view('agency.document_requests.index', compact('documentRequests', 'eligibleIncidents'));
     }
 
     public function store(StoreDocumentRequestRequest $request, int $incident): RedirectResponse|JsonResponse

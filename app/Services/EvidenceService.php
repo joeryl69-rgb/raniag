@@ -70,7 +70,7 @@ class EvidenceService
 
             // 3. Watermark the photo if it has coordinates
             if ($isGpsCapture && $latitude !== null && $longitude !== null && $fileType === EvidenceType::Photo) {
-                $place = $this->watermarkPhoto($absolutePath, $latitude, $longitude, $incident->barangay, $incident->location_address, $timestamp);
+                $place = $this->watermarkPhoto($absolutePath, $latitude, $longitude, $incident->barangay, $timestamp);
 
                 // Dynamically assign incident coordinates if not already set
                 if (empty($incident->latitude) || empty($incident->longitude)) {
@@ -122,7 +122,7 @@ class EvidenceService
             $timestamp = $capture['captured_at'] ?? now()->toDateTimeString();
 
             if ($latitude !== null && $longitude !== null) {
-                $place = $this->watermarkPhoto($absolutePath, $latitude, $longitude, $incident->barangay, $incident->location_address, $timestamp);
+                $place = $this->watermarkPhoto($absolutePath, $latitude, $longitude, $incident->barangay, $timestamp);
 
                 if (empty($incident->latitude) || empty($incident->longitude)) {
                     $incident->update([
@@ -230,11 +230,13 @@ class EvidenceService
     }
 
     /**
-     * Watermarks a photo using PHP GD.
-     * Uses incident location_address when available; otherwise attempts reverse-geocoding
-     * from OpenStreetMap (Nominatim) to produce an accurate place name for the watermark.
+     * Watermarks a photo using PHP GD: title, coordinates, full address
+     * (barangay/municipality/province/country), formatted date/time, and a
+     * small map preview thumbnail with a pin. Always reverse-geocodes via
+     * OpenStreetMap (Nominatim) to complete the address, falling back to
+     * config('raniag.address') defaults for anything it can't resolve.
      */
-    private function watermarkPhoto(string $absolutePath, float $latitude, float $longitude, ?string $barangay, ?string $locationAddress, string $timestamp): ?string
+    private function watermarkPhoto(string $absolutePath, float $latitude, float $longitude, ?string $barangay, string $timestamp): ?string
     {
         if (! function_exists('imagecreatefromjpeg')) {
             return null;
@@ -269,72 +271,18 @@ class EvidenceService
             $width = imagesx($image);
             $height = imagesy($image);
 
-            // Determine a concise, accurate location string
-            $place = null;
-            if (! empty($locationAddress)) {
-                $place = trim($locationAddress);
-            } else {
-                // Try reverse geocoding via OpenStreetMap Nominatim (no API key required)
-                try {
-                    $url = sprintf('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%F&lon=%F&zoom=12&addressdetails=1', $latitude, $longitude);
-                    $opts = [
-                        'http' => [
-                            'method' => 'GET',
-                            'header' => "User-Agent: RANIAG/1.0\r\nAccept: application/json\r\n",
-                            'timeout' => 5,
-                        ],
-                    ];
-                    $context = stream_context_create($opts);
-                    $resp = @file_get_contents($url, false, $context);
-                    if ($resp) {
-                        $json = json_decode($resp, true);
-                        if (! empty($json['address'])) {
-                            $addr = $json['address'];
-                            $parts = [];
-                            foreach (['city', 'town', 'village', 'hamlet', 'county'] as $k) {
-                                if (! empty($addr[$k])) {
-                                    $parts[] = $addr[$k];
-                                    break;
-                                }
-                            }
-                            if (! empty($addr['state'])) {
-                                $parts[] = $addr['state'];
-                            }
-                            if (! empty($addr['country'])) {
-                                $parts[] = $addr['country'];
-                            }
-                            if (! empty($parts)) {
-                                $place = implode(', ', $parts);
-                            }
-                        }
-                        if (! $place && ! empty($json['display_name'])) {
-                            $place = $json['display_name'];
-                        }
-                    }
-                } catch (\Throwable $t) {
-                    Log::warning('Reverse geocode failed: '.$t->getMessage());
-                }
-            }
-
-            if (! $place) {
-                $place = 'Pamplona, Cagayan, PH';
-            }
-
-            // Always surface the barangay explicitly, not just the municipality
-            if (! empty($barangay) && stripos($place, $barangay) === false) {
-                $place = 'Barangay '.$barangay.', '.$place;
-            }
+            $place = $this->resolveFullAddress($latitude, $longitude, $barangay);
 
             $coordsText = sprintf('GPS COORDINATES: %f, %f', $latitude, $longitude);
             $locationText = 'LOCATION: '.$place;
-            $timeText = 'DATE/TIME: '.$timestamp;
+            $timeText = 'DATE/TIME: '.$this->formatWatermarkTimestamp($timestamp);
 
             $this->compositeWatermarkLayer($image, $width, $height, [
                 ['text' => 'RANIAG GPS CAMERA', 'accent' => true],
                 ['text' => $coordsText, 'accent' => false],
                 ['text' => $locationText, 'accent' => false],
                 ['text' => $timeText, 'accent' => false],
-            ]);
+            ], $latitude, $longitude);
 
             // Overwrite original photo
             switch ($mime) {
@@ -362,6 +310,159 @@ class EvidenceService
     }
 
     /**
+     * Resolves the full address — barangay, municipality, province, country —
+     * shown in the watermark. Reverse-geocodes via Nominatim to fill in
+     * whichever parts aren't already known, and always falls back to the
+     * configured defaults (config('raniag.address')) for any part that
+     * can't be resolved, so the address is never left incomplete even if
+     * the network call fails.
+     */
+    private function resolveFullAddress(float $latitude, float $longitude, ?string $barangay): string
+    {
+        $defaults = config('raniag.address', []);
+        $municipality = $defaults['municipality'] ?? 'Pamplona';
+        $province = $defaults['province'] ?? 'Cagayan';
+        $country = $defaults['country'] ?? 'Philippines';
+
+        try {
+            $url = sprintf('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%F&lon=%F&zoom=16&addressdetails=1', $latitude, $longitude);
+            $opts = [
+                'http' => [
+                    'method' => 'GET',
+                    'header' => "User-Agent: RANIAG/1.0\r\nAccept: application/json\r\n",
+                    'timeout' => 5,
+                ],
+            ];
+            $resp = @file_get_contents($url, false, stream_context_create($opts));
+            if ($resp) {
+                $json = json_decode($resp, true);
+                $addr = $json['address'] ?? [];
+
+                if (empty($barangay)) {
+                    foreach (['village', 'suburb', 'hamlet', 'neighbourhood'] as $key) {
+                        if (! empty($addr[$key])) {
+                            $barangay = $addr[$key];
+                            break;
+                        }
+                    }
+                }
+
+                foreach (['city', 'town', 'municipality'] as $key) {
+                    if (! empty($addr[$key])) {
+                        $municipality = $addr[$key];
+                        break;
+                    }
+                }
+
+                if (! empty($addr['state'])) {
+                    $province = $addr['state'];
+                } elseif (! empty($addr['province'])) {
+                    $province = $addr['province'];
+                }
+
+                if (! empty($addr['country'])) {
+                    $country = $addr['country'];
+                }
+            }
+        } catch (\Throwable $t) {
+            Log::warning('Reverse geocode failed: '.$t->getMessage());
+        }
+
+        $parts = [];
+        if (! empty($barangay)) {
+            $parts[] = 'Barangay '.$barangay;
+        }
+        $parts[] = $municipality;
+        $parts[] = $province;
+        $parts[] = $country;
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Formats a timestamp as: "Monday, 27/07/2026 08:23 PM GMT +08:00",
+     * using the application timezone (Asia/Manila) so the printed offset
+     * always matches the printed time.
+     */
+    private function formatWatermarkTimestamp(string $timestamp): string
+    {
+        try {
+            $carbon = \Illuminate\Support\Carbon::parse($timestamp)->setTimezone(config('app.timezone', 'Asia/Manila'));
+
+            return $carbon->format('l, d/m/Y h:i A \G\M\T P');
+        } catch (\Throwable $t) {
+            return $timestamp;
+        }
+    }
+
+    /**
+     * Fetches (and locally caches) the single OpenStreetMap tile that
+     * contains the given coordinates, plus the coordinates' fractional
+     * pixel position within that tile — used to draw the map preview
+     * thumbnail and its pin. Caching avoids re-downloading the same tile
+     * for repeat captures near the same spot, keeping the system usable
+     * offline after first load and respectful of OSM's tile usage limits.
+     * Returns null (never throws) if the tile can't be obtained, in which
+     * case the watermark simply omits the thumbnail.
+     *
+     * @return array{image: \GdImage, px: float, py: float}|null
+     */
+    private function fetchMapTile(float $latitude, float $longitude, int $zoom = 16): ?array
+    {
+        try {
+            $n = 2 ** $zoom;
+            $latRad = deg2rad($latitude);
+            $xFloat = (($longitude + 180) / 360) * $n;
+            $yFloat = ((1 - log(tan($latRad) + 1 / cos($latRad)) / M_PI) / 2) * $n;
+            $xTile = (int) floor($xFloat);
+            $yTile = (int) floor($yFloat);
+
+            $cachePath = storage_path("app/map-tiles/{$zoom}/{$xTile}/{$yTile}.png");
+            $tileData = null;
+
+            if (is_readable($cachePath)) {
+                $tileData = @file_get_contents($cachePath);
+            }
+
+            if (! $tileData) {
+                $url = "https://tile.openstreetmap.org/{$zoom}/{$xTile}/{$yTile}.png";
+                $opts = [
+                    'http' => [
+                        'method' => 'GET',
+                        'header' => "User-Agent: RANIAG/1.0\r\n",
+                        'timeout' => 5,
+                    ],
+                ];
+                $tileData = @file_get_contents($url, false, stream_context_create($opts));
+
+                if ($tileData) {
+                    @mkdir(dirname($cachePath), 0755, true);
+                    @file_put_contents($cachePath, $tileData);
+                }
+            }
+
+            if (! $tileData) {
+                return null;
+            }
+
+            $tileImage = @imagecreatefromstring($tileData);
+            if (! $tileImage) {
+                return null;
+            }
+
+            return [
+                'image' => $tileImage,
+                'px' => $xFloat - $xTile,
+                'py' => $yFloat - $yTile,
+            ];
+        } catch (\Throwable $t) {
+            Log::warning('Map tile fetch failed: '.$t->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
      * Draws the watermark at a fixed reference size (crisp bitmap fonts), then scales
      * that layer to match the actual photo's resolution before blending it onto the
      * bottom of the image. This keeps the watermark legible and proportionate whether
@@ -370,9 +471,9 @@ class EvidenceService
      *
      * @param  array<int, array{text: string, accent: bool}>  $lines
      */
-    private function compositeWatermarkLayer($image, int $width, int $height, array $lines): void
+    private function compositeWatermarkLayer($image, int $width, int $height, array $lines, ?float $latitude = null, ?float $longitude = null): void
     {
-        $refWidth = 640;
+        $refWidth = 760;
         $refBannerHeight = 130;
 
         $layer = imagecreatetruecolor($refWidth, $refBannerHeight);
@@ -398,11 +499,52 @@ class EvidenceService
         $textColor = imagecolorallocate($layer, 255, 255, 255);
 
         $pad = 14;
+        $textStartX = $pad;
+
+        // Map preview thumbnail — a single OSM tile scaled into a square
+        // box on the left of the banner, with a pin at the fix's exact
+        // fractional position within that tile. Text shifts right to make
+        // room for it; if the tile can't be fetched (offline, blocked
+        // network), the thumbnail is simply skipped and text keeps its
+        // original position — the watermark never breaks either way.
+        if ($latitude !== null && $longitude !== null) {
+            $tile = $this->fetchMapTile($latitude, $longitude);
+            if ($tile) {
+                $boxSize = $refBannerHeight - (2 * $pad);
+                $tileSize = imagesx($tile['image']);
+
+                imagecopyresampled(
+                    $layer,
+                    $tile['image'],
+                    $pad,
+                    $pad,
+                    0,
+                    0,
+                    $boxSize,
+                    $boxSize,
+                    $tileSize,
+                    $tileSize
+                );
+                imagedestroy($tile['image']);
+
+                $border = imagecolorallocatealpha($layer, 255, 255, 255, 60);
+                imagerectangle($layer, $pad, $pad, $pad + $boxSize - 1, $pad + $boxSize - 1, $border);
+
+                $pinX = (int) round($pad + ($tile['px'] * $boxSize));
+                $pinY = (int) round($pad + ($tile['py'] * $boxSize));
+                $pinWhite = imagecolorallocate($layer, 255, 255, 255);
+                imagefilledellipse($layer, $pinX, $pinY, 10, 10, $pinWhite);
+                imagefilledellipse($layer, $pinX, $pinY, 6, 6, $accentColor);
+
+                $textStartX = $pad + $boxSize + 10;
+            }
+        }
+
         $y = 14;
         foreach ($lines as $index => $line) {
             $font = $index === 0 ? 5 : 3;
             $color = ! empty($line['accent']) ? $accentColor : $textColor;
-            imagestring($layer, $font, $pad, $y, $line['text'], $color);
+            imagestring($layer, $font, $textStartX, $y, $line['text'], $color);
             $y += $index === 0 ? 22 : 20;
         }
 

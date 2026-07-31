@@ -5,25 +5,44 @@ namespace App\Services;
 use App\Enums\NotificationChannel;
 use App\Enums\SmsLogStatus;
 use App\Enums\UserRole;
+use App\Jobs\DispatchSmsJob;
 use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\Resolution;
 use App\Models\SmsLog;
 use App\Models\SystemNotification;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Twilio\Rest\Client;
 
 class NotificationService
 {
+    private function fullLocation(Incident $incident): string
+    {
+        $parts = array_filter([
+            $incident->location_address,
+            $incident->barangay ? "Brgy. {$incident->barangay}" : null,
+        ]);
+
+        return $parts ? implode(', ', $parts) : 'Location not specified';
+    }
+
+    private function incidentUrl(Incident $incident, string $area = 'admin'): string
+    {
+        $base = rtrim(config('app.url'), '/');
+
+        // Matches routes/{admin,agency,personnel}.php: prefix('{area}')->prefix('incidents')->get('/{incident}')
+        return "{$base}/{$area}/incidents/{$incident->id}";
+    }
+
     public function notifyAdminNewIncident(Incident $incident): void
     {
         $admins = User::where('role', UserRole::Administrator)->where('is_active', true)->get();
         foreach ($admins as $admin) {
             if ($admin->phone) {
-                $message = "RANIAG Alert: New incident submitted [Tracking: {$incident->tracking_number}]. Please review and assign.";
+                $location = $this->fullLocation($incident);
+                $message = "RANIAG Alert: New incident submitted [Tracking: {$incident->tracking_number}] at {$location}. Please review and assign.";
                 $this->sendSms(
                     recipientPhone: $admin->phone,
                     message: $message,
@@ -55,7 +74,8 @@ class NotificationService
             return;
         }
 
-        $message = "RANIAG Alert: New incident assigned [{$incident->tracking_number}]. Check system for details.";
+        $location = $this->fullLocation($incident);
+        $message = "RANIAG Alert: New incident assigned [{$incident->tracking_number}] at {$location}.";
 
         $this->sendSms(
             recipientPhone: $agency->phone,
@@ -86,7 +106,8 @@ class NotificationService
             return;
         }
 
-        $message = "RANIAG Alert: New incident assigned [{$incident->tracking_number}]. Check system for details.";
+        $location = $this->fullLocation($incident);
+        $message = "RANIAG Alert: New incident assigned [{$incident->tracking_number}] at {$location}.";
 
         $this->sendSms(
             recipientPhone: $personnel->phone,
@@ -112,14 +133,28 @@ class NotificationService
     public function notifyAgencyStatusRequest(Assignment $assignment, string $message): void
     {
         $agency = $assignment->agency;
+        $incident = $assignment->incident;
 
         if ($agency->phone) {
             $this->sendSms(
                 recipientPhone: $agency->phone,
                 message: $message,
-                incident: $assignment->incident,
+                incident: $incident,
             );
         }
+
+        SystemNotification::create([
+            'user_id' => null,
+            'incident_id' => $incident->id,
+            'type' => 'status_request',
+            'title' => 'Status Update Requested',
+            'message' => $message,
+            'channel' => NotificationChannel::Database->value,
+            'data' => [
+                'incident_id' => $incident->id,
+                'agency_id' => $agency->id,
+            ],
+        ]);
     }
 
     public function notifyAdminResolutionSubmitted(Resolution $resolution): void
@@ -176,33 +211,30 @@ class NotificationService
         Incident $incident,
         ?User $user = null,
     ): void {
-        DB::transaction(function () use ($recipientPhone, $message, $incident, $user) {
-            $smsLog = SmsLog::create([
-                'incident_id' => $incident->id,
-                'user_id' => $user?->id,
-                'recipient_phone' => $recipientPhone,
-                'message' => $message,
-                'status' => SmsLogStatus::Pending->value,
-                'provider' => config('services.sms.provider', env('SMS_PROVIDER', 'textbee')),
-                'sent_at' => null,
-                'failed_at' => null,
-            ]);
+        $smsLog = SmsLog::create([
+            'incident_id' => $incident->id,
+            'user_id' => $user?->id,
+            'recipient_phone' => $recipientPhone,
+            'message' => $message,
+            'status' => SmsLogStatus::Pending->value,
+            'provider' => config('services.sms.provider', env('SMS_PROVIDER', 'textbee')),
+            'sent_at' => null,
+            'failed_at' => null,
+        ]);
 
-            try {
-                $this->dispatchSms($smsLog);
-            } catch (\Exception $e) {
-                $smsLog->update([
-                    'status' => SmsLogStatus::Failed->value,
-                    'failed_at' => now(),
-                    'provider_response' => [
-                        'error' => $e->getMessage(),
-                    ],
-                ]);
-            }
-        });
+        // Dispatched after the enclosing DB transaction commits (afterCommit
+        // is the app-wide queue default; see config/queue.php connections),
+        // so a slow/unreachable SMS provider never blocks the incident
+        // submission or status-change request itself.
+        DispatchSmsJob::dispatch($smsLog->id)->afterCommit();
     }
 
-    private function dispatchSms(SmsLog $smsLog): void
+    /**
+     * Send a single logged SMS via its configured provider. Public so the
+     * queued DispatchSmsJob can invoke it outside the request/transaction
+     * that created the SmsLog row.
+     */
+    public function dispatchSms(SmsLog $smsLog): void
     {
         $provider = config('services.sms.provider', env('SMS_PROVIDER', 'textbee'));
 
@@ -210,8 +242,28 @@ class NotificationService
             $this->sendViaTextBee($smsLog);
         } elseif ($provider === 'twilio') {
             $this->sendViaTwilio($smsLog);
-        } else {
+        } elseif ($provider === 'philsms') {
+            $this->sendViaPhilSms($smsLog);
+        } elseif (app()->environment('local')) {
             $this->sendViaPlaceholder($smsLog);
+        } else {
+            // Refuse to fake a "sent" SMS outside local dev. A misconfigured
+            // SMS_PROVIDER in staging/production should surface loudly as a
+            // failed log entry, not silently pass as delivered.
+            $smsLog->update([
+                'status' => SmsLogStatus::Failed->value,
+                'failed_at' => now(),
+                'provider_response' => [
+                    'error' => "Unknown or unconfigured SMS provider '{$provider}' outside local environment; refusing placeholder send.",
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+
+            Log::critical('SMS dispatch blocked: no real provider configured outside local env', [
+                'sms_log_id' => $smsLog->id,
+                'provider' => $provider,
+                'environment' => app()->environment(),
+            ]);
         }
     }
 
@@ -307,6 +359,81 @@ class NotificationService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function sendViaPhilSms(SmsLog $smsLog): void
+    {
+        try {
+            $apiToken = config('services.philsms.api_token');
+            $senderId = config('services.philsms.sender_id', 'PhilSMS');
+
+            if (! $apiToken) {
+                throw new \Exception('PhilSMS configuration incomplete. Check services.php and .env (PHILSMS_API_TOKEN).');
+            }
+
+            $recipient = $this->normalizePhilippineNumber($smsLog->recipient_phone);
+
+            $response = Http::withToken($apiToken)
+                ->acceptJson()
+                ->post('https://dashboard.philsms.com/api/v3/sms/send', [
+                    'recipient' => $recipient,
+                    'sender_id' => $senderId,
+                    'type' => 'plain',
+                    'message' => $smsLog->message,
+                ]);
+
+            if ($response->failed() || ($response->json('status') ?? null) === 'error') {
+                throw new \Exception('PhilSMS API response failed: '.$response->body());
+            }
+
+            $smsLog->update([
+                'status' => SmsLogStatus::Sent->value,
+                'sent_at' => now(),
+                'provider_message_id' => $response->json('data.uid') ?? 'philsms_'.uniqid(),
+                'provider_response' => [
+                    'body' => $response->json(),
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            $smsLog->update([
+                'status' => SmsLogStatus::Failed->value,
+                'failed_at' => now(),
+                'provider_response' => [
+                    'error' => $e->getMessage(),
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+
+            Log::error('SMS dispatch via PhilSMS failed', [
+                'sms_log_id' => $smsLog->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * PhilSMS expects Philippine numbers in 63XXXXXXXXXX format (no plus,
+     * no leading zero). Numbers in the app are typically stored in local
+     * 09XXXXXXXXX format, so normalize before sending.
+     */
+    private function normalizePhilippineNumber(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone);
+
+        if (str_starts_with($digits, '0')) {
+            return '63'.substr($digits, 1);
+        }
+
+        if (str_starts_with($digits, '63')) {
+            return $digits;
+        }
+
+        if (str_starts_with($digits, '9') && strlen($digits) === 10) {
+            return '63'.$digits;
+        }
+
+        return $digits;
     }
 
     private function sendViaPlaceholder(SmsLog $smsLog): void

@@ -49,6 +49,14 @@ class IncidentService
                 $meta['within_jurisdiction'] = $withinJurisdiction;
             }
 
+            // Barangay is authoritative from server-side polygon resolution,
+            // not the client-submitted value (which could be stale, spoofed,
+            // or mismatched with the actual pinned coordinates). Fall back
+            // to the client value only if no boundary file covers the point,
+            // so hotspot analytics stay trustworthy.
+            $resolvedBarangay = $this->geofence->resolveBarangay($lat, $lng);
+            $payload['barangay'] = $resolvedBarangay ?? ($payload['barangay'] ?? null);
+
             $incident = $this->incidents->create([
                 ...Arr::except($payload, ['meta']),
                 'meta' => $meta ?: null,

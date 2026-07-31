@@ -24,6 +24,18 @@
             @enderror
         </div>
 
+        <!-- Phone Field -->
+        <div class="mb-3">
+            <label for="profile_phone" class="form-label fw-semibold text-dark">{{ __('Phone Number') }}</label>
+            <input id="profile_phone" name="phone" type="text" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone', $user->phone) }}" placeholder="09XXXXXXXXX" autocomplete="tel">
+            <div class="form-text">Used for SMS alerts (new incident submissions, resolution reviews).</div>
+            @error('phone')
+                <div class="invalid-feedback">
+                    {{ $message }}
+                </div>
+            @enderror
+        </div>
+
         <!-- Email Field -->
         <div class="mb-3">
             <label for="profile_email" class="form-label fw-semibold text-dark">{{ __('Email Address') }}</label>

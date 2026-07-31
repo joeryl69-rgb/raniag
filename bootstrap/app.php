@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // that terminates SSL). Without this, Laravel thinks requests are
         // plain HTTP, which breaks HTTPS asset URLs, secure cookies, and CSRF.
         $middleware->trustProxies(at: '*');
+
+        // download_token must stay unencrypted so the frontend JS can read it
+        // via document.cookie to detect when a file download has started.
+        $middleware->encryptCookies(except: ['download_token']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

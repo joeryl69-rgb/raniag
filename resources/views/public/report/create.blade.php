@@ -241,15 +241,21 @@
                                     <video id="gps-camera-video" class="w-100 rounded" playsinline autoplay muted></video>
                                     <canvas id="gps-camera-canvas" class="d-none"></canvas>
                                     <div class="gps-watermark-overlay" id="gps-watermark-overlay">
-                                        <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
-                                        <div class="gps-watermark-line" id="gps-camera-coords">Waiting for GPS signal…</div>
-                                        <div class="gps-watermark-line" id="gps-camera-place">Resolving barangay…</div>
-                                        <div class="gps-watermark-line" id="gps-camera-time">—</div>
+                                        <div class="gps-watermark-map" id="gps-watermark-map">
+                                            <img id="gps-watermark-map-img" alt="Map preview of the captured location" loading="lazy">
+                                            <span class="gps-watermark-map-pin" id="gps-watermark-map-pin"></span>
+                                        </div>
+                                        <div class="gps-watermark-text">
+                                            <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                                            <div class="gps-watermark-line" id="gps-camera-coords">Waiting for GPS signal…</div>
+                                            <div class="gps-watermark-line" id="gps-camera-place">Resolving address…</div>
+                                            <div class="gps-watermark-line" id="gps-camera-time">—</div>
+                                        </div>
                                     </div>
                                     <span class="badge bg-light text-dark gps-accuracy-pill" id="gps-camera-accuracy">Waiting for signal…</span>
                                 </div>
                                 <p class="small text-muted mt-2 mb-0">
-                                    Each capture tags the photo with live coordinates, barangay, and time — burned into the image on submit.
+                                    Each capture tags the photo with live coordinates, full address, a map preview, and the date/time — burned into the image on submit.
                                 </p>
                             </div>
                         </div>
@@ -288,6 +294,7 @@
 <script>
     window.RANIAG_MAP = @json($mapConfig);
     window.RANIAG_GPS = @json($gpsConfig);
+    window.RANIAG_ADDRESS = @json($addressConfig);
     window.RANIAG_BARANGAYS = @json($barangays);
     window.RANIAG_BOUNDARY = @json($boundaryGeometry);
     window.RANIAG_BARANGAY_BOUNDARIES = @json($barangayBoundaries);

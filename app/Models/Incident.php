@@ -49,6 +49,8 @@ class Incident extends Model
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
             'meta' => 'array',
+            'reporter_phone' => 'encrypted',
+            'reporter_email' => 'encrypted',
         ];
     }
 
@@ -74,7 +76,9 @@ class Incident extends Model
 
     public function currentAssignments(): HasMany
     {
-        return $this->assignments()->where('created_at', '>=', $this->created_at);
+        return $this->assignments()->whereRaw(
+            'assignments.created_at >= (select incidents.created_at from incidents where incidents.id = assignments.incident_id)'
+        );
     }
 
     public function statusUpdates(): HasMany

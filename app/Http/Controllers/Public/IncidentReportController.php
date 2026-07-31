@@ -28,6 +28,7 @@ class IncidentReportController extends Controller
                 ->get(),
             'barangays' => config('raniag.barangays', []),
             'mapConfig' => config('raniag.map'),
+            'addressConfig' => config('raniag.address'),
             'boundaryGeometry' => $this->geofence->boundaryGeometry(),
             'barangayBoundaries' => $this->geofence->barangayBoundaries(),
             'evidenceConfig' => config('raniag.evidence'),

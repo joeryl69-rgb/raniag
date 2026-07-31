@@ -29,6 +29,18 @@ return [
         'default_zoom' => (int) env('RANIAG_MAP_ZOOM', 13),
     ],
 
+    // Fallback address components used to complete the full address
+    // (barangay, municipality, province, country) shown in the GPS
+    // camera overlay and burned into the photo watermark. Reverse
+    // geocoding (Nominatim) fills these in dynamically when available;
+    // these are only the defaults used if that lookup fails or omits a
+    // field, so the address is never left incomplete.
+    'address' => [
+        'municipality' => env('RANIAG_MUNICIPALITY', 'Pamplona'),
+        'province' => env('RANIAG_PROVINCE', 'Cagayan'),
+        'country' => env('RANIAG_COUNTRY', 'Philippines'),
+    ],
+
     // Path (relative to storage/app) to a GeoJSON file containing the
     // official Pamplona municipality boundary (a Polygon/MultiPolygon,
     // or a Feature/FeatureCollection wrapping one). Used by

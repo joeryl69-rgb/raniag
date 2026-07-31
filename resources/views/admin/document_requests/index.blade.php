@@ -60,6 +60,7 @@
                                 <th class="py-3">Status</th>
                                 <th class="py-3">Requested By</th>
                                 <th class="py-3">Requested At</th>
+                                <th class="py-3">PDF</th>
                                 <th class="py-3">Action</th>
                             </tr>
                         </thead>
@@ -74,6 +75,15 @@
                                     </td>
                                     <td>{{ $dr->requestedByUser->name ?? 'N/A' }}</td>
                                     <td>{{ optional($dr->created_at)->format('M d, Y h:i A') }}</td>
+                                    <td>
+                                        @if($dr->generated_path)
+                                            <a href="{{ Storage::disk('public')->url($dr->generated_path) }}" target="_blank" class="btn btn-sm btn-outline-success text-nowrap">
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>View PDF
+                                            </a>
+                                        @else
+                                            <span class="text-muted small">&mdash;</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <div class="d-flex gap-2 flex-wrap">
                                             <form method="POST" action="{{ route('admin.document_requests.approve', $dr) }}" class="d-flex gap-2 flex-wrap" data-loading-message="Generating the PDF and updating the request...">
