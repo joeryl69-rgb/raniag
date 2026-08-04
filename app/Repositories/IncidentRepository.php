@@ -126,6 +126,44 @@ class IncidentRepository implements IncidentRepositoryInterface
         return $query->paginate($perPage)->withQueryString();
     }
 
+    public function paginateForPersonnel(int $personnelId, int $perPage = 15, array $filters = []): LengthAwarePaginator
+    {
+        // Dispatches are based on assignments (one-to-many), not on incidents.assigned_to.
+        $query = Incident::query()
+            ->with(['incidentType', 'agency'])
+            ->whereHas('assignments', function ($q) use ($personnelId) {
+                $q->where('assignments.assigned_to', $personnelId)
+                    ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+            });
+
+        if (! empty($filters['status'] ?? null) && $filters['status'] !== 'all') {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['priority'] ?? null) && $filters['priority'] !== 'all') {
+            $query->where('priority', $filters['priority']);
+        }
+
+        if (! empty($filters['barangay'] ?? null) && $filters['barangay'] !== 'all') {
+            $query->where('barangay', $filters['barangay']);
+        }
+
+        if (! empty($filters['q'] ?? null)) {
+            $q = trim($filters['q']);
+            $query->where(function ($w) use ($q) {
+                $w->where('tracking_number', 'like', "%{$q}%")
+                    ->orWhere('title', 'like', "%{$q}%");
+            });
+        }
+
+        $sort = $filters['sort'] ?? 'reported_at';
+        $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $sortable = ['reported_at', 'priority', 'status', 'barangay'];
+        $query->orderBy(in_array($sort, $sortable, true) ? $sort : 'reported_at', $direction);
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
     public function paginateAll(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Incident::query()->with(['incidentType', 'agency']);

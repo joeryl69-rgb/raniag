@@ -36,6 +36,20 @@
     const panelEl = document.getElementById('gps-camera-panel');
     const useLocationBtn = document.getElementById('use-current-location');
 
+    // Full-screen modal + review-step elements
+    const cameraModalEl = document.getElementById('gps-camera-modal');
+    const liveViewEl = document.getElementById('gps-camera-live');
+    const reviewViewEl = document.getElementById('gps-camera-review');
+    const reviewImgEl = document.getElementById('gps-review-image');
+    const liveControlsEl = document.getElementById('gps-live-controls');
+    const reviewControlsEl = document.getElementById('gps-review-controls');
+    const retakeBtn = document.getElementById('gps-camera-retake');
+    const useBtn = document.getElementById('gps-camera-use');
+    const lightboxModalEl = document.getElementById('gps-lightbox-modal');
+    const lightboxImgEl = document.getElementById('gps-lightbox-image');
+    const cameraModal = (window.bootstrap && cameraModalEl) ? new bootstrap.Modal(cameraModalEl) : null;
+    const lightboxModal = (window.bootstrap && lightboxModalEl) ? new bootstrap.Modal(lightboxModalEl) : null;
+
     let mediaStream = null;
     let watchId = null;
     let bestAccuracy = Infinity;
@@ -43,6 +57,7 @@
     let facingMode = 'environment';
     let lastPosition = null;
     let lastResolved = null;
+    let pendingCapture = null;
     let lastGeocodedAt = 0;
     const captures = [];
     const manualFiles = [];
@@ -215,6 +230,75 @@
         });
     }
 
+    function enterReviewMode(previewUrl) {
+        if (reviewImgEl) reviewImgEl.src = previewUrl;
+        liveViewEl?.classList.add('d-none');
+        reviewViewEl?.classList.remove('d-none');
+        reviewViewEl?.classList.add('d-flex');
+        liveControlsEl?.classList.add('d-none');
+        reviewControlsEl?.classList.remove('d-none');
+        reviewControlsEl?.classList.add('d-flex');
+    }
+
+    function exitReviewMode() {
+        liveViewEl?.classList.remove('d-none');
+        reviewViewEl?.classList.add('d-none');
+        reviewViewEl?.classList.remove('d-flex');
+        liveControlsEl?.classList.remove('d-none');
+        reviewControlsEl?.classList.add('d-none');
+        reviewControlsEl?.classList.remove('d-flex');
+    }
+
+    function confirmCapture() {
+        if (!pendingCapture) return;
+
+        captures.push(pendingCapture);
+        pendingCapture = null;
+
+        syncEvidenceInput();
+        syncCaptureLog();
+        renderPreviews();
+        applyPositionToMap(lastPosition, true);
+        captureBtn.disabled = !canAddMoreCaptures();
+        exitReviewMode();
+
+        if (coordsEl) {
+            coordsEl.classList.add('text-success');
+            setTimeout(() => coordsEl.classList.remove('text-success'), 800);
+        }
+
+        // Out of slots — close the modal straight back to the thumbnail grid.
+        if (!canAddMoreCaptures()) {
+            cameraModal ? cameraModal.hide() : stopCamera();
+        }
+    }
+
+    function retakeCapture() {
+        if (pendingCapture?.previewUrl) {
+            URL.revokeObjectURL(pendingCapture.previewUrl);
+        }
+        pendingCapture = null;
+        exitReviewMode();
+    }
+
+    function openLightbox(url) {
+        if (!lightboxImgEl) return;
+        lightboxImgEl.src = url;
+        if (lightboxModal) {
+            lightboxModal.show();
+        }
+    }
+
+    retakeBtn?.addEventListener('click', retakeCapture);
+    useBtn?.addEventListener('click', confirmCapture);
+
+    if (cameraModalEl) {
+        cameraModalEl.addEventListener('hidden.bs.modal', () => {
+            if (pendingCapture) retakeCapture();
+            stopCamera();
+        });
+    }
+
     function renderPreviews() {
         if (!previewEl) {
             return;
@@ -233,6 +317,8 @@
             img.src = item.previewUrl;
             img.alt = `GPS capture ${index + 1}`;
             img.className = 'card-img-top';
+            img.title = 'Tap to view full size';
+            img.addEventListener('click', () => openLightbox(item.previewUrl));
 
             const body = document.createElement('div');
             body.className = 'card-body p-2 small';
@@ -360,6 +446,8 @@
             }
 
             panelEl?.classList.remove('d-none');
+            cameraModal ? cameraModal.show() : liveViewEl?.classList.remove('d-none');
+            exitReviewMode();
             startBtn?.classList.add('d-none');
             stopBtn?.classList.remove('d-none');
             captureBtn?.classList.remove('d-none');
@@ -395,6 +483,9 @@
         clockTimer = null;
 
         panelEl?.classList.add('d-none');
+        if (cameraModal && cameraModalEl?.classList.contains('show')) {
+            cameraModal.hide();
+        }
         startBtn?.classList.remove('d-none');
         stopBtn?.classList.add('d-none');
         captureBtn?.classList.add('d-none');
@@ -416,6 +507,16 @@
 
         if (!lastPosition) {
             setError('Waiting for GPS fix. Hold steady until coordinates appear, then capture.');
+            return;
+        }
+
+        // Guard against baking the "Resolving location…" placeholder
+        // permanently into the photo — this is the exact race that let
+        // unresolved captures through: geofence lookup is instant, but
+        // the Nominatim address fetch can lag 1-2s+ on a slow connection,
+        // and a fast tap on Capture Photo used to fire before it landed.
+        if (!lastResolved || !lastResolved.barangay && !lastResolved.municipality) {
+            setError('Still resolving your exact location — wait a second, then capture.');
             return;
         }
 
@@ -458,7 +559,10 @@
                 const previewUrl = URL.createObjectURL(blob);
                 const { latitude, longitude, accuracy } = lastPosition.coords;
 
-                captures.push({
+                // Hold the shot for review instead of committing it straight
+                // away — the person can now see it full-size and Retake if
+                // it's blurry/off before it's added to Evidence.
+                pendingCapture = {
                     file,
                     filename,
                     previewUrl,
@@ -466,19 +570,10 @@
                     longitude,
                     accuracy,
                     captured_at: timestamp.toISOString(),
-                });
+                };
 
-                syncEvidenceInput();
-                syncCaptureLog();
-                renderPreviews();
-                applyPositionToMap(lastPosition, true);
                 setError('');
-                captureBtn.disabled = !canAddMoreCaptures();
-
-                if (coordsEl) {
-                    coordsEl.classList.add('text-success');
-                    setTimeout(() => coordsEl.classList.remove('text-success'), 800);
-                }
+                enterReviewMode(previewUrl);
             },
             'image/jpeg',
             jpegQuality

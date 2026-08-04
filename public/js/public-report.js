@@ -132,7 +132,14 @@
         // nothing left over from an earlier fix is ever shown next to a
         // new one — this is the "old barangay stuck on screen" bug.
         if (barangayInput) barangayInput.value = '';
-        if (addressInput) addressInput.value = 'Locating…';
+        // Never write the "Locating…" placeholder into addressInput itself —
+        // that field's value is what actually gets submitted as
+        // location_address. Doing so used to let a fast/premature submit
+        // save the literal placeholder text to the database, which is why
+        // some incidents permanently showed "Location: Locating…" on the
+        // admin/agency/personnel case pages. The placeholder only belongs
+        // in the separate status label below.
+        if (addressInput) addressInput.value = '';
         setResolveStatus('Locating…', 'arrow-repeat', 'text-primary');
 
         // Primary: real geofence lookup against the official boundary

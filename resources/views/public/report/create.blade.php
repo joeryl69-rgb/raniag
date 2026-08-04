@@ -219,49 +219,85 @@
 
                     <div id="gps-camera-error" class="alert alert-warning d-none small" role="alert"></div>
 
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button type="button" class="btn btn-primary" id="gps-camera-start">
-                            <i class="bi bi-camera me-1"></i>Start Camera
-                        </button>
-                        <button type="button" class="btn btn-outline-danger d-none" id="gps-camera-stop">
-                            <i class="bi bi-stop-circle me-1"></i>Stop
-                        </button>
-                        <button type="button" class="btn btn-success d-none" id="gps-camera-capture">
-                            <i class="bi bi-camera-fill me-1"></i>Capture Photo
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary d-none" id="gps-camera-switch" title="Switch camera">
-                            <i class="bi bi-arrow-repeat"></i>
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-primary" id="gps-camera-start">
+                        <i class="bi bi-camera me-1"></i>Start Camera
+                    </button>
 
-                    <div id="gps-camera-panel" class="d-none">
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <div class="gps-camera-viewport position-relative">
-                                    <video id="gps-camera-video" class="w-100 rounded" playsinline autoplay muted></video>
-                                    <canvas id="gps-camera-canvas" class="d-none"></canvas>
-                                    <div class="gps-watermark-overlay" id="gps-watermark-overlay">
-                                        <div class="gps-watermark-map" id="gps-watermark-map">
-                                            <img id="gps-watermark-map-img" alt="Map preview of the captured location" loading="lazy">
-                                            <span class="gps-watermark-map-pin" id="gps-watermark-map-pin"></span>
+                    <!-- Full-screen camera modal: live shot + review/retake before it's added to Evidence -->
+                    <div class="modal fade" id="gps-camera-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                        <div class="modal-dialog modal-fullscreen">
+                            <div class="modal-content bg-dark">
+                                <div class="modal-body p-0 d-flex align-items-center justify-content-center position-relative">
+                                    <!-- Live viewport -->
+                                    <div id="gps-camera-live" class="gps-camera-viewport gps-camera-viewport-full position-relative w-100 h-100">
+                                        <video id="gps-camera-video" class="gps-modal-video" playsinline autoplay muted></video>
+                                        <canvas id="gps-camera-canvas" class="d-none"></canvas>
+                                        <div class="gps-watermark-overlay" id="gps-watermark-overlay">
+                                            <div class="gps-watermark-map" id="gps-watermark-map">
+                                                <img id="gps-watermark-map-img" alt="Map preview of the captured location" loading="lazy">
+                                                <span class="gps-watermark-map-pin" id="gps-watermark-map-pin"></span>
+                                            </div>
+                                            <div class="gps-watermark-text">
+                                                <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                                                <div class="gps-watermark-line" id="gps-camera-coords">Waiting for GPS signal…</div>
+                                                <div class="gps-watermark-line" id="gps-camera-place">Resolving address…</div>
+                                                <div class="gps-watermark-line" id="gps-camera-time">—</div>
+                                            </div>
                                         </div>
-                                        <div class="gps-watermark-text">
-                                            <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
-                                            <div class="gps-watermark-line" id="gps-camera-coords">Waiting for GPS signal…</div>
-                                            <div class="gps-watermark-line" id="gps-camera-place">Resolving address…</div>
-                                            <div class="gps-watermark-line" id="gps-camera-time">—</div>
-                                        </div>
+                                        <span class="badge bg-light text-dark gps-accuracy-pill" id="gps-camera-accuracy">Waiting for signal…</span>
                                     </div>
-                                    <span class="badge bg-light text-dark gps-accuracy-pill" id="gps-camera-accuracy">Waiting for signal…</span>
+
+                                    <!-- Review step: shown after a shot, before it's committed -->
+                                    <div id="gps-camera-review" class="d-none w-100 h-100 align-items-center justify-content-center">
+                                        <img id="gps-review-image" class="gps-review-img" alt="Captured photo preview">
+                                    </div>
                                 </div>
-                                <p class="small text-muted mt-2 mb-0">
-                                    Each capture tags the photo with live coordinates, full address, a map preview, and the date/time — burned into the image on submit.
-                                </p>
+                                <div class="modal-footer justify-content-center gap-2 bg-dark border-top border-secondary">
+                                    <!-- Live controls -->
+                                    <div id="gps-live-controls" class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-light" id="gps-camera-switch" title="Switch camera">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-success px-4" id="gps-camera-capture">
+                                            <i class="bi bi-camera-fill me-1"></i>Capture Photo
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" id="gps-camera-stop" data-bs-dismiss="modal">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                    <!-- Review controls -->
+                                    <div id="gps-review-controls" class="d-none gap-2">
+                                        <button type="button" class="btn btn-outline-light px-4" id="gps-camera-retake">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Retake
+                                        </button>
+                                        <button type="button" class="btn btn-success px-4" id="gps-camera-use">
+                                            <i class="bi bi-check-lg me-1"></i>Use Photo
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <p class="small text-muted mt-2 mb-0">
+                        Each capture tags the photo with live coordinates, full address, a map preview, and the date/time — burned into the image on submit.
+                    </p>
+
                     <div class="row g-2 mt-2" id="gps-camera-preview"></div>
+                </div>
+
+                <!-- Lightbox: tap any thumbnail below to view it full-size -->
+                <div class="modal fade" id="gps-lightbox-modal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content bg-dark">
+                            <div class="modal-header border-0">
+                                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body pt-0 text-center">
+                                <img id="gps-lightbox-image" class="img-fluid rounded" alt="Full-size evidence preview">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <hr class="my-4">

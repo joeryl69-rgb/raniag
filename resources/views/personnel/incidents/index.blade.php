@@ -7,7 +7,37 @@
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-card-checklist me-2 text-primary"></i>Assigned Emergency Responses</h5>
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-card-checklist me-2 text-primary"></i>Assigned Emergency Responses</h5>
+                            <p class="small text-muted mb-0 mt-1">Dispatches currently assigned to your account</p>
+                        </div>
+                    </div>
+                    <form method="GET" action="{{ route('personnel.incidents.index') }}" class="d-flex flex-wrap gap-2 align-items-center">
+                        <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control form-control-sm" style="width: 180px;" placeholder="Search tracking # or title">
+                        <select name="status" class="form-select form-select-sm" style="width: 160px;">
+                            <option value="all">All Statuses</option>
+                            @foreach (\App\Enums\IncidentStatus::cases() as $s)
+                                <option value="{{ $s->value }}" @selected(($filters['status'] ?? '') === $s->value)>{{ $s->label() }}</option>
+                            @endforeach
+                        </select>
+                        <select name="priority" class="form-select form-select-sm" style="width: 140px;">
+                            <option value="all">All Priorities</option>
+                            @foreach (\App\Enums\IncidentPriority::cases() as $p)
+                                <option value="{{ $p->value }}" @selected(($filters['priority'] ?? '') === $p->value)>{{ $p->label() }}</option>
+                            @endforeach
+                        </select>
+                        <select name="barangay" class="form-select form-select-sm" style="width: 160px;">
+                            <option value="all">All Barangays</option>
+                            @foreach ($barangays as $b)
+                                <option value="{{ $b }}" @selected(($filters['barangay'] ?? '') === $b)>{{ $b }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+                        @if (array_filter($filters ?? []))
+                            <a href="{{ route('personnel.incidents.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                        @endif
+                    </form>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -16,19 +46,27 @@
                                 <tr>
                                     <th class="px-4 py-3">Tracking #</th>
                                     <th class="py-3">Type</th>
-                                    <th class="py-3">Status</th>
-                                    <th class="py-3">Priority</th>
-                                    <th class="py-3">Barangay</th>
-                                    <th class="py-3">Assigned At</th>
+                                    @php
+                                        $sortLink = function (string $col, string $label) use ($filters) {
+                                            $dir = (($filters['sort'] ?? '') === $col && ($filters['direction'] ?? 'desc') === 'asc') ? 'desc' : 'asc';
+                                            $icon = ($filters['sort'] ?? '') === $col ? ($dir === 'asc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-down-up text-muted';
+                                            $qs = array_merge($filters ?? [], ['sort' => $col, 'direction' => $dir]);
+                                            return '<a href="'.route('personnel.incidents.index', $qs).'" class="text-dark text-decoration-none">'.$label.' <i class="bi '.$icon.'" style="font-size:0.7rem;"></i></a>';
+                                        };
+                                    @endphp
+                                    <th class="py-3">{!! $sortLink('status', 'Status') !!}</th>
+                                    <th class="py-3">{!! $sortLink('priority', 'Priority') !!}</th>
+                                    <th class="py-3">{!! $sortLink('barangay', 'Barangay') !!}</th>
+                                    <th class="py-3">{!! $sortLink('reported_at', 'Assigned At') !!}</th>
                                     <th class="px-4 py-3 text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($incidents as $inc)
                                     @php
-                                        // Get assignment timestamps
                                         $assignment = $inc->currentAssignments()->where('assigned_to', auth()->user()->id)->where('is_active', true)->first();
-                                    @endphp                                    <tr class="{{ $inc->status->value === 'assigned' ? 'table-warning bg-opacity-25' : '' }}">
+                                    @endphp
+                                    <tr class="{{ $inc->status->value === 'assigned' ? 'table-warning bg-opacity-25' : '' }}">
                                         <td class="px-4 py-3 fw-bold text-primary">
                                             {{ $inc->tracking_number }}
                                             @if($inc->status->value === 'assigned')
@@ -65,6 +103,11 @@
                                             @if($assignment && $assignment->created_at->isToday())
                                                 <span class="text-success ms-1" style="font-size: 0.75rem;">(Today)</span>
                                             @endif
+                                            @if($assignment && in_array($inc->status->value, ['assigned', 'in_progress', 'pending_info']) && $assignment->created_at->diffInHours(now()) >= 4)
+                                                <span class="badge bg-danger-subtle text-danger ms-1" style="font-size: 0.65rem;" title="No update in {{ $assignment->created_at->diffForHumans(null, true) }}">
+                                                    <i class="bi bi-alarm"></i> Stale
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3 text-end">
                                             <a href="{{ route('personnel.incidents.show', $inc->id) }}" class="btn btn-sm btn-primary shadow-sm">
@@ -84,9 +127,14 @@
                         </table>
                     </div>
                 </div>
-                @if ($incidents->hasPages())
+                @if ($incidents->hasPages() || $incidents->total() > 0)
                     <div class="card-footer bg-white border-0 py-3">
-                        {!! $incidents->links('pagination::bootstrap-5') !!}
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3">
+                            <small class="text-muted">Showing {{ $incidents->firstItem() }} to {{ $incidents->lastItem() }} of {{ $incidents->total() }} results</small>
+                            <div>
+                                {!! $incidents->links('pagination::bootstrap-5') !!}
+                            </div>
+                        </div>
                     </div>
                 @endif
             </div>

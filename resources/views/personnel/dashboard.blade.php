@@ -12,32 +12,96 @@
                 border: 1px solid #dee2e6;
                 z-index: 1;
             }
+
+            .personnel-kpi-card {
+                border-radius: 1rem;
+                border: 1px solid #e7f1ea;
+                background: linear-gradient(180deg, #ffffff 0%, #f8fcf9 100%);
+            }
+
+            .personnel-kpi-clickable {
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+
+            .personnel-kpi-clickable:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08) !important;
+            }
+
+            .personnel-kpi-icon {
+                width: 42px;
+                height: 42px;
+                border-radius: 0.75rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(46, 139, 87, 0.12);
+                color: #1f7a3d;
+                font-size: 1.05rem;
+            }
+
+            .personnel-map-pin {
+                position: relative;
+                width: 26px;
+                height: 26px;
+                border-radius: 50% 50% 50% 0;
+                border: 2px solid #fff;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                transform: rotate(-45deg);
+            }
+
+            .personnel-map-pin i {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transform: rotate(45deg);
+                color: #fff;
+                font-size: 0.8rem;
+            }
         </style>
     @endpush
 
     <!-- Status KPI Grid -->
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 border-start border-primary border-4">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Assigned Incident Cases</div>
-                    <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-assigned">—</h2>
+        <div class="col-12 col-md-4">
+            <a href="{{ route('personnel.incidents.index') }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 personnel-kpi-card personnel-kpi-clickable">
+                    <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="text-muted small text-uppercase fw-semibold">Assigned Incident Cases</div>
+                            <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-assigned">—</h2>
+                            <div class="d-flex gap-2 mt-2 small" id="kpi-status-breakdown"></div>
+                        </div>
+                        <div class="personnel-kpi-icon"><i class="bi bi-clipboard2-pulse"></i></div>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 border-start border-warning border-4">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Pending Resolutions</div>
-                    <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-pending">—</h2>
+        <div class="col-12 col-md-4">
+            <a href="{{ route('personnel.incidents.index', ['status' => 'in_progress']) }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 personnel-kpi-card personnel-kpi-clickable">
+                    <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="text-muted small text-uppercase fw-semibold">Pending Resolutions</div>
+                            <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-pending">—</h2>
+                            <p class="small text-muted mb-0 mt-2">In progress or awaiting info</p>
+                        </div>
+                        <div class="personnel-kpi-icon"><i class="bi bi-hourglass-split"></i></div>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 border-start border-success border-4">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">SMS Alerts Received (This Week)</div>
-                    <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-sms">—</h2>
+        <div class="col-12 col-md-4">
+            <div class="card h-100 shadow-sm border-0 personnel-kpi-card">
+                <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">SMS Alerts Received (This Week)</div>
+                        <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-sms">—</h2>
+                        <p class="small text-muted mb-0 mt-2" id="kpi-sms-caption"></p>
+                    </div>
+                    <div class="personnel-kpi-icon"><i class="bi bi-chat-left-text"></i></div>
                 </div>
             </div>
         </div>
@@ -214,6 +278,16 @@
                         document.getElementById('kpi-assigned').textContent = data.total_assigned_incidents;
                         document.getElementById('kpi-pending').textContent = data.pending_resolutions;
                         document.getElementById('kpi-sms').textContent = data.sms_alerts_this_week;
+                        document.getElementById('kpi-sms-caption').textContent =
+                            data.sms_alerts_this_week > 0 ? 'since Monday' : 'No alerts logged this week';
+
+                        const breakdown = data.incident_status_breakdown || {};
+                        const breakdownEl = document.getElementById('kpi-status-breakdown');
+                        const bLabels = { assigned: 'Assigned', in_progress: 'In Progress', pending_info: 'Pending Info' };
+                        const bColors = { assigned: 'text-info', in_progress: 'text-primary', pending_info: 'text-warning' };
+                        breakdownEl.innerHTML = Object.keys(bLabels).map(key =>
+                            `<span class="${bColors[key]}"><strong>${breakdown[key] ?? 0}</strong> ${bLabels[key]}</span>`
+                        ).join('<span class="text-muted">·</span>');
 
                         // Update Active Dispatches Table
                         renderDispatchesTable(data.active_dispatches);
@@ -303,6 +377,26 @@
                     });
                 }
 
+                // Icon map — kept in sync with the admin/agency dashboard's incident type glyphs
+                const ICON_MAP = {
+                    fire: 'bi-fire', water: 'bi-droplet-fill', shield: 'bi-shield-fill',
+                    'heart-pulse': 'bi-heart-pulse-fill', car: 'bi-car-front-fill',
+                    'triangle-alert': 'bi-exclamation-triangle-fill', building: 'bi-building-fill',
+                    'circle-help': 'bi-question-circle-fill',
+                };
+
+                function getMarkerIcon(type) {
+                    const color = type?.color || '#dc3545';
+                    const glyph = ICON_MAP[type?.icon] || 'bi-geo-alt-fill';
+                    return L.divIcon({
+                        html: `<div class="personnel-map-pin" style="background:${color}"><i class="bi ${glyph}"></i></div>`,
+                        className: 'personnel-map-marker',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 26],
+                        popupAnchor: [0, -20],
+                    });
+                }
+
                 function updateMapMarkers(incidents) {
                     if (!mapInstance) return;
 
@@ -320,7 +414,9 @@
                         const lat = parseFloat(inc.latitude);
                         const lng = parseFloat(inc.longitude);
                         if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                            const marker = L.marker([lat, lng]).addTo(mapInstance);
+                            const marker = L.marker([lat, lng], {
+                                icon: getMarkerIcon(inc.incident_type)
+                            }).addTo(mapInstance);
                             const type = inc.incident_type?.name ?? 'Incident';
                             marker.bindPopup(`
                                 <strong>Tracking #: ${inc.tracking_number}</strong><br>

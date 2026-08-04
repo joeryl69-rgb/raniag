@@ -26,19 +26,26 @@ class IncidentController extends Controller
         $personnelId = $request->user()?->id;
         abort_if(! $personnelId, 403, 'No personnel account is associated with this login.');
 
-        $incidents = Incident::query()
-            ->with(['incidentType', 'agency'])
-            ->whereHas('assignments', function ($q) use ($personnelId) {
-                $q->where('assigned_to', $personnelId);
-            })
-            ->latest('reported_at')
-            ->paginate((int) $request->integer('per_page', 15));
+        $filters = $request->only(['status', 'priority', 'barangay', 'q', 'sort', 'direction']);
+
+        $incidents = $this->incidents->paginateForPersonnel(
+            $personnelId,
+            (int) $request->integer('per_page', 15),
+            $filters
+        );
 
         if ($request->wantsJson()) {
             return response()->json($incidents);
         }
 
-        return view('personnel.incidents.index', compact('incidents'));
+        $barangays = Incident::query()
+            ->whereHas('assignments', fn ($q) => $q->where('assignments.assigned_to', $personnelId))
+            ->whereNotNull('barangay')
+            ->distinct()
+            ->orderBy('barangay')
+            ->pluck('barangay');
+
+        return view('personnel.incidents.index', compact('incidents', 'filters', 'barangays'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse
