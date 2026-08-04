@@ -53,11 +53,6 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="email" class="form-label">Office Email Address</label>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ old('email', $agency->email) }}">
-                        </div>
-
-                        <div class="mb-3">
                             <label for="address" class="form-label">Office Address</label>
                             <input type="text" class="form-control" id="address" name="address" value="{{ old('address', $agency->address) }}">
                         </div>
@@ -74,18 +69,19 @@
             <div class="col-md-6">
                 <div class="card raniag-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i>Officer Login Account</h5>
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i>Account Details</h5>
                     </div>
                     <div class="card-body">
                         @if ($user)
                             <div class="mb-3">
-                                <label for="officer_name" class="form-label">Officer's Full Name <span class="text-danger">*</span></label>
+                                <label for="officer_name" class="form-label">Full Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="officer_name" name="officer_name" value="{{ old('officer_name', $user->name) }}" required>
                             </div>
 
                             <div class="mb-3">
-                                <label for="officer_email" class="form-label">Officer's Login Email <span class="text-danger">*</span></label>
+                                <label for="officer_email" class="form-label">Email Address <span class="text-danger">*</span></label>
                                 <input type="email" class="form-control" id="officer_email" name="officer_email" value="{{ old('officer_email', $user->email) }}" required>
+                                <div class="form-text">Single Gmail address used for login, notifications, and password reset.</div>
                             </div>
 
                             <div class="mb-0">
@@ -103,9 +99,34 @@
                 </div>
             </div>
 
-            <div class="col-12 mt-4 text-end">
+            <div class="col-12 mt-4 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#deleteAgencyModal">
+                    <i class="bi bi-trash me-1"></i>Delete Account
+                </button>
                 <button type="submit" class="btn btn-primary btn-lg px-4"><i class="bi bi-check-lg me-1"></i>Save Modifications</button>
             </div>
         </div>
     </form>
+
+    <div class="modal fade" id="deleteAgencyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Agency Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to permanently delete <strong>{{ $agency->name }}</strong> and its login account? This cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{{ route('admin.agencies.destroy', $agency->id) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </x-app-layout>

@@ -18,6 +18,8 @@ class StoreDocumentRequestRequest extends FormRequest
         return [
             'request_type' => ['required', 'string', 'in:single,bulk'],
             'request_note' => ['nullable', 'string', 'max:1000'],
+            'requested_sections' => ['nullable', 'array'],
+            'requested_sections.*' => ['string', 'in:incident_details,narrative,resolutions,evidence_photos,status_timeline,call_taker_form,dispatch_form,narrative_report,endorsement_sheet'],
         ];
     }
 

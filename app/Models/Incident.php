@@ -69,6 +69,11 @@ class Incident extends Model
         return $this->hasMany(Evidence::class);
     }
 
+    public function incidentDocuments(): HasMany
+    {
+        return $this->hasMany(IncidentDocument::class);
+    }
+
     public function assignments(): HasMany
     {
         return $this->hasMany(Assignment::class);
@@ -100,10 +105,6 @@ class Incident extends Model
         return $this->hasMany(Resolution::class);
     }
 
-    public function systemNotifications(): HasMany
-    {
-        return $this->hasMany(SystemNotification::class);
-    }
 
     public function smsLogs(): HasMany
     {

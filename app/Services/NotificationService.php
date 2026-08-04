@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\NotificationChannel;
 use App\Enums\SmsLogStatus;
 use App\Enums\UserRole;
 use App\Jobs\DispatchSmsJob;
@@ -10,7 +9,6 @@ use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\Resolution;
 use App\Models\SmsLog;
-use App\Models\SystemNotification;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -82,19 +80,6 @@ class NotificationService
             message: $message,
             incident: $incident,
         );
-
-        SystemNotification::create([
-            'user_id' => null,
-            'incident_id' => $incident->id,
-            'type' => 'assignment',
-            'title' => 'New Assignment',
-            'message' => "New incident assigned to {$agency->name}: {$incident->tracking_number}",
-            'channel' => NotificationChannel::Database->value,
-            'data' => [
-                'incident_id' => $incident->id,
-                'agency_id' => $agency->id,
-            ],
-        ]);
     }
 
     public function notifyPersonnelAssigned(Assignment $assignment): void
@@ -115,19 +100,6 @@ class NotificationService
             incident: $incident,
             user: $personnel,
         );
-
-        SystemNotification::create([
-            'user_id' => $personnel->id,
-            'incident_id' => $incident->id,
-            'type' => 'assignment',
-            'title' => 'New Assignment',
-            'message' => "New incident assigned to {$personnel->display_title}: {$incident->tracking_number}",
-            'channel' => NotificationChannel::Database->value,
-            'data' => [
-                'incident_id' => $incident->id,
-                'assigned_to' => $personnel->id,
-            ],
-        ]);
     }
 
     public function notifyAgencyStatusRequest(Assignment $assignment, string $message): void
@@ -142,19 +114,6 @@ class NotificationService
                 incident: $incident,
             );
         }
-
-        SystemNotification::create([
-            'user_id' => null,
-            'incident_id' => $incident->id,
-            'type' => 'status_request',
-            'title' => 'Status Update Requested',
-            'message' => $message,
-            'channel' => NotificationChannel::Database->value,
-            'data' => [
-                'incident_id' => $incident->id,
-                'agency_id' => $agency->id,
-            ],
-        ]);
     }
 
     public function notifyAdminResolutionSubmitted(Resolution $resolution): void
@@ -173,36 +132,7 @@ class NotificationService
                     user: $admin,
                 );
             }
-
-            SystemNotification::create([
-                'user_id' => $admin->id,
-                'incident_id' => $incident->id,
-                'type' => 'resolution',
-                'title' => 'Resolution Submitted',
-                'message' => "Resolution submitted for incident {$incident->tracking_number}",
-                'channel' => NotificationChannel::Database->value,
-                'data' => [
-                    'incident_id' => $incident->id,
-                    'resolution_id' => $resolution->id,
-                ],
-            ]);
         }
-    }
-
-    public function notifyPublicStatusUpdate(Incident $incident, string $updateMessage): void
-    {
-        SystemNotification::create([
-            'user_id' => null,
-            'incident_id' => $incident->id,
-            'type' => 'status_update',
-            'title' => 'Status Update',
-            'message' => $updateMessage,
-            'channel' => NotificationChannel::Database->value,
-            'data' => [
-                'incident_id' => $incident->id,
-                'status' => $incident->status->value,
-            ],
-        ]);
     }
 
     private function sendSms(

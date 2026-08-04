@@ -74,10 +74,6 @@ class ResolutionService
             );
 
             $this->notifications->notifyAdminResolutionSubmitted($resolution);
-            $this->notifications->notifyPublicStatusUpdate(
-                $incident,
-                'Your report has been resolved.'
-            );
 
             return $resolution->fresh();
         });
@@ -103,11 +99,6 @@ class ResolutionService
                 properties: [
                     'closed_at' => now()->toIso8601String(),
                 ],
-            );
-
-            $this->notifications->notifyPublicStatusUpdate(
-                $incident,
-                'Your report case has been closed.'
             );
 
             return $incident->fresh();

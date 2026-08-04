@@ -21,22 +21,24 @@
 
             .dashboard-map-pin {
                 position: relative;
-                width: 20px;
-                height: 20px;
+                width: 26px;
+                height: 26px;
                 border-radius: 50% 50% 50% 0;
                 background: #dc3545;
                 border: 2px solid #fff;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                 transform: rotate(-45deg);
-                overflow: hidden;
             }
 
-            .dashboard-map-pin::after {
-                content: '';
+            .dashboard-map-pin i {
                 position: absolute;
-                inset: 4px;
-                border-radius: 50%;
-                background: rgba(255,255,255,0.9);
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transform: rotate(45deg);
+                color: #fff;
+                font-size: 0.8rem;
             }
 
             .dashboard-fallback-card {
@@ -282,7 +284,7 @@
         <div class="col-12 col-md-7 col-lg-4">
             <div class="card shadow-sm border-0 h-100 border-start border-danger border-4">
                 <div class="card-header bg-white py-3 border-0">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-exclamation-octagon text-danger me-2"></i>Redundancy Hotspots</h6>
+                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-exclamation-octagon text-danger me-2"></i>Accident-Prone Areas</h6>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
@@ -383,13 +385,22 @@
                     }
                 }
 
-                function getMarkerIcon() {
+                const ICON_MAP = {
+                    fire: 'bi-fire', water: 'bi-droplet-fill', shield: 'bi-shield-fill',
+                    'heart-pulse': 'bi-heart-pulse-fill', car: 'bi-car-front-fill',
+                    'triangle-alert': 'bi-exclamation-triangle-fill', building: 'bi-building-fill',
+                    'circle-help': 'bi-question-circle-fill',
+                };
+
+                function getMarkerIcon(type) {
+                    const color = type?.color || '#dc3545';
+                    const glyph = ICON_MAP[type?.icon] || 'bi-geo-alt-fill';
                     return L.divIcon({
-                        html: '<div class="dashboard-map-pin"></div>',
+                        html: `<div class="dashboard-map-pin" style="background:${color}"><i class="bi ${glyph}"></i></div>`,
                         className: 'dashboard-map-marker',
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 20],
-                        popupAnchor: [0, -16],
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 26],
+                        popupAnchor: [0, -20],
                     });
                 }
 
@@ -498,7 +509,7 @@
                         const lat = parseFloat(inc.latitude);
                         const lng = parseFloat(inc.longitude);
                         if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                            const marker = L.marker([lat, lng], { icon: getMarkerIcon() }).addTo(mapInstance);
+                            const marker = L.marker([lat, lng], { icon: getMarkerIcon(inc.incident_type) }).addTo(mapInstance);
                             const type = inc.incident_type?.name ?? 'Incident';
                             const status = inc.status?.toUpperCase() ?? 'SUBMITTED';
                             marker.bindPopup(`

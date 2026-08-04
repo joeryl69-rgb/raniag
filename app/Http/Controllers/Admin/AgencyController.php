@@ -43,7 +43,6 @@ class AgencyController extends Controller
             'name' => ['required_if:account_type,agency', 'string', 'max:255'],
             'code' => ['required_if:account_type,agency', 'string', 'max:32', 'unique:agencies,code'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'role_title' => ['required_if:account_type,personnel', Rule::in([
                 'Research and Planning Chief',
@@ -68,7 +67,9 @@ class AgencyController extends Controller
                     'code' => strtoupper($data['code']),
                     'description' => $data['description'],
                     'phone' => $data['phone'],
-                    'email' => $data['email'],
+                    // The agency's single email doubles as its login ID and
+                    // the inbox that receives Gmail notifications.
+                    'email' => $data['officer_email'],
                     'address' => $data['address'],
                     'is_active' => true,
                 ]);
@@ -101,7 +102,7 @@ class AgencyController extends Controller
         return redirect()
             ->route('admin.agencies.index')
             ->with('success', $data['account_type'] === 'agency'
-                ? 'Agency and primary officer login created successfully.'
+                ? 'Agency account created successfully.'
                 : 'Personnel account created successfully.');
     }
 
@@ -121,7 +122,6 @@ class AgencyController extends Controller
             'code' => ['required', 'string', 'max:32', Rule::unique('agencies', 'code')->ignore($agency->id)],
             'description' => ['nullable', 'string', 'max:1000'],
             'phone' => ['nullable', 'string', 'max:32'],
-            'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'officer_name' => ['required', 'string', 'max:255'],
@@ -137,7 +137,7 @@ class AgencyController extends Controller
                 'code' => strtoupper($data['code']),
                 'description' => $data['description'],
                 'phone' => $data['phone'],
-                'email' => $data['email'],
+                'email' => $data['officer_email'],
                 'address' => $data['address'],
                 'is_active' => $isActive,
             ]);
@@ -160,6 +160,18 @@ class AgencyController extends Controller
 
         return redirect()
             ->route('admin.agencies.index')
-            ->with('success', 'Agency and officer account updated successfully.');
+            ->with('success', 'Agency account updated successfully.');
+    }
+
+    public function destroy(Agency $agency)
+    {
+        DB::transaction(function () use ($agency) {
+            $agency->users()->delete();
+            $agency->delete();
+        });
+
+        return redirect()
+            ->route('admin.agencies.index')
+            ->with('success', 'Agency account deleted successfully.');
     }
 }

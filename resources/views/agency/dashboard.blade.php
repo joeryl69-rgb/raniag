@@ -26,6 +26,15 @@
                 background: linear-gradient(180deg, #ffffff 0%, #f8fcf9 100%);
             }
 
+            .agency-kpi-clickable {
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+
+            .agency-kpi-clickable:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08) !important;
+            }
+
             .agency-kpi-icon {
                 width: 42px;
                 height: 42px;
@@ -40,22 +49,23 @@
 
             .agency-map-pin {
                 position: relative;
-                width: 20px;
-                height: 20px;
+                width: 26px;
+                height: 26px;
                 border-radius: 50% 50% 50% 0;
-                background: #dc3545;
                 border: 2px solid #fff;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                 transform: rotate(-45deg);
-                overflow: hidden;
             }
 
-            .agency-map-pin::after {
-                content: '';
+            .agency-map-pin i {
                 position: absolute;
-                inset: 4px;
-                border-radius: 50%;
-                background: rgba(255,255,255,0.9);
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transform: rotate(45deg);
+                color: #fff;
+                font-size: 0.8rem;
             }
 
             @media (max-width: 767.98px) {
@@ -69,26 +79,32 @@
     <!-- Status KPI Grid -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-md-4">
-            <div class="card h-100 shadow-sm border-0 agency-kpi-card">
-                <div class="card-body d-flex align-items-start justify-content-between gap-3">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Assigned Incident Cases</div>
-                        <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-assigned">—</h2>
+            <a href="{{ route('agency.incidents.index') }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 agency-kpi-card agency-kpi-clickable">
+                    <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="text-muted small text-uppercase fw-semibold">Assigned Incident Cases</div>
+                            <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-assigned">—</h2>
+                            <div class="d-flex gap-2 mt-2 small" id="kpi-status-breakdown"></div>
+                        </div>
+                        <div class="agency-kpi-icon"><i class="bi bi-clipboard2-pulse"></i></div>
                     </div>
-                    <div class="agency-kpi-icon"><i class="bi bi-clipboard2-pulse"></i></div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card h-100 shadow-sm border-0 agency-kpi-card">
-                <div class="card-body d-flex align-items-start justify-content-between gap-3">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Pending Resolutions</div>
-                        <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-pending">—</h2>
+            <a href="{{ route('agency.incidents.index', ['status' => 'in_progress']) }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 agency-kpi-card agency-kpi-clickable">
+                    <div class="card-body d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="text-muted small text-uppercase fw-semibold">Pending Resolutions</div>
+                            <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-pending">—</h2>
+                            <p class="small text-muted mb-0 mt-2">In progress or awaiting info</p>
+                        </div>
+                        <div class="agency-kpi-icon"><i class="bi bi-hourglass-split"></i></div>
                     </div>
-                    <div class="agency-kpi-icon"><i class="bi bi-hourglass-split"></i></div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-12 col-md-4">
             <div class="card h-100 shadow-sm border-0 agency-kpi-card">
@@ -96,6 +112,7 @@
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold">SMS Alerts Received (This Week)</div>
                         <h2 class="fw-bold mb-0 text-dark mt-1" id="kpi-sms">—</h2>
+                        <p class="small text-muted mb-0 mt-2" id="kpi-sms-caption"></p>
                     </div>
                     <div class="agency-kpi-icon"><i class="bi bi-chat-left-text"></i></div>
                 </div>
@@ -214,6 +231,26 @@
                     }
                 }
 
+                // Icon map — kept in sync with the admin dashboard's incident type glyphs
+                const ICON_MAP = {
+                    fire: 'bi-fire', water: 'bi-droplet-fill', shield: 'bi-shield-fill',
+                    'heart-pulse': 'bi-heart-pulse-fill', car: 'bi-car-front-fill',
+                    'triangle-alert': 'bi-exclamation-triangle-fill', building: 'bi-building-fill',
+                    'circle-help': 'bi-question-circle-fill',
+                };
+
+                function getMarkerIcon(type) {
+                    const color = type?.color || '#dc3545';
+                    const glyph = ICON_MAP[type?.icon] || 'bi-geo-alt-fill';
+                    return L.divIcon({
+                        html: `<div class="agency-map-pin" style="background:${color}"><i class="bi ${glyph}"></i></div>`,
+                        className: 'agency-map-marker',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 26],
+                        popupAnchor: [0, -20],
+                    });
+                }
+
                 // Initialize Map
                 function initMap() {
                     mapInstance = L.map('agency-dashboard-map').setView([18.4720, 121.3250], 12);
@@ -283,6 +320,16 @@
                         document.getElementById('kpi-assigned').textContent = data.total_assigned_incidents;
                         document.getElementById('kpi-pending').textContent = data.pending_resolutions;
                         document.getElementById('kpi-sms').textContent = data.sms_alerts_this_week;
+                        document.getElementById('kpi-sms-caption').textContent =
+                            data.sms_alerts_this_week > 0 ? 'since Monday' : 'No alerts logged this week';
+
+                        const breakdown = data.incident_status_breakdown || {};
+                        const breakdownEl = document.getElementById('kpi-status-breakdown');
+                        const labels = { assigned: 'Assigned', in_progress: 'In Progress', pending_info: 'Pending Info' };
+                        const colors = { assigned: 'text-info', in_progress: 'text-primary', pending_info: 'text-warning' };
+                        breakdownEl.innerHTML = Object.keys(labels).map(key =>
+                            `<span class="${colors[key]}"><strong>${breakdown[key] ?? 0}</strong> ${labels[key]}</span>`
+                        ).join('<span class="text-muted">·</span>');
 
                         // Update Active Dispatches Table
                         renderDispatchesTable(data.active_dispatches);
@@ -390,12 +437,7 @@
                         const lng = parseFloat(inc.longitude);
                         if (Number.isFinite(lat) && Number.isFinite(lng)) {
                             const marker = L.marker([lat, lng], {
-                                icon: L.divIcon({
-                                    className: 'agency-map-marker',
-                                    html: '<div class="agency-map-pin"></div>',
-                                    iconSize: [20, 20],
-                                    iconAnchor: [10, 20]
-                                })
+                                icon: getMarkerIcon(inc.incident_type)
                             }).addTo(mapInstance);
                             const type = inc.incident_type?.name ?? 'Incident';
                             marker.bindPopup(`

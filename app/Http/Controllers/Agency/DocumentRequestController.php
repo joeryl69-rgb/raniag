@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Agency\StoreDocumentRequestRequest;
 use App\Models\DocumentRequest;
 use App\Models\Incident;
-use App\Models\SystemNotification;
 use App\Services\DocumentRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,8 +29,13 @@ class DocumentRequestController extends Controller
             ->orderByDesc('created_at');
 
         $status = $request->input('status');
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
+        if ($status === 'archived') {
+            $query->whereNotNull('archived_at');
+        } else {
+            $query->whereNull('archived_at');
+            if ($status && $status !== 'all') {
+                $query->where('status', $status);
+            }
         }
 
         $requestType = $request->input('request_type');
@@ -40,21 +44,6 @@ class DocumentRequestController extends Controller
         }
 
         $documentRequests = $query->paginate(10)->appends($request->query());
-
-        // Mark ALL unread document_request notifications for this agency/user as read.
-        // Previously this only covered document_request_ids on the current paginated page
-        // (10 per page), so notifications for older requests on later pages never cleared,
-        // and the badge could stay stuck or reappear inconsistently with what was on screen.
-        SystemNotification::query()
-            ->whereNull('read_at')
-            ->where('type', 'document_request')
-            ->where(function ($q) use ($agencyId, $request) {
-                $q->where('user_id', $request->user()->id)
-                    ->orWhere(function ($q2) use ($agencyId) {
-                        $q2->whereNull('user_id')->where('data->agency_id', $agencyId);
-                    });
-            })
-            ->update(['read_at' => now()]);
 
         $requestedIncidentIds = DocumentRequest::query()
             ->where('requesting_agency_id', $agencyId)
@@ -95,6 +84,7 @@ class DocumentRequestController extends Controller
             requestedBy: $request->user(),
             requestType: $data['request_type'],
             requestNote: $data['request_note'] ?? null,
+            requestedSections: $data['requested_sections'] ?? null,
         );
 
         if ($request->wantsJson()) {
@@ -107,5 +97,64 @@ class DocumentRequestController extends Controller
         return redirect()
             ->route('agency.incidents.show', $incident)
             ->with('success', 'Printable copy requested. Please wait for admin approval.');
+    }
+
+    public function storeBulk(Request $request): RedirectResponse|JsonResponse
+    {
+        $agencyId = $request->user()->agency_id;
+        abort_if(! $agencyId, 403, 'No agency associated with this account.');
+
+        $data = $request->validate([
+            'incident_ids' => ['required', 'array', 'min:1'],
+            'incident_ids.*' => ['integer', 'exists:incidents,id'],
+            'request_note' => ['nullable', 'string', 'max:1000'],
+            'requested_sections' => ['nullable', 'array'],
+            'requested_sections.*' => ['string', 'in:incident_details,narrative,resolutions,evidence_photos,status_timeline,call_taker_form,dispatch_form,narrative_report,endorsement_sheet'],
+        ]);
+
+        $incidents = Incident::query()
+            ->whereIn('id', $data['incident_ids'])
+            ->whereIn('status', ['resolved', 'closed'])
+            ->whereHas('currentAssignments', fn ($q) => $q->where('agency_id', $agencyId))
+            ->get();
+
+        abort_if($incidents->isEmpty(), 422, 'None of the selected reports are eligible for a printable request.');
+
+        foreach ($incidents as $incident) {
+            $this->documentRequests->createPendingRequest(
+                incident: $incident,
+                requestingAgencyId: $agencyId,
+                requestedBy: $request->user(),
+                requestType: 'bulk',
+                requestNote: $data['request_note'] ?? null,
+                requestedSections: $data['requested_sections'] ?? null,
+            );
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => count($incidents).' printable document requests submitted.'], 201);
+        }
+
+        return redirect()
+            ->route('agency.document_requests.index')
+            ->with('success', count($incidents).' printable copies requested. Please wait for admin approval.');
+    }
+
+    public function archive(Request $request, DocumentRequest $documentRequest): RedirectResponse
+    {
+        abort_if($documentRequest->requesting_agency_id !== $request->user()->agency_id, 403);
+
+        $documentRequest->update(['archived_at' => now()]);
+
+        return back()->with('success', 'Document request moved to archive.');
+    }
+
+    public function unarchive(Request $request, DocumentRequest $documentRequest): RedirectResponse
+    {
+        abort_if($documentRequest->requesting_agency_id !== $request->user()->agency_id, 403);
+
+        $documentRequest->update(['archived_at' => null]);
+
+        return back()->with('success', 'Document request restored from archive.');
     }
 }

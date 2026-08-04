@@ -1,9 +1,123 @@
 :root {
-    --raniag-primary: #0b5ed7;
+    /* --- RANIAG unified design tokens (used by every layout: public + staff portal) --- */
+    --raniag-primary: #0b5ed7;        /* original brand blue, restored */
     --raniag-primary-dark: #084298;
-    --raniag-accent: #20c997;
+    --raniag-primary-light: #e7f0fd;
+    --raniag-accent: #20c997;         /* original teal accent, restored */
+    --raniag-accent-dark: #199d76;
+    --raniag-sidebar: #0f172a;        /* original dark slate sidebar, restored */
+    --raniag-sidebar-active: #1e293b;
     --raniag-surface: #f4f7fb;
+    --raniag-border: #dde5ea;
+    --raniag-radius: 0.75rem;
+    --raniag-radius-sm: 0.5rem;
     --raniag-card-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08);
+}
+
+/* ============================================================
+   GLOBAL BOOTSTRAP OVERRIDES
+   Every screen (public site, admin, agency, personnel) loads
+   this file and uses plain Bootstrap classes (.card/.btn/.table/
+   .badge/.form-control). Restyling those classes here — instead
+   of per-page CSS — is what keeps every form, table, and button
+   visually consistent across the whole system.
+   ============================================================ */
+
+body { color: #1e2b33; }
+
+a { color: var(--raniag-primary); }
+a:hover { color: var(--raniag-accent); }
+
+/* Buttons: consistent radius, weight, and a real brand color instead of Bootstrap default blue */
+.btn {
+    border-radius: var(--raniag-radius-sm);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-sm { min-height: 32px; }
+.btn-primary, .btn-outline-primary:hover {
+    background-color: var(--raniag-primary);
+    border-color: var(--raniag-primary);
+}
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--raniag-primary-dark);
+    border-color: var(--raniag-primary-dark);
+}
+.btn-outline-primary { color: var(--raniag-primary); border-color: var(--raniag-primary); }
+.btn-outline-secondary { color: #45545c; border-color: var(--raniag-border); }
+.btn-success, .btn-outline-success:hover {
+    background-color: var(--raniag-accent);
+    border-color: var(--raniag-accent);
+    color: #fff;
+}
+.btn:focus-visible { outline: 2px solid var(--raniag-accent); outline-offset: 2px; }
+
+/* Cards: one consistent elevated style everywhere (dashboards, tables, forms) */
+.card {
+    border: 1px solid var(--raniag-border);
+    border-radius: var(--raniag-radius);
+    box-shadow: var(--raniag-card-shadow);
+}
+.card-header {
+    border-radius: var(--raniag-radius) var(--raniag-radius) 0 0 !important;
+    background: #fff;
+}
+
+/* Tables: calmer grid, sticky header, consistent row spacing/hover for every list screen */
+.table thead.table-light th, .table > :not(caption) > * > th {
+    background-color: #f7f9fb;
+    color: #56666e;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+    border-bottom: 2px solid var(--raniag-border);
+}
+.table > :not(caption) > * > td { vertical-align: middle; }
+.table-hover > tbody > tr:hover > * { background-color: var(--raniag-primary-light); }
+
+/* Badges: rounded pill everywhere so status labels look uniform across admin/agency/public */
+.badge {
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.4em 0.75em;
+    text-transform: capitalize;
+}
+.badge.bg-primary, .badge.bg-primary-subtle { background-color: var(--raniag-primary) !important; color: #fff !important; }
+.badge.bg-primary-subtle { background-color: var(--raniag-primary-light) !important; color: var(--raniag-primary-dark) !important; }
+.badge.bg-secondary-subtle { background-color: #eef1f3 !important; color: #556069 !important; }
+
+/* Form controls: bigger touch targets for mobile, consistent focus ring */
+.form-control, .form-select {
+    border-radius: var(--raniag-radius-sm);
+    border-color: var(--raniag-border);
+    min-height: 44px;
+    padding: 0.55rem 0.85rem;
+}
+.form-control-sm, .form-select-sm { min-height: 34px; padding: 0.35rem 0.6rem; }
+.form-control:focus, .form-select:focus {
+    border-color: var(--raniag-primary);
+    box-shadow: 0 0 0 0.2rem var(--raniag-primary-light);
+}
+.form-label { font-weight: 600; font-size: 0.85rem; color: #3a474d; }
+
+.alert { border-radius: var(--raniag-radius-sm); border: none; }
+.alert-success { background: #e6f4ea; color: #1e6b3a; }
+.alert-danger { background: #fbe9e7; color: #a3271f; }
+
+/* Pagination + misc small elements share the same accent */
+.page-link { color: var(--raniag-primary); }
+.page-item.active .page-link { background-color: var(--raniag-primary); border-color: var(--raniag-primary); }
+
+/* Respect safe-area insets on notched phones when app runs installed as a PWA */
+@supports (padding: max(0px)) {
+    body { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
 }
 
 body.raniag-public {

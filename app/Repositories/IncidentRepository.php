@@ -31,6 +31,14 @@ class IncidentRepository implements IncidentRepositoryInterface
 
             $incident->setRelation('evidence', $evidence);
 
+            // Same guard as evidence above, applied to attached case documents.
+            $documents = $incident->incidentDocuments()
+                ->where('created_at', '>=', $incident->created_at)
+                ->orderBy('created_at')
+                ->get();
+
+            $incident->setRelation('incidentDocuments', $documents);
+
             // Prevent old records from previous incident IDs from leaking into current incident views.
             $assignments = $incident->assignments()
                 ->where('created_at', '>=', $incident->created_at)
@@ -80,17 +88,42 @@ class IncidentRepository implements IncidentRepositoryInterface
         return $incident->fresh();
     }
 
-    public function paginateForAgency(int $agencyId, int $perPage = 15): LengthAwarePaginator
+    public function paginateForAgency(int $agencyId, int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         // Dispatches are based on assignments (one-to-many), not on incidents.agency_id.
-        return Incident::query()
+        $query = Incident::query()
             ->with(['incidentType', 'agency'])
             ->whereHas('assignments', function ($q) use ($agencyId) {
                 $q->where('assignments.agency_id', $agencyId)
                     ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
-            })
-            ->latest('reported_at')
-            ->paginate($perPage);
+            });
+
+        if (! empty($filters['status'] ?? null) && $filters['status'] !== 'all') {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['priority'] ?? null) && $filters['priority'] !== 'all') {
+            $query->where('priority', $filters['priority']);
+        }
+
+        if (! empty($filters['barangay'] ?? null) && $filters['barangay'] !== 'all') {
+            $query->where('barangay', $filters['barangay']);
+        }
+
+        if (! empty($filters['q'] ?? null)) {
+            $q = trim($filters['q']);
+            $query->where(function ($w) use ($q) {
+                $w->where('tracking_number', 'like', "%{$q}%")
+                    ->orWhere('title', 'like', "%{$q}%");
+            });
+        }
+
+        $sort = $filters['sort'] ?? 'reported_at';
+        $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $sortable = ['reported_at', 'priority', 'status', 'barangay'];
+        $query->orderBy(in_array($sort, $sortable, true) ? $sort : 'reported_at', $direction);
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function paginateAll(array $filters = [], int $perPage = 15): LengthAwarePaginator

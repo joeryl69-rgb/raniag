@@ -67,10 +67,6 @@ class User extends Authenticatable
         return $this->hasMany(Resolution::class, 'resolved_by');
     }
 
-    public function systemNotifications(): HasMany
-    {
-        return $this->hasMany(SystemNotification::class);
-    }
 
     public function smsLogs(): HasMany
     {

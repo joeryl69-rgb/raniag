@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AgencyController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IncidentController;
+use App\Http\Controllers\Admin\IncidentDocumentController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
 use App\Http\Controllers\Admin\ReportController;
@@ -20,12 +21,16 @@ Route::prefix('admin')
         Route::get('/sms-logs', [DashboardController::class, 'smsLogs'])->name('sms-logs');
         Route::get('/audit-logs', [DashboardController::class, 'auditLogs'])->name('audit-logs');
 
+        Route::get('/incident-documents', [IncidentDocumentController::class, 'index'])->name('incident_documents.index');
+
         Route::prefix('incidents')->name('incidents.')->group(function () {
             Route::get('/', [IncidentController::class, 'index'])->name('index');
             Route::get('/{incident}', [IncidentController::class, 'show'])->name('show');
             Route::post('/{incident}/validate', [IncidentController::class, 'validate'])->name('validate');
             Route::get('/{incident}/assignments', [IncidentController::class, 'assignments'])->name('assignments');
             Route::put('/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('resolutions.update');
+            Route::post('/{incident}/documents', [IncidentDocumentController::class, 'store'])->name('documents.store');
+            Route::delete('/{incident}/documents/{document}', [IncidentDocumentController::class, 'destroy'])->name('documents.destroy');
         });
 
         Route::prefix('assignments')->name('assignments.')->group(function () {
@@ -34,11 +39,12 @@ Route::prefix('admin')
             Route::post('/{assignment}/complete', [AssignmentController::class, 'complete'])->name('complete');
         });
 
-        Route::resource('agencies', AgencyController::class)->except(['destroy']);
+        Route::resource('agencies', AgencyController::class);
 
         Route::prefix('personnel')->name('personnel.')->group(function () {
             Route::get('/{personnel}/edit', [PersonnelController::class, 'edit'])->name('edit');
             Route::put('/{personnel}', [PersonnelController::class, 'update'])->name('update');
+            Route::delete('/{personnel}', [PersonnelController::class, 'destroy'])->name('destroy');
         });
 
         // Printable document requests (admin approve + generate)
@@ -52,5 +58,6 @@ Route::prefix('admin')
 
             Route::get('/generate', [ReportController::class, 'index'])->name('index');
             Route::post('/generate', [ReportController::class, 'generate'])->name('generate');
+            Route::post('/generate-excel', [ReportController::class, 'generateExcel'])->name('generate_excel');
         });
     });

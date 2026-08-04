@@ -19,7 +19,7 @@
 
         body {
             font-family: 'Figtree', sans-serif;
-            background: linear-gradient(135deg, #f4fbf6 0%, #eaf7ee 100%);
+            background: linear-gradient(135deg, #eff6ff 0%, #e7f0fd 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -40,7 +40,7 @@
         }
 
         .login-header {
-            background: linear-gradient(135deg, #1f7a3d 0%, #155f30 100%);
+            background: linear-gradient(135deg, #0b5ed7 0%, #084298 100%);
             color: white;
             padding: 30px 28px 24px;
             text-align: center;
@@ -77,22 +77,22 @@
 
         .form-label {
             font-weight: 600;
-            color: #23402d;
+            color: #1e2b33;
         }
 
         .form-control,
         .form-control:focus {
-            border-color: #cfe3d5;
+            border-color: #dde5ea;
             box-shadow: none;
         }
 
         .form-control:focus {
-            border-color: #2e8b57;
-            box-shadow: 0 0 0 0.2rem rgba(46, 139, 87, 0.18);
+            border-color: #0b5ed7;
+            box-shadow: 0 0 0 0.2rem rgba(11, 94, 215, 0.18);
         }
 
         .btn-login {
-            background: linear-gradient(135deg, #2e8b57 0%, #1f7a3d 100%);
+            background: linear-gradient(135deg, #0b5ed7 0%, #0b5ed7 100%);
             border: none;
             padding: 12px 14px;
             font-weight: 600;
@@ -101,7 +101,7 @@
         }
 
         .btn-login:hover {
-            background: linear-gradient(135deg, #267a49 0%, #176232 100%);
+            background: linear-gradient(135deg, #0b5ed7 0%, #084298 100%);
             color: white;
         }
 
@@ -113,12 +113,12 @@
         .login-footer {
             text-align: center;
             padding: 18px 24px 24px;
-            background-color: #f7fbf8;
-            border-top: 1px solid #e7f1ea;
+            background-color: #f4f7ff;
+            border-top: 1px solid #dde5ea;
         }
 
         .login-footer a {
-            color: #1f7a3d;
+            color: #0b5ed7;
             text-decoration: none;
             font-size: 0.9rem;
             font-weight: 600;
@@ -129,7 +129,7 @@
         }
 
         .helper-text {
-            color: #5e7768;
+            color: #5a6b75;
             font-size: 0.85rem;
         }
 

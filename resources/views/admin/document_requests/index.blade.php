@@ -57,6 +57,7 @@
                                 <th class="py-3">Tracking #</th>
                                 <th class="py-3">Requesting Agency</th>
                                 <th class="py-3">Request Type</th>
+                                <th class="py-3">Requested Content</th>
                                 <th class="py-3">Status</th>
                                 <th class="py-3">Requested By</th>
                                 <th class="py-3">Requested At</th>
@@ -70,6 +71,33 @@
                                     <td class="font-monospace">{{ $dr->incident->tracking_number ?? 'N/A' }}</td>
                                     <td>{{ $dr->requestingAgency->name ?? 'N/A' }}</td>
                                     <td>{{ $dr->request_type }}</td>
+                                    <td style="max-width: 220px;">
+                                        @php
+                                            $sectionLabels = [
+                                                'incident_details' => 'Incident Details', 'narrative' => 'Narrative',
+                                                'resolutions' => 'Resolution Notes', 'status_timeline' => 'Status Timeline',
+                                                'evidence_photos' => 'Evidence Photos', 'call_taker_form' => 'Call Taker Form',
+                                                'dispatch_form' => 'Dispatch Form', 'narrative_report' => 'Narrative Report',
+                                                'endorsement_sheet' => 'Endorsement Sheet',
+                                            ];
+                                            $picked = $dr->requested_sections;
+                                        @endphp
+                                        @if(empty($picked))
+                                            <span class="badge bg-secondary-subtle text-secondary border">All content (default)</span>
+                                        @else
+                                            <details>
+                                                <summary class="small text-primary" style="cursor: pointer;">{{ count($picked) }} item(s) selected</summary>
+                                                <div class="mt-1 d-flex flex-wrap gap-1">
+                                                    @foreach($picked as $key)
+                                                        <span class="badge bg-light text-dark border small fw-normal">{{ $sectionLabels[$key] ?? $key }}</span>
+                                                    @endforeach
+                                                </div>
+                                            </details>
+                                        @endif
+                                        @if($dr->request_note)
+                                            <div class="text-muted small mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $dr->request_note }}</div>
+                                        @endif
+                                    </td>
                                     <td>
                                         <span class="badge bg-primary-subtle text-primary border text-capitalize">{{ $dr->status }}</span>
                                     </td>

@@ -63,11 +63,6 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="email" class="form-label">Office Email Address</label>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}" placeholder="e.g. bfp@pamplona.gov.ph">
-                        </div>
-
-                        <div class="mb-3">
                             <label for="address" class="form-label">Office Address</label>
                             <input type="text" class="form-control" id="address" name="address" value="{{ old('address') }}" placeholder="e.g. Barangay Santa Cruz, Pamplona">
                         </div>
@@ -84,13 +79,13 @@
             <div class="col-md-6">
                 <div class="card raniag-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i>Primary Officer Login Account</h5>
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i>Account Details</h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="officer_name" class="form-label">Officer's Full Name <span class="text-danger">*</span></label>
+                            <label for="officer_name" class="form-label">Full Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="officer_name" name="officer_name" value="{{ old('officer_name') }}" required placeholder="e.g. Chief Inspector John Doe">
-                            <div class="form-text">The full display name for the staff officer.</div>
+                            <div class="form-text">The full display name for this account.</div>
                         </div>
  
                         <div id="personnel-fields" class="{{ old('account_type', 'agency') !== 'personnel' ? 'd-none' : '' }}">
@@ -118,9 +113,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="officer_email" class="form-label">Officer's Login Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="officer_email" name="officer_email" value="{{ old('officer_email') }}" required placeholder="e.g. john.doe@pamplona.gov.ph">
-                            <div class="form-text">Used by the officer as their login ID. Must be unique.</div>
+                            <label for="officer_email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="officer_email" name="officer_email" value="{{ old('officer_email') }}" required placeholder="e.g. bfp.pamplona@gmail.com">
+                            <div class="form-text">This single Gmail address is used to log in, receive notifications, and reset the password. Must be unique.</div>
                         </div>
 
                         <div class="mb-0">

@@ -26,16 +26,26 @@ class IncidentController extends Controller
 
         abort_if(! $agencyId, 403, 'No agency is associated with this account.');
 
+        $filters = $request->only(['status', 'priority', 'barangay', 'q', 'sort', 'direction']);
+
         $incidents = $this->incidents->paginateForAgency(
             $agencyId,
-            (int) $request->integer('per_page', 15)
+            (int) $request->integer('per_page', 15),
+            $filters
         );
 
         if ($request->wantsJson()) {
             return response()->json($incidents);
         }
 
-        return view('agency.incidents.index', compact('incidents'));
+        $barangays = \App\Models\Incident::query()
+            ->whereHas('assignments', fn ($q) => $q->where('assignments.agency_id', $agencyId))
+            ->whereNotNull('barangay')
+            ->distinct()
+            ->orderBy('barangay')
+            ->pluck('barangay');
+
+        return view('agency.incidents.index', compact('incidents', 'filters', 'barangays'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse

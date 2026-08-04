@@ -68,4 +68,17 @@ class PersonnelController extends Controller
             ->route('admin.agencies.index')
             ->with('success', 'Personnel account updated successfully.');
     }
+
+    public function destroy(User $personnel)
+    {
+        if ($personnel->role !== UserRole::Personnel) {
+            abort(404);
+        }
+
+        $personnel->delete();
+
+        return redirect()
+            ->route('admin.agencies.index')
+            ->with('success', 'Personnel account deleted successfully.');
+    }
 }

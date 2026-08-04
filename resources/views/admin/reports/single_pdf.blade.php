@@ -132,6 +132,7 @@
         <strong>System Ref:</strong> {{ $incident->id }}
     </div>
 
+    @if(! isset($sections) || in_array('incident_details', $sections))
     <div class="section-title">I. Incident Particulars</div>
     <table class="details-table">
         <tr>
@@ -167,7 +168,9 @@
             </td>
         </tr>
     </table>
+    @endif
 
+    @if(! isset($sections) || in_array('narrative', $sections))
     <div class="section-title">II. Narrative / Description</div>
     @if($incident->title)
         <div style="font-weight: bold; margin-bottom: 5px; font-size: 11pt;">{{ $incident->title }}</div>
@@ -175,8 +178,9 @@
     <div class="narrative-box">
         {!! nl2br(e($incident->description)) !!}
     </div>
+    @endif
 
-    @if($incident->resolutions && $incident->resolutions->isNotEmpty())
+    @if(($incident->resolutions && $incident->resolutions->isNotEmpty()) && (! isset($sections) || in_array('resolutions', $sections)))
         <div class="section-title">III. Official Resolutions & Actions Taken</div>
         @foreach($incident->resolutions as $res)
             <div style="margin-bottom: 15px; border: 1px solid #1a365d; padding: 10px;">
@@ -192,6 +196,7 @@
         @endforeach
     @endif
 
+    @if(! isset($sections) || in_array('evidence_photos', $sections))
     <div class="section-title">IV. Attached Evidence</div>
     @if($incident->evidence->isEmpty())
         <div style="font-style: italic; color: #666; font-size: 10pt;">No digital evidence attached to this report.</div>
@@ -213,8 +218,35 @@
             @endforeach
         </div>
     @endif
+    @endif
 
-    <div class="section-title" style="page-break-before: auto;">V. Status & Audit Timeline</div>
+    @php
+        $docSectionKeys = ['call_taker_form', 'dispatch_form', 'narrative_report', 'endorsement_sheet'];
+        $activeDocKeys = isset($sections) ? array_intersect($docSectionKeys, $sections) : $docSectionKeys;
+        $docsToShow = ($incident->incidentDocuments ?? collect())->whereIn('document_type', array_map(fn ($k) => \App\Enums\IncidentDocumentType::from($k), $activeDocKeys));
+    @endphp
+    @if(! empty($activeDocKeys))
+    <div class="section-title" style="page-break-before: auto;">V. Case Documents (Repository)</div>
+    @if($docsToShow->isEmpty())
+        <div style="font-style: italic; color: #666; font-size: 10pt;">No repository documents attached for the selected content.</div>
+    @else
+        <div class="evidence-grid">
+            @foreach($docsToShow as $doc)
+                <div class="evidence-item">
+                    @if(str_starts_with((string) $doc->mime_type, 'image/'))
+                        <img src="{{ storage_path('app/public/'.$doc->file_path) }}" class="evidence-img" alt="{{ $doc->document_type->label() }}">
+                    @else
+                        <div style="font-size: 9pt; padding: 5px; border: 1px dashed #ccc;">[Document Attached]: {{ $doc->original_filename }}</div>
+                    @endif
+                    <div class="evidence-caption">{{ $doc->document_type->label() }} — {{ $doc->original_filename }}</div>
+                </div>
+            @endforeach
+        </div>
+    @endif
+    @endif
+
+    @if(! isset($sections) || in_array('status_timeline', $sections))
+    <div class="section-title" style="page-break-before: auto;">VI. Status & Audit Timeline</div>
     @if($incident->statusUpdates->isEmpty())
         <div style="font-style: italic; color: #666; font-size: 10pt;">No status timeline recorded.</div>
     @else
@@ -239,6 +271,7 @@
                 @endforeach
             </tbody>
         </table>
+    @endif
     @endif
 
 </body>

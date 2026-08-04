@@ -83,9 +83,34 @@
                 </div>
             </div>
 
-            <div class="col-12 text-end">
+            <div class="col-12 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#deletePersonnelModal">
+                    <i class="bi bi-trash me-1"></i>Delete Account
+                </button>
                 <button type="submit" class="btn btn-primary btn-lg px-4"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
             </div>
         </div>
     </form>
+
+    <div class="modal fade" id="deletePersonnelModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Personnel Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to permanently delete <strong>{{ $personnel->name }}</strong>'s account? This cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{{ route('admin.personnel.destroy', $personnel->id) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </x-app-layout>

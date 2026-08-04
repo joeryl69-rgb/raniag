@@ -29,7 +29,7 @@
                                     <th class="py-3">Name</th>
                                     <th class="py-3">Phone</th>
                                     <th class="py-3">Email Address</th>
-                                    <th class="py-3">Officer Login</th>
+                                    <th class="py-3">Login Name</th>
                                     <th class="py-3">Status</th>
                                     <th class="px-4 py-3 text-end">Actions</th>
                                 </tr>
@@ -47,7 +47,6 @@
                                         <td class="py-3">
                                             @if ($primaryUser)
                                                 <div class="small fw-semibold text-dark">{{ $primaryUser->name }}</div>
-                                                <div class="text-muted small">{{ $primaryUser->email }}</div>
                                             @else
                                                 <span class="text-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i>No Login Account</span>
                                             @endif
@@ -63,6 +62,30 @@
                                             <a href="{{ route('admin.agencies.edit', $agency->id) }}" class="btn btn-sm btn-outline-primary">
                                                 <i class="bi bi-pencil me-1"></i>Edit
                                             </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAgency{{ $agency->id }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <div class="modal fade" id="deleteAgency{{ $agency->id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Delete Agency Account</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body text-start">
+                                                            Permanently delete <strong>{{ $agency->name }}</strong> and its login account?
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ route('admin.agencies.destroy', $agency->id) }}" method="POST">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
@@ -126,6 +149,30 @@
                                             <a href="{{ route('admin.personnel.edit', $personnel->id) }}" class="btn btn-sm btn-outline-primary">
                                                 <i class="bi bi-pencil me-1"></i>Edit
                                             </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletePersonnel{{ $personnel->id }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <div class="modal fade" id="deletePersonnel{{ $personnel->id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Delete Personnel Account</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body text-start">
+                                                            Permanently delete <strong>{{ $personnel->name }}</strong>'s account?
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ route('admin.personnel.destroy', $personnel->id) }}" method="POST">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty

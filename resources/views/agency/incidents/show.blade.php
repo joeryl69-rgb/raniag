@@ -336,6 +336,29 @@
                                     <label for="request_note" class="form-label">Request Details</label>
                                     <textarea class="form-control" id="request_note" name="request_note" rows="3" placeholder="Describe what you need in the printable copy (optional)"></textarea>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label small mb-1 d-block">Include in printable copy</label>
+                                    @php
+                                        $sectionOptions = [
+                                            'incident_details' => 'Incident Details',
+                                            'narrative' => 'Narrative',
+                                            'resolutions' => 'Resolution Notes',
+                                            'status_timeline' => 'Status Timeline',
+                                            'evidence_photos' => 'Evidence Photos',
+                                            'call_taker_form' => 'Call Taker Form',
+                                            'dispatch_form' => 'Dispatch Form',
+                                            'narrative_report' => 'Narrative Report',
+                                            'endorsement_sheet' => 'Endorsement Sheet',
+                                        ];
+                                    @endphp
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach ($sectionOptions as $value => $label)
+                                            <input type="checkbox" class="btn-check" name="requested_sections[]" value="{{ $value }}" id="incsection_{{ $value }}" checked autocomplete="off">
+                                            <label class="btn btn-outline-primary btn-sm rounded-pill px-3" for="incsection_{{ $value }}">{{ $label }}</label>
+                                        @endforeach
+                                    </div>
+                                    <div class="form-text">All content is included by default. Uncheck anything you don't need.</div>
+                                </div>
                                 <button type="submit" class="btn btn-outline-primary w-100" @disabled(($documentRequest && in_array($documentRequest->status, ['pending','approved','sent'])))>
                                     <i class="bi bi-file-earmark-text me-2"></i>
                                     @if($documentRequest && $documentRequest->status === 'rejected')

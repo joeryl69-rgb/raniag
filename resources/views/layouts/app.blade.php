@@ -12,12 +12,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{{ asset('css/public.css') }}" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0e4a6b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
     @stack('styles')
-    
+
     <style>
         body {
             font-family: 'Figtree', sans-serif;
-            background-color: #f1f5f9;
+            background-color: var(--raniag-surface);
             overflow-x: hidden;
         }
         
@@ -29,47 +34,48 @@
 
         #sidebar-wrapper {
             width: 260px;
-            background-color: #0f172a;
-            color: #cbd5e1;
+            background-color: var(--raniag-sidebar);
+            color: #a9c1cf;
             flex-shrink: 0;
             transition: all 0.25s ease;
             display: flex;
             flex-column: column;
             flex-direction: column;
-            border-right: 1px solid #1e293b;
+            border-right: 1px solid rgba(255,255,255,0.06);
         }
 
         #sidebar-wrapper .sidebar-brand {
             padding: 1.5rem 1.25rem;
-            background-color: #020617;
-            border-bottom: 1px solid #1e293b;
+            background: linear-gradient(135deg, var(--raniag-primary-dark), var(--raniag-primary));
+            border-bottom: 1px solid rgba(255,255,255,0.08);
         }
 
         #sidebar-wrapper .sidebar-profile {
             padding: 1.25rem;
-            background-color: #1e293b;
-            border-bottom: 1px solid #0f172a;
+            background-color: rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
 
         #sidebar-wrapper .nav-link {
-            color: #94a3b8;
+            color: #a9c1cf;
             padding: 0.8rem 1.25rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
             border-left: 3px solid transparent;
             transition: all 0.15s ease;
+            min-height: 44px;
         }
 
         #sidebar-wrapper .nav-link:hover {
             color: #fff;
-            background-color: #1e293b;
+            background-color: var(--raniag-sidebar-active);
         }
 
         #sidebar-wrapper .nav-link.active {
             color: #fff;
-            background-color: #1e293b;
-            border-left-color: #3b82f6;
+            background-color: var(--raniag-sidebar-active);
+            border-left-color: var(--raniag-accent);
             font-weight: 600;
         }
  
@@ -113,21 +119,10 @@
 
         .navbar-top {
             background-color: #fff;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--raniag-border);
             padding: 1rem 1.5rem;
             position: relative;
-        }
-
-        /* Sidebar base styles (non-fixed by default for mobile) */
-        #sidebar-wrapper {
-            width: 260px;
-            background-color: #0f172a;
-            color: #cbd5e1;
-            flex-shrink: 0;
-            transition: all 0.25s ease;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #1e293b;
+            min-height: 60px;
         }
 
         /* Make sidebar fixed on desktop only to preserve mobile responsiveness */
@@ -182,68 +177,6 @@
     </style>
 </head>
 <body>
-    @php
-        // Fetch new/assigned reports badge count dynamically in the layout
-        if (auth()->user()->isAdministrator()) {
-            $badgeCount = \App\Models\Incident::where('status', \App\Enums\IncidentStatus::Submitted)->count();
-        } elseif (auth()->user()->isPersonnel()) {
-            $badgeCount = \App\Models\Incident::whereHas('assignments', function ($q) {
-                    $q->where('assigned_to', auth()->id())
-                        ->where('is_active', true);
-                })
-                ->where('status', \App\Enums\IncidentStatus::Assigned)
-                ->count();
-        } else {
-            $badgeCount = \App\Models\Incident::where('agency_id', auth()->user()->agency_id)
-                ->where('status', \App\Enums\IncidentStatus::Assigned)
-                ->count();
-        }
-
-        $documentRequestAlertCount = 0;
-        if (auth()->user()->agency_id) {
-            // Count unread document-request notifications targeted to this agency.
-            $documentRequestAlertCount = \App\Models\SystemNotification::query()
-                ->whereNull('read_at')
-                ->where('type', 'document_request')
-                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.agency_id')) = ?", [auth()->user()->agency_id])
-                ->count();
-        }
-
-        $notificationCount = \App\Models\SystemNotification::query()
-            ->when(auth()->user()->isAdministrator(), function ($query) {
-                $query->where(function ($q) {
-                    $q->where('user_id', auth()->id())->orWhereNull('user_id');
-                });
-            })
-            ->when(auth()->user()->isPersonnel(), function ($query) {
-                $query->where('user_id', auth()->id());
-            })
-            ->when(! auth()->user()->isAdministrator() && ! auth()->user()->isPersonnel(), function ($query) {
-                $query->where(function ($q) {
-                    $q->where('user_id', auth()->id())
-                        ->orWhere(function ($q2) {
-                            $q2->whereNull('user_id')
-                               ->where('data->agency_id', auth()->user()->agency_id);
-                        });
-                });
-            })
-            ->whereNull('read_at')
-            ->count();
-
-        // Admin document request badge: unread document_request notifications global (user_id null) or targeted
-        $adminDocumentRequestAlertCount = 0;
-        if (auth()->user()->isAdministrator()) {
-            $adminDocumentRequestAlertCount = \App\Models\SystemNotification::query()
-                ->whereNull('read_at')
-                ->where('type', 'document_request')
-                ->where(function ($q) {
-                    $q->where('user_id', auth()->id())->orWhereNull('user_id');
-                })
-                ->selectRaw('COUNT(DISTINCT JSON_UNQUOTE(JSON_EXTRACT(`data`, "$.document_request_id"))) as count')
-                ->value('count') ?? 0;
-        }
-    @endphp
-
     <div id="wrapper">
         <!-- Overlay for mobile toggle -->
         <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -269,9 +202,9 @@
                     @if (auth()->user()->isAdministrator())
                         <span class="badge bg-danger fs-8 fw-normal">Administrator</span>
                     @elseif (auth()->user()->isPersonnel())
-                        <span class="badge bg-info text-dark fs-8 fw-normal">Personnel</span>
+                        <span class="badge fs-8 fw-normal" style="background-color: var(--raniag-accent); color: #fff;">Personnel</span>
                     @else
-                        <span class="badge bg-info text-dark fs-8 fw-normal">{{ auth()->user()->agency->code ?? 'Agency' }}</span>
+                        <span class="badge fs-8 fw-normal" style="background-color: var(--raniag-accent); color: #fff;">{{ auth()->user()->agency->code ?? 'Agency' }}</span>
                     @endif
                 </div>
             </div>
@@ -284,23 +217,11 @@
                             <i class="bi bi-speedometer2"></i><span>Dashboard</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
-                            <i class="bi bi-bell"></i><span>Notifications</span>
-                            @if($notificationCount > 0)
-                                <span class="badge bg-primary rounded-pill fs-8">{{ $notificationCount }}</span>
-                            @endif
-                        </a>
-                    </li>
- 
                     @if(auth()->user()->isAdministrator())
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.incidents.*') ? 'active' : '' }}" href="{{ route('admin.incidents.index') }}">
                                 <i class="bi bi-exclamation-circle"></i>
                                 <span class="flex-grow-1">Incidents</span>
-                                @if($badgeCount > 0)
-                                    <span class="badge bg-primary rounded-pill fs-8">{{ $badgeCount }}</span>
-                                @endif
                             </a>
                         </li>
                         <li class="nav-item">
@@ -321,9 +242,11 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.document_requests.*') ? 'active' : '' }}" href="{{ route('admin.document_requests.index') }}">
                                 <i class="bi bi-file-earmark-pdf"></i><span>Document Requests</span>
-                                @if(isset($adminDocumentRequestAlertCount) && $adminDocumentRequestAlertCount > 0)
-                                    <span class="badge bg-primary rounded-pill fs-8">{{ $adminDocumentRequestAlertCount }}</span>
-                                @endif
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.incident_documents.*') ? 'active' : '' }}" href="{{ route('admin.incident_documents.index') }}">
+                                <i class="bi bi-folder2-open"></i><span>Case Documents</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -336,18 +259,12 @@
                             <a class="nav-link {{ request()->routeIs('agency.incidents.*') || request()->routeIs('personnel.incidents.*') ? 'active' : '' }}" href="{{ auth()->user()->isPersonnel() ? route('personnel.incidents.index') : route('agency.incidents.index') }}">
                                 <i class="bi card-checklist"></i>
                                 <span class="flex-grow-1">Dispatches</span>
-                                @if($badgeCount > 0)
-                                    <span class="badge bg-primary rounded-pill fs-8">{{ $badgeCount }}</span>
-                                @endif
                             </a>
                         </li>
                         @if(auth()->user()->agency_id)
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('agency.document_requests.*') || request()->routeIs('agency.document_requests.index') ? 'active' : '' }}" href="{{ route('agency.document_requests.index') }}">
                                     <i class="bi bi-file-earmark-pdf"></i><span>Document Requests</span>
-                                    @if($documentRequestAlertCount > 0)
-                                        <span class="badge bg-primary rounded-pill fs-8">{{ $documentRequestAlertCount }}</span>
-                                    @endif
                                 </a>
                             </li>
                         @endif
@@ -465,10 +382,15 @@
  
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('form').forEach(function (form) {
+                let lastClickedSubmit = null;
+                form.querySelectorAll('button[type="submit"]').forEach(function (btn) {
+                    btn.addEventListener('click', function () { lastClickedSubmit = btn; });
+                });
+
                 form.addEventListener('submit', function () {
                     if (this.classList.contains('no-loading')) return;
-                    const submitButton = this.querySelector('button[type="submit"]');
-                    const message = this.dataset.loadingMessage || 'Processing, please wait...';
+                    const submitButton = lastClickedSubmit || this.querySelector('button[type="submit"]');
+                    const message = submitButton?.dataset.loadingMessage || this.dataset.loadingMessage || 'Processing, please wait...';
                     showLoadingOverlay(message);
                     if (submitButton) {
                         setButtonLoading(submitButton, message);

@@ -139,6 +139,71 @@
                 </div>
             </div>
 
+            <!-- Case Documents Repository -->
+            <div class="card raniag-card shadow-sm border-0 mb-4" id="case-documents">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-folder2-open me-2 text-primary"></i>Case Documents Repository</h5>
+                    <div class="text-muted small mt-1">Attach a photo (or file) of each paper form for this incident. These are kept on file and can be included in printable copies requested by agencies.</div>
+                </div>
+                <div class="card-body">
+                    @php
+                        $documentGroups = \App\Enums\IncidentDocumentType::cases();
+                        $existingDocuments = $incident->incidentDocuments ?? collect();
+                    @endphp
+                    <div class="row g-3">
+                        @foreach ($documentGroups as $docType)
+                            @php $docsOfType = $existingDocuments->where('document_type', $docType); @endphp
+                            <div class="col-md-6">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-semibold small">{{ $docType->label() }}</span>
+                                        <span class="badge {{ $docsOfType->isEmpty() ? 'bg-secondary' : 'bg-success' }}">{{ $docsOfType->count() }} on file</span>
+                                    </div>
+
+                                    @if ($docsOfType->isNotEmpty())
+                                        <div class="d-flex flex-wrap gap-2 mb-2">
+                                            @foreach ($docsOfType as $doc)
+                                                <div class="position-relative">
+                                                    <a href="{{ Storage::url($doc->file_path) }}" target="_blank">
+                                                        @if (str_starts_with((string) $doc->mime_type, 'image/'))
+                                                            <img src="{{ Storage::url($doc->file_path) }}" alt="{{ $docType->label() }}" style="width:70px;height:70px;object-fit:cover;" class="rounded border">
+                                                        @else
+                                                            <div class="d-flex align-items-center justify-content-center bg-light text-secondary rounded border" style="width:70px;height:70px;"><i class="bi bi-file-earmark-pdf fs-4"></i></div>
+                                                        @endif
+                                                    </a>
+                                                    <form method="POST" action="{{ route('admin.incidents.documents.destroy', [$incident->id, $doc->id]) }}" class="position-absolute top-0 end-0" onsubmit="return confirm('Remove this document?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-danger py-0 px-1" style="line-height:1;" title="Remove"><i class="bi bi-x"></i></button>
+                                                    </form>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <div class="d-flex gap-2">
+                                        <form method="POST" action="{{ route('admin.incidents.documents.store', $incident->id) }}" enctype="multipart/form-data" class="doc-upload-form">
+                                            @csrf
+                                            <input type="hidden" name="document_type" value="{{ $docType->value }}">
+                                            <input type="hidden" name="is_camera_capture" value="1">
+                                            <input type="file" name="file" accept="image/*" capture="environment" class="d-none doc-file-input" onchange="this.form.requestSubmit()">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="this.previousElementSibling.click()"><i class="bi bi-camera me-1"></i>Take Photo</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.incidents.documents.store', $incident->id) }}" enctype="multipart/form-data" class="doc-upload-form">
+                                            @csrf
+                                            <input type="hidden" name="document_type" value="{{ $docType->value }}">
+                                            <input type="hidden" name="is_camera_capture" value="0">
+                                            <input type="file" name="file" accept="image/*,application/pdf" class="d-none doc-file-input" onchange="this.form.requestSubmit()">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.click()"><i class="bi bi-upload me-1"></i>Upload File</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
             <!-- Timeline Section -->
             <div class="card raniag-card shadow-sm border-0 mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">

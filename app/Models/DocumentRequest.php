@@ -16,18 +16,22 @@ class DocumentRequest extends Model
         'requested_by',
         'request_type',
         'request_note',
+        'requested_sections',
         'status',
         'admin_comment',
         'generated_path',
         'generated_at',
         'sent_at',
         'failed_reason',
+        'archived_at',
     ];
 
     protected $casts = [
+        'requested_sections' => 'array',
         'generated_at' => 'datetime',
         'sent_at' => 'datetime',
         'admin_comment' => 'string',
+        'archived_at' => 'datetime',
     ];
 
     public function incident(): BelongsTo

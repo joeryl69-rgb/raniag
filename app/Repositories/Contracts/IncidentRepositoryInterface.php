@@ -15,7 +15,7 @@ interface IncidentRepositoryInterface
 
     public function update(Incident $incident, array $attributes): Incident;
 
-    public function paginateForAgency(int $agencyId, int $perPage = 15): LengthAwarePaginator;
+    public function paginateForAgency(int $agencyId, int $perPage = 15, array $filters = []): LengthAwarePaginator;
 
     public function paginateAll(array $filters = [], int $perPage = 15): LengthAwarePaginator;
 }
