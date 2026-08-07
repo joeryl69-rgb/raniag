@@ -5,8 +5,8 @@
 
     <div class="row">
         <div class="col-12">
-            <div class="card shadow-sm border-0 mb-4" style="border-radius: 1rem; border: 1px solid #e7f1ea;">
-                <div class="card-header bg-white py-3 border-0">
+            <div class="card raniag-card shadow-sm border-0 mb-4">
+                <div class="card-header raniag-card-header py-3 border-0">
                     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
                         <div>
                             <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-card-checklist me-2 text-primary"></i>Assigned Emergency Responses</h5>
@@ -18,6 +18,7 @@
                         <select name="status" class="form-select form-select-sm" style="width: 160px;">
                             <option value="all">All Statuses</option>
                             @foreach (\App\Enums\IncidentStatus::cases() as $s)
+                                @continue(in_array($s->value, ['resolved', 'closed']))
                                 <option value="{{ $s->value }}" @selected(($filters['status'] ?? '') === $s->value)>{{ $s->label() }}</option>
                             @endforeach
                         </select>

@@ -268,6 +268,13 @@
                                 </a>
                             </li>
                         @endif
+                        @if(auth()->user()->agency_id && ! auth()->user()->isPersonnel())
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('agency.archived_reports.*') ? 'active' : '' }}" href="{{ route('agency.archived_reports.index') }}">
+                                    <i class="bi bi-archive"></i><span>Archived Reports</span>
+                                </a>
+                            </li>
+                        @endif
                     @endif
 
                     <li class="nav-item border-top border-secondary my-2 pt-2">

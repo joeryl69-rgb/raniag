@@ -229,7 +229,7 @@
                             <div class="modal-content bg-dark">
                                 <div class="modal-body p-0 d-flex align-items-center justify-content-center position-relative">
                                     <!-- Live viewport -->
-                                    <div id="gps-camera-live" class="gps-camera-viewport gps-camera-viewport-full position-relative w-100 h-100">
+                                    <div id="gps-camera-live" class="gps-camera-viewport gps-camera-viewport-full">
                                         <video id="gps-camera-video" class="gps-modal-video" playsinline autoplay muted></video>
                                         <canvas id="gps-camera-canvas" class="d-none"></canvas>
                                         <div class="gps-watermark-overlay" id="gps-watermark-overlay">
@@ -248,7 +248,7 @@
                                     </div>
 
                                     <!-- Review step: shown after a shot, before it's committed -->
-                                    <div id="gps-camera-review" class="d-none w-100 h-100 align-items-center justify-content-center">
+                                    <div id="gps-camera-review" class="d-none gps-camera-review-step">
                                         <img id="gps-review-image" class="gps-review-img" alt="Captured photo preview">
                                     </div>
                                 </div>

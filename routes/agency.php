@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Agency\ArchivedReportController;
 use App\Http\Controllers\Agency\DashboardController;
 use App\Http\Controllers\Agency\DocumentRequestController;
 use App\Http\Controllers\Agency\IncidentController;
@@ -29,4 +30,13 @@ Route::prefix('agency')
 
         Route::post('/incidents/{incident}/resolution', [ResolutionController::class, 'store'])->name('incidents.resolution');
         Route::put('/incidents/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('incidents.resolution.update');
+
+        Route::prefix('archived-reports')->name('archived_reports.')->group(function () {
+            Route::get('/', [ArchivedReportController::class, 'index'])->name('index');
+            Route::post('/bulk/verify-password', [ArchivedReportController::class, 'verifyPasswordBulk'])->name('bulk_verify_password');
+            Route::get('/bulk/download', [ArchivedReportController::class, 'downloadBulk'])->name('bulk_download');
+            Route::get('/{incident}', [ArchivedReportController::class, 'show'])->name('show');
+            Route::post('/{incident}/verify-password', [ArchivedReportController::class, 'verifyPassword'])->name('verify_password');
+            Route::get('/{incident}/download', [ArchivedReportController::class, 'download'])->name('download');
+        });
     });

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IncidentDocumentType;
 use App\Enums\IncidentPriority;
 use App\Enums\IncidentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -114,6 +115,40 @@ class Incident extends Model
     public function activityLogs(): MorphMany
     {
         return $this->morphMany(ActivityLog::class, 'subject');
+    }
+
+    /**
+     * Per-document-type availability for this incident (value => on file?).
+     * Single source of truth for both the missing-labels warning and the
+     * agency-facing "what's available right now" UI.
+     *
+     * @return array<string, bool>
+     */
+    public function documentAvailability(): array
+    {
+        $onFile = $this->incidentDocuments->pluck('document_type')
+            ->map(fn ($type) => is_object($type) ? $type->value : $type)
+            ->all();
+
+        return collect(IncidentDocumentType::cases())
+            ->mapWithKeys(fn (IncidentDocumentType $type) => [$type->value => in_array($type->value, $onFile, true)])
+            ->all();
+    }
+
+    /**
+     * Required document types not yet on file for this incident. Used to warn
+     * an agency before they submit a printable document request.
+     *
+     * @return list<string> human-readable labels of missing document types
+     */
+    public function missingRequiredDocumentTypes(): array
+    {
+        return collect($this->documentAvailability())
+            ->reject(fn (bool $available) => $available)
+            ->keys()
+            ->map(fn (string $value) => IncidentDocumentType::from($value)->label())
+            ->values()
+            ->all();
     }
 
     public function documentRequests()

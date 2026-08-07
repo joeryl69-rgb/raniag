@@ -1,8 +1,8 @@
 <x-app-layout>
     <x-slot name="header">{{ __('My Document Requests') }}</x-slot>
 
-    <div class="card shadow-sm border-0" style="border-radius: 1rem; border: 1px solid #e7f1ea;">
-        <div class="card-header bg-white border-0 py-3">
+    <div class="card raniag-card shadow-sm border-0">
+        <div class="card-header raniag-card-header border-0 py-3">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 flex-wrap">
                 <div>
                     <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-file-earmark-text me-2 text-primary"></i>My Document Requests</h5>
@@ -66,7 +66,9 @@
                             <i class="bi bi-send me-1"></i>Request
                         </button>
                     </div>
-                    <div class="col-12 d-none" id="singleSectionsWrap"></div>
+                    <div class="col-12 d-none" id="singleSectionPicker">
+                        @include('agency.document_requests._section_picker', ['idPrefix' => 'single'])
+                    </div>
                 </form>
 
                 {{-- BULK MODE --}}
@@ -93,131 +95,179 @@
                             <i class="bi bi-send me-1"></i>Request Selected
                         </button>
                     </div>
-                    <div class="col-12 d-none" id="bulkSectionsWrap"></div>
+                    <div class="col-12 d-none" id="bulkSectionPicker">
+                        @include('agency.document_requests._section_picker', ['idPrefix' => 'bulk'])
+                    </div>
                 </form>
 
-                {{-- SHARED "Include in printable copy" TEMPLATE (cloned into whichever mode is active) --}}
-                <template id="sectionsTemplate">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
-                        <label class="form-label small mb-0">Include in printable copy</label>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="small text-muted section-counter"></span>
-                            <button type="button" class="btn btn-link btn-sm p-0 select-all-sections">Select All</button>
-                            <span class="text-muted">|</span>
-                            <button type="button" class="btn btn-link btn-sm p-0 deselect-all-sections">Deselect All</button>
+                {{-- Incomplete-document confirmation modal (shared by single & bulk) --}}
+                <div class="modal fade" id="incompleteDocsModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-1"></i>Incomplete Report(s)</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="small mb-2">The following selected report(s) are missing some required documents:</p>
+                                <ul id="incompleteDocsList" class="small mb-0"></ul>
+                                <p class="small text-muted mt-2 mb-0">You can still request a printable copy now, or cancel and wait until the file is complete.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-sm btn-primary" id="incompleteDocsContinueBtn">Continue Anyway</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="d-flex flex-wrap gap-2 section-checkbox-group">
-                        @php
-                            $sectionOptions = [
-                                'incident_details' => ['Incident Details', 'Location, type, priority, and reporter info'],
-                                'narrative' => ['Narrative', "Reporter's original account of the incident"],
-                                'resolutions' => ['Resolution Notes', 'How the case was closed out'],
-                                'status_timeline' => ['Status Timeline', 'Full history of status changes'],
-                                'evidence_photos' => ['Evidence Photos', 'Uploaded photos attached to the case'],
-                                'call_taker_form' => ['Call Taker Form', 'Details logged by the receiving call taker'],
-                                'dispatch_form' => ['Dispatch Form', 'Assignment and dispatch record'],
-                                'narrative_report' => ['Narrative Report', "Responding agency's written report"],
-                                'endorsement_sheet' => ['Endorsement Sheet', 'Formal endorsement for referral/filing'],
-                            ];
-                        @endphp
-                        @foreach ($sectionOptions as $value => [$label, $tip])
-                            <input type="checkbox" class="btn-check section-checkbox" name="requested_sections[]" value="{{ $value }}" id="__PREFIX___{{ $value }}" checked autocomplete="off">
-                            <label class="btn btn-outline-primary btn-sm rounded-pill px-3" for="__PREFIX___{{ $value }}" title="{{ $tip }}">{{ $label }}</label>
-                        @endforeach
-                    </div>
-                    <div class="form-text">All content is included by default. Uncheck anything you don't need.</div>
-                    <div class="text-danger small d-none section-required-warning">Select at least one section to include.</div>
-                </template>
+                </div>
 
+                @push('scripts')
                 <script>
                     (function () {
-                        var tpl = document.getElementById('sectionsTemplate');
+                        var incompleteIncidents = @json($incompleteIncidents ?? []);
+                        var documentAvailability = @json($documentAvailability ?? []);
+                        var FORM_TYPES = ['call_taker_form', 'dispatch_form', 'narrative_report', 'endorsement_sheet'];
+                        var sectionLabels = {
+                            call_taker_form: 'Call Taker Form',
+                            dispatch_form: 'Dispatch Form',
+                            narrative_report: 'Narrative Report',
+                            endorsement_sheet: 'Endorsement Sheet'
+                        };
 
-                        function mountSections(wrapEl, prefix) {
-                            wrapEl.innerHTML = tpl.innerHTML.replaceAll('__PREFIX__', prefix);
-                            wrapEl.classList.remove('d-none');
-                            return wrapEl;
-                        }
-
-                        function wireSections(wrapEl, onChange) {
-                            var checkboxes = wrapEl.querySelectorAll('.section-checkbox');
-                            var counter = wrapEl.querySelector('.section-counter');
-                            var warning = wrapEl.querySelector('.section-required-warning');
-
-                            function refresh() {
-                                var checked = wrapEl.querySelectorAll('.section-checkbox:checked').length;
-                                counter.textContent = checked + ' of ' + checkboxes.length + ' sections included';
-                                warning.classList.toggle('d-none', checked > 0);
-                                onChange(checked);
+                        // Lets the agency see, per report, which form documents are on file
+                        // right now — and makes it impossible to check a box for one that
+                        // isn't, instead of warning about it after the fact.
+                        function applyAvailability(idPrefix, incidentIds) {
+                            var unavailable = [];
+                            FORM_TYPES.forEach(function (type) {
+                                var availableForAll = incidentIds.every(function (id) {
+                                    var map = documentAvailability[id];
+                                    return map ? !!map[type] : true;
+                                });
+                                var input = document.getElementById(idPrefix + '_section_' + type);
+                                var wrap = document.getElementById(idPrefix + '_section_' + type + '_wrap');
+                                if (!input || !wrap) return;
+                                input.disabled = !availableForAll;
+                                wrap.classList.toggle('opacity-50', !availableForAll);
+                                if (!availableForAll) {
+                                    input.checked = false;
+                                    unavailable.push(sectionLabels[type]);
+                                }
+                            });
+                            var note = document.getElementById(idPrefix + '_availability_note');
+                            if (!note) return;
+                            if (unavailable.length) {
+                                note.textContent = 'Not yet available for the selected report(s): ' + unavailable.join(', ') + '.';
+                                note.classList.remove('d-none');
+                            } else {
+                                note.classList.add('d-none');
                             }
-                            checkboxes.forEach(function (cb) { cb.addEventListener('change', refresh); });
-                            wrapEl.querySelector('.select-all-sections').addEventListener('click', function () {
-                                checkboxes.forEach(function (cb) { cb.checked = true; }); refresh();
-                            });
-                            wrapEl.querySelector('.deselect-all-sections').addEventListener('click', function () {
-                                checkboxes.forEach(function (cb) { cb.checked = false; }); refresh();
-                            });
-                            refresh();
                         }
+
+                        var incompleteModalEl = document.getElementById('incompleteDocsModal');
+                        var incompleteModal = new bootstrap.Modal(incompleteModalEl);
+                        var incompleteList = document.getElementById('incompleteDocsList');
+                        var continueBtn = document.getElementById('incompleteDocsContinueBtn');
+                        var pendingSubmitForm = null;
+
+                        function missingFor(ids) {
+                            var out = {};
+                            ids.forEach(function (id) {
+                                if (incompleteIncidents[id] && incompleteIncidents[id].missing.length) {
+                                    out[id] = incompleteIncidents[id];
+                                }
+                            });
+                            return out;
+                        }
+
+                        // Intercepts a form submit; if any selected incident has missing
+                        // documents, shows a warning modal and lets the agency choose to
+                        // continue or cancel instead of silently submitting.
+                        function guardSubmit(form, getIncidentIds) {
+                            form.addEventListener('submit', function (e) {
+                                if (form.dataset.confirmed === '1') {
+                                    form.dataset.confirmed = '';
+                                    return;
+                                }
+                                // Specific docs already can't be checked unless available
+                                // (see applyAvailability). Only the "everything" default
+                                // (nothing checked) still needs the best-effort warning.
+                                if (form.querySelectorAll('input[name="requested_sections[]"]:checked').length > 0) return;
+                                var missing = missingFor(getIncidentIds());
+                                var trackingLabels = Object.keys(missing);
+                                if (trackingLabels.length === 0) return;
+
+                                e.preventDefault();
+                                e.stopImmediatePropagation();
+                                incompleteList.innerHTML = '';
+                                trackingLabels.forEach(function (id) {
+                                    var li = document.createElement('li');
+                                    var info = missing[id];
+                                    li.textContent = info.tracking + ': missing ' + info.missing.join(', ');
+                                    incompleteList.appendChild(li);
+                                });
+                                pendingSubmitForm = form;
+                                incompleteModal.show();
+                            });
+                        }
+
+                        continueBtn.addEventListener('click', function () {
+                            incompleteModal.hide();
+                            if (pendingSubmitForm) {
+                                pendingSubmitForm.dataset.confirmed = '1';
+                                pendingSubmitForm.requestSubmit ? pendingSubmitForm.requestSubmit() : pendingSubmitForm.submit();
+                                pendingSubmitForm = null;
+                            }
+                        });
 
                         // ---- SINGLE MODE ----
                         var sel = document.getElementById('quickPrintIncident');
                         var singleForm = document.getElementById('quickPrintForm');
                         var singleBtn = document.getElementById('quickPrintSubmit');
-                        var singleWrap = document.getElementById('singleSectionsWrap');
-                        var singleSectionsChecked = 0;
-
-                        function refreshSingleBtn() {
-                            singleBtn.disabled = !sel.value || singleSectionsChecked === 0;
-                        }
 
                         sel.addEventListener('change', function () {
                             singleForm.action = sel.value;
-                            if (sel.value && singleWrap.classList.contains('d-none')) {
-                                mountSections(singleWrap, 'single');
-                                wireSections(singleWrap, function (checked) {
-                                    singleSectionsChecked = checked;
-                                    refreshSingleBtn();
-                                });
-                            } else if (!sel.value) {
-                                singleWrap.classList.add('d-none');
-                                singleWrap.innerHTML = '';
-                            }
-                            refreshSingleBtn();
+                            singleBtn.disabled = !sel.value;
+                            document.getElementById('singleSectionPicker').classList.toggle('d-none', !sel.value);
+                            var opt = sel.options[sel.selectedIndex];
+                            var id = opt ? opt.getAttribute('data-incident-id') : null;
+                            applyAvailability('single', id ? [id] : []);
+                        });
+
+                        guardSubmit(singleForm, function () {
+                            var opt = sel.options[sel.selectedIndex];
+                            var id = opt ? opt.getAttribute('data-incident-id') : null;
+                            return id ? [id] : [];
                         });
 
                         // ---- BULK MODE ----
-                        var bulkForm = document.getElementById('bulkPrintForm');
                         var bulkBtn = document.getElementById('bulkPrintSubmit');
-                        var bulkWrap = document.getElementById('bulkSectionsWrap');
                         var bulkCounter = document.getElementById('bulkCounter');
-                        var bulkSectionsChecked = 0;
-                        var bulkSectionsWired = false;
 
                         function refreshBulkBtn() {
-                            var incidentsChecked = document.querySelectorAll('.bulk-incident-checkbox:checked').length;
-                            bulkCounter.textContent = incidentsChecked + ' selected';
-                            if (incidentsChecked > 0 && !bulkSectionsWired) {
-                                mountSections(bulkWrap, 'bulk');
-                                wireSections(bulkWrap, function (checked) {
-                                    bulkSectionsChecked = checked;
-                                    bulkBtn.disabled = incidentsChecked === 0 || bulkSectionsChecked === 0;
-                                });
-                                bulkSectionsWired = true;
-                            } else if (incidentsChecked === 0 && bulkSectionsWired) {
-                                bulkWrap.classList.add('d-none');
-                                bulkWrap.innerHTML = '';
-                                bulkSectionsWired = false;
-                            }
-                            bulkBtn.disabled = incidentsChecked === 0 || (bulkSectionsWired && bulkSectionsChecked === 0);
+                            var ids = Array.prototype.map.call(
+                                document.querySelectorAll('.bulk-incident-checkbox:checked'),
+                                function (cb) { return cb.value; }
+                            );
+                            bulkCounter.textContent = ids.length + ' selected';
+                            bulkBtn.disabled = ids.length === 0;
+                            document.getElementById('bulkSectionPicker').classList.toggle('d-none', ids.length === 0);
+                            applyAvailability('bulk', ids);
                         }
+
+                        guardSubmit(document.getElementById('bulkPrintForm'), function () {
+                            return Array.prototype.map.call(
+                                document.querySelectorAll('.bulk-incident-checkbox:checked'),
+                                function (cb) { return cb.value; }
+                            );
+                        });
 
                         document.querySelectorAll('.bulk-incident-checkbox').forEach(function (cb) {
                             cb.addEventListener('change', refreshBulkBtn);
                         });
 
                         // ---- MODE TOGGLE ----
+                        var bulkForm = document.getElementById('bulkPrintForm');
                         var modeSingleBtn = document.getElementById('modeSingleBtn');
                         var modeBulkBtn = document.getElementById('modeBulkBtn');
                         modeSingleBtn.addEventListener('click', function () {
@@ -250,6 +300,7 @@
                         });
                     })();
                 </script>
+                @endpush
             @endif
         </div>
         <div class="card-body">

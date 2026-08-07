@@ -18,6 +18,7 @@
                         <select name="status" class="form-select form-select-sm" style="width: 160px;">
                             <option value="all">All Statuses</option>
                             @foreach (\App\Enums\IncidentStatus::cases() as $s)
+                                @continue(in_array($s->value, ['resolved', 'closed']))
                                 <option value="{{ $s->value }}" @selected(($filters['status'] ?? '') === $s->value)>{{ $s->label() }}</option>
                             @endforeach
                         </select>

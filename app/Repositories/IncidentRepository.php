@@ -98,6 +98,10 @@ class IncidentRepository implements IncidentRepositoryInterface
                     ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
             });
 
+        // Resolved incidents move to the Document Request workflow and no
+        // longer appear in the active incidents list, regardless of filter.
+        $query->whereNotIn('status', ['resolved', 'closed']);
+
         if (! empty($filters['status'] ?? null) && $filters['status'] !== 'all') {
             $query->where('status', $filters['status']);
         }
@@ -135,6 +139,10 @@ class IncidentRepository implements IncidentRepositoryInterface
                 $q->where('assignments.assigned_to', $personnelId)
                     ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
             });
+
+        // Resolved incidents move to the Document Request workflow and no
+        // longer appear in the active incidents list, regardless of filter.
+        $query->whereNotIn('status', ['resolved', 'closed']);
 
         if (! empty($filters['status'] ?? null) && $filters['status'] !== 'all') {
             $query->where('status', $filters['status']);

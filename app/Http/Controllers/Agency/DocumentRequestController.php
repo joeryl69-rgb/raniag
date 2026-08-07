@@ -54,10 +54,29 @@ class DocumentRequestController extends Controller
             ->whereIn('status', ['resolved', 'closed'])
             ->whereHas('currentAssignments', fn ($q) => $q->where('agency_id', $agencyId))
             ->whereNotIn('id', $requestedIncidentIds)
+            ->with('incidentDocuments:id,incident_id,document_type')
             ->orderByDesc('created_at')
             ->get(['id', 'tracking_number']);
 
-        return view('agency.document_requests.index', compact('documentRequests', 'eligibleIncidents'));
+        // Map of incident_id => {tracking, missing[]}, so the UI can warn the
+        // agency (by tracking number, not internal id) before an incomplete submit.
+        $incompleteIncidents = $eligibleIncidents
+            ->mapWithKeys(function ($inc) {
+                $missing = $inc->missingRequiredDocumentTypes();
+
+                return $missing
+                    ? [$inc->id => ['tracking' => $inc->tracking_number, 'missing' => $missing]]
+                    : [];
+            })
+            ->all();
+
+        // incident_id => {type_value => bool}, so the section picker can grey
+        // out/disable a document type the moment it's not available yet.
+        $documentAvailability = $eligibleIncidents
+            ->mapWithKeys(fn ($inc) => [$inc->id => $inc->documentAvailability()])
+            ->all();
+
+        return view('agency.document_requests.index', compact('documentRequests', 'eligibleIncidents', 'incompleteIncidents', 'documentAvailability'));
     }
 
     public function store(StoreDocumentRequestRequest $request, int $incident): RedirectResponse|JsonResponse
@@ -77,6 +96,10 @@ class DocumentRequestController extends Controller
             403,
             'Your agency is not assigned to this incident and cannot request documents.'
         );
+
+        if ($error = $this->documentRequests->assertSectionsAvailable($record, $data['requested_sections'] ?? null)) {
+            abort(422, $error.' Please wait until it is on file, or submit without selecting it.');
+        }
 
         $requestModel = $this->documentRequests->createPendingRequest(
             incident: $record,
@@ -119,6 +142,16 @@ class DocumentRequestController extends Controller
             ->get();
 
         abort_if($incidents->isEmpty(), 422, 'None of the selected reports are eligible for a printable request.');
+
+        $unavailable = $incidents
+            ->map(fn ($incident) => $this->documentRequests->assertSectionsAvailable($incident, $data['requested_sections'] ?? null))
+            ->filter();
+
+        abort_if(
+            $unavailable->isNotEmpty(),
+            422,
+            $unavailable->join(' ').' Please wait until these are on file, or submit without selecting them.'
+        );
 
         foreach ($incidents as $incident) {
             $this->documentRequests->createPendingRequest(

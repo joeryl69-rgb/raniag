@@ -289,26 +289,24 @@ body.raniag-public {
 }
 
 .gps-camera-viewport-full {
-    /* position:fixed sizes against the real visible viewport on phones,
-       sidestepping the classic 100vh bug where a mobile browser's address
-       bar eats into the height and leaves a black gap below the video
-       (only showed up on phones, never desktop, for that exact reason).
-       Anchored above the footer's height instead of the full viewport so
-       the watermark bar and footer controls never overlap each other. */
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 84px;
+    /* position:absolute fills the modal-body (which carries position-relative
+       from Bootstrap). This avoids the 100vh mobile-browser-bar gap AND the
+       earlier conflict where Bootstrap's position-relative !important on the
+       child overrode position:fixed, leaving the video undersize. */
+    position: absolute;
+    inset: 0;
     min-height: unset;
     border-radius: 0;
     background: #000;
 }
 
-@media (max-width: 575.98px) {
-    .gps-camera-viewport-full {
-        bottom: 76px;
-    }
+/* Review-step panel: same absolute fill as the live viewport */
+.gps-camera-review-step {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    align-items: center;
+    justify-content: center;
 }
 
 .gps-modal-video {
@@ -316,6 +314,13 @@ body.raniag-public {
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+/* Fullscreen modal: double-class specificity (0,2,0) beats .gps-camera-viewport video (0,1,1)
+   so the 420px / 60vh / 50vh max-height caps don't apply inside the fullscreen viewport. */
+.gps-camera-viewport-full .gps-modal-video {
+    max-height: none;
+    height: 100%;
 }
 
 .gps-modal-video.gps-mirrored {

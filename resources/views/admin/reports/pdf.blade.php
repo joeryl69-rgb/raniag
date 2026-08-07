@@ -108,7 +108,7 @@
             <p><strong>Barangay:</strong> {{ $filters['barangay'] }}</p>
         @endif
         @if(!empty($filters['agency_id']))
-            <p><strong>Agency:</strong> {{ $incidents->first()->agency->name ?? 'N/A' }}</p>
+            <p><strong>Agency:</strong> {{ $agencyName ?? 'N/A' }}</p>
         @endif
         @if(!empty($filters['incident_type_id']))
             <p><strong>Incident Type:</strong> {{ $incidents->first()->incidentType->name ?? 'N/A' }}</p>
@@ -160,7 +160,7 @@
 {{ ucfirst(str_replace('_', ' ', ($incident->status instanceof \UnitEnum ? $incident->status->value : $incident->status))) }}
                             </span>
                         </td>
-                        <td>{{ $incident->agency->name ?? 'Unassigned' }}</td>
+                        <td>{{ $resolvedAgencyNames[$incident->id] ?? '' }}</td>
                     </tr>
                 @endforeach
             </tbody>

@@ -253,7 +253,10 @@
 
                 // Initialize Map
                 function initMap() {
-                    mapInstance = L.map('agency-dashboard-map').setView([18.4720, 121.3250], 12);
+                    mapInstance = L.map('agency-dashboard-map', {
+                        zoomControl: true,
+                        scrollWheelZoom: true,
+                    }).setView([18.4720, 121.3250], 12);
 
                     const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         maxZoom: 19,
@@ -271,6 +274,7 @@
                     }, null, { position: 'topright' }).addTo(mapInstance);
 
                     loadBoundary();
+                    setTimeout(() => mapInstance.invalidateSize(), 200);
                 }
 
                 // Fetch and draw the Pamplona municipal boundary as a dashed overlay

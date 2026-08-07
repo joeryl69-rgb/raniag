@@ -21,6 +21,13 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    @if(session('warning'))
+                        <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center gap-2 mb-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                            <div>{{ session('warning') }}</div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
                     <form action="{{ route('admin.reports.generate') }}" method="POST" class="row g-3" data-loading-message="Generating your PDF report...">
                         @csrf
                         <input type="hidden" name="download_token" id="download_token">
