@@ -35,6 +35,8 @@ class IncidentController extends Controller
             'status' => $request->string('status')->value(),
             'incident_type_id' => $request->integer('incident_type_id') ?: null,
             'jurisdiction' => $request->string('jurisdiction')->value(),
+            'date_from' => $request->string('date_from')->trim()->value(),
+            'date_to' => $request->string('date_to')->trim()->value(),
         ];
 
         $incidents = $this->incidents->paginateAll(array_filter($filters), $perPage);
@@ -102,6 +104,27 @@ class IncidentController extends Controller
             return redirect()
                 ->route('admin.incidents.show', $record->id)
                 ->with('success', 'Incident report has been rejected.');
+        }
+
+        if ($data['action'] === 'outside_aor') {
+            $this->incidentService->recordStatusChange(
+                incident: $record,
+                toStatus: IncidentStatus::OutsideAor,
+                user: $request->user(),
+                comment: 'Referred outside Pamplona AOR: '.$data['notes'],
+                isPublic: true,
+            );
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => 'Incident marked as outside AOR and referred.',
+                    'incident' => $record->fresh(),
+                ]);
+            }
+
+            return redirect()
+                ->route('admin.incidents.show', $record->id)
+                ->with('success', 'Incident marked as outside AOR. The reporter will see this report as referred/closed on tracking.');
         }
 
         if ($record->status === IncidentStatus::Submitted) {

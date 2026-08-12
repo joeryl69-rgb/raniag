@@ -35,13 +35,26 @@ class PrintableReportRequestController extends Controller
             $query->where('status', $status);
         }
 
+        $filters = \App\Support\Filters::fromRequest($request);
+
+        $term = trim((string) ($filters['q'] ?? ''));
+        if ($term !== '') {
+            $query->where(function ($w) use ($term) {
+                $w->where('request_note', 'like', "%{$term}%")
+                    ->orWhereHas('incident', fn ($q) => $q->where('tracking_number', 'like', "%{$term}%"))
+                    ->orWhereHas('requestingAgency', fn ($q) => $q->where('name', 'like', "%{$term}%"));
+            });
+        }
+
+        \App\Support\Filters::dateRange($query, 'created_at', $filters);
+
         if ($request->wantsJson()) {
             return response()->json([
                 'data' => $query->get(),
             ]);
         }
 
-        $documentRequests = $query->paginate(10)->appends($request->query());
+        $documentRequests = $query->paginate(10)->withQueryString();
 
         return view('admin.document_requests.index', [
             'documentRequests' => $documentRequests,

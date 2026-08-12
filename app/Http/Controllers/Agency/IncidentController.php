@@ -26,7 +26,7 @@ class IncidentController extends Controller
 
         abort_if(! $agencyId, 403, 'No agency is associated with this account.');
 
-        $filters = $request->only(['status', 'priority', 'barangay', 'q', 'sort', 'direction']);
+        $filters = $request->only(['status', 'priority', 'barangay', 'q', 'sort', 'direction', 'date_from', 'date_to']);
 
         $incidents = $this->incidents->paginateForAgency(
             $agencyId,

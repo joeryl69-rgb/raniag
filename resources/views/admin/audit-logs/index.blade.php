@@ -17,6 +17,35 @@
                         </a>
                     </div>
                 </div>
+                <div class="p-3 border-bottom bg-light-subtle">
+                    <form method="GET" action="{{ route('admin.audit-logs') }}" class="row g-2 align-items-end" data-loading-message="Filtering activity logs...">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Search</label>
+                            <input type="search" name="q" value="{{ request('q') }}" class="form-control" placeholder="Search description, event">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Log Name</label>
+                            <select name="log_name" class="form-select">
+                                <option value="all">All</option>
+                                @foreach($logNames ?? [] as $ln)
+                                    <option value="{{ $ln }}" {{ request('log_name') === $ln ? 'selected' : '' }}>{{ ucfirst($ln) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">From</label>
+                            <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">To</label>
+                            <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
+                        </div>
+                        <div class="col-md-auto d-flex gap-2">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Filter</button>
+                            <a href="{{ route('admin.audit-logs') }}" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-1"></i>Clear</a>
+                        </div>
+                    </form>
+                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover table-striped mb-0 align-middle">

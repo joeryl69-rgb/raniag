@@ -25,13 +25,12 @@
                     <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="e.g. RAN-1234">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">Year</label>
-                    <select name="year" class="form-select form-select-sm">
-                        <option value="">All Years</option>
-                        @foreach($availableYears as $yr)
-                            <option value="{{ $yr }}" @selected(request('year') == $yr)>{{ $yr }}</option>
-                        @endforeach
-                    </select>
+                    <label class="form-label small mb-1">From</label>
+                    <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">To</label>
+                    <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Status</label>

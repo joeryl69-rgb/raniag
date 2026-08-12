@@ -26,6 +26,7 @@
             'resolved' => 'Your report has been resolved. Thank you for helping keep our community safe.',
             'closed' => 'This report has been resolved and officially closed.',
             'rejected' => 'This report could not be accepted. Please see the notes below for details.',
+            'outside_aor' => 'This location falls outside Pamplona\'s area of responsibility. It has been referred to the appropriate agency or municipality; MDRRMO Pamplona will not be processing it further.',
         ];
 
         $steps = [
@@ -45,6 +46,7 @@
         };
         $currentIndex = array_search($effectiveStatus, $stepOrder, true);
         $isRejected = $statusValue === 'rejected';
+        $isOutsideAor = $statusValue === 'outside_aor';
     @endphp
 
     <div class="card raniag-card mb-4">
@@ -55,6 +57,14 @@
                     <div>
                         <div class="fw-bold fs-5">Report Not Accepted</div>
                         <div class="text-muted">{{ $plainLanguage['rejected'] }}</div>
+                    </div>
+                </div>
+            @elseif($isOutsideAor)
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-signpost-split-fill text-info fs-1"></i>
+                    <div>
+                        <div class="fw-bold fs-5">Referred to Another Agency/Municipality</div>
+                        <div class="text-muted">{{ $plainLanguage['outside_aor'] }}</div>
                     </div>
                 </div>
             @else

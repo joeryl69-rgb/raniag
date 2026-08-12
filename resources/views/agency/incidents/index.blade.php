@@ -34,6 +34,8 @@
                                 <option value="{{ $b }}" @selected(($filters['barangay'] ?? '') === $b)>{{ $b }}</option>
                             @endforeach
                         </select>
+                        <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 150px;" title="From date">
+                        <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 150px;" title="To date">
                         <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
                         @if (array_filter($filters ?? []))
                             <a href="{{ route('agency.incidents.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>

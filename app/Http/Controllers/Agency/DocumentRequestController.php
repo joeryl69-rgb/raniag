@@ -43,7 +43,19 @@ class DocumentRequestController extends Controller
             $query->where('request_type', $requestType);
         }
 
-        $documentRequests = $query->paginate(10)->appends($request->query());
+        $filters = \App\Support\Filters::fromRequest($request);
+
+        $term = trim((string) ($filters['q'] ?? ''));
+        if ($term !== '') {
+            $query->where(function ($w) use ($term) {
+                $w->where('request_note', 'like', "%{$term}%")
+                    ->orWhereHas('incident', fn ($q) => $q->where('tracking_number', 'like', "%{$term}%"));
+            });
+        }
+
+        \App\Support\Filters::dateRange($query, 'created_at', $filters);
+
+        $documentRequests = $query->paginate(10)->withQueryString();
 
         $requestedIncidentIds = DocumentRequest::query()
             ->where('requesting_agency_id', $agencyId)

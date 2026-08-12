@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Incident;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
+use App\Support\Filters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class IncidentRepository implements IncidentRepositoryInterface
@@ -122,6 +123,8 @@ class IncidentRepository implements IncidentRepositoryInterface
             });
         }
 
+        Filters::dateRange($query, 'reported_at', $filters);
+
         $sort = $filters['sort'] ?? 'reported_at';
         $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
         $sortable = ['reported_at', 'priority', 'status', 'barangay'];
@@ -164,6 +167,8 @@ class IncidentRepository implements IncidentRepositoryInterface
             });
         }
 
+        Filters::dateRange($query, 'reported_at', $filters);
+
         $sort = $filters['sort'] ?? 'reported_at';
         $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
         $sortable = ['reported_at', 'priority', 'status', 'barangay'];
@@ -201,6 +206,8 @@ class IncidentRepository implements IncidentRepositoryInterface
                 $query->where('meta->within_jurisdiction', true);
             }
         }
+
+        Filters::dateRange($query, 'reported_at', $filters);
 
         return $query->latest('reported_at')->paginate($perPage);
     }

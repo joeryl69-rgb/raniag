@@ -11,6 +11,7 @@
         'resolved' => 'bg-success',
         'closed' => 'bg-dark',
         'rejected' => 'bg-danger',
+        'outside_aor' => 'bg-info text-dark',
         default => 'bg-secondary',
     };
 @endphp

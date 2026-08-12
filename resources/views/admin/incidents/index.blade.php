@@ -17,11 +17,9 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="p-3 border-bottom bg-light-subtle">
-                        <form method="GET" class="row g-2 align-items-end" data-loading-message="Filtering incident reports...">
-                            <div class="col-md-4">
-                                <input type="search" name="q" value="{{ request('q') }}" class="form-control" placeholder="Search tracking #, title, description, reporter">
-                            </div>
-                            <div class="col-md-3">
+                        <x-filters.toolbar search-placeholder="Search tracking #, title, description, reporter">
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted mb-1">Status</label>
                                 <select name="status" class="form-select">
                                     <option value="">All Statuses</option>
                                     @foreach(\App\Enums\IncidentStatus::cases() as $s)
@@ -29,7 +27,8 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted mb-1">Category</label>
                                 <select name="incident_type_id" class="form-select">
                                     <option value="">All Categories</option>
                                     @foreach($incidentTypes ?? [] as $it)
@@ -38,18 +37,14 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
+                                <label class="form-label small text-muted mb-1">Location</label>
                                 <select name="jurisdiction" class="form-select">
                                     <option value="">All Locations</option>
                                     <option value="outside" {{ request('jurisdiction') === 'outside' ? 'selected' : '' }}>Outside Pamplona</option>
                                     <option value="inside" {{ request('jurisdiction') === 'inside' ? 'selected' : '' }}>Inside Pamplona</option>
                                 </select>
                             </div>
-                            <div class="col-md-2 d-grid">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-search me-1"></i>Search
-                                </button>
-                            </div>
-                        </form>
+                        </x-filters.toolbar>
                     </div>
 
                     <div class="table-responsive">

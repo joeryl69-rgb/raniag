@@ -26,7 +26,7 @@ class IncidentController extends Controller
         $personnelId = $request->user()?->id;
         abort_if(! $personnelId, 403, 'No personnel account is associated with this login.');
 
-        $filters = $request->only(['status', 'priority', 'barangay', 'q', 'sort', 'direction']);
+        $filters = $request->only(['status', 'priority', 'barangay', 'q', 'sort', 'direction', 'date_from', 'date_to']);
 
         $incidents = $this->incidents->paginateForPersonnel(
             $personnelId,

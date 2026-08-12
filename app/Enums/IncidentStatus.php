@@ -12,6 +12,7 @@ enum IncidentStatus: string
     case Resolved = 'resolved';
     case Closed = 'closed';
     case Rejected = 'rejected';
+    case OutsideAor = 'outside_aor';
 
     public function label(): string
     {
@@ -24,13 +25,14 @@ enum IncidentStatus: string
             self::Resolved => 'Resolved',
             self::Closed => 'Closed',
             self::Rejected => 'Rejected',
+            self::OutsideAor => 'Outside AOR (Referred)',
         };
     }
 
     public function availableTransitions(): array
     {
         return match ($this) {
-            self::Submitted => [self::Received, self::Rejected],
+            self::Submitted => [self::Received, self::Rejected, self::OutsideAor],
             self::Received => [self::Assigned],
             self::Assigned => [self::InProgress, self::Rejected],
             self::InProgress => [self::PendingInfo, self::Resolved],
@@ -38,6 +40,7 @@ enum IncidentStatus: string
             self::Resolved => [self::Closed],
             self::Closed => [],
             self::Rejected => [],
+            self::OutsideAor => [],
         };
     }
 }

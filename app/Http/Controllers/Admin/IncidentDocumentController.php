@@ -36,10 +36,10 @@ class IncidentDocumentController extends Controller
             $query->where('tracking_number', 'like', "%{$q}%");
         }
 
-        $year = $request->string('year')->value();
-        if ($year !== '' && ctype_digit($year)) {
-            $query->whereYear('created_at', (int) $year);
-        }
+        \App\Support\Filters::dateRange($query, 'created_at', [
+            'date_from' => $request->string('date_from')->trim()->value(),
+            'date_to' => $request->string('date_to')->trim()->value(),
+        ]);
 
         $completionFilter = $request->string('completion')->value();
         if ($completionFilter === 'complete') {
@@ -50,15 +50,9 @@ class IncidentDocumentController extends Controller
 
         $incidents = $query->orderByDesc('created_at')->paginate(12)->appends($request->query());
 
-        $availableYears = Incident::query()
-            ->whereIn('status', $validStatuses)
-            ->selectRaw('DISTINCT YEAR(created_at) as yr')
-            ->orderByDesc('yr')
-            ->pluck('yr');
-
         $documentTypes = IncidentDocumentType::cases();
 
-        return view('admin.incident_documents.index', compact('incidents', 'documentTypes', 'availableYears'));
+        return view('admin.incident_documents.index', compact('incidents', 'documentTypes'));
     }
 
     public function store(StoreIncidentDocumentRequest $request, Incident $incident): RedirectResponse|JsonResponse

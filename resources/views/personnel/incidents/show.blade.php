@@ -335,6 +335,27 @@
 
     @push('scripts')
         @if ($incident->latitude && $incident->longitude)
+                        <style>
+                .incident-map-pin {
+                    position: relative;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50% 50% 50% 0;
+                    border: 2px solid #fff;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+                    transform: rotate(-45deg);
+                }
+                .incident-map-pin i {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transform: rotate(45deg);
+                    color: #fff;
+                    font-size: 0.85rem;
+                }
+            </style>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
@@ -345,8 +366,24 @@
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(map);
-                    L.marker([lat, lng]).addTo(map)
-                        .bindPopup('Incident Location')
+                    const iconMap = {
+                        fire: 'bi-fire', water: 'bi-droplet-fill', shield: 'bi-shield-fill',
+                        'heart-pulse': 'bi-heart-pulse-fill', car: 'bi-car-front-fill',
+                        'triangle-alert': 'bi-exclamation-triangle-fill', building: 'bi-building-fill',
+                        'circle-help': 'bi-question-circle-fill',
+                    };
+                    const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
+                    const pinColor = withinJurisdiction === false ? '#fd7e14' : (@json($incident->incidentType->color ?? null) || '#dc3545');
+                    const pinGlyph = iconMap[@json($incident->incidentType->icon ?? null)] || 'bi-geo-alt-fill';
+                    const pinIcon = L.divIcon({
+                        html: `<div class="incident-map-pin" style="background:${pinColor}"><i class="bi ${pinGlyph}"></i></div>`,
+                        className: 'incident-map-marker',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30],
+                        popupAnchor: [0, -24],
+                    });
+                    L.marker([lat, lng], { icon: pinIcon }).addTo(map)
+                        .bindPopup(withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location')
                         .openPopup();
                 });
             </script>

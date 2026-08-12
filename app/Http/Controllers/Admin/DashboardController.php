@@ -37,18 +37,41 @@ class DashboardController extends Controller
         );
     }
 
-    public function smsLogs()
+    public function smsLogs(Request $request)
     {
-        $logs = SmsLog::with('incident')->latest()->paginate(15);
+        $filters = \App\Support\Filters::fromRequest($request);
+
+        $query = SmsLog::with('incident');
+        \App\Support\Filters::search($query, ['recipient_phone', 'message', 'status'], $filters);
+        \App\Support\Filters::dateRange($query, 'created_at', $filters);
+
+        $logs = $query->latest()->paginate(15)->withQueryString();
 
         return view('admin.sms-logs.index', compact('logs'));
     }
 
-    public function auditLogs()
+    public function auditLogs(Request $request)
     {
-        $logs = ActivityLog::with('user')->latest()->paginate(15);
+        $filters = \App\Support\Filters::fromRequest($request);
 
-        return view('admin.audit-logs.index', compact('logs'));
+        $query = ActivityLog::with('user');
+        \App\Support\Filters::search($query, ['description', 'event'], $filters);
+        \App\Support\Filters::dateRange($query, 'created_at', $filters);
+
+        $logName = $request->string('log_name')->trim()->value();
+        if ($logName !== '' && $logName !== 'all') {
+            $query->where('log_name', $logName);
+        }
+
+        $logs = $query->latest()->paginate(15)->withQueryString();
+
+        $logNames = ActivityLog::query()
+            ->whereNotNull('log_name')
+            ->distinct()
+            ->orderBy('log_name')
+            ->pluck('log_name');
+
+        return view('admin.audit-logs.index', compact('logs', 'logNames'));
     }
 
     public function api(Request $request): JsonResponse

@@ -10,6 +10,9 @@
                     <h5 class="mb-0 fw-bold"><i class="bi bi-chat-left-text-fill text-primary me-2"></i>SMS Notification Registry</h5>
                     <p class="text-muted small mb-0">Review dispatch alerts sent to MDRRMO Pamplona administrators and LGU response agencies.</p>
                 </div>
+                <div class="p-3 border-bottom bg-light-subtle">
+                    <x-filters.toolbar search-placeholder="Search phone, message, status" />
+                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover table-striped mb-0 align-middle">

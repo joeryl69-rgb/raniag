@@ -37,10 +37,10 @@ class ArchivedReportController extends Controller
             $query->where('tracking_number', 'like', "%{$q}%");
         }
 
-        $year = $request->string('year')->value();
-        if ($year !== '' && ctype_digit($year)) {
-            $query->whereYear('reported_at', (int) $year);
-        }
+        \App\Support\Filters::dateRange($query, 'reported_at', [
+            'date_from' => $request->string('date_from')->trim()->value(),
+            'date_to' => $request->string('date_to')->trim()->value(),
+        ]);
 
         $barangay = $request->string('barangay')->value();
         if ($barangay !== '' && $barangay !== 'all') {
@@ -57,14 +57,7 @@ class ArchivedReportController extends Controller
         $sortable = ['reported_at', 'tracking_number', 'barangay', 'status'];
         $query->orderBy(in_array($sort, $sortable, true) ? $sort : 'reported_at', $direction);
 
-        $reports = $query->paginate(12)->appends($request->query());
-
-        $availableYears = Incident::query()
-            ->whereIn('status', self::VALID_STATUSES)
-            ->whereHas('currentAssignments', fn ($q) => $q->where('agency_id', $agencyId))
-            ->selectRaw('DISTINCT YEAR(reported_at) as yr')
-            ->orderByDesc('yr')
-            ->pluck('yr');
+        $reports = $query->paginate(12)->withQueryString();
 
         $barangays = Incident::query()
             ->whereIn('status', self::VALID_STATUSES)
@@ -74,7 +67,7 @@ class ArchivedReportController extends Controller
             ->orderBy('barangay')
             ->pluck('barangay');
 
-        return view('agency.archived_reports.index', compact('reports', 'availableYears', 'barangays'));
+        return view('agency.archived_reports.index', compact('reports', 'barangays'));
     }
 
     public function show(Request $request, Incident $incident): View

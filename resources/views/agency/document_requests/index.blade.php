@@ -10,6 +10,7 @@
                 </div>
 
                 <form method="GET" action="{{ route('agency.document_requests.index') }}" class="d-flex gap-2 align-items-center flex-wrap" data-loading-message="Filtering document requests...">
+                    <input type="search" name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width: 190px;" placeholder="Search tracking # or note">
                     @php
                         $currentStatus = request()->query('status', 'all');
                         $currentType = request()->query('request_type', 'all');
@@ -28,6 +29,8 @@
                         <option value="single" @selected($currentType === 'single')>Single</option>
                         <option value="bulk" @selected($currentType === 'bulk')>Bulk</option>
                     </select>
+                    <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 145px;" title="From date">
+                    <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 145px;" title="To date">
                     <button type="submit" class="btn btn-sm btn-primary">
                         <i class="bi bi-funnel me-1"></i>Filter
                     </button>

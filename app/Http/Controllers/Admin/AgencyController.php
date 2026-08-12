@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Agency;
 use App\Models\User;
+use App\Support\Filters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -13,10 +14,29 @@ use Illuminate\Validation\Rule;
 
 class AgencyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $agencies = Agency::with('users')->paginate(15);
-        $personnelAccounts = User::where('role', UserRole::Personnel)->paginate(15);
+        $agencyFilters = [
+            'q' => $request->string('agency_q')->trim()->value(),
+            'date_from' => $request->string('agency_date_from')->trim()->value(),
+            'date_to' => $request->string('agency_date_to')->trim()->value(),
+        ];
+
+        $agenciesQuery = Agency::with('users');
+        Filters::search($agenciesQuery, ['name', 'code', 'email'], $agencyFilters);
+        Filters::dateRange($agenciesQuery, 'created_at', $agencyFilters);
+        $agencies = $agenciesQuery->paginate(15, ['*'], 'agency_page')->withQueryString();
+
+        $personnelFilters = [
+            'q' => $request->string('personnel_q')->trim()->value(),
+            'date_from' => $request->string('personnel_date_from')->trim()->value(),
+            'date_to' => $request->string('personnel_date_to')->trim()->value(),
+        ];
+
+        $personnelQuery = User::where('role', UserRole::Personnel);
+        Filters::search($personnelQuery, ['name', 'email', 'role_title', 'team_assignment'], $personnelFilters);
+        Filters::dateRange($personnelQuery, 'created_at', $personnelFilters);
+        $personnelAccounts = $personnelQuery->paginate(15, ['*'], 'personnel_page')->withQueryString();
 
         return view('admin.agencies.index', compact('agencies', 'personnelAccounts'));
     }

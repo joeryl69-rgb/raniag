@@ -18,10 +18,11 @@ class ValidateIncidentRequest extends FormRequest
     public function rules(): array
     {
         $isApprove = $this->input('action') === 'approve';
+        $isOutsideAor = $this->input('action') === 'outside_aor';
 
         $rules = [
-            'action' => ['required', Rule::in('approve', 'reject')],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'action' => ['required', Rule::in(['approve', 'reject', 'outside_aor'])],
+            'notes' => [$isOutsideAor ? 'required' : 'nullable', 'string', 'max:1000'],
         ];
 
         // Only require assignment selections when approving the report
@@ -64,8 +65,9 @@ class ValidateIncidentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'action.required' => 'Please specify an action: approve or reject.',
-            'action.in' => 'Action must be either approve or reject.',
+            'action.required' => 'Please specify an action: approve, reject, or mark as outside AOR.',
+            'action.in' => 'Action must be approve, reject, or outside_aor.',
+            'notes.required' => 'Please provide referral details (which agency/municipality this was referred to) before marking as outside AOR.',
             'assigned_agency_id.required_without_all' => 'Please select at least one agency or personnel to assign this incident to.',
             'assigned_agency_id.array' => 'Agency selection must be an array.',
             'assigned_agency_id.min' => 'Please select at least one agency.',
