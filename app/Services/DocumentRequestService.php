@@ -9,6 +9,10 @@ use App\Models\User;
 
 class DocumentRequestService
 {
+    public function __construct(
+        private readonly NotificationService $notifications,
+    ) {}
+
     /**
      * Blocks the request when the agency explicitly asked for a form document
      * that isn't on file yet. Leaving the picker empty ("everything") is left
@@ -51,6 +55,8 @@ class DocumentRequestService
             'requested_sections' => $requestedSections,
             'status' => 'pending',
         ]);
+
+        $this->notifications->notifyAdminsNewDocumentRequest($dr);
 
         return $dr;
     }

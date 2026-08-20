@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Storage;
 
 class PrintableReportService
 {
+    public function __construct(
+        private readonly NotificationService $notifications,
+    ) {}
+
     public function approveAndGenerate(
         DocumentRequest $documentRequest,
         User $admin,
@@ -76,6 +80,8 @@ class PrintableReportService
                 'failed_reason' => null,
             ]);
         }
+
+        $this->notifications->notifyRequesterDocumentReady($documentRequest);
 
         return $documentRequest->fresh();
     }

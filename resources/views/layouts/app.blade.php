@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'Staff Portal') — {{ config('raniag.organization', 'LGU Pamplona') }}</title>
+    <title>@yield('title', 'Staff Portal') — RANIAG · MDRRMO Pamplona</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
@@ -78,7 +78,21 @@
             border-left-color: var(--raniag-accent);
             font-weight: 600;
         }
- 
+
+        #sidebar-wrapper .nav-section-label {
+            padding: 1rem 1.25rem 0.35rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6f8ea0;
+        }
+
+        #sidebar-wrapper .nav-item + .nav-section-label {
+            border-top: 1px solid rgba(255,255,255,0.06);
+            margin-top: 0.4rem;
+        }
+
         #page-content-wrapper {
             flex-grow: 1;
             display: flex;
@@ -188,7 +202,10 @@
                     <span class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded" style="width: 2rem; height: 2rem;">
                         <i class="bi bi-shield-lock-fill"></i>
                     </span>
-                    <span>RANIAG</span>
+                    <span class="d-flex flex-column lh-sm">
+                        <span>RANIAG</span>
+                        <span class="fw-normal text-white-50" style="font-size: 0.62rem; letter-spacing: 0.04em;">MDRRMO PAMPLONA</span>
+                    </span>
                 </a>
             </div>
 
@@ -209,89 +226,8 @@
                 </div>
             </div>
 
-            <!-- Nav List -->
-            <div class="flex-grow-1 py-3 overflow-y-auto">
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                            <i class="bi bi-speedometer2"></i><span>Dashboard</span>
-                        </a>
-                    </li>
-                    @if(auth()->user()->isAdministrator())
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.incidents.*') ? 'active' : '' }}" href="{{ route('admin.incidents.index') }}">
-                                <i class="bi bi-exclamation-circle"></i>
-                                <span class="flex-grow-1">Incidents</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.agencies.*') ? 'active' : '' }}" href="{{ route('admin.agencies.index') }}">
-                                <i class="bi bi-building"></i><span>Agencies</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.sms-logs') ? 'active' : '' }}" href="{{ route('admin.sms-logs') }}">
-                                <i class="bi bi-chat-left-text"></i><span>SMS Alerts</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
-                                <i class="bi bi-file-earmark-text"></i><span>Make Report</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.document_requests.*') ? 'active' : '' }}" href="{{ route('admin.document_requests.index') }}">
-                                <i class="bi bi-file-earmark-pdf"></i><span>Document Requests</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.incident_documents.*') ? 'active' : '' }}" href="{{ route('admin.incident_documents.index') }}">
-                                <i class="bi bi-folder2-open"></i><span>Case Documents</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.audit-logs') ? 'active' : '' }}" href="{{ route('admin.audit-logs') }}">
-                                <i class="bi bi-shield-shaded"></i><span>Audit Trails</span>
-                            </a>
-                        </li>
-                    @else
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('agency.incidents.*') || request()->routeIs('personnel.incidents.*') ? 'active' : '' }}" href="{{ auth()->user()->isPersonnel() ? route('personnel.incidents.index') : route('agency.incidents.index') }}">
-                                <i class="bi card-checklist"></i>
-                                <span class="flex-grow-1">Dispatches</span>
-                            </a>
-                        </li>
-                        @if(auth()->user()->agency_id)
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('agency.document_requests.*') || request()->routeIs('agency.document_requests.index') ? 'active' : '' }}" href="{{ route('agency.document_requests.index') }}">
-                                    <i class="bi bi-file-earmark-pdf"></i><span>Document Requests</span>
-                                </a>
-                            </li>
-                        @endif
-                        @if(auth()->user()->agency_id && ! auth()->user()->isPersonnel())
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('agency.archived_reports.*') ? 'active' : '' }}" href="{{ route('agency.archived_reports.index') }}">
-                                    <i class="bi bi-archive"></i><span>Archived Reports</span>
-                                </a>
-                            </li>
-                        @endif
-                    @endif
-
-                    <li class="nav-item border-top border-secondary my-2 pt-2">
-                        <a class="nav-link {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">
-                            <i class="bi bi-gear"></i><span>My Profile</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form">
-                            @csrf
-                            <a class="nav-link text-danger" href="#" onclick="event.preventDefault(); if(this.dataset.submitted) return; this.dataset.submitted='1'; document.getElementById('sidebar-logout-form').submit();">
-                                <i class="bi bi-box-arrow-right"></i><span>Log Out</span>
-                            </a>
-                        </form>
-                    </li>
-                </ul>
-            </div>
+            <!-- Centralized Navigation Component -->
+            <x-sidebar-nav />
         </div>
 
         <!-- Content Area -->
@@ -307,8 +243,11 @@
                     @endif
                 </div>
 
-                <div class="text-muted small d-none d-sm-block">
-                    <i class="bi bi-calendar3 me-1"></i>{{ date('l, M d, Y') }}
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-muted small d-none d-sm-block">
+                        <i class="bi bi-calendar3 me-1"></i>{{ date('l, M d, Y') }}
+                    </div>
+                    <x-notification-bell />
                 </div>
             </nav>
 

@@ -13,6 +13,19 @@
         });
     });
 
+    // Clear a field's error state live as soon as the user corrects it,
+    // instead of leaving the red outline until the next full page reload.
+    document.querySelectorAll('.is-invalid').forEach((field) => {
+        const clear = () => field.classList.remove('is-invalid');
+        field.addEventListener('input', clear);
+        field.addEventListener('change', clear);
+    });
+    typeCards.forEach((card) => {
+        card.addEventListener('click', () => {
+            document.querySelector('.text-danger.small.mt-2')?.remove();
+        });
+    });
+
     const anonymousToggle = document.getElementById('is_anonymous');
     const reporterFields = document.getElementById('reporter-fields');
 
@@ -127,6 +140,11 @@
     function resolveLocation(lat, lng) {
         clearTimeout(geocodeTimer);
         const myToken = ++geocodeToken;
+
+        // A pin was placed — clear any "please pin the location" error state.
+        [barangayInput, addressInput,
+            document.getElementById('latitude'), document.getElementById('longitude')]
+            .forEach((f) => f?.classList.remove('is-invalid'));
 
         // Clear stale results from the previous position immediately, so
         // nothing left over from an earlier fix is ever shown next to a

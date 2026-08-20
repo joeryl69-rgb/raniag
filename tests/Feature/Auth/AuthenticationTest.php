@@ -40,6 +40,14 @@ test('agency users are redirected to the agency dashboard after login', function
     $response->assertRedirect(route('agency.dashboard', absolute: false));
 });
 
+test('seeders create the baseline dashboard data', function () {
+    $this->artisan('db:seed')->assertSuccessful();
+
+    expect(DB::table('incident_types')->count())->toBeGreaterThan(0)
+        ->and(DB::table('agencies')->count())->toBeGreaterThan(0)
+        ->and(DB::table('users')->count())->toBeGreaterThan(0);
+});
+
 test('inactive users cannot authenticate', function () {
     $user = User::factory()->create(['is_active' => false]);
 

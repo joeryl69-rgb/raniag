@@ -3,8 +3,8 @@
     --raniag-primary: #0b5ed7;        /* original brand blue, restored */
     --raniag-primary-dark: #084298;
     --raniag-primary-light: #e7f0fd;
-    --raniag-accent: #20c997;         /* original teal accent, restored */
-    --raniag-accent-dark: #199d76;
+    --raniag-accent: #3d8bfd;         /* blue accent, matches public theme */
+    --raniag-accent-dark: #0a53c4;
     --raniag-sidebar: #0f172a;        /* original dark slate sidebar, restored */
     --raniag-sidebar-active: #1e293b;
     --raniag-surface: #f4f7fb;
@@ -50,11 +50,21 @@ a:hover { color: var(--raniag-accent); }
     border-color: var(--raniag-primary-dark);
 }
 .btn-outline-primary { color: var(--raniag-primary); border-color: var(--raniag-primary); }
-.btn-outline-secondary { color: #45545c; border-color: var(--raniag-border); }
+.btn-outline-primary:focus, .btn-outline-primary:active {
+    box-shadow: 0 0 0 0.2rem var(--raniag-primary-light) !important;
+    border-color: var(--raniag-primary) !important;
+}
+.btn-outline-secondary { color: #45545c; border-color: var(--rg-line, #cbd5e1); }
+.btn-outline-secondary:hover { color: #fff; background: var(--rg-brand, #0b5ed7); border-color: var(--rg-brand, #0b5ed7); }
 .btn-success, .btn-outline-success:hover {
     background-color: var(--raniag-accent);
     border-color: var(--raniag-accent);
     color: #fff;
+}
+.btn-success:hover, .btn-success:focus, .btn-success:active {
+    background-color: var(--raniag-accent-dark) !important;
+    border-color: var(--raniag-accent-dark) !important;
+    color: #fff !important;
 }
 .btn:focus-visible { outline: 2px solid var(--raniag-accent); outline-offset: 2px; }
 
@@ -122,7 +132,7 @@ a:hover { color: var(--raniag-accent); }
 
 body.raniag-public {
     font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
-    background: var(--raniag-surface);
+    background: var(--rg-surface);
     color: #1e293b;
 }
 
@@ -244,6 +254,121 @@ body.raniag-public {
     padding-bottom: 0;
 }
 
+/* Full-history timeline: color the dot/line to match each entry's status
+   so the read gets faster without needing to read every badge. */
+.raniag-timeline-wide .raniag-timeline-item[data-status="resolved"]::before,
+.raniag-timeline-wide .raniag-timeline-item[data-status="closed"]::before {
+    background: #198754;
+    box-shadow: 0 0 0 2px #198754;
+}
+.raniag-timeline-wide .raniag-timeline-item[data-status="rejected"]::before,
+.raniag-timeline-wide .raniag-timeline-item[data-status="outside_aor"]::before {
+    background: #dc3545;
+    box-shadow: 0 0 0 2px #dc3545;
+}
+.raniag-timeline-wide .raniag-timeline-item[data-status="pending_info"]::before {
+    background: #fd7e14;
+    box-shadow: 0 0 0 2px #fd7e14;
+}
+.raniag-timeline-wide .raniag-timeline-item {
+    padding: 0.5rem 0 1rem 0.25rem;
+}
+
+/* Responding Agencies (public tracking page) */
+.rg-agency-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.rg-badge-accepted {
+    background: #d1f5e0;
+    color: #0f7a44;
+    font-weight: 600;
+}
+.rg-badge-pending {
+    background: #fff1d6;
+    color: #a3660a;
+    font-weight: 600;
+}
+
+/* ============================================================
+   Public tracking progress bar — horizontal stepper with a
+   filled connecting line. Was previously unstyled markup.
+   ============================================================ */
+.raniag-progress-tracker {
+    padding: 0.5rem 0 0.25rem;
+}
+.progress-container {
+    position: relative;
+}
+.progress-track {
+    position: absolute;
+    top: 1.1rem;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #e2e8f0;
+    border-radius: 3px;
+}
+.progress-fill {
+    position: absolute;
+    top: 1.1rem;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--raniag-primary), var(--raniag-accent));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+.progress-steps {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    z-index: 1;
+}
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+}
+.step-dot {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #e2e8f0;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+.progress-step.completed .step-dot {
+    background: var(--raniag-primary);
+    border-color: var(--raniag-primary);
+    color: #fff;
+}
+.step-name {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+.progress-step.completed .step-name {
+    color: var(--raniag-primary-dark);
+}
+
+@media (max-width: 575.98px) {
+    .step-name { font-size: 0.65rem; white-space: normal; }
+    .step-dot { width: 1.9rem; height: 1.9rem; font-size: 0.85rem; }
+    .progress-track, .progress-fill { top: 0.95rem; }
+}
+
 .raniag-type-card {
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
@@ -269,6 +394,117 @@ body.raniag-public {
 .form-control[readonly] {
     background-color: #f8fafc;
     color: #334155;
+}
+
+/* Manual fallback if bootstrap.Modal isn't available: force true fullscreen
+   above the sticky navbar (which sits at z-index: 1040). */
+.gps-manual-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2200 !important;
+    background: #000;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+.gps-manual-fullscreen .modal-dialog {
+    max-width: none; height: 100%; margin: 0;
+}
+.gps-manual-fullscreen .modal-content {
+    height: 100%; border: 0; border-radius: 0;
+}
+
+.gps-camera-review-step .gps-watermark-overlay {
+    position: absolute; left: 0; right: 0; bottom: 0;
+}
+
+/* The overlay used to be absolutely positioned against the whole
+   fullscreen modal, while the photo itself (object-fit: contain)
+   only fills part of that box on any photo whose aspect ratio
+   doesn't match the screen — leaving the watermark floating over
+   letterboxed empty space instead of sitting on the actual image.
+   This wrapper shrinks to the image's own rendered size (not the
+   modal's), so the overlay's 0/0/0 edges line up with the photo's
+   real edges, matching what actually gets burned into the file. */
+.gps-review-frame {
+    position: relative;
+    display: inline-flex;
+    width: fit-content;
+    height: fit-content;
+    max-width: 100%;
+    max-height: 100%;
+    line-height: 0;
+    vertical-align: bottom;
+}
+
+.gps-review-frame > img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: inherit;
+}
+
+#gps-lightbox-frame,
+#gps-review-frame {
+    position: relative;
+    display: inline-flex;
+    width: fit-content;
+    height: fit-content;
+    max-width: 100%;
+    max-height: 100%;
+    line-height: 0;
+    vertical-align: bottom;
+}
+
+#gps-lightbox-watermark,
+#gps-review-watermark { border-radius: 0 0 0.375rem 0.375rem; }
+/* ==========================================================
+   RANIAG fixes — append to public/css/public.css
+   ========================================================== */
+
+/* --- Fix 1: evidence preview modal — cap height, keep image
+   fully visible (contain) instead of forcing a scroll on tall
+   portrait captures. Applies to both the tracking-status
+   lightbox (#rg-lightbox-img) and the report-page evidence
+   preview modal. --- */
+#rg-lightbox .modal-body,
+#gps-lightbox-modal .modal-body {
+    max-height: 80vh;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#rg-lightbox-img,
+#gps-lightbox-image {
+    max-height: 75vh;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* --- Fix 2: "Use Current Location" disabled state — pin it to
+   the brand blue outline instead of the browser's default
+   disabled treatment (which was rendering green bg / blue text
+   inconsistently). --- */
+.btn-outline-primary:disabled,
+.btn-outline-primary.disabled {
+    color: var(--raniag-primary) !important;
+    background-color: transparent !important;
+    border-color: var(--raniag-primary) !important;
+    opacity: 0.6;
+}
+/* Capture button while GPS/address is still resolving: dimmed instead of
+   full-strength green, so it visibly reads as "not ready yet" rather than
+   looking clickable and silently rejecting the tap. */
+#gps-camera-capture.gps-capture-pending {
+    opacity: .55;
+    cursor: not-allowed;
 }
 
 .gps-camera-viewport {
@@ -328,8 +564,11 @@ body.raniag-public {
 }
 
 .gps-review-img {
+    display: block;
     max-width: 100%;
     max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
 }
 
@@ -354,11 +593,12 @@ body.raniag-public {
     left: 0;
     right: 0;
     bottom: 0;
+    inset: auto 0 0 0;
     display: flex;
     align-items: flex-end;
     gap: 0.6rem;
     padding: 0.5rem 0.75rem;
-    background: linear-gradient(to top, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.15));
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.18));
     color: #fff;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     line-height: 1.35;
@@ -368,6 +608,12 @@ body.raniag-public {
 .gps-watermark-text {
     min-width: 0;
     flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.1rem;
 }
 
 .gps-watermark-title {
@@ -375,12 +621,16 @@ body.raniag-public {
     font-weight: 700;
     font-size: clamp(0.65rem, 2vw, 0.8rem);
     letter-spacing: 0.03em;
+    display: block;
+    width: 100%;
 }
 
 .gps-watermark-line {
     font-size: clamp(0.6rem, 1.8vw, 0.78rem);
     word-break: break-word;
     white-space: normal;
+    display: block;
+    width: 100%;
 }
 
 /* Map preview thumbnail: a single OSM tile centered on the fix, with a

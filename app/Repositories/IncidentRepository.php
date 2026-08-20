@@ -72,6 +72,9 @@ class IncidentRepository implements IncidentRepositoryInterface
                 'incidentType',
                 'agency',
                 'statusUpdates' => fn ($query) => $query->where('is_public', true)->latest(),
+                'assignments' => fn ($query) => $query->where('is_active', true)->latest('created_at'),
+                'assignments.agency',
+                'assignments.assignee',
             ])
             ->where('tracking_number', $trackingNumber)
             ->first();

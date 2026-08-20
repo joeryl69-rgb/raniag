@@ -273,9 +273,9 @@ class EvidenceService
 
             $place = $this->resolveFullAddress($latitude, $longitude, $barangay);
 
-            $coordsText = sprintf('GPS COORDINATES: %f, %f', $latitude, $longitude);
-            $locationText = 'LOCATION: '.$place;
-            $timeText = 'DATE/TIME: '.$this->formatWatermarkTimestamp($timestamp);
+            $coordsText = sprintf('%f, %f', $latitude, $longitude);
+            $locationText = $place;
+            $timeText = $this->formatWatermarkTimestamp($timestamp);
 
             $this->compositeWatermarkLayer($image, $width, $height, [
                 ['text' => 'RANIAG GPS CAMERA', 'accent' => true],
@@ -486,7 +486,7 @@ class EvidenceService
         // live CSS overlay: linear-gradient(to top, rgba(15,23,42,.85), rgba(15,23,42,.15))
         for ($y = 0; $y < $refBannerHeight; $y++) {
             $t = $y / max(1, $refBannerHeight - 1);
-            $opacity = 0.15 + (0.85 - 0.15) * $t;
+            $opacity = 0.18 + (0.72 - 0.18) * $t;
             $gdAlpha = (int) round(127 * (1 - $opacity));
             $gdAlpha = max(0, min(127, $gdAlpha));
             $rowColor = imagecolorallocatealpha($layer, 15, 23, 42, $gdAlpha);
@@ -495,7 +495,7 @@ class EvidenceService
 
         imagealphablending($layer, true);
 
-        $accentColor = imagecolorallocate($layer, 74, 222, 128);
+        $accentColor = imagecolorallocate($layer, 61, 139, 253);
         $textColor = imagecolorallocate($layer, 255, 255, 255);
 
         $pad = 14;

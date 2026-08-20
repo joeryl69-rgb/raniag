@@ -14,6 +14,7 @@ Route::prefix('agency')
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
         Route::get('/dashboard/boundary.json', [DashboardController::class, 'boundary'])->name('dashboard.boundary');
+        Route::get('/dashboard/barangays.json', [DashboardController::class, 'barangays'])->name('dashboard.barangays');
 
         Route::get('/document-requests', [DocumentRequestController::class, 'index'])->name('document_requests.index');
         Route::post('/document-requests/bulk', [DocumentRequestController::class, 'storeBulk'])->name('document_requests.bulk_store');

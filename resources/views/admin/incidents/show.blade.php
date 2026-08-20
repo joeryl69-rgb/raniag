@@ -430,7 +430,16 @@
                                             <div class="small text-muted mt-1">Dispatch notes: {{ $assignment->notes }}</div>
                                         @endif
                                         @if ($assignment->is_active)
-                                            <span class="badge bg-warning text-dark">Active</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-warning text-dark">Active</span>
+                                                @if ($assignment->isAcknowledged())
+                                                    <span class="badge bg-info text-dark" title="Acknowledged {{ $assignment->acknowledged_at->diffForHumans() }}">
+                                                        <i class="bi bi-check2-circle"></i> Acknowledged
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-secondary">Pending Acceptance</span>
+                                                @endif
+                                            </div>
                                         @else
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="badge bg-success">Completed</span>

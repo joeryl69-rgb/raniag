@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,13 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::get('/poll', [NotificationController::class, 'poll'])->name('poll');
+        Route::post('/{notification}/read', [NotificationController::class, 'markRead'])->name('mark_read');
+        Route::post('/read-all', [NotificationController::class, 'markAllRead'])->name('mark_all_read');
+    });
 });
 
 Route::get('/debug-session', function () {

@@ -154,4 +154,40 @@ class IncidentService
     {
         return in_array($targetStatus, $incident->status->availableTransitions());
     }
+
+    /**
+     * Records one assignee's independent acceptance. Every assignee gets logged;
+     * the shared incident status only advances on the first acceptance so later
+     * acceptances don't get blocked or hidden by an already-in-progress status.
+     */
+    public function logAssignmentAcknowledged(\App\Models\Assignment $assignment, Incident $incident, User $user): Incident
+    {
+        return DB::transaction(function () use ($assignment, $incident, $user) {
+            $assignment->update([
+                'acknowledged_at' => now(),
+                'acknowledged_by' => $user->id,
+            ]);
+
+            $this->activityLogs->log(
+                description: sprintf('%s acknowledged assignment for incident #%d.', $user->name, $incident->id),
+                user: $user,
+                subject: $incident,
+                event: 'assignment.acknowledged',
+                logName: 'incident',
+                properties: ['assignment_id' => $assignment->id],
+            );
+
+            if ($incident->status === IncidentStatus::Assigned) {
+                $incident = $this->recordStatusChange(
+                    incident: $incident,
+                    toStatus: IncidentStatus::InProgress,
+                    user: $user,
+                    comment: 'Assignment accepted and incident under active investigation',
+                    isPublic: true,
+                );
+            }
+
+            return $incident->fresh();
+        });
+    }
 }

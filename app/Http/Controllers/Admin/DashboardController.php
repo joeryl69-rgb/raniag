@@ -19,7 +19,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('admin.dashboard');
+        return view('dashboard');
     }
 
     /**
@@ -29,6 +29,21 @@ class DashboardController extends Controller
     public function boundary(): JsonResponse
     {
         $path = 'geo/pamplona_boundary.geojson';
+
+        abort_unless(Storage::disk('local')->exists($path), 404);
+
+        return response()->json(
+            json_decode(Storage::disk('local')->get($path), true)
+        );
+    }
+
+    /**
+     * Serve the Pamplona barangay boundaries as GeoJSON for the
+     * dashboard map's optional barangay-borders overlay.
+     */
+    public function barangays(): JsonResponse
+    {
+        $path = 'geo/pamplona_barangays.geojson';
 
         abort_unless(Storage::disk('local')->exists($path), 404);
 
@@ -179,12 +194,13 @@ class DashboardController extends Controller
             ->get()
             ->mapWithKeys(fn ($item) => [$item->agency_code => (float) $item->avg_hours]);
 
-        // 6. Seasonal Trends (Wet vs Dry Season)
-        // Philippines: Dry (Dec-May), Wet (Jun-Nov)
-        $seasonalCounts = [
-            'Dry Season' => Incident::whereRaw('MONTH(reported_at) IN (12, 1, 2, 3, 4, 5)')->count(),
-            'Wet Season' => Incident::whereRaw('MONTH(reported_at) IN (6, 7, 8, 9, 10, 11)')->count(),
-        ];
+        // 6. Priority Breakdown (reliable, drawn straight from the incidents table)
+        $priorityBreakdown = Incident::selectRaw('priority, COUNT(*) as count')
+            ->groupBy('priority')
+            ->pluck('count', 'priority')
+            ->mapWithKeys(fn ($count, $priority) => [
+                ($priority instanceof \BackedEnum ? $priority->value : $priority) => $count,
+            ]);
 
         // 7. Out-of-Jurisdiction Reports (pinned outside Pamplona municipality limits)
         $outOfJurisdictionCount = Incident::where('meta->within_jurisdiction', false)->count();
@@ -220,7 +236,7 @@ class DashboardController extends Controller
                 'weekly_trends' => $weeklyTrends,
                 'avg_resolution_hours' => $avgResolutionHours,
                 'agency_response_times' => $agencyResponseTimes,
-                'seasonal_counts' => $seasonalCounts,
+                'priority_breakdown' => $priorityBreakdown,
                 'out_of_jurisdiction_count' => $outOfJurisdictionCount,
                 'redundancy_hotspots' => $redundancyData,
             ],

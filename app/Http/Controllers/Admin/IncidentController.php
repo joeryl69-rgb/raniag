@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Services\AssignmentService;
 use App\Services\IncidentService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class IncidentController extends Controller
         private readonly IncidentRepositoryInterface $incidents,
         private readonly IncidentService $incidentService,
         private readonly AssignmentService $assignmentService,
+        private readonly NotificationService $notifications,
     ) {}
 
     public function index(Request $request): View|JsonResponse
@@ -114,6 +116,8 @@ class IncidentController extends Controller
                 comment: 'Referred outside Pamplona AOR: '.$data['notes'],
                 isPublic: true,
             );
+
+            $this->notifications->notifyOutsideAor($record, $request->user());
 
             if ($request->wantsJson()) {
                 return response()->json([

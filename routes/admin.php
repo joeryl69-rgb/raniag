@@ -18,6 +18,7 @@ Route::prefix('admin')
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
         Route::get('/dashboard/boundary.json', [DashboardController::class, 'boundary'])->name('dashboard.boundary');
+        Route::get('/dashboard/barangays.json', [DashboardController::class, 'barangays'])->name('dashboard.barangays');
         Route::get('/sms-logs', [DashboardController::class, 'smsLogs'])->name('sms-logs');
         Route::get('/audit-logs', [DashboardController::class, 'auditLogs'])->name('audit-logs');
 

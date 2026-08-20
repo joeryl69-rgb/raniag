@@ -148,14 +148,9 @@ class IncidentController extends Controller
             ->first();
 
         abort_if(! $assignment, 403, 'No active assignment found for this incident for your account.');
+        abort_if($assignment->isAcknowledged(), 409, 'This assignment has already been accepted.');
 
-        $updated = $this->incidentService->recordStatusChange(
-            incident: $record,
-            toStatus: IncidentStatus::InProgress,
-            user: $request->user(),
-            comment: 'Assignment accepted and incident under active investigation',
-            isPublic: true,
-        );
+        $updated = $this->incidentService->logAssignmentAcknowledged($assignment, $record, $request->user());
 
         if ($request->wantsJson()) {
             return response()->json([

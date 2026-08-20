@@ -47,8 +47,39 @@
     const useBtn = document.getElementById('gps-camera-use');
     const lightboxModalEl = document.getElementById('gps-lightbox-modal');
     const lightboxImgEl = document.getElementById('gps-lightbox-image');
-    const cameraModal = (window.bootstrap && cameraModalEl) ? new bootstrap.Modal(cameraModalEl) : null;
-    const lightboxModal = (window.bootstrap && lightboxModalEl) ? new bootstrap.Modal(lightboxModalEl) : null;
+    // Lazily resolved (not cached at parse time) so a late-loading/blocked
+    // Bootstrap bundle doesn't permanently lock this into the inline fallback.
+    function getModal(el) {
+        return (window.bootstrap && el) ? bootstrap.Modal.getOrCreateInstance(el) : null;
+    }
+
+    // True fullscreen fallback for when bootstrap.Modal genuinely isn't
+    // available. Re-parented straight onto <body> so it escapes any
+    // z-index stacking context created by ancestor wrappers (e.g. the
+    // .rg-shell > * { position:relative; z-index:1 } rule in the public
+    // layout) — otherwise a high z-index here can still render behind
+    // the navbar and block clicks on the camera controls.
+    let gpsModalHome = null; // {parent, next} to restore original position
+    function showFallbackFullscreen(el) {
+        if (!el) return;
+        if (el.parentElement !== document.body) {
+            gpsModalHome = { parent: el.parentElement, next: el.nextSibling };
+            document.body.appendChild(el);
+        }
+        el.classList.add('show', 'gps-manual-fullscreen');
+        el.style.display = 'block';
+        document.body.classList.add('modal-open');
+    }
+    function hideFallbackFullscreen(el) {
+        if (!el) return;
+        el.classList.remove('show', 'gps-manual-fullscreen');
+        el.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        if (gpsModalHome) {
+            gpsModalHome.parent.insertBefore(el, gpsModalHome.next);
+            gpsModalHome = null;
+        }
+    }
 
     let mediaStream = null;
     let watchId = null;
@@ -124,6 +155,7 @@
 
     window.addEventListener('raniag:location-resolved', (event) => {
         lastResolved = event.detail;
+        updateCaptureReadiness();
         if (placeEl && event.detail) {
             const { barangay, municipality, province, country } = event.detail;
             const parts = [];
@@ -208,6 +240,20 @@
         return totalEvidenceCount() < maxCaptures;
     }
 
+    // Single source of truth for whether "Capture Photo" should be
+    // clickable — previously the button stayed enabled even before GPS/
+    // address resolved, so the first tap silently no-op'd (just an inline
+    // error) and felt like the button "needed two clicks."
+    function isLocationReady() {
+        return !!lastResolved && (lastResolved.barangay || lastResolved.municipality);
+    }
+    function updateCaptureReadiness() {
+        if (!captureBtn) return;
+        const ready = isLocationReady() && canAddMoreCaptures();
+        captureBtn.disabled = !ready;
+        captureBtn.classList.toggle('gps-capture-pending', !isLocationReady());
+    }
+
     function syncEvidenceInput() {
         if (!evidenceInput) {
             return;
@@ -232,6 +278,17 @@
 
     function enterReviewMode(previewUrl) {
         if (reviewImgEl) reviewImgEl.src = previewUrl;
+        // Freeze the exact watermark text used for this shot (coords/place
+        // change live as GPS keeps refining, so this must be a snapshot,
+        // not a live-bound reference).
+        const rc = document.getElementById('gps-review-coords');
+        const rp = document.getElementById('gps-review-place');
+        const rt = document.getElementById('gps-review-time');
+        if (rc && coordsEl) rc.textContent = coordsEl.textContent;
+        if (rp && placeEl) rp.textContent = placeEl.textContent;
+        if (rt && timeEl) rt.textContent = timeEl.textContent;
+        const rMapImg = document.getElementById('gps-review-map-img');
+        if (rMapImg && mapThumbImg?.src) rMapImg.src = mapThumbImg.src;
         liveViewEl?.classList.add('d-none');
         reviewViewEl?.classList.remove('d-none');
         reviewViewEl?.classList.add('d-flex');
@@ -255,11 +312,15 @@
         captures.push(pendingCapture);
         pendingCapture = null;
 
+        // A photo was captured — clear any "please capture a geotagged
+        // photo" error state left over from a previous failed submit.
+        document.getElementById('evidence')?.classList.remove('is-invalid');
+
         syncEvidenceInput();
         syncCaptureLog();
         renderPreviews();
         applyPositionToMap(lastPosition, true);
-        captureBtn.disabled = !canAddMoreCaptures();
+        updateCaptureReadiness();
         exitReviewMode();
 
         if (coordsEl) {
@@ -269,7 +330,7 @@
 
         // Out of slots — close the modal straight back to the thumbnail grid.
         if (!canAddMoreCaptures()) {
-            cameraModal ? cameraModal.hide() : stopCamera();
+            getModal(cameraModalEl) ? getModal(cameraModalEl).hide() : stopCamera();
         }
     }
 
@@ -281,13 +342,53 @@
         exitReviewMode();
     }
 
-    function openLightbox(url) {
-        if (!lightboxImgEl) return;
-        lightboxImgEl.src = url;
-        if (lightboxModal) {
-            lightboxModal.show();
+    let lightboxHome = null;
+    function openLightbox(item) {
+        if (!lightboxImgEl || !lightboxModalEl) return;
+        lightboxImgEl.src = item.previewUrl;
+
+        const wrap = document.getElementById('gps-lightbox-watermark');
+        if (wrap) {
+            const coordsTxt = `${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)}`;
+            const timeTxt = new Date(item.captured_at).toLocaleString();
+            document.getElementById('gps-lightbox-coords').textContent = coordsTxt;
+            document.getElementById('gps-lightbox-place').textContent = item.place || '—';
+            document.getElementById('gps-lightbox-time').textContent = timeTxt;
+            const mapImg = document.getElementById('gps-lightbox-map-img');
+            if (mapImg) mapImg.src = item.mapThumbSrc || '';
+        }
+
+        if (lightboxModalEl.parentElement !== document.body) {
+            lightboxHome = { parent: lightboxModalEl.parentElement, next: lightboxModalEl.nextSibling };
+            document.body.appendChild(lightboxModalEl);
+        }
+        const modal = getModal(lightboxModalEl);
+        if (modal) {
+            modal.show();
+        } else {
+            showFallbackFullscreen(lightboxModalEl);
         }
     }
+
+    lightboxModalEl?.addEventListener('hidden.bs.modal', () => {
+        hideFallbackFullscreen(lightboxModalEl);
+        if (lightboxHome) {
+            lightboxHome.parent.insertBefore(lightboxModalEl, lightboxHome.next);
+            lightboxHome = null;
+        }
+    });
+    document.getElementById('gps-lightbox-close')?.addEventListener('click', () => {
+        const modal = getModal(lightboxModalEl);
+        if (modal) {
+            modal.hide();
+        } else {
+            hideFallbackFullscreen(lightboxModalEl);
+            if (lightboxHome) {
+                lightboxHome.parent.insertBefore(lightboxModalEl, lightboxHome.next);
+                lightboxHome = null;
+            }
+        }
+    });
 
     retakeBtn?.addEventListener('click', retakeCapture);
     useBtn?.addEventListener('click', confirmCapture);
@@ -318,7 +419,7 @@
             img.alt = `GPS capture ${index + 1}`;
             img.className = 'card-img-top';
             img.title = 'Tap to view full size';
-            img.addEventListener('click', () => openLightbox(item.previewUrl));
+            img.addEventListener('click', () => openLightbox(item));
 
             const body = document.createElement('div');
             body.className = 'card-body p-2 small';
@@ -349,7 +450,7 @@
         syncEvidenceInput();
         syncCaptureLog();
         renderPreviews();
-        captureBtn.disabled = !canAddMoreCaptures();
+        updateCaptureReadiness();
     }
 
     function applyPositionToMap(position, pan = true) {
@@ -439,20 +540,27 @@
                 audio: false,
             });
 
+            panelEl?.classList.remove('d-none');
+            // Re-parent to <body> first (fixes the navbar-stacking bug for
+            // both the real Bootstrap modal and the manual fallback).
+            if (cameraModalEl && cameraModalEl.parentElement !== document.body) {
+                gpsModalHome = { parent: cameraModalEl.parentElement, next: cameraModalEl.nextSibling };
+                document.body.appendChild(cameraModalEl);
+            }
+            const camModal = getModal(cameraModalEl);
+            camModal ? camModal.show() : showFallbackFullscreen(cameraModalEl);
+            exitReviewMode();
+
             if (videoEl) {
                 videoEl.srcObject = mediaStream;
                 videoEl.classList.toggle('gps-mirrored', facingMode === 'user');
                 await videoEl.play();
             }
-
-            panelEl?.classList.remove('d-none');
-            cameraModal ? cameraModal.show() : liveViewEl?.classList.remove('d-none');
-            exitReviewMode();
             startBtn?.classList.add('d-none');
             stopBtn?.classList.remove('d-none');
             captureBtn?.classList.remove('d-none');
             switchBtn?.classList.remove('d-none');
-            captureBtn.disabled = !canAddMoreCaptures();
+            updateCaptureReadiness();
 
             startGeolocationWatch();
             tickClock();
@@ -483,9 +591,16 @@
         clockTimer = null;
 
         panelEl?.classList.add('d-none');
-        if (cameraModal && cameraModalEl?.classList.contains('show')) {
-            cameraModal.hide();
+        const camModal = getModal(cameraModalEl);
+        if (camModal && cameraModalEl?.classList.contains('show')) {
+            camModal.hide();
         }
+        // Always restore original DOM position, real modal or fallback.
+        if (gpsModalHome && cameraModalEl) {
+            gpsModalHome.parent.insertBefore(cameraModalEl, gpsModalHome.next);
+            gpsModalHome = null;
+        }
+        hideFallbackFullscreen(cameraModalEl);
         startBtn?.classList.remove('d-none');
         stopBtn?.classList.add('d-none');
         captureBtn?.classList.add('d-none');
@@ -525,12 +640,38 @@
             return;
         }
 
-        const width = videoEl.videoWidth;
-        const height = videoEl.videoHeight;
-        if (!width || !height) {
+        const nativeWidth = videoEl.videoWidth;
+        const nativeHeight = videoEl.videoHeight;
+        if (!nativeWidth || !nativeHeight) {
             setError('Camera is not ready yet. Please wait a moment.');
             return;
         }
+
+        // The live preview is shown with CSS object-fit: cover, so it's
+        // cropped to the viewport's aspect ratio — but the native camera
+        // frame is usually a different (often wider) ratio. Capturing the
+        // full native frame here made the saved photo noticeably wider
+        // than what was actually framed on screen. Crop the source frame
+        // to match the displayed aspect ratio before drawing, so the
+        // capture matches what the person saw when they tapped the button.
+        const displayWidth = videoEl.clientWidth || nativeWidth;
+        const displayHeight = videoEl.clientHeight || nativeHeight;
+        const displayRatio = displayWidth / displayHeight;
+        const nativeRatio = nativeWidth / nativeHeight;
+
+        let sx = 0, sy = 0, sWidth = nativeWidth, sHeight = nativeHeight;
+        if (nativeRatio > displayRatio) {
+            // Native frame is relatively wider — crop the sides.
+            sWidth = Math.round(nativeHeight * displayRatio);
+            sx = Math.round((nativeWidth - sWidth) / 2);
+        } else if (nativeRatio < displayRatio) {
+            // Native frame is relatively taller — crop top/bottom.
+            sHeight = Math.round(nativeWidth / displayRatio);
+            sy = Math.round((nativeHeight - sHeight) / 2);
+        }
+
+        const width = sWidth;
+        const height = sHeight;
 
         canvasEl.width = width;
         canvasEl.height = height;
@@ -543,7 +684,7 @@
             context.translate(width, 0);
             context.scale(-1, 1);
         }
-        context.drawImage(videoEl, 0, 0, width, height);
+        context.drawImage(videoEl, sx, sy, sWidth, sHeight, 0, 0, width, height);
         context.restore();
 
         canvasEl.toBlob(
@@ -570,6 +711,11 @@
                     longitude,
                     accuracy,
                     captured_at: timestamp.toISOString(),
+                    // Frozen watermark snapshot so the lightbox can show the
+                    // same overlay later, without re-deriving it from live
+                    // (by-then-stale) GPS state.
+                    place: placeEl?.textContent || '',
+                    mapThumbSrc: mapThumbImg?.src || '',
                 };
 
                 setError('');
@@ -678,7 +824,7 @@
         }
         syncEvidenceInput();
         if (captureBtn) {
-            captureBtn.disabled = !canAddMoreCaptures();
+            updateCaptureReadiness();
         }
     });
 

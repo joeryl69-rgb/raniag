@@ -15,23 +15,31 @@
         justify-content: center;
         gap: .5rem;
         background: rgba(255, 255, 255, 0.85);
-        border-radius: .375rem;
+        backdrop-filter: blur(2px);
+        border-radius: 14px;
     }
     .raniag-map-overlay.d-none { display: none !important; }
-    .raniag-map-overlay-text { font-weight: 600; color: #212529; }
+    .raniag-map-overlay-text { font-weight: 600; color: var(--rg-ink); }
 </style>
 @endpush
 
 @section('content')
 <div class="container">
-    <div class="mb-4">
-        <h1 class="h3 fw-bold mb-1">Report an Incident</h1>
-        <p class="text-muted mb-0">Provide accurate details to help {{ config('raniag.organization') }} respond faster.</p>
+
+    <div class="rg-page-head" data-rg-reveal>
+        <span class="rg-eyebrow" style="color: var(--rg-alert); background: rgba(217,85,43,.10); border-color: rgba(217,85,43,.22);">
+            <i class="bi bi-megaphone-fill"></i>New report
+        </span>
+        <h1 class="rg-page-title">Report an Incident</h1>
+        <p class="rg-page-sub">
+            Provide accurate details to help {{ config('raniag.organization') }} respond faster.
+            Five short steps — you'll get a tracking number the moment you submit.
+        </p>
     </div>
 
     @if ($errors->any())
-        <div class="alert alert-danger">
-            <strong>Please correct the following:</strong>
+        <div class="alert alert-danger" data-rg-reveal>
+            <strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Please correct the following:</strong>
             <ul class="mb-0 mt-2">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -43,12 +51,12 @@
     <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
-        <div class="card raniag-card mb-4">
+        <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">1</span>
                 <span>Incident Type</span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="row g-3">
                     @foreach ($incidentTypes as $type)
                         <div class="col-sm-6 col-lg-4">
@@ -56,8 +64,21 @@
                                 <input type="radio" name="incident_type_id" value="{{ $type->id }}"
                                        {{ (int) old('incident_type_id') === $type->id ? 'checked' : '' }} required>
                                 <div class="d-flex align-items-start gap-2">
+                                    @php
+                                        $rgIcons = [
+                                            'fire' => 'bi-fire',
+                                            'flood' => 'bi-water',
+                                            'crime' => 'bi-shield-exclamation',
+                                            'medical' => 'bi-heart-pulse',
+                                            'traffic' => 'bi-car-front',
+                                            'disaster' => 'bi-exclamation-diamond',
+                                            'infrastructure' => 'bi-cone-striped',
+                                            'other' => 'bi-question-circle',
+                                        ];
+                                        $rgIcon = $rgIcons[$type->slug] ?? 'bi-exclamation-triangle';
+                                    @endphp
                                     <span class="badge rounded-pill" style="background: {{ $type->color ?? '#6c757d' }}">
-                                        <i class="bi bi-exclamation-triangle"></i>
+                                        <i class="bi {{ $rgIcon }}"></i>
                                     </span>
                                     <div>
                                         <div class="fw-semibold">{{ $type->name }}</div>
@@ -76,12 +97,12 @@
             </div>
         </div>
 
-        <div class="card raniag-card mb-4">
+        <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">2</span>
                 <span>Incident Details</span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="row g-3">
                     <div class="col-12">
                         <label for="title" class="form-label">Title <span class="text-muted">(optional)</span></label>
@@ -102,14 +123,14 @@
             </div>
         </div>
 
-        <div class="card raniag-card mb-4">
+        <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">3</span>
                 <span>Location</span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                    <p class="text-muted small mb-0">Use your current location or capture with the GPS camera — the map shows your pinned location and isn't clickable.</p>
+                    <p class="text-muted small mb-0" style="max-width: 60ch;">Use your current location or capture with the GPS camera — the map shows your pinned location and isn't clickable.</p>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="use-current-location">
                         <i class="bi bi-crosshair me-1"></i>Use Current Location
                     </button>
@@ -117,13 +138,13 @@
                 <div class="position-relative mb-2">
                     <div id="incident-map"></div>
                     <div id="map-locating-overlay" class="raniag-map-overlay d-none">
-                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="spinner-border" role="status" style="color: var(--rg-brand);"></div>
                         <div class="raniag-map-overlay-text">Pinpointing your location…</div>
                     </div>
                 </div>
                 <p class="small mb-2 d-none" id="jurisdiction-warning">
-                    <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
-                    <span class="text-warning">Pinned location looks like it's outside Pamplona municipality limits. You can still submit, but please double-check the pin.</span>
+                    <i class="bi bi-exclamation-triangle-fill me-1" style="color: var(--rg-alert);"></i>
+                    <span style="color: var(--rg-alert);">Pinned location looks like it's outside Pamplona municipality limits. You can still submit, but please double-check the pin.</span>
                 </p>
                 <p class="small mb-3" id="location-resolve-status">
                     <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Pin a location or enable GPS to auto-fill the barangay and coordinates.</span>
@@ -166,16 +187,17 @@
             </div>
         </div>
 
-        <div class="card raniag-card mb-4">
+        <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">4</span>
                 <span>Reporter Information</span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" role="switch" id="is_anonymous" name="is_anonymous"
                            value="1" @checked(old('is_anonymous', true))>
-                    <label class="form-check-label" for="is_anonymous">Report anonymously</label>
+                    <label class="form-check-label fw-semibold" for="is_anonymous">Report anonymously</label>
+                    <div class="form-text mb-0">Leave this on to keep your identity out of the record.</div>
                 </div>
                 <div class="row g-3 reporter-fields" id="reporter-fields">
                     <div class="col-md-4">
@@ -200,21 +222,24 @@
             </div>
         </div>
 
-        <div class="card raniag-card mb-4">
+        <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">5</span>
                 <span>Evidence <span class="text-danger">*</span></span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <input type="hidden" name="meta[gps_captures]" id="gps-capture-log" value="">
 
                 <div id="gps-camera-module" class="mb-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                        <div>
-                            <h3 class="h6 fw-bold mb-1"><i class="bi bi-camera-video me-2"></i>GPS Camera</h3>
-                            <p class="text-muted small mb-0">Capture geotagged photos using your device camera and GPS.</p>
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="rg-icon-tile"><i class="bi bi-camera-video"></i></span>
+                            <div>
+                                <h3 class="h6 fw-bold mb-1">GPS Camera</h3>
+                                <p class="text-muted small mb-0">Capture geotagged photos using your device camera and GPS.</p>
+                            </div>
                         </div>
-                        <span class="badge bg-secondary" id="gps-camera-status">Camera off</span>
+                        <span class="badge rounded-pill bg-secondary" id="gps-camera-status">Camera off</span>
                     </div>
 
                     <div id="gps-camera-error" class="alert alert-warning d-none small" role="alert"></div>
@@ -227,7 +252,7 @@
                     <div class="modal fade" id="gps-camera-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                         <div class="modal-dialog modal-fullscreen">
                             <div class="modal-content bg-dark">
-                                <div class="modal-body p-0 d-flex align-items-center justify-content-center position-relative">
+                                <div class="modal-body p-0 position-relative">
                                     <!-- Live viewport -->
                                     <div id="gps-camera-live" class="gps-camera-viewport gps-camera-viewport-full">
                                         <video id="gps-camera-video" class="gps-modal-video" playsinline autoplay muted></video>
@@ -247,9 +272,25 @@
                                         <span class="badge bg-light text-dark gps-accuracy-pill" id="gps-camera-accuracy">Waiting for signal…</span>
                                     </div>
 
-                                    <!-- Review step: shown after a shot, before it's committed -->
+                                    <!-- Review step: shown after a shot, before it's committed. Mirrors
+                                         the live watermark so the reviewer sees what gets burned in
+                                         server-side, without duplicating the map-tile fetch. -->
                                     <div id="gps-camera-review" class="d-none gps-camera-review-step">
-                                        <img id="gps-review-image" class="gps-review-img" alt="Captured photo preview">
+                                        <div class="gps-review-frame" id="gps-review-frame">
+                                            <img id="gps-review-image" class="gps-review-img" alt="Captured photo preview">
+                                            <div class="gps-watermark-overlay" id="gps-review-watermark">
+                                                <div class="gps-watermark-map" id="gps-review-watermark-map">
+                                                    <img id="gps-review-map-img" alt="Map preview of the captured location">
+                                                    <span class="gps-watermark-map-pin is-visible"></span>
+                                                </div>
+                                                <div class="gps-watermark-text">
+                                                    <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                                                    <div class="gps-watermark-line" id="gps-review-coords">—</div>
+                                                    <div class="gps-watermark-line" id="gps-review-place">—</div>
+                                                    <div class="gps-watermark-line" id="gps-review-time">—</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="modal-footer justify-content-center gap-2 bg-dark border-top border-secondary">
@@ -280,7 +321,7 @@
                     </div>
 
                     <p class="small text-muted mt-2 mb-0">
-                        Each capture tags the photo with live coordinates, full address, a map preview, and the date/time — burned into the image on submit.
+                        Each capture tags the photo with live coordinates, full address, a map preview, and the date/time — shown on the review screen and burned into the final image.
                     </p>
 
                     <div class="row g-2 mt-2" id="gps-camera-preview"></div>
@@ -291,16 +332,29 @@
                     <div class="modal-dialog modal-dialog-centered modal-lg">
                         <div class="modal-content bg-dark">
                             <div class="modal-header border-0">
-                                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <button type="button" class="btn-close btn-close-white ms-auto" id="gps-lightbox-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div class="modal-body pt-0 text-center">
-                                <img id="gps-lightbox-image" class="img-fluid rounded" alt="Full-size evidence preview">
+                                               <div class="modal-body pt-0 text-center position-relative">
+                                <div class="gps-review-frame" id="gps-lightbox-frame">
+                                    <img id="gps-lightbox-image" class="img-fluid rounded" alt="Full-size evidence preview">
+                                    <div class="gps-watermark-overlay" id="gps-lightbox-watermark">
+                                    <div class="gps-watermark-map">
+                                        <img id="gps-lightbox-map-img" alt="Map preview of the captured location">
+                                        <span class="gps-watermark-map-pin is-visible"></span>
+                                    </div>
+                                    <div class="gps-watermark-text">
+                                        <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                                        <div class="gps-watermark-line" id="gps-lightbox-coords">—</div>
+                                        <div class="gps-watermark-line" id="gps-lightbox-place">—</div>
+                                        <div class="gps-watermark-line" id="gps-lightbox-time">—</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <hr class="my-4">
+                <hr class="my-4" style="border-color: var(--rg-line);">
 
                 <label for="evidence" class="form-label fw-semibold">Upload files</label>
                 <input type="file" class="form-control @error('evidence') is-invalid @enderror @error('evidence.*') is-invalid @enderror"
@@ -315,11 +369,18 @@
             </div>
         </div>
 
-        <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center">
-            <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-report">
-                <i class="bi bi-send me-2"></i>Submit Report
-            </button>
+        <div class="card raniag-card p-3 p-lg-4" data-rg-reveal>
+            <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center">
+                <p class="text-muted small mb-0" style="max-width: 46ch;">
+                    <i class="bi bi-shield-lock me-1"></i>Your report is confidential and stored with a full audit trail.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-report">
+                        <i class="bi bi-send me-2"></i>Submit Report
+                    </button>
+                </div>
+            </div>
         </div>
     </form>
 </div>
@@ -336,6 +397,5 @@
     window.RANIAG_BARANGAY_BOUNDARIES = @json($barangayBoundaries);
 </script>
 <script src="{{ asset('js/public-report.js') }}"></script>
-<script src="{{ asset('js/gps-camera.js') }}"></script>
+<script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
 @endpush
-

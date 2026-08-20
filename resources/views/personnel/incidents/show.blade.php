@@ -167,8 +167,18 @@
                     <h5 class="mb-0 fw-bold"><i class="bi bi-play-circle me-2"></i>Case Action Control</h5>
                 </div>
                 <div class="card-body">
-                    @if ($incident->status->value === 'assigned')
-                        <!-- Action: Accept assignment -->
+                    @php
+                        $userId = auth()->id();
+                        $myAssignment = \App\Models\Assignment::where('incident_id', $incident->id)
+                            ->where('assigned_to', $userId)
+                            ->where('is_active', true)
+                            ->latest('created_at')
+                            ->first();
+                        $needsAcceptance = $myAssignment && ! $myAssignment->isAcknowledged()
+                            && ! in_array($incident->status->value, ['resolved', 'closed']);
+                    @endphp
+                    @if ($needsAcceptance)
+                        <!-- Action: Accept assignment (per-personnel, independent of other assignees' status) -->
                         <div class="p-3 text-center">
                             <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation.</p>
                             <form action="{{ route('personnel.incidents.accept', $incident->id) }}" method="POST">
@@ -178,11 +188,7 @@
                         </div>
                     @elseif ($incident->status->value === 'in_progress' || $incident->status->value === 'pending_info')
                         @php
-                            $userId = auth()->id();
-                            $hasActiveAssignment = \App\Models\Assignment::where('incident_id', $incident->id)
-                                ->where('assigned_to', $userId)
-                                ->where('is_active', true)
-                                ->exists();
+                            $hasActiveAssignment = $myAssignment !== null;
                         @endphp
 
                         @if ($hasActiveAssignment)

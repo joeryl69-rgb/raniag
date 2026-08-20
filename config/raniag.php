@@ -10,7 +10,9 @@ return [
 
     'name' => env('RANIAG_NAME', 'RANIAG'),
 
-    'organization' => env('RANIAG_ORGANIZATION', 'LGU Pamplona'),
+    'organization' => env('RANIAG_ORGANIZATION', 'MDRRMO Pamplona'),
+
+    'tagline' => env('RANIAG_TAGLINE', 'Your safety is our priority'),
 
     'tracking' => [
         'prefix' => env('RANIAG_TRACKING_PREFIX', 'RAN'),

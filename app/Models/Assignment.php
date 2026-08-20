@@ -17,6 +17,8 @@ class Assignment extends Model
         'assigned_to',
         'notes',
         'is_active',
+        'acknowledged_at',
+        'acknowledged_by',
         'assigned_at',
         'completed_at',
     ];
@@ -25,9 +27,15 @@ class Assignment extends Model
     {
         return [
             'is_active' => 'boolean',
+            'acknowledged_at' => 'datetime',
             'assigned_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
+    }
+
+    public function isAcknowledged(): bool
+    {
+        return $this->acknowledged_at !== null;
     }
 
     public function incident(): BelongsTo
@@ -48,5 +56,10 @@ class Assignment extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function acknowledger(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'acknowledged_by');
     }
 }

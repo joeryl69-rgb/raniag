@@ -18,7 +18,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('agency.dashboard');
+        return view('dashboard');
     }
 
     /**
@@ -28,6 +28,21 @@ class DashboardController extends Controller
     public function boundary(): JsonResponse
     {
         $path = 'geo/pamplona_boundary.geojson';
+
+        abort_unless(Storage::disk('local')->exists($path), 404);
+
+        return response()->json(
+            json_decode(Storage::disk('local')->get($path), true)
+        );
+    }
+
+    /**
+     * Serve the Pamplona barangay boundaries as GeoJSON for the
+     * dashboard map's optional barangay-borders overlay.
+     */
+    public function barangays(): JsonResponse
+    {
+        $path = 'geo/pamplona_barangays.geojson';
 
         abort_unless(Storage::disk('local')->exists($path), 404);
 

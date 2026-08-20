@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>RANIAG — LGU Pamplona Incident Reporting System</title>
+    <title>RANIAG — {{ config('raniag.organization') }} Incident Reporting System</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
@@ -159,7 +159,7 @@
                     <i class="bi bi-shield-check"></i>
                 </div>
                 <h1>RANIAG</h1>
-                <p>Secure incident reporting for LGU Pamplona</p>
+                <p>Secure incident reporting for {{ config('raniag.organization') }}</p>
             </div>
 
             <div class="login-body">
