@@ -21,6 +21,7 @@ class IncidentDocumentService
         bool $isCameraCapture = false,
         ?int $uploadedBy = null,
         ?string $notes = null,
+        ?string $extractedText = null,
     ): IncidentDocument {
         $directory = sprintf('incidents/%d/documents', $incident->id);
         $filename = Str::uuid()->toString().'.'.($file->getClientOriginalExtension() ?: 'jpg');
@@ -36,6 +37,10 @@ class IncidentDocumentService
             'file_size' => $file->getSize(),
             'is_camera_capture' => $isCameraCapture,
             'notes' => $notes,
+            // Scanned client-side via Tesseract.js in the upload popup (same
+            // pattern as the GPS-camera watermark popup) and reviewed/edited
+            // by the admin before this record is created.
+            'extracted_text' => $extractedText,
         ]);
     }
 

@@ -71,6 +71,12 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
+        // Flashed separately (not just embedded in the message string) so the
+        // login page can render a live countdown and lock the form, the way
+        // most sites show a clear "try again in Xs" state instead of a bare
+        // inline validation error.
+        $this->session()->flash('lockout_seconds', $seconds);
+
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [
                 'seconds' => $seconds,

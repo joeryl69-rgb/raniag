@@ -23,6 +23,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/poll', [NotificationController::class, 'poll'])->name('poll');
         Route::post('/{notification}/read', [NotificationController::class, 'markRead'])->name('mark_read');
         Route::post('/read-all', [NotificationController::class, 'markAllRead'])->name('mark_all_read');
+        Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
+        Route::delete('/bulk/delete', [NotificationController::class, 'destroySelected'])->name('destroy_selected');
+        Route::delete('/bulk/delete-all', [NotificationController::class, 'destroyAll'])->name('destroy_all');
     });
 });
 

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
 
     <style>
         :root {
@@ -186,6 +186,16 @@
                     </div>
                 @endif
 
+                @if (session('lockout_seconds'))
+                    <div class="alert alert-danger d-flex align-items-center gap-2" id="lockout-banner">
+                        <i class="bi bi-shield-lock fs-5"></i>
+                        <div>
+                            Too many login attempts. Please try again in
+                            <strong><span id="lockout-countdown">{{ session('lockout_seconds') }}</span>s</strong>.
+                        </div>
+                    </div>
+                @endif
+
                 <form id="login-form" method="POST" action="{{ route('login') }}">
                     @csrf
 
@@ -262,6 +272,27 @@
                     buttonLabel.textContent = 'Signing in...';
                     spinner.classList.remove('d-none');
                 });
+            }
+
+            // Lock the form for the remaining cooldown and count down live,
+            // so a locked-out account gets an unmistakable "come back later"
+            // state instead of just a small inline error under the field.
+            let remaining = parseInt(document.getElementById('lockout-countdown')?.textContent || '0', 10);
+            if (remaining > 0) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50');
+                const countdownEl = document.getElementById('lockout-countdown');
+                const timer = setInterval(function () {
+                    remaining -= 1;
+                    if (remaining <= 0) {
+                        clearInterval(timer);
+                        document.getElementById('lockout-banner')?.remove();
+                        submitButton.disabled = false;
+                        submitButton.classList.remove('opacity-50');
+                        return;
+                    }
+                    if (countdownEl) countdownEl.textContent = remaining;
+                }, 1000);
             }
         });
     </script>

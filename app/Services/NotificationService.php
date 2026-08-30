@@ -65,14 +65,6 @@ class NotificationService
         return $parts ? implode(', ', $parts) : 'Location not specified';
     }
 
-    private function incidentUrl(Incident $incident, string $area = 'admin'): string
-    {
-        $base = rtrim(config('app.url'), '/');
-
-        // Matches routes/{admin,agency,personnel}.php: prefix('{area}')->prefix('incidents')->get('/{incident}')
-        return "{$base}/{$area}/incidents/{$incident->id}";
-    }
-
     public function notifyAdminNewIncident(Incident $incident): void
     {
         $location = $this->fullLocation($incident);
@@ -88,7 +80,7 @@ class NotificationService
         $admins = User::where('role', UserRole::Administrator)->where('is_active', true)->get();
         foreach ($admins as $admin) {
             if ($admin->phone) {
-                $message = "RANIAG Alert: New incident submitted [Tracking: {$incident->tracking_number}] at {$location}. Please review and assign.";
+                $message = "RANIAG ALERT: New {$incident->incidentType?->name} report (Priority: {$incident->priority->label()}) at {$location}. Tracking #: {$incident->tracking_number}. Log in to RANIAG to review and assign a responding agency.";
                 $this->sendSms(
                     recipientPhone: $admin->phone,
                     message: $message,
@@ -102,7 +94,7 @@ class NotificationService
     public function notifyReporterStatusUpdate(Incident $incident, string $updateMessage): void
     {
         if (! $incident->is_anonymous && $incident->reporter_phone) {
-            $message = "RANIAG Alert: Your report [Tracking: {$incident->tracking_number}] status is updated: {$updateMessage}";
+            $message = "RANIAG UPDATE: Your incident report (Tracking #: {$incident->tracking_number}) has a status update: {$updateMessage} You may check full details anytime using your tracking number on the RANIAG public tracking page.";
             $this->sendSms(
                 recipientPhone: $incident->reporter_phone,
                 message: $message,
@@ -139,7 +131,7 @@ class NotificationService
             return;
         }
 
-        $message = "RANIAG Alert: New incident assigned [{$incident->tracking_number}] at {$location}.";
+        $message = "RANIAG ALERT: A new {$incident->incidentType?->name} incident (Priority: {$incident->priority->label()}) has been assigned to your agency at {$location}. Tracking #: {$incident->tracking_number}. Please coordinate your response team.";
 
         $this->sendSms(
             recipientPhone: $agency->phone,
@@ -171,7 +163,7 @@ class NotificationService
             return;
         }
 
-        $message = "RANIAG Alert: New incident assigned [{$incident->tracking_number}] at {$location}.";
+        $message = "RANIAG ALERT: You have been assigned to a {$incident->incidentType?->name} incident (Priority: {$incident->priority->label()}) at {$location}. Tracking #: {$incident->tracking_number}. Log in to RANIAG for full details and to accept the dispatch.";
 
         $this->sendSms(
             recipientPhone: $personnel->phone,
@@ -211,7 +203,7 @@ class NotificationService
 
         foreach ($adminUsers as $admin) {
             if ($admin->phone) {
-                $message = "RANIAG Alert: Resolution submitted for [{$incident->tracking_number}]. Review required.";
+                $message = "RANIAG ALERT: A resolution report has been submitted for incident {$incident->tracking_number} ({$incident->incidentType?->name}) and is awaiting your review and approval. Log in to RANIAG to review.";
 
                 $this->sendSms(
                     recipientPhone: $admin->phone,
@@ -303,7 +295,14 @@ class NotificationService
      */
     public function dispatchSms(SmsLog $smsLog): void
     {
-        $provider = config('services.sms.provider', env('SMS_PROVIDER', 'textbee'));
+        // Normalize case/whitespace before comparing — SMS_PROVIDER is a
+        // free-text .env value (commonly written "PhilSMS", "TextBee",
+        // etc. for readability) and a case-sensitive match here was
+        // silently missing every branch, falling through to the local
+        // placeholder (which fakes a "Sent" status without ever calling
+        // the real API) or failing outright outside local. That's why
+        // logs could show "Sent" while no SMS ever actually arrived.
+        $provider = strtolower(trim((string) config('services.sms.provider', env('SMS_PROVIDER', 'textbee'))));
 
         if ($provider === 'textbee') {
             $this->sendViaTextBee($smsLog);

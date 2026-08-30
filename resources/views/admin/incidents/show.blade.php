@@ -117,7 +117,7 @@
                                             @endif
                                             
                                             @if (str_starts_with($ev->mime_type, 'image/'))
-                                                <a href="{{ Storage::url($ev->file_path) }}" target="_blank">
+                                                <a href="{{ Storage::url($ev->file_path) }}" class="js-lightbox" data-group="evidence-public-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
                                                     <img src="{{ Storage::url($ev->file_path) }}" class="card-img-top" alt="Evidence">
                                                 </a>
                                             @else
@@ -161,20 +161,24 @@
                                     </div>
 
                                     @if ($docsOfType->isNotEmpty())
-                                        <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <div class="rg-docthumb-row mb-2">
                                             @foreach ($docsOfType as $doc)
-                                                <div class="position-relative">
-                                                    <a href="{{ Storage::url($doc->file_path) }}" target="_blank">
+                                                <div class="rg-docthumb">
+                                                    <a href="{{ Storage::url($doc->file_path) }}" class="js-lightbox rg-docthumb-link" data-group="casedoc-{{ $incident->id }}-{{ $docType->value }}" data-caption="{{ $docType->label() }}">
                                                         @if (str_starts_with((string) $doc->mime_type, 'image/'))
-                                                            <img src="{{ Storage::url($doc->file_path) }}" alt="{{ $docType->label() }}" style="width:70px;height:70px;object-fit:cover;" class="rounded border">
+                                                            <img src="{{ Storage::url($doc->file_path) }}" alt="{{ $docType->label() }}" class="rg-docthumb-img" loading="lazy">
                                                         @else
-                                                            <div class="d-flex align-items-center justify-content-center bg-light text-secondary rounded border" style="width:70px;height:70px;"><i class="bi bi-file-earmark-pdf fs-4"></i></div>
+                                                            <div class="rg-docthumb-img rg-docthumb-file"><i class="bi bi-file-earmark-pdf fs-4"></i></div>
                                                         @endif
                                                     </a>
-                                                    <form method="POST" action="{{ route('admin.incidents.documents.destroy', [$incident->id, $doc->id]) }}" class="position-absolute top-0 end-0" onsubmit="return confirm('Remove this document?');">
+                                                    <button type="button" class="btn btn-sm btn-outline-dark rg-docthumb-textbtn" title="View/edit scanned text"
+                                                        onclick="openTextModal({{ $incident->id }}, {{ $doc->id }}, @js($docType->label()), @js($doc->extracted_text ?? ''))">
+                                                        <i class="bi bi-body-text"></i>
+                                                    </button>
+                                                    <form method="POST" action="{{ route('admin.incidents.documents.destroy', [$incident->id, $doc->id]) }}" class="rg-docthumb-delform" onsubmit="return confirm('Remove this document?');">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger py-0 px-1" style="line-height:1;" title="Remove"><i class="bi bi-x"></i></button>
+                                                        <button type="submit" class="btn btn-sm btn-danger rg-docthumb-delbtn" title="Remove"><i class="bi bi-x"></i></button>
                                                     </form>
                                                 </div>
                                             @endforeach
@@ -182,20 +186,8 @@
                                     @endif
 
                                     <div class="d-flex gap-2">
-                                        <form method="POST" action="{{ route('admin.incidents.documents.store', $incident->id) }}" enctype="multipart/form-data" class="doc-upload-form">
-                                            @csrf
-                                            <input type="hidden" name="document_type" value="{{ $docType->value }}">
-                                            <input type="hidden" name="is_camera_capture" value="1">
-                                            <input type="file" name="file" accept="image/*" capture="environment" class="d-none doc-file-input" onchange="this.form.requestSubmit()">
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="this.previousElementSibling.click()"><i class="bi bi-camera me-1"></i>Take Photo</button>
-                                        </form>
-                                        <form method="POST" action="{{ route('admin.incidents.documents.store', $incident->id) }}" enctype="multipart/form-data" class="doc-upload-form">
-                                            @csrf
-                                            <input type="hidden" name="document_type" value="{{ $docType->value }}">
-                                            <input type="hidden" name="is_camera_capture" value="0">
-                                            <input type="file" name="file" accept="image/*,application/pdf" class="d-none doc-file-input" onchange="this.form.requestSubmit()">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.click()"><i class="bi bi-upload me-1"></i>Upload File</button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), true)"><i class="bi bi-camera me-1"></i>Take Photo</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), false)"><i class="bi bi-upload me-1"></i>Upload File</button>
                                     </div>
                                 </div>
                             </div>
@@ -203,6 +195,231 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Scan popup: pick/take a photo, auto-extract its text client-side
+                 (same "GPS-camera popup" UX pattern), let the admin review and
+                 edit the text, then submit — no need to leave the browser for
+                 a separate scanning app. --}}
+            <div class="modal fade" id="scanModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable rg-scan-dialog">
+                    <div class="modal-content">
+                        <form method="POST" id="scanForm" enctype="multipart/form-data">
+                            @csrf
+                            <input type="hidden" name="document_type" id="scanDocType">
+                            <input type="hidden" name="is_camera_capture" id="scanIsCamera">
+                            <input type="hidden" name="extracted_text" id="scanExtractedText">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="bi bi-camera-fill me-2 text-primary"></i>Scan <span id="scanDocLabel" class="fw-bold ms-1"></span></h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="d-flex gap-2 align-items-start mb-3">
+                                    <input type="file" name="file" id="scanFileInput" class="form-control" required>
+                                    <button type="button" class="btn btn-outline-secondary flex-shrink-0 d-none" id="scanRetakeBtn" title="Retake photo">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Retake
+                                    </button>
+                                </div>
+                                <div id="scanPreviewWrap" class="d-none text-center mb-3">
+                                    <img id="scanPreviewImg" class="img-fluid rounded border" style="max-height:280px;" alt="Scan preview">
+                                </div>
+                                <div id="scanOcrStatus" class="small text-muted mb-2"></div>
+                                <label class="form-label small fw-semibold">Extracted Text (editable)</label>
+                                <textarea id="scanTextArea" rows="8" class="form-control" placeholder="Scanned text will appear here automatically — you can edit it before saving."></textarea>
+                            </div>
+                            <div class="modal-footer rg-scan-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary" id="scanSubmitBtn"><i class="bi bi-check-lg me-1"></i>Save Document</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            @push('styles')
+            <style>
+                /* The scan form (file picker + preview + OCR status + an
+                   8-row textarea) was long enough to force a lot of
+                   scrolling on phones, and the footer with "Save Document"
+                   could end up out of easy reach. Go full-screen on mobile
+                   and pin the footer so it's always visible/reachable. */
+                @media (max-width: 767.98px) {
+                    .rg-scan-dialog {
+                        width: 100%;
+                        max-width: 100%;
+                        height: 100%;
+                        max-height: 100%;
+                        margin: 0;
+                    }
+                    .rg-scan-dialog .modal-content {
+                        height: 100%;
+                        border-radius: 0;
+                    }
+                    .rg-scan-footer {
+                        position: sticky;
+                        bottom: 0;
+                        background: #fff;
+                        z-index: 2;
+                    }
+                }
+            </style>
+            @endpush
+
+            {{-- View/edit already-extracted text for an existing document. --}}
+            <div class="modal fade" id="textModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <form method="POST" id="textForm">
+                            @csrf
+                            @method('PUT')
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="bi bi-body-text me-2 text-primary"></i><span id="textDocLabel"></span> &mdash; Extracted Text</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <textarea name="extracted_text" id="textDocArea" rows="10" class="form-control" placeholder="No text extracted yet."></textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            @push('scripts')
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+            <script src="{{ asset('js/document-camera.js') }}?v={{ @filemtime(public_path('js/document-camera.js')) }}"></script>
+            <script>
+                const incidentDocumentsBaseUrl = @json(route('admin.incidents.documents.store', $incident->id));
+
+                let scanIsCameraFlow = false;
+
+                function scanFileFromCamera(file) {
+                    const fileInput = document.getElementById('scanFileInput');
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    fileInput.files = dt.files;
+                    fileInput.dispatchEvent(new Event('change'));
+                    new bootstrap.Modal(document.getElementById('scanModal')).show();
+                }
+
+                function openScanModal(incidentId, docTypeValue, docLabel, isCamera) {
+                    document.getElementById('scanForm').action = incidentDocumentsBaseUrl;
+                    document.getElementById('scanDocType').value = docTypeValue;
+                    document.getElementById('scanIsCamera').value = isCamera ? '1' : '0';
+                    document.getElementById('scanDocLabel').textContent = docLabel;
+                    document.getElementById('scanTextArea').value = '';
+                    document.getElementById('scanOcrStatus').textContent = '';
+                    document.getElementById('scanPreviewWrap').classList.add('d-none');
+                    scanIsCameraFlow = !!isCamera;
+                    document.getElementById('scanRetakeBtn').classList.toggle('d-none', !isCamera);
+                    const fileInput = document.getElementById('scanFileInput');
+                    fileInput.value = '';
+                    fileInput.setAttribute('accept', isCamera ? 'image/*' : 'image/*,application/pdf');
+                    fileInput.removeAttribute('capture');
+
+                    if (isCamera) {
+                        // Guided in-app camera (framing guide + flash) instead of
+                        // handing off to the phone's native camera app — a properly
+                        // framed, well-lit capture is what actually fixes OCR accuracy.
+                        window.RaniagDocCamera.open(scanFileFromCamera);
+                        return;
+                    }
+
+                    new bootstrap.Modal(document.getElementById('scanModal')).show();
+                }
+
+                // "Retake" — lets you reshoot/reselect without closing the whole
+                // form and losing your place, matching the retake affordance the
+                // in-app camera itself already offers before you get here.
+                document.getElementById('scanRetakeBtn').addEventListener('click', function () {
+                    if (scanIsCameraFlow) {
+                        window.RaniagDocCamera.open(scanFileFromCamera);
+                    } else {
+                        document.getElementById('scanFileInput').value = '';
+                        document.getElementById('scanPreviewWrap').classList.add('d-none');
+                        document.getElementById('scanTextArea').value = '';
+                        document.getElementById('scanOcrStatus').textContent = '';
+                    }
+                });
+
+                document.getElementById('scanFileInput').addEventListener('change', function (e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const status = document.getElementById('scanOcrStatus');
+                    const previewWrap = document.getElementById('scanPreviewWrap');
+                    const previewImg = document.getElementById('scanPreviewImg');
+                    const textArea = document.getElementById('scanTextArea');
+
+                    if (!file.type.startsWith('image/')) {
+                        previewWrap.classList.add('d-none');
+                        status.textContent = 'Text scanning only works for image files — PDFs are attached as-is.';
+                        return;
+                    }
+
+                    // Grayscale + contrast-stretch the image before handing it to
+                    // Tesseract — flat/dim lighting (common with the in-app camera
+                    // on a phone) was a real contributor to garbled OCR output.
+                    function preprocessForOcr(dataUrl) {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.onload = function () {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                const d = frame.data;
+                                for (let i = 0; i < d.length; i += 4) {
+                                    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                                    const contrasted = Math.min(255, Math.max(0, (gray - 128) * 1.35 + 128));
+                                    d[i] = d[i + 1] = d[i + 2] = contrasted;
+                                }
+                                ctx.putImageData(frame, 0, 0);
+                                resolve(canvas.toDataURL('image/jpeg', 0.95));
+                            };
+                            img.onerror = function () { resolve(dataUrl); };
+                            img.src = dataUrl;
+                        });
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        previewImg.src = evt.target.result;
+                        previewWrap.classList.remove('d-none');
+                        status.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Scanning document for text…';
+                        document.getElementById('scanSubmitBtn').disabled = true;
+
+                        preprocessForOcr(evt.target.result)
+                            .then((processedUrl) => Tesseract.recognize(processedUrl, 'eng'))
+                            .then(({ data: { text } }) => {
+                                textArea.value = text.trim();
+                                status.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Text scanned — review and edit below before saving. If it looks off, use Retake for a sharper shot.';
+                            })
+                            .catch(() => {
+                                status.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Automatic scan failed — you can still type the text manually, or use Retake.';
+                            })
+                            .finally(() => {
+                                document.getElementById('scanSubmitBtn').disabled = false;
+                            });
+                    };
+                    reader.readAsDataURL(file);
+                });
+
+                document.getElementById('scanForm').addEventListener('submit', function () {
+                    document.getElementById('scanExtractedText').value = document.getElementById('scanTextArea').value;
+                });
+
+                function openTextModal(incidentId, documentId, docLabel, existingText) {
+                    document.getElementById('textForm').action = `/admin/incidents/${incidentId}/documents/${documentId}/text`;
+                    document.getElementById('textDocLabel').textContent = docLabel;
+                    document.getElementById('textDocArea').value = existingText || '';
+                    new bootstrap.Modal(document.getElementById('textModal')).show();
+                }
+            </script>
+            @endpush
 
             <!-- Timeline Section -->
             <div class="card raniag-card shadow-sm border-0 mb-4">
@@ -471,7 +688,7 @@
                                             <div class="row g-2 mb-3">
                                                 @foreach($assignmentEvidence as $ev)
                                                     <div class="col-4 col-sm-3">
-                                                        <a href="{{ Storage::url($ev->file_path) }}" target="_blank">
+                                                        <a href="{{ Storage::url($ev->file_path) }}" class="js-lightbox" data-group="evidence-assignment-{{ $assignment->id }}" data-caption="{{ $ev->original_filename }}">
                                                             @if(str_starts_with($ev->mime_type, 'image/'))
                                                                 <img src="{{ Storage::url($ev->file_path) }}" class="img-fluid rounded border shadow-sm" style="aspect-ratio: 4/3; object-fit: cover;" alt="Evidence">
                                                             @else
@@ -549,27 +766,11 @@
     @push('scripts')
         @if ($incident->latitude && $incident->longitude)
                         <style>
-                .incident-map-pin {
-                    position: relative;
-                    width: 30px;
-                    height: 30px;
-                    border-radius: 50% 50% 50% 0;
-                    border: 2px solid #fff;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-                    transform: rotate(-45deg);
-                }
-                .incident-map-pin i {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transform: rotate(45deg);
-                    color: #fff;
-                    font-size: 0.85rem;
-                }
+                /* Pin styling now lives in the shared .raniag-marker-pin class
+                   (public/css/public.css) — see public/js/incident-map-icons.js. */
             </style>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+            <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
                     const lat = {{ $incident->latitude }};
@@ -579,21 +780,13 @@
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(map);
-                    const iconMap = {
-                        fire: 'bi-fire', water: 'bi-droplet-fill', shield: 'bi-shield-fill',
-                        'heart-pulse': 'bi-heart-pulse-fill', car: 'bi-car-front-fill',
-                        'triangle-alert': 'bi-exclamation-triangle-fill', building: 'bi-building-fill',
-                        'circle-help': 'bi-question-circle-fill',
-                    };
                     const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
-                    const pinColor = withinJurisdiction === false ? '#fd7e14' : (@json($incident->incidentType->color ?? null) || '#dc3545');
-                    const pinGlyph = iconMap[@json($incident->incidentType->icon ?? null)] || 'bi-geo-alt-fill';
-                    const pinIcon = L.divIcon({
-                        html: `<div class="incident-map-pin" style="background:${pinColor}"><i class="bi ${pinGlyph}"></i></div>`,
-                        className: 'incident-map-marker',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 30],
-                        popupAnchor: [0, -24],
+                    // Centralized icon+color resolution (see public/js/incident-map-icons.js)
+                    // keeps this pin visually identical to every other incident map in the system.
+                    const pinIcon = window.RaniagIcons.buildDivIcon({
+                        icon: @json($incident->incidentType->icon ?? null),
+                        color: @json($incident->incidentType->color ?? null),
+                        outsideJurisdiction: withinJurisdiction === false,
                     });
                     L.marker([lat, lng], { icon: pinIcon }).addTo(map)
                         .bindPopup(withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location')

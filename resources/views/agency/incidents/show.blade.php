@@ -94,7 +94,7 @@
                                 <div class="col-6 col-md-4">
                                     <div class="card h-100 border">
                                         @if (str_starts_with($ev->mime_type, 'image/'))
-                                            <a href="{{ Storage::url($ev->file_path) }}" target="_blank">
+                                            <a href="{{ Storage::url($ev->file_path) }}" class="js-lightbox" data-group="evidence-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
                                                 <img src="{{ Storage::url($ev->file_path) }}" class="card-img-top evidence-thumb" alt="Evidence">
                                             </a>
                                         @else
@@ -385,27 +385,11 @@
     @push('scripts')
         @if ($incident->latitude && $incident->longitude)
                         <style>
-                .incident-map-pin {
-                    position: relative;
-                    width: 30px;
-                    height: 30px;
-                    border-radius: 50% 50% 50% 0;
-                    border: 2px solid #fff;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-                    transform: rotate(-45deg);
-                }
-                .incident-map-pin i {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transform: rotate(45deg);
-                    color: #fff;
-                    font-size: 0.85rem;
-                }
+                /* Pin styling now lives in the shared .raniag-marker-pin class
+                   (public/css/public.css) — see public/js/incident-map-icons.js. */
             </style>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+            <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
                     const lat = {{ $incident->latitude }};
@@ -415,21 +399,13 @@
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(map);
-                    const iconMap = {
-                        fire: 'bi-fire', water: 'bi-droplet-fill', shield: 'bi-shield-fill',
-                        'heart-pulse': 'bi-heart-pulse-fill', car: 'bi-car-front-fill',
-                        'triangle-alert': 'bi-exclamation-triangle-fill', building: 'bi-building-fill',
-                        'circle-help': 'bi-question-circle-fill',
-                    };
                     const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
-                    const pinColor = withinJurisdiction === false ? '#fd7e14' : (@json($incident->incidentType->color ?? null) || '#dc3545');
-                    const pinGlyph = iconMap[@json($incident->incidentType->icon ?? null)] || 'bi-geo-alt-fill';
-                    const pinIcon = L.divIcon({
-                        html: `<div class="incident-map-pin" style="background:${pinColor}"><i class="bi ${pinGlyph}"></i></div>`,
-                        className: 'incident-map-marker',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 30],
-                        popupAnchor: [0, -24],
+                    // Centralized icon+color resolution (see public/js/incident-map-icons.js)
+                    // keeps this pin visually identical to every other incident map in the system.
+                    const pinIcon = window.RaniagIcons.buildDivIcon({
+                        icon: @json($incident->incidentType->icon ?? null),
+                        color: @json($incident->incidentType->color ?? null),
+                        outsideJurisdiction: withinJurisdiction === false,
                     });
                     L.marker([lat, lng], { icon: pinIcon }).addTo(map)
                         .bindPopup(withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location')

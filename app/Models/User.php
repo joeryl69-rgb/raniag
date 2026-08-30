@@ -25,6 +25,7 @@ class User extends Authenticatable
         'role_title',
         'team_assignment',
         'is_active',
+        'avatar_path',
     ];
 
     protected $hidden = [
@@ -76,6 +77,25 @@ class User extends Authenticatable
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    /**
+     * Public URL for this user's profile photo, or null if they haven't
+     * uploaded one (callers fall back to an initials/icon avatar).
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar_path
+            ? \Illuminate\Support\Facades\Storage::url($this->avatar_path)
+            : null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        $words = preg_split('/\s+/', trim((string) $this->name));
+        $initials = collect($words)->filter()->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->implode('');
+
+        return $initials !== '' ? $initials : '?';
     }
 
     public function isAdministrator(): bool

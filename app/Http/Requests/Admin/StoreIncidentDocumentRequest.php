@@ -22,6 +22,7 @@ class StoreIncidentDocumentRequest extends FormRequest
             'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:15360'],
             'is_camera_capture' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'extracted_text' => ['nullable', 'string', 'max:20000'],
         ];
     }
 

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/public.css') }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0e4a6b">
@@ -20,6 +20,10 @@
     @stack('styles')
 
     <style>
+        html {
+            scrollbar-gutter: stable;
+        }
+
         body {
             font-family: 'Figtree', sans-serif;
             background-color: var(--raniag-surface);
@@ -28,7 +32,7 @@
         
         #wrapper {
             display: flex;
-            width: 100vw;
+            width: 100%;
             min-height: 100vh;
         }
 
@@ -42,6 +46,24 @@
             flex-column: column;
             flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.06);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.25) transparent;
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.25);
+            border-radius: 3px;
+        }
+
+        #sidebar-wrapper .sidebar-brand,
+        #sidebar-wrapper .sidebar-profile {
+            flex-shrink: 0;
         }
 
         #sidebar-wrapper .sidebar-brand {
@@ -115,6 +137,17 @@
         #global-loading-overlay.d-none {
             display: none !important;
         }
+
+        /* Robust scroll lock (see showLoadingOverlay/hideLoadingOverlay below):
+           overflow:hidden on <body> alone doesn't stop iOS rubber-band
+           scrolling, so the page could still be dragged behind the overlay. */
+        body.rg-scroll-locked {
+            overflow: hidden;
+            position: fixed;
+            left: 0;
+            right: 0;
+            width: 100%;
+        }
  
         #global-loading-overlay .spinner-border {
             width: 3rem;
@@ -135,8 +168,33 @@
             background-color: #fff;
             border-bottom: 1px solid var(--raniag-border);
             padding: 1rem 1.5rem;
-            position: relative;
+            position: sticky;
+            top: 0;
+            z-index: 1015;
             min-height: 60px;
+            /* Bootstrap's .navbar defaults to flex-wrap:wrap. Combined with
+               a long page title, that let the right-hand group (date +
+               bell) wrap onto its own row — and once alone on that row,
+               justify-content:space-between has nothing to space apart, so
+               it collapsed to the left, landing the bell underneath the
+               hamburger button instead of staying on the right. */
+            flex-wrap: nowrap;
+        }
+
+        .navbar-top .navbar-top-title {
+            min-width: 0;
+        }
+
+        .navbar-top .navbar-top-title h4 {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 575.98px) {
+            .navbar-top {
+                padding: 0.75rem 1rem;
+            }
         }
 
         /* Make sidebar fixed on desktop only to preserve mobile responsiveness */
@@ -173,12 +231,9 @@
             #sidebar-overlay {
                 display: none;
                 position: fixed;
-                width: 100vw;
-                height: 100vh;
+                inset: 0;
                 background-color: rgba(0,0,0,0.4);
                 z-index: 1030;
-                top: 0;
-                left: 0;
             }
             #wrapper.toggled #sidebar-overlay {
                 display: block;
@@ -211,9 +266,13 @@
 
             <!-- Profile Widget -->
             <div class="sidebar-profile d-flex align-items-center gap-3">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 2.5rem; height: 2.5rem;">
-                    <i class="bi bi-person-fill fs-4"></i>
-                </div>
+                <a href="{{ route('profile.edit') }}" class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0 text-decoration-none fw-bold" style="width: 2.5rem; height: 2.5rem;" title="Edit profile">
+                    @if (auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-100 h-100" style="object-fit:cover;">
+                    @else
+                        {{ auth()->user()->initials }}
+                    @endif
+                </a>
                 <div class="text-truncate">
                     <div class="fw-bold text-white small text-truncate" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</div>
                     @if (auth()->user()->isAdministrator())
@@ -234,8 +293,8 @@
         <div id="page-content-wrapper">
             <!-- Top bar -->
             <nav class="navbar navbar-top d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-3">
-                    <button class="btn btn-outline-dark d-lg-none" type="button" onclick="toggleSidebar()">
+                <div class="d-flex align-items-center gap-3 navbar-top-title">
+                    <button class="btn btn-outline-dark d-lg-none flex-shrink-0" type="button" onclick="toggleSidebar()">
                         <i class="bi bi-list"></i>
                     </button>
                     @if (isset($header))
@@ -243,7 +302,7 @@
                     @endif
                 </div>
 
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 flex-shrink-0">
                     <div class="text-muted small d-none d-sm-block">
                         <i class="bi bi-calendar3 me-1"></i>{{ date('l, M d, Y') }}
                     </div>
@@ -289,6 +348,7 @@
             document.getElementById('wrapper').classList.toggle('toggled');
         }
  
+        let staffLockedScrollY = 0;
         function showLoadingOverlay(message = 'Processing, please wait...') {
             const overlay = document.getElementById('global-loading-overlay');
             if (!overlay) return;
@@ -297,6 +357,9 @@
                 label.textContent = message;
             }
             overlay.classList.remove('d-none');
+            staffLockedScrollY = window.scrollY || window.pageYOffset || 0;
+            document.body.classList.add('rg-scroll-locked');
+            document.body.style.top = (-staffLockedScrollY) + 'px';
         }
  
         function hideLoadingOverlay() {
@@ -304,6 +367,9 @@
             if (overlay) {
                 overlay.classList.add('d-none');
             }
+            document.body.classList.remove('rg-scroll-locked');
+            document.body.style.top = '';
+            window.scrollTo(0, staffLockedScrollY);
         }
 
         function setButtonLoading(button, message = 'Processing, please wait...') {
@@ -382,6 +448,7 @@
             });
         });
     </script>
+    <x-lightbox />
     @stack('scripts')
 </body>
 </html>

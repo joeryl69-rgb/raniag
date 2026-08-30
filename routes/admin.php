@@ -3,8 +3,10 @@
 use App\Http\Controllers\Admin\AgencyController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\IncidentController;
 use App\Http\Controllers\Admin\IncidentDocumentController;
+use App\Http\Controllers\Admin\IncidentTypeController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
 use App\Http\Controllers\Admin\ReportController;
@@ -22,7 +24,21 @@ Route::prefix('admin')
         Route::get('/sms-logs', [DashboardController::class, 'smsLogs'])->name('sms-logs');
         Route::get('/audit-logs', [DashboardController::class, 'auditLogs'])->name('audit-logs');
 
+        Route::prefix('feedback')->name('feedback.')->group(function () {
+            Route::get('/', [FeedbackController::class, 'index'])->name('index');
+            Route::put('/{feedback}', [FeedbackController::class, 'update'])->name('update');
+            Route::post('/{feedback}/reply', [FeedbackController::class, 'reply'])->name('reply');
+        });
+
         Route::get('/incident-documents', [IncidentDocumentController::class, 'index'])->name('incident_documents.index');
+
+        Route::prefix('incident-types')->name('incident_types.')->group(function () {
+            Route::get('/', [IncidentTypeController::class, 'index'])->name('index');
+            Route::post('/', [IncidentTypeController::class, 'store'])->name('store');
+            Route::put('/{incidentType}', [IncidentTypeController::class, 'update'])->name('update');
+            Route::post('/{incidentType}/toggle', [IncidentTypeController::class, 'toggle'])->name('toggle');
+            Route::delete('/{incidentType}', [IncidentTypeController::class, 'destroy'])->name('destroy');
+        });
 
         Route::prefix('incidents')->name('incidents.')->group(function () {
             Route::get('/', [IncidentController::class, 'index'])->name('index');
@@ -32,6 +48,7 @@ Route::prefix('admin')
             Route::put('/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('resolutions.update');
             Route::post('/{incident}/documents', [IncidentDocumentController::class, 'store'])->name('documents.store');
             Route::delete('/{incident}/documents/{document}', [IncidentDocumentController::class, 'destroy'])->name('documents.destroy');
+            Route::put('/{incident}/documents/{document}/text', [IncidentDocumentController::class, 'updateText'])->name('documents.update_text');
         });
 
         Route::prefix('assignments')->name('assignments.')->group(function () {

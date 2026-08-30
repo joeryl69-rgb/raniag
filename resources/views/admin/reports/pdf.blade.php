@@ -6,37 +6,33 @@
     <title>Incident Report — {{ config('raniag.organization') }}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
             color: #333;
             margin: 0;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #1a6b3a;
-            padding-bottom: 15px;
-        }
-        .header h1 {
-            font-size: 24px;
-            color: #1a6b3a;
-            margin: 0 0 5px 0;
-        }
-        .header p {
-            font-size: 14px;
-            margin: 0;
-            color: #666;
+            padding: 20px 20px 45px 20px;
         }
         .filters {
-            background-color: #f8f9fa;
+            background-color: #f8fafc;
             padding: 10px 15px;
             margin-bottom: 15px;
-            border-left: 4px solid #1a6b3a;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #1a365d;
+            font-size: 10pt;
         }
         .filters strong {
-            color: #1a6b3a;
+            color: #1a365d;
+        }
+        .section-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1a365d;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
         }
         table {
             width: 100%;
@@ -46,22 +42,23 @@
         th, td {
             padding: 8px 10px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border: 1px solid #e2e8f0;
+            font-size: 9.5pt;
         }
         th {
-            background-color: #1a6b3a;
+            background-color: #1a365d;
             color: white;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 9pt;
             text-transform: uppercase;
         }
         tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: #f8fafc;
         }
         .badge {
             padding: 3px 8px;
             border-radius: 12px;
-            font-size: 10px;
+            font-size: 8pt;
             font-weight: bold;
             color: white;
             display: inline-block;
@@ -77,14 +74,6 @@
         .badge-medium { background-color: #ffc107; color: #000; }
         .badge-high { background-color: #fd7e14; }
         .badge-critical { background-color: #dc3545; }
-        .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #ddd;
-            text-align: center;
-            color: #666;
-            font-size: 11px;
-        }
         .summary {
             margin-bottom: 20px;
         }
@@ -92,14 +81,17 @@
             display: flex;
             justify-content: space-between;
             padding: 5px 0;
-            border-bottom: 1px dashed #ddd;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 10pt;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>{{ config('raniag.name') }} — Incident Report</h1>
-        <p>{{ config('raniag.organization') }}</p>
+    @include('admin.reports.partials._footer')
+    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'Incident Report — '.config('raniag.organization')])
+
+    <div class="meta-info" style="text-align:right; font-size:9pt; color:#666; margin-bottom:20px;">
+        <strong>Generated:</strong> {{ $generated_at->format('M d, Y h:i A') }}
     </div>
 
     <div class="filters">
@@ -117,6 +109,7 @@
     </div>
 
     <div class="summary">
+        <div class="section-title" style="margin-top:0;">Summary</div>
         <div class="summary-row">
             <span><strong>Total Incidents:</strong> {{ $incidents->count() }}</span>
         </div>
@@ -130,17 +123,18 @@
         </div>
     </div>
 
+    <div class="section-title">Incident Records</div>
     @if($incidents->count() > 0)
         <table>
             <thead>
                 <tr>
-                    <th>Tracking #</th>
-                    <th>Date Reported</th>
-                    <th>Type</th>
-                    <th>Barangay</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Agency</th>
+                    <th style="width:14%;">Tracking #</th>
+                    <th style="width:12%;">Date Reported</th>
+                    <th style="width:16%;">Type</th>
+                    <th style="width:14%;">Barangay</th>
+                    <th style="width:10%;">Priority</th>
+                    <th style="width:12%;">Status</th>
+                    <th style="width:22%;">Agency</th>
                 </tr>
             </thead>
             <tbody>
@@ -151,14 +145,16 @@
                         <td>{{ $incident->incidentType->name ?? 'N/A' }}</td>
                         <td>{{ $incident->barangay }}</td>
                         <td>
-<span class="badge badge-{{ $incident->priority instanceof \UnitEnum ? $incident->priority->value : $incident->priority }}">
-                                {{ ($incident->priority instanceof \UnitEnum ? $incident->priority->value : $incident->priority) ? ucfirst(($incident->priority instanceof \UnitEnum ? $incident->priority->value : $incident->priority)) : 'N/A' }}
-                            </span>
+                            @php
+                                $priorityValue = $incident->priority instanceof \UnitEnum ? $incident->priority->value : $incident->priority;
+                            @endphp
+                            <span class="badge badge-{{ $priorityValue }}">{{ $priorityValue ? ucfirst($priorityValue) : 'N/A' }}</span>
                         </td>
                         <td>
-<span class="badge badge-{{ $incident->status instanceof \UnitEnum ? $incident->status->value : $incident->status }}">
-{{ ucfirst(str_replace('_', ' ', ($incident->status instanceof \UnitEnum ? $incident->status->value : $incident->status))) }}
-                            </span>
+                            @php
+                                $statusValue = $incident->status instanceof \UnitEnum ? $incident->status->value : $incident->status;
+                            @endphp
+                            <span class="badge badge-{{ $statusValue }}">{{ ucfirst(str_replace('_', ' ', $statusValue)) }}</span>
                         </td>
                         <td>{{ $resolvedAgencyNames[$incident->id] ?? '' }}</td>
                     </tr>
@@ -169,9 +165,9 @@
         <p style="text-align: center; color: #666; padding: 20px;">No incidents found matching the specified filters.</p>
     @endif
 
-    <div class="footer">
-        <p>This report was generated automatically by {{ config('raniag.name') }} — {{ config('raniag.organization') }}</p>
-        <p>For inquiries, contact MDRRMO Pamplona.</p>
+    <div style="margin-top:30px; padding-top:15px; border-top:1px solid #e2e8f0; text-align:center; color:#666; font-size:9pt;">
+        <p style="margin:0 0 4px;">This report was generated automatically by {{ config('raniag.name') }} — {{ config('raniag.organization') }}</p>
+        <p style="margin:0;">For inquiries, contact MDRRMO Pamplona.</p>
     </div>
 </body>
 </html>

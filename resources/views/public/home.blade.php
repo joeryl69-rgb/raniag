@@ -61,6 +61,75 @@
             </div>
         </div>
     </div>
+
+    {{-- ===================== FEEDBACK / CONCERNS ===================== --}}
+    <div class="row justify-content-center mt-5" id="feedback">
+        <div class="col-lg-8">
+            <div class="card raniag-card border-0">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="text-center mb-4">
+                        <div class="text-primary fs-2 mb-2"><i class="bi bi-chat-square-text"></i></div>
+                        <h2 class="h5 fw-bold mb-1">Feedback &amp; Concerns</h2>
+                        <p class="text-muted small mb-0">Encountered an issue, have a suggestion, or want to raise a concern about RANIAG or MDRRMO Pamplona's response? Let us know — this goes directly to our team.</p>
+                    </div>
+
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('public.feedback.store') }}">
+                        @csrf
+                        {{-- Honeypot field — hidden from real users via CSS, bots that
+                             auto-fill every input will trip validation. --}}
+                        <div style="position:absolute; left:-9999px;" aria-hidden="true">
+                            <label for="website">Leave this field blank</label>
+                            <input type="text" name="website" id="website" tabindex="-1" autocomplete="off">
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Type</label>
+                                <select name="category" class="form-select @error('category') is-invalid @enderror" required>
+                                    <option value="feedback" selected>General Feedback</option>
+                                    <option value="concern">Concern</option>
+                                    <option value="suggestion">Suggestion</option>
+                                    <option value="bug">Report a Bug/Issue</option>
+                                </select>
+                                @error('category')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label small fw-semibold">Subject</label>
+                                <input type="text" name="subject" value="{{ old('subject') }}" maxlength="150" class="form-control @error('subject') is-invalid @enderror" required placeholder="Brief summary">
+                                @error('subject')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Message</label>
+                                <textarea name="message" rows="4" maxlength="2000" class="form-control @error('message') is-invalid @enderror" required placeholder="Tell us more...">{{ old('message') }}</textarea>
+                                @error('message')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Your Name <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" name="submitter_name" value="{{ old('submitter_name') }}" maxlength="150" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Email <span class="text-muted fw-normal">(optional, for a reply)</span></label>
+                                <input type="email" name="submitter_email" value="{{ old('submitter_email') }}" maxlength="150" class="form-control @error('submitter_email') is-invalid @enderror">
+                                @error('submitter_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-12 text-center mt-2">
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="bi bi-send me-2"></i>Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 

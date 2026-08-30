@@ -69,11 +69,11 @@
                                     @php
                                         $assignment = $inc->currentAssignments()->where('assigned_to', auth()->user()->id)->where('is_active', true)->first();
                                     @endphp
-                                    <tr class="{{ $inc->status->value === 'assigned' ? 'table-warning bg-opacity-25' : '' }}">
+                                    <tr class="{{ $inc->status->value === 'assigned' ? 'table-light' : '' }}">
                                         <td class="px-4 py-3 fw-bold text-primary">
                                             {{ $inc->tracking_number }}
                                             @if($inc->status->value === 'assigned')
-                                                <span class="badge bg-danger ms-1" style="font-size: 0.65rem;">NEW</span>
+                                                <span class="badge bg-primary-subtle text-primary ms-1" style="font-size: 0.65rem;">NEW</span>
                                             @endif
                                         </td>
                                         <td class="py-3">

@@ -296,6 +296,9 @@
                                 <div class="modal-footer justify-content-center gap-2 bg-dark border-top border-secondary">
                                     <!-- Live controls -->
                                     <div id="gps-live-controls" class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-light d-none" id="gps-camera-flash" title="Toggle flash">
+                                            <i class="bi bi-lightning-charge"></i>
+                                        </button>
                                         <button type="button" class="btn btn-outline-light" id="gps-camera-switch" title="Switch camera">
                                             <i class="bi bi-arrow-repeat"></i>
                                         </button>

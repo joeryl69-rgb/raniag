@@ -10,7 +10,7 @@
             color: #333;
             line-height: 1.5;
             margin: 0;
-            padding: 20px;
+            padding: 20px 20px 45px 20px;
         }
         .header {
             text-align: center;
@@ -117,15 +117,8 @@
 </head>
 <body>
 
-    <div class="header">
-        <div class="header-text">
-            Republic of the Philippines<br>
-            Province of Cagayan<br>
-            Municipality of Pamplona<br>
-            <strong>MDRRMO Pamplona / RANIAG Operations Center</strong>
-        </div>
-        <div class="header-title">OFFICIAL INCIDENT REPORT</div>
-    </div>
+    @include('admin.reports.partials._footer')
+    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'OFFICIAL INCIDENT REPORT'])
 
     <div class="meta-info">
         <strong>Generated:</strong> {{ $generated_at->format('M d, Y h:i A') }}<br>

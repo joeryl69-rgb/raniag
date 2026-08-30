@@ -15,8 +15,7 @@
 
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-white py-3 border-0">
-            <h5 class="mb-1 fw-bold"><i class="bi bi-folder2-open text-primary me-2"></i>Case Documents Repository</h5>
-            <p class="text-muted small mb-0">Filed forms for resolved and closed incidents &mdash; Call Taker Form, Dispatch Form, Narrative Report, Endorsement Sheet.</p>
+            <p class="text-muted small mb-0"><i class="bi bi-folder2-open text-primary me-2"></i>Filed forms for resolved and closed incidents &mdash; Call Taker Form, Dispatch Form, Narrative Report, Endorsement Sheet.</p>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('admin.incident_documents.index') }}" class="row g-2 align-items-end">

@@ -22,6 +22,7 @@
     const stopBtn = document.getElementById('gps-camera-stop');
     const captureBtn = document.getElementById('gps-camera-capture');
     const switchBtn = document.getElementById('gps-camera-switch');
+    const flashBtn = document.getElementById('gps-camera-flash');
     const previewEl = document.getElementById('gps-camera-preview');
     const statusEl = document.getElementById('gps-camera-status');
     const coordsEl = document.getElementById('gps-camera-coords');
@@ -86,6 +87,7 @@
     let bestAccuracy = Infinity;
     let clockTimer = null;
     let facingMode = 'environment';
+    let torchOn = false;
     let lastPosition = null;
     let lastResolved = null;
     let pendingCapture = null;
@@ -561,6 +563,7 @@
             captureBtn?.classList.remove('d-none');
             switchBtn?.classList.remove('d-none');
             updateCaptureReadiness();
+            updateFlashAvailability();
 
             startGeolocationWatch();
             tickClock();
@@ -586,6 +589,10 @@
             videoEl.srcObject = null;
         }
 
+        torchOn = false;
+        flashBtn?.classList.add('d-none');
+        flashBtn?.classList.remove('active');
+
         stopGeolocationWatch();
         clearInterval(clockTimer);
         clockTimer = null;
@@ -610,10 +617,52 @@
 
     async function switchCamera() {
         facingMode = facingMode === 'environment' ? 'user' : 'environment';
+        torchOn = false;
         if (mediaStream) {
             await startCamera();
         }
     }
+
+    /**
+     * Flash/torch support: only the rear ("environment") camera on devices
+     * that expose the `torch` capability can be driven this way (this is
+     * how "GPS camera"-style apps light dark scenes for night incident
+     * reports). The button is hidden entirely when unsupported instead of
+     * showing an control that would silently do nothing.
+     */
+    function getVideoTrack() {
+        return mediaStream ? mediaStream.getVideoTracks()[0] : null;
+    }
+
+    function updateFlashAvailability() {
+        if (!flashBtn) return;
+        const track = getVideoTrack();
+        const caps = track && track.getCapabilities ? track.getCapabilities() : null;
+        const supported = facingMode === 'environment' && caps && caps.torch;
+        flashBtn.classList.toggle('d-none', !supported);
+        flashBtn.classList.remove('active');
+        flashBtn.innerHTML = '<i class="bi bi-lightning-charge"></i>';
+        torchOn = false;
+    }
+
+    async function toggleFlash() {
+        const track = getVideoTrack();
+        if (!track || !track.applyConstraints) return;
+
+        try {
+            torchOn = !torchOn;
+            await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+            flashBtn.classList.toggle('active', torchOn);
+            flashBtn.innerHTML = torchOn
+                ? '<i class="bi bi-lightning-charge-fill"></i>'
+                : '<i class="bi bi-lightning-charge"></i>';
+        } catch (err) {
+            torchOn = false;
+            setError('Flash is not supported on this device/camera.');
+        }
+    }
+
+    flashBtn?.addEventListener('click', toggleFlash);
 
     function capturePhoto() {
         if (!videoEl || !canvasEl || !mediaStream) {

@@ -21,6 +21,7 @@ class IncidentDocument extends Model
         'file_size',
         'is_camera_capture',
         'notes',
+        'extracted_text',
     ];
 
     protected function casts(): array

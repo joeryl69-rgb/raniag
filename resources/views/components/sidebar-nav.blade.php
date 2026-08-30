@@ -23,6 +23,11 @@
                 </a>
             </li>
             <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.incident_types.*') ? 'active' : '' }}" href="{{ route('admin.incident_types.index') }}">
+                    <i class="bi bi-tags-fill"></i><span>Incident Types</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
                     <i class="bi bi-file-earmark-text"></i><span>Make Report</span>
                 </a>
@@ -51,6 +56,11 @@
                     <i class="bi bi-shield-shaded"></i><span>Audit Trails</span>
                 </a>
             </li>
+            <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.feedback.*') ? 'active' : '' }}" href="{{ route('admin.feedback.index') }}">
+                    <i class="bi bi-chat-square-text"></i><span>Feedback &amp; Concerns</span>
+                </a>
+            </li>
         @endif
 
         <!-- Agency & Personnel Menu -->
@@ -76,7 +86,7 @@
             @if(auth()->user()->isAgency())
                 <li class="nav-item" data-role="agency">
                     <a class="nav-link {{ request()->routeIs('agency.archived_reports.*') ? 'active' : '' }}" href="{{ route('agency.archived_reports.index') }}">
-                        <i class="bi bi-archive"></i><span>Archived Reports</span>
+                        <i class="bi bi-clock-history"></i><span>Resolved Reports</span>
                     </a>
                 </li>
             @endif

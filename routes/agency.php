@@ -32,12 +32,12 @@ Route::prefix('agency')
         Route::post('/incidents/{incident}/resolution', [ResolutionController::class, 'store'])->name('incidents.resolution');
         Route::put('/incidents/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('incidents.resolution.update');
 
+        // "Resolved Reports" — read-only history of the agency's resolved/closed
+        // incidents (they drop off the active Dispatches list once resolved).
+        // The old password-gated ZIP "repository" download was removed: once an
+        // incident is resolved its paperwork lives in Document Requests instead.
         Route::prefix('archived-reports')->name('archived_reports.')->group(function () {
             Route::get('/', [ArchivedReportController::class, 'index'])->name('index');
-            Route::post('/bulk/verify-password', [ArchivedReportController::class, 'verifyPasswordBulk'])->name('bulk_verify_password');
-            Route::get('/bulk/download', [ArchivedReportController::class, 'downloadBulk'])->name('bulk_download');
             Route::get('/{incident}', [ArchivedReportController::class, 'show'])->name('show');
-            Route::post('/{incident}/verify-password', [ArchivedReportController::class, 'verifyPassword'])->name('verify_password');
-            Route::get('/{incident}/download', [ArchivedReportController::class, 'download'])->name('download');
         });
     });

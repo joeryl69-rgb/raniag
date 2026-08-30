@@ -66,6 +66,7 @@ class IncidentDocumentController extends Controller
             isCameraCapture: (bool) ($data['is_camera_capture'] ?? false),
             uploadedBy: $request->user()->id,
             notes: $data['notes'] ?? null,
+            extractedText: $data['extracted_text'] ?? null,
         );
 
         if ($request->wantsJson()) {
@@ -94,5 +95,21 @@ class IncidentDocumentController extends Controller
         return redirect()
             ->route('admin.incidents.show', $incident->id)
             ->with('success', 'Document removed.');
+    }
+
+    /** Save admin edits to the scanned/extracted text without re-uploading the file. */
+    public function updateText(Request $request, Incident $incident, IncidentDocument $document): RedirectResponse
+    {
+        abort_if($document->incident_id !== $incident->id, 404);
+
+        $data = $request->validate([
+            'extracted_text' => ['nullable', 'string', 'max:20000'],
+        ]);
+
+        $document->update($data);
+
+        return redirect()
+            ->route('admin.incidents.show', $incident->id)
+            ->with('success', 'Extracted text updated.');
     }
 }

@@ -82,6 +82,12 @@ class Notification extends Model
      * Where clicking the notification should navigate to. Falls back to
      * the incident show route for the recipient's own role area, since
      * that's the destination for nearly every event type today.
+     *
+     * Uses named routes with relative (non-absolute) URLs rather than
+     * string-concatenating config('app.url') — that config value is
+     * frequently stale in local/tunnelled/deployed environments (it
+     * doesn't auto-track the domain actually being served), which was
+     * sending clicks to the wrong host entirely.
      */
     public function url(): ?string
     {
@@ -90,15 +96,15 @@ class Notification extends Model
         }
 
         if ($this->incident_id && $this->user) {
-            $area = match (true) {
-                $this->user->isAdministrator() => 'admin',
-                $this->user->isAgency() => 'agency',
-                $this->user->isPersonnel() => 'personnel',
+            $routeName = match (true) {
+                $this->user->isAdministrator() => 'admin.incidents.show',
+                $this->user->isAgency() => 'agency.incidents.show',
+                $this->user->isPersonnel() => 'personnel.incidents.show',
                 default => null,
             };
 
-            if ($area) {
-                return rtrim(config('app.url'), '/')."/{$area}/incidents/{$this->incident_id}";
+            if ($routeName && \Illuminate\Support\Facades\Route::has($routeName)) {
+                return route($routeName, $this->incident_id, absolute: false);
             }
         }
 

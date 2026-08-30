@@ -125,19 +125,28 @@
             .popup-view-btn:hover { text-decoration: underline; }
 
             .map-wrap { position: relative; }
-            .map-wrap:fullscreen { background: #fff; }
-            .map-wrap:fullscreen #dashboard-map { height: 100vh !important; }
-            .map-wrap:fullscreen .map-legend { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; z-index: 500; }
-
-            .incident-pin {
-                width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
-                border: 2px solid #fff; box-shadow: 0 3px 8px rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center;
+            .map-card:fullscreen {
+                background: #fff; display: flex; flex-direction: column;
+                margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+                width: 100%; height: 100%;
             }
-            .incident-pin i { transform: rotate(45deg); color: #fff; font-size: .72rem; }
-            .incident-pin.p-critical { background: #b91c1c; }
-            .incident-pin.p-high { background: #dc3545; }
-            .incident-pin.p-medium { background: #f59e0b; }
-            .incident-pin.p-low { background: #0d6efd; }
+            .map-card:fullscreen .map-toolbar { flex-shrink: 0; }
+            .map-card:fullscreen .map-wrap { flex: 1 1 auto; min-height: 0; }
+            .map-card:fullscreen #dashboard-map { height: 100% !important; }
+            .map-card:fullscreen .map-legend { flex-shrink: 0; }
+            /* Safari/older WebKit fullscreen pseudo-class */
+            .map-card:-webkit-full-screen {
+                background: #fff; display: flex; flex-direction: column;
+                margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+                width: 100%; height: 100%;
+            }
+            .map-card:-webkit-full-screen .map-toolbar { flex-shrink: 0; }
+            .map-card:-webkit-full-screen .map-wrap { flex: 1 1 auto; min-height: 0; }
+            .map-card:-webkit-full-screen #dashboard-map { height: 100% !important; }
+
+            /* Marker pin styling now lives in the shared .raniag-marker-pin
+               class (public/css/public.css) so every map in the system uses
+               the exact same pin shape/rules — see public/js/incident-map-icons.js. */
 
             /* ---- Analytics grid ---- */
             .analytics-card { padding: 1.1rem 1.15rem; }
@@ -403,6 +412,7 @@
 
     @push('scripts')
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
         <script>
         (function () {
@@ -445,14 +455,20 @@
                 document.getElementById('map-refresh-btn').addEventListener('click', loadData);
 
                 document.getElementById('map-fullscreen-btn').addEventListener('click', function () {
-                    const wrap = document.querySelector('.map-wrap');
+                    const wrap = document.querySelector('.map-card');
                     if (!document.fullscreenElement) {
                         (wrap.requestFullscreen || wrap.webkitRequestFullscreen)?.call(wrap);
                     } else {
                         (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
                     }
                 });
-                document.addEventListener('fullscreenchange', () => { if (map) setTimeout(() => map.invalidateSize(), 150); });
+                document.addEventListener('fullscreenchange', () => {
+                    const btnIcon = document.querySelector('#map-fullscreen-btn i');
+                    if (btnIcon) {
+                        btnIcon.className = document.fullscreenElement ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen';
+                    }
+                    if (map) setTimeout(() => map.invalidateSize(), 150);
+                });
 
                 document.getElementById('map-zoom-in').addEventListener('click', () => map && map.zoomIn());
                 document.getElementById('map-zoom-out').addEventListener('click', () => map && map.zoomOut());
@@ -542,17 +558,20 @@
                     const lat = parseFloat(pt.latitude), lng = parseFloat(pt.longitude);
                     if (Number.isNaN(lat) || Number.isNaN(lng)) return;
 
-                    const cls = priorityColorClass(pt.priority);
+                    const typeObj = pt.incident_type || pt.incidentType || {};
+                    // Centralized icon+color resolution (see public/js/incident-map-icons.js)
+                    // keeps this pin visually identical to every other incident map
+                    // in the system, driven by the incident type's own configured icon.
                     const marker = L.marker([lat, lng], {
-                        icon: L.divIcon({
-                            className: '',
-                            html: `<div class="incident-pin ${cls}"><i class="bi bi-exclamation-triangle-fill"></i></div>`,
-                            iconSize: [24, 24],
-                            iconAnchor: [12, 24]
+                        icon: window.RaniagIcons.buildDivIcon({
+                            icon: typeObj.icon,
+                            color: typeObj.color,
+                            priority: pt.priority,
+                            size: 26,
                         })
                     });
 
-                    const typeName = pt.incident_type && pt.incident_type.name ? pt.incident_type.name : (pt.incidentType && pt.incidentType.name ? pt.incidentType.name : 'Incident');
+                    const typeName = typeObj.name || 'Incident';
                     marker.bindPopup(
                         `<strong>${escapeHtml(pt.tracking_number || ('#' + pt.id))}</strong><br>` +
                         `${escapeHtml(typeName)}<br>` +

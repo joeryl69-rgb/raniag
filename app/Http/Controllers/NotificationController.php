@@ -89,6 +89,69 @@ class NotificationController extends Controller
         return back()->with('success', 'All notifications marked as read.');
     }
 
+    /**
+     * Delete ("move to bin") a single notification.
+     */
+    public function destroy(Request $request, Notification $notification): JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        abort_unless($notification->user_id === $request->user()->id, 403);
+
+        $notification->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Notification deleted.']);
+        }
+
+        return back()->with('success', 'Notification deleted.');
+    }
+
+    /**
+     * Delete a specific set of notifications the user checked/selected.
+     */
+    public function destroySelected(Request $request): JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        $ids = collect($request->input('ids', []))->filter()->values();
+
+        $deleted = Notification::where('user_id', $request->user()->id)
+            ->whereIn('id', $ids)
+            ->delete();
+
+        $message = $deleted === 1 ? '1 notification deleted.' : "{$deleted} notifications deleted.";
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => $message, 'deleted' => $deleted]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Empty the bin — delete every notification belonging to this user,
+     * optionally scoped to the same filters shown on the notifications
+     * page (status/type) so "Delete All" only clears what's visible.
+     */
+    public function destroyAll(Request $request): JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        $query = Notification::where('user_id', $request->user()->id);
+
+        if ($request->filled('status') && $request->string('status')->value() === 'unread') {
+            $query->unread();
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->string('type')->value());
+        }
+
+        $deleted = $query->delete();
+        $message = $deleted === 0 ? 'No notifications to delete.' : "All notifications deleted ({$deleted}).";
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => $message, 'deleted' => $deleted]);
+        }
+
+        return back()->with('success', $message);
+    }
+
     private function transform(Notification $n): array
     {
         return [
@@ -100,6 +163,7 @@ class NotificationController extends Controller
             'color' => $n->color(),
             'target_url' => $n->url(),
             'read_url' => route('notifications.mark_read', $n),
+            'delete_url' => route('notifications.destroy', $n),
             'is_read' => $n->isRead(),
             'created_at' => $n->created_at->diffForHumans(),
         ];

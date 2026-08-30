@@ -9,9 +9,36 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}">
+    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data">
         @csrf
         @method('patch')
+
+        <!-- Avatar -->
+        <div class="mb-4">
+            <label class="form-label fw-semibold text-dark d-block">{{ __('Profile Photo') }}</label>
+            <div class="d-flex align-items-center gap-3">
+                <div id="avatarPreviewWrap" class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center flex-shrink-0 bg-primary text-white fw-bold" style="width:72px;height:72px;font-size:1.4rem;">
+                    @if($user->avatar_url)
+                        <img id="avatarPreviewImg" src="{{ $user->avatar_url }}" alt="Profile photo" class="w-100 h-100" style="object-fit:cover;">
+                    @else
+                        <span id="avatarPreviewInitials">{{ $user->initials }}</span>
+                    @endif
+                </div>
+                <div>
+                    <input type="file" name="avatar" id="avatarInput" class="form-control form-control-sm @error('avatar') is-invalid @enderror" accept="image/png,image/jpeg,image/webp" onchange="previewAvatar(this)">
+                    <div class="form-text">JPG, PNG or WEBP. Max 4MB.</div>
+                    @error('avatar')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                    @if($user->avatar_url)
+                        <label class="form-check mt-1 small">
+                            <input type="checkbox" name="remove_avatar" value="1" class="form-check-input">
+                            <span class="form-check-label">Remove current photo</span>
+                        </label>
+                    @endif
+                </div>
+            </div>
+        </div>
 
         <!-- Name Field -->
         <div class="mb-3">
@@ -73,3 +100,19 @@
         </div>
     </form>
 </section>
+
+@once
+@push('scripts')
+<script>
+    function previewAvatar(input) {
+        if (!input.files || !input.files[0]) return;
+        const wrap = document.getElementById('avatarPreviewWrap');
+        const reader = new FileReader();
+        reader.onload = e => {
+            wrap.innerHTML = `<img src="${e.target.result}" alt="Profile photo" class="w-100 h-100" style="object-fit:cover;">`;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+</script>
+@endpush
+@endonce

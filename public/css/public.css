@@ -173,6 +173,42 @@ body.raniag-public {
     font-weight: 600;
 }
 
+/* Refreshed header treatment for personnel/agency/admin table & list pages
+   (raniag-card is shared across all three role areas), matching the
+   rounded, icon-forward look introduced on the main dashboard. */
+.raniag-card-header h5,
+.raniag-card-header h6 {
+    letter-spacing: -0.01em;
+}
+.raniag-card-header h5 i,
+.raniag-card-header h6 i {
+    background: var(--raniag-primary-light, #e7f0fd);
+    color: var(--raniag-primary);
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.6rem;
+    font-size: 0.95rem;
+    margin-right: 0.15rem;
+}
+
+.raniag-card .table thead th {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--raniag-muted, #64748b);
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.raniag-card .badge {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
 .raniag-step-badge {
     width: 2rem;
     height: 2rem;
@@ -715,4 +751,198 @@ body.raniag-public {
     .gps-camera-viewport video {
         max-height: 50vh;
     }
+}
+/* ============================================================
+   Case document thumbnails (admin > incident > Case Documents
+   Repository). Tightened spacing — the old markup used oversized
+   position:relative wrapper divs with large implicit gaps around
+   each 70x70 thumb; this keeps a compact, evenly-gapped grid with
+   no dead space regardless of how many documents are on file.
+   ============================================================ */
+.rg-docthumb-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem 0.75rem;
+}
+
+.rg-docthumb {
+    position: relative;
+    width: 72px;
+    line-height: 0;
+    /* Room for the delete button, which sits partly outside the thumb's
+       own box — without this the button could clip/overlap the next
+       thumbnail's controls when thumbs wrap onto a new row. */
+    margin-top: 6px;
+}
+
+.rg-docthumb-link {
+    display: block;
+    width: 72px;
+    height: 72px;
+}
+
+.rg-docthumb-img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 0.4rem;
+    border: 1px solid var(--raniag-border, #dee2e6);
+    display: block;
+}
+
+.rg-docthumb-file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+.rg-docthumb-textbtn {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    line-height: 1;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.3rem;
+    border-radius: 0.25rem;
+}
+
+.rg-docthumb-delform {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    margin: 0;
+    z-index: 2;
+}
+
+.rg-docthumb-delbtn {
+    line-height: 1;
+    padding: 0.15rem 0.35rem;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    box-shadow: 0 0 0 2px #fff;
+}
+
+/* Take Photo / Upload File buttons below the thumbnails — force them to
+   wrap onto their own line on narrow screens instead of squeezing
+   side-by-side, which is what was causing them to overlap/clip on mobile. */
+@media (max-width: 420px) {
+    #case-documents .d-flex.gap-2 > .btn {
+        flex: 1 1 100%;
+    }
+}
+
+/* ============================================================
+   Centralized incident marker pin — the single style used by
+   every Leaflet map in the system (dashboard situational map,
+   admin/agency/personnel incident detail maps). Icon + color are
+   always driven by the incident type's own configured values via
+   window.RaniagIcons (public/js/incident-map-icons.js), so a pin
+   looks identical everywhere it is rendered.
+   ============================================================ */
+.raniag-marker-pin {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50% 50% 50% 0;
+    border: 2px solid #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    transform: rotate(-45deg);
+    background: #64748b;
+}
+
+.raniag-marker-pin i {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(45deg);
+    color: #fff;
+    font-size: 0.85rem;
+}
+
+.raniag-marker-pin.p-critical { border-color: #b91c1c; }
+.raniag-marker-pin.p-high { border-color: #dc3545; }
+.raniag-marker-pin.p-medium { border-color: #f59e0b; }
+.raniag-marker-pin.p-low { border-color: #0d6efd; }
+.raniag-marker-pin.is-outside { border-color: #fd7e14; }
+
+/* GPS camera flash/torch toggle — highlighted while active so it's obvious
+   the light is on (relevant for night-time incident capture). */
+#gps-camera-flash.active {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+/* ============================================================
+   In-app document camera (public/js/document-camera.js) — framing
+   guide overlay and error banner shown over the live video feed.
+   ============================================================ */
+.doc-cam-viewport {
+    aspect-ratio: 4 / 3;
+}
+
+.doc-cam-viewport video,
+.doc-cam-viewport #docCamPreviewWrap,
+.doc-cam-viewport #docCamPreviewImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* On phones the camera modal goes edge-to-edge (.modal-fullscreen-sm-down)
+   — let the viewport fill that real space instead of staying boxed into a
+   small fixed-ratio rectangle floating in a mostly-empty dark modal. */
+@media (max-width: 575.98px) {
+    #docCameraModal .modal-body {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding-bottom: 0.75rem;
+    }
+    #docCameraModal .doc-cam-viewport {
+        aspect-ratio: auto;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+}
+
+.doc-cam-guide {
+    position: absolute;
+    inset: 8% 6%;
+    border: 2px dashed rgba(255, 255, 255, 0.75);
+    border-radius: 0.5rem;
+    pointer-events: none;
+}
+
+.doc-cam-guide::before,
+.doc-cam-guide::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border: 3px solid #fff;
+}
+
+.doc-cam-guide::before { top: -3px; left: -3px; border-right: none; border-bottom: none; }
+.doc-cam-guide::after { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+
+.doc-cam-error {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: 8%;
+    background: rgba(220, 53, 69, 0.9);
+    color: #fff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.4rem;
+}
+
+#docCamFlashBtn.active {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
 }
