@@ -5,8 +5,7 @@
         <div class="card-header raniag-card-header border-0 py-3">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 flex-wrap">
                 <div>
-                    <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-file-earmark-text me-2 text-primary"></i>My Document Requests</h5>
-                    <p class="small text-muted mb-0 mt-1">Track printable requests and approval updates</p>
+                    <p class="small text-muted mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Track printable requests and approval updates.</p>
                 </div>
 
                 <form method="GET" action="{{ route('agency.document_requests.index') }}" class="d-flex gap-2 align-items-center flex-wrap" data-loading-message="Filtering document requests...">

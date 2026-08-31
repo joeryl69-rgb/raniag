@@ -4,27 +4,11 @@
     </x-slot>
 
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <div>
-        <h5 class="fw-bold mb-0"><i class="bi bi-tags-fill me-2 text-primary"></i>Incident Types</h5>
-        <p class="small text-muted mb-0">Types used for incident reporting, dashboard breakdowns, and map markers.</p>
-    </div>
+    <p class="small text-muted mb-0">Types used for incident reporting, dashboard breakdowns, and map markers.</p>
     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#typeModal" onclick="openCreateModal()">
         <i class="bi bi-plus-lg me-1"></i>Add Incident Type
     </button>
 </div>
-
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
-@if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
 
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
@@ -196,8 +180,10 @@
 @push('scripts')
 <script>
     const createAction = @json(route('admin.incident_types.store'));
-    const defaultPresets = @json($defaultPresets);
-    let currentSlug = null;
+    // Each type now carries its OWN default_icon/default_color (set the
+    // moment it was created — see the migration + controller), so reset
+    // works for every type, not just the 8 originally-seeded ones.
+    let currentDefault = null;
 
     function resetForm() {
         document.getElementById('typeForm').reset();
@@ -205,7 +191,7 @@
         document.getElementById('typeIcon').value = '';
         document.getElementById('iconSearch').value = '';
         document.getElementById('typeColor').value = '';
-        currentSlug = null;
+        currentDefault = null;
         document.getElementById('iconResetBtn').classList.add('d-none');
         filterIcons();
         updatePreview();
@@ -227,10 +213,14 @@
         selectIcon(type.icon);
         document.getElementById('typeColor').value = type.color;
 
-        currentSlug = type.slug;
-        // Only built-in seeded types (Fire, Flood, Crime, ...) have an
-        // "original" icon/color to revert to — hide the button otherwise.
-        document.getElementById('iconResetBtn').classList.toggle('d-none', !defaultPresets[currentSlug]);
+        // Every type (seeded or custom, old or new) now has its own
+        // default_icon/default_color captured at creation time, so the
+        // reset button shows whenever we actually have one on record —
+        // and is only hidden if the icon/color already match it.
+        currentDefault = (type.default_icon && type.default_color)
+            ? { icon: type.default_icon, color: type.default_color }
+            : null;
+        document.getElementById('iconResetBtn').classList.toggle('d-none', !currentDefault);
 
         updatePreview();
 
@@ -241,10 +231,9 @@
     }
 
     function resetToDefault() {
-        const preset = defaultPresets[currentSlug];
-        if (!preset) return;
-        selectIcon(preset.icon);
-        document.getElementById('typeColor').value = preset.color;
+        if (!currentDefault) return;
+        selectIcon(currentDefault.icon);
+        document.getElementById('typeColor').value = currentDefault.color;
         updatePreview();
     }
 

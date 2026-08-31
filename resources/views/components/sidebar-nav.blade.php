@@ -61,6 +61,11 @@
                     <i class="bi bi-chat-square-text"></i><span>Feedback &amp; Concerns</span>
                 </a>
             </li>
+            <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}" href="{{ route('admin.announcements.index') }}">
+                    <i class="bi bi-megaphone-fill"></i><span>Updates &amp; Announcements</span>
+                </a>
+            </li>
         @endif
 
         <!-- Agency & Personnel Menu -->
@@ -90,6 +95,13 @@
                     </a>
                 </li>
             @endif
+
+            <li class="nav-section-label" data-role="agency,personnel">Help</li>
+            <li class="nav-item" data-role="agency,personnel">
+                <a class="nav-link {{ request()->routeIs('agency.support.*') ? 'active' : '' }}" href="{{ route('agency.support.create') }}">
+                    <i class="bi bi-headset"></i><span>Support Center</span>
+                </a>
+            </li>
         @endif
 
         <!-- Account Section (All Roles) -->

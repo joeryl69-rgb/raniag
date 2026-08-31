@@ -3,19 +3,6 @@
         {{ __('Resolved Reports') }}
     </x-slot>
 
-    <div class="d-flex mb-4">
-        <a href="{{ route('agency.dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
-        </a>
-    </div>
-
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
     <div class="card raniag-card shadow-sm border-0 mb-4">
         <div class="card-header raniag-card-header py-3 border-0">
             <h5 class="mb-1 fw-bold"><i class="bi bi-clock-history text-success me-2"></i>Resolved Reports</h5>

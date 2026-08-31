@@ -535,7 +535,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark raniag-navbar" id="rg-nav">
         <div class="container">
             <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ route('public.home') }}">
-                <span class="raniag-brand-icon"><i class="bi bi-shield-check"></i></span>
+                <span class="raniag-brand-icon"><img src="/images/icons/icon-72x72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
                 <span class="d-flex flex-column lh-1">
                     {{ config('raniag.name') }}
                     <span class="raniag-brand-sub">{{ config('raniag.organization') }}</span>
@@ -565,6 +565,12 @@
                         <a class="nav-link {{ request()->routeIs('public.dashboard') ? 'active' : '' }}"
                            href="{{ route('public.dashboard') }}">
                             <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>Community Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('public.support') ? 'active' : '' }}"
+                           href="{{ route('public.support') }}">
+                            <i class="bi bi-headset me-1 d-lg-none"></i>Support
                         </a>
                     </li>
                     @auth
@@ -623,7 +629,7 @@
             <div class="row g-4">
                 <div class="col-lg-5">
                     <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="raniag-brand-icon"><i class="bi bi-shield-check"></i></span>
+                        <span class="raniag-brand-icon"><img src="/images/icons/icon-72x72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
                         <span class="text-white fw-semibold">{{ config('raniag.name') }}</span>
                     </div>
                     <p class="small mb-0" style="max-width: 34ch;">
@@ -744,6 +750,9 @@
     }
     </script>
     <x-lightbox />
+    @unless(request()->routeIs('public.support'))
+        <x-help-fab :href="route('public.support')" />
+    @endunless
     @stack('scripts')
 </body>
 </html>

@@ -16,6 +16,8 @@ class IncidentType extends Model
         'description',
         'icon',
         'color',
+        'default_icon',
+        'default_color',
         'is_active',
         'sort_order',
     ];

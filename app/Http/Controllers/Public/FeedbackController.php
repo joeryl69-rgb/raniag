@@ -6,13 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\FeedbackSubmission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class FeedbackController extends Controller
 {
+    /** Support Center — category picker + message form (public/anonymous). */
+    public function create(): View
+    {
+        return view('public.support.create', [
+            'categories' => FeedbackSubmission::CATEGORIES,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'category' => ['required', 'in:feedback,concern,suggestion,bug'],
+            'category' => ['required', 'string', 'in:'.implode(',', array_keys(FeedbackSubmission::CATEGORIES))],
             'subject' => ['required', 'string', 'max:150'],
             'message' => ['required', 'string', 'max:2000'],
             'submitter_name' => ['nullable', 'string', 'max:150'],
@@ -22,9 +31,10 @@ class FeedbackController extends Controller
         ]);
 
         unset($data['website']);
+        $data['submitted_via'] = 'public';
 
         FeedbackSubmission::create($data);
 
-        return back()->with('success', 'Thank you — your message has been sent to the MDRRMO Pamplona team.');
+        return back()->with('sent', true);
     }
 }

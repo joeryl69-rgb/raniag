@@ -4,19 +4,13 @@
     </x-slot>
 
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <p class="small text-muted mb-0">Messages submitted by the public through the RANIAG landing page.</p>
+    <p class="small text-muted mb-0">Support Center messages from the public landing page and from signed-in agency/personnel accounts.</p>
     <div class="d-flex gap-2">
         <span class="badge bg-danger">{{ $counts['new'] }} New</span>
         <span class="badge bg-warning text-dark">{{ $counts['reviewed'] }} Reviewed</span>
         <span class="badge bg-success">{{ $counts['resolved'] }} Resolved</span>
     </div>
 </div>
-
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
 
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
@@ -29,10 +23,14 @@
             </select>
             <select name="category" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
                 <option value="all">All categories</option>
-                <option value="feedback" @selected(request('category')==='feedback')>General Feedback</option>
-                <option value="concern" @selected(request('category')==='concern')>Concern</option>
-                <option value="suggestion" @selected(request('category')==='suggestion')>Suggestion</option>
-                <option value="bug" @selected(request('category')==='bug')>Bug Report</option>
+                @foreach(\App\Models\FeedbackSubmission::CATEGORIES as $key => $cat)
+                    <option value="{{ $key }}" @selected(request('category')===$key)>{{ $cat['label'] }}</option>
+                @endforeach
+            </select>
+            <select name="source" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                <option value="all">All sources</option>
+                <option value="public" @selected(request('source')==='public')>Public (Landing Page)</option>
+                <option value="agency" @selected(request('source')==='agency')>Support Center (Agency/Personnel)</option>
             </select>
         </form>
     </div>
@@ -46,7 +44,12 @@
                     <div class="d-flex align-items-start gap-2">
                         <i class="bi {{ $item->categoryIcon() }} fs-5 text-primary mt-1"></i>
                         <div>
-                            <div class="fw-semibold">{{ $item->subject }}</div>
+                            <div class="fw-semibold">
+                                {{ $item->subject }}
+                                @if($item->isFromAgency())
+                                    <span class="badge bg-primary-subtle text-primary ms-1"><i class="bi bi-headset me-1"></i>Support Center{{ $item->agency ? ' · '.$item->agency->name : '' }}</span>
+                                @endif
+                            </div>
                             <div class="small text-muted">
                                 {{ $item->categoryLabel() }}
                                 @if($item->submitter_name) · {{ $item->submitter_name }} @endif

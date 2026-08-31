@@ -1,0 +1,1 @@
+REMOVED_FILE: resources/views/components/app-loader.blade.php (delete this file manually if it still exists in your project — no longer referenced anywhere)

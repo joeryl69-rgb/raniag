@@ -4,11 +4,11 @@
 
 @section('content')
 <div class="container">
-    <div class="text-center mb-4">
-        <p class="text-uppercase small fw-semibold text-primary mb-1">Transparency</p>
-        <h1 class="h3 fw-bold mb-2">Community Situational Dashboard</h1>
-        <p class="text-muted mb-0" style="max-width:640px; margin:0 auto;">
-            Aggregated, anonymized incident statistics for MDRRMO Pamplona. No personal information, exact addresses, or reporter details are shown here — only counts and trends to keep the community informed.
+    <div class="rg-support-hero text-center mb-4">
+        <span class="rg-support-hero__badge"><i class="bi bi-bar-chart-line me-1"></i>TRANSPARENCY</span>
+        <h1 class="rg-support-hero__title mb-2">Community Situational Dashboard</h1>
+        <p class="rg-support-hero__sub mb-0" style="max-width:640px; margin:0 auto;">
+            Aggregated, anonymized incident statistics for {{ config('raniag.organization') }}. No personal information, exact addresses, or reporter details are shown here — only counts and trends to keep the community informed.
         </p>
     </div>
 
@@ -21,25 +21,29 @@
         {{-- KPI strip --}}
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
-                <div class="card raniag-card h-100 p-3 text-center">
+                <div class="rg-support-card h-100 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 text-primary mb-2" style="width:44px;height:44px;"><i class="bi bi-calendar-week"></i></div>
                     <div class="fs-3 fw-bold text-primary" id="pd-total-month">—</div>
                     <div class="small text-muted">Reports This Month</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card raniag-card h-100 p-3 text-center">
+                <div class="rg-support-card h-100 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10 text-success mb-2" style="width:44px;height:44px;"><i class="bi bi-check-circle"></i></div>
                     <div class="fs-3 fw-bold text-success" id="pd-resolved-month">—</div>
                     <div class="small text-muted">Resolved This Month</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card raniag-card h-100 p-3 text-center">
+                <div class="rg-support-card h-100 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary bg-opacity-10 text-secondary mb-2" style="width:44px;height:44px;"><i class="bi bi-archive"></i></div>
                     <div class="fs-3 fw-bold" id="pd-total-all">—</div>
                     <div class="small text-muted">Total Reports (All Time)</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card raniag-card h-100 p-3 text-center">
+                <div class="rg-support-card h-100 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning bg-opacity-10 text-warning mb-2" style="width:44px;height:44px;"><i class="bi bi-lightning-charge"></i></div>
                     <div class="fs-3 fw-bold text-warning" id="pd-active">—</div>
                     <div class="small text-muted">Currently Active</div>
                 </div>
@@ -48,14 +52,14 @@
 
         <div class="row g-4 mb-4">
             <div class="col-lg-6">
-                <div class="card raniag-card h-100 p-3">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-bar-chart-line me-2 text-primary"></i>6-Month Trend</h2>
+                <div class="rg-support-card h-100">
+                    <div class="rg-support-card__head"><i class="bi bi-bar-chart-line me-2"></i>6-Month Trend</div>
                     <div style="height:260px;"><canvas id="pd-trend-chart"></canvas></div>
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="card raniag-card h-100 p-3">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-pie-chart me-2 text-primary"></i>By Incident Type</h2>
+                <div class="rg-support-card h-100">
+                    <div class="rg-support-card__head"><i class="bi bi-pie-chart me-2"></i>By Incident Type</div>
                     <div style="height:260px;"><canvas id="pd-type-chart"></canvas></div>
                 </div>
             </div>
@@ -63,15 +67,15 @@
 
         <div class="row g-4 mb-4">
             <div class="col-lg-6">
-                <div class="card raniag-card h-100 p-3">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-geo-alt me-2 text-primary"></i>Top Barangays (Report Count)</h2>
+                <div class="rg-support-card h-100">
+                    <div class="rg-support-card__head"><i class="bi bi-geo-alt me-2"></i>Top Barangays (Report Count)</div>
                     <div id="pd-barangay-list" class="small"></div>
                     <p class="small text-muted mt-2 mb-0"><i class="bi bi-shield-lock me-1"></i>Shown by barangay only — exact addresses are never made public.</p>
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="card raniag-card h-100 p-3">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity</h2>
+                <div class="rg-support-card h-100">
+                    <div class="rg-support-card__head"><i class="bi bi-clock-history me-2"></i>Recent Activity</div>
                     <div id="pd-activity-list" class="small"></div>
                 </div>
             </div>

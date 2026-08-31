@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AgencyController;
+use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FeedbackController;
@@ -28,6 +29,14 @@ Route::prefix('admin')
             Route::get('/', [FeedbackController::class, 'index'])->name('index');
             Route::put('/{feedback}', [FeedbackController::class, 'update'])->name('update');
             Route::post('/{feedback}/reply', [FeedbackController::class, 'reply'])->name('reply');
+        });
+
+        Route::prefix('announcements')->name('announcements.')->group(function () {
+            Route::get('/', [AnnouncementController::class, 'index'])->name('index');
+            Route::post('/', [AnnouncementController::class, 'store'])->name('store');
+            Route::put('/{announcement}', [AnnouncementController::class, 'update'])->name('update');
+            Route::post('/{announcement}/toggle', [AnnouncementController::class, 'toggle'])->name('toggle');
+            Route::delete('/{announcement}', [AnnouncementController::class, 'destroy'])->name('destroy');
         });
 
         Route::get('/incident-documents', [IncidentDocumentController::class, 'index'])->name('incident_documents.index');

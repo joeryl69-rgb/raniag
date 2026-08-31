@@ -25,13 +25,23 @@ class IncidentTypeSeeder extends Seeder
         ];
 
         foreach ($types as $type) {
+            $existing = IncidentType::query()->where('slug', $type['slug'])->first();
+
             IncidentType::query()->updateOrCreate(
                 ['slug' => $type['slug']],
                 [
                     'name' => $type['name'],
                     'description' => $type['description'],
-                    'icon' => $type['icon'],
-                    'color' => $type['color'],
+                    // On first create, icon/color start as the seed values (the admin
+                    // hasn't customized anything yet). On re-seed, keep whatever the
+                    // admin has already set rather than clobbering their edits.
+                    'icon' => $existing->icon ?? $type['icon'],
+                    'color' => $existing->color ?? $type['color'],
+                    // default_icon/default_color are always the ORIGINAL seed values —
+                    // that's what "Reset to Default" reverts to, regardless of how many
+                    // times the admin has customized icon/color since.
+                    'default_icon' => $type['icon'],
+                    'default_color' => $type['color'],
                     'sort_order' => $type['sort_order'],
                     'is_active' => true,
                 ]

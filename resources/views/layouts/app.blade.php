@@ -246,6 +246,9 @@
     </style>
 </head>
 <body>
+    @if(auth()->user()->isAgency() || auth()->user()->isPersonnel())
+        <x-help-fab :href="route('agency.support.create')" />
+    @endif
     <div id="wrapper">
         <!-- Overlay for mobile toggle -->
         <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -254,8 +257,8 @@
         <div id="sidebar-wrapper">
             <div class="sidebar-brand">
                 <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2 fs-5" href="{{ route('dashboard') }}">
-                    <span class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded" style="width: 2rem; height: 2rem;">
-                        <i class="bi bi-shield-lock-fill"></i>
+                    <span class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded overflow-hidden" style="width: 2rem; height: 2rem;">
+                        <img src="/images/icons/icon-72x72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
                     </span>
                     <span class="d-flex flex-column lh-sm">
                         <span>RANIAG</span>

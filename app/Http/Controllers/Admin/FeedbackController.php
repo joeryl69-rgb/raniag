@@ -27,7 +27,11 @@ class FeedbackController extends Controller
             $query->where('category', $request->string('category')->value());
         }
 
-        $submissions = $query->paginate(15)->withQueryString();
+        if ($request->filled('source') && $request->string('source')->value() !== 'all') {
+            $query->where('submitted_via', $request->string('source')->value());
+        }
+
+        $submissions = $query->with('agency')->paginate(15)->withQueryString();
 
         $counts = [
             'new' => FeedbackSubmission::where('status', 'new')->count(),

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Agency\FeedbackController as StaffSupportController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +15,19 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified', 'active'])->name('dashboard');
 
 Route::middleware(['auth', 'active'])->group(function () {
+    // Support Center for signed-in staff (agency + personnel accounts).
+    // Shared here (instead of duplicated in agency.php/personnel.php)
+    // since both roles get identical access to file a message.
+    // NOTE: path is deliberately NOT "/support" — that URI already belongs
+    // to the public route in routes/public.php (public.support). Two
+    // routes can't share the same method+URI: the one registered first
+    // (public.php, required above) would always win the match, so signed-in
+    // staff visiting "/support" would silently land on the public form.
+    Route::prefix('support-center')->name('agency.support.')->group(function () {
+        Route::get('/', [StaffSupportController::class, 'create'])->name('create');
+        Route::post('/', [StaffSupportController::class, 'store'])->name('store');
+    });
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

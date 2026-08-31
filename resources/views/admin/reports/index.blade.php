@@ -15,9 +15,6 @@
                             </h5>
                             <p class="text-muted small mb-0">Select your filters and generate a downloadable PDF report for the requested period.</p>
                         </div>
-                        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm" data-loading-link data-loading-message="Returning to the dashboard...">
-                            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
-                        </a>
                     </div>
                 </div>
                 <div class="card-body">

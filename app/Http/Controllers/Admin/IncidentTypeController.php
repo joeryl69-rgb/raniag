@@ -65,7 +65,6 @@ class IncidentTypeController extends Controller
             'iconChoices' => IconLibrary::DEFAULT_SET,
             'iconCatalog' => IconLibrary::CATALOG,
             'colorChoices' => self::COLOR_PRESETS,
-            'defaultPresets' => self::DEFAULT_PRESETS,
         ]);
     }
 
@@ -73,6 +72,11 @@ class IncidentTypeController extends Controller
     {
         $data = $this->validated($request);
         $data['slug'] = $this->uniqueSlug($data['name']);
+        // Capture this type's own icon/color as its "default" the moment
+        // it's created, so the Reset to Default button always has a real
+        // target — not just for the 8 hardcoded seeded types.
+        $data['default_icon'] = $data['icon'];
+        $data['default_color'] = $data['color'];
 
         IncidentType::create($data);
 

@@ -3,18 +3,6 @@
         {{ __('Printable Document Requests') }}
     </x-slot>
 
-    <div class="d-flex mb-4">
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Admin Dashboard
-        </a>
-    </div>
-
-    @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-3 border-0">
             <div>

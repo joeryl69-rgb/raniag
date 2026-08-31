@@ -946,3 +946,68 @@ body.raniag-public {
     border-color: #ffc107;
     color: #212529;
 }
+
+/* ============================================================
+   RANIAG — Support Center (public + agency)
+============================================================ */
+.rg-support-hero { background: linear-gradient(135deg, var(--rg-brand, #0b5ed7) 0%, var(--rg-brand-darker, #084298) 100%); color: #fff; border-radius: 20px; padding: 28px 30px; margin-bottom: 28px; }
+.rg-support-hero__badge { display: inline-block; background: rgba(255,255,255,.16); padding: 4px 12px; border-radius: 999px; font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin-bottom: 12px; }
+.rg-support-hero__title { font-size: 1.8rem; font-weight: 800; margin: 0 0 6px; }
+.rg-support-hero__sub { opacity: .9; font-size: .95rem; }
+.rg-info-box { display: flex; gap: 12px; align-items: flex-start; background: #fff7e6; border: 1px solid #f3dfa8; border-left: 4px solid #f6a723; border-radius: 12px; padding: 14px 16px; font-size: .88rem; color: #5c4813; }
+.rg-info-box i { font-size: 1.1rem; color: #b7822b; margin-top: 2px; }
+.rg-lock-note { display: flex; gap: 8px; align-items: center; background: #fff7e6; border: 1px solid #f3dfa8; border-radius: 10px; padding: 8px 12px; font-size: .82rem; color: #7a5c14; margin-bottom: 14px; }
+.rg-support-card { background: #fff; border: 1px solid var(--rg-line, rgba(11,18,32,.08)); border-radius: 16px; padding: 20px; }
+.rg-support-card__head { font-weight: 800; font-size: .95rem; color: var(--rg-brand, #0b5ed7); margin-bottom: 16px; }
+.rg-support-card__head--dark { background: linear-gradient(135deg, #0b5ed7, #084298); color: #fff; margin: -20px -20px 16px; padding: 16px 20px; border-radius: 16px 16px 0 0; }
+.rg-support-card__head--gold { background: linear-gradient(135deg, #f6a723, #d98c12); color: #fff; margin: -20px -20px 16px; padding: 16px 20px; border-radius: 16px 16px 0 0; }
+.rg-cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.rg-cat-choice { background: #f8f9fb; border: 1.5px solid var(--rg-line, #e5e8ee); border-radius: 14px; padding: 16px 10px; text-align: center; cursor: pointer; transition: all .15s ease; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rg-cat-choice i { font-size: 1.5rem; color: #7a8699; transition: color .15s ease; }
+.rg-cat-choice__label { font-weight: 700; font-size: .82rem; color: #16203a; }
+.rg-cat-choice__hint { font-size: .7rem; color: #8892a3; line-height: 1.3; }
+.rg-cat-choice:hover { border-color: var(--rg-brand-soft, #3d8bfd); transform: translateY(-2px); }
+.rg-cat-choice.is-selected { border-color: var(--rg-brand, #0b5ed7); background: rgba(11,94,215,.06); box-shadow: 0 6px 16px -8px rgba(11,94,215,.4); }
+.rg-cat-choice.is-selected i, .rg-cat-choice.is-selected .rg-cat-choice__label { color: var(--rg-brand, #0b5ed7); }
+.rg-support-submit { background: linear-gradient(135deg, #0b5ed7, #073a86); color: #fff; font-weight: 700; border: none; padding: 10px 22px; border-radius: 10px; box-shadow: 0 10px 22px -10px rgba(11,94,215,.5); }
+.rg-support-submit:hover { color: #fff; opacity: .92; }
+.rg-timeline { list-style: none; margin: 0; padding: 0; }
+.rg-timeline li { display: flex; gap: 12px; position: relative; padding-bottom: 22px; }
+.rg-timeline li:last-child { padding-bottom: 0; }
+.rg-timeline li:not(:last-child)::before { content: ''; position: absolute; left: 15px; top: 34px; bottom: -4px; width: 2px; background: var(--rg-line, #e5e8ee); }
+.rg-timeline__icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(11,94,215,.1); color: var(--rg-brand, #0b5ed7); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .85rem; }
+.rg-timeline__icon--done { background: rgba(25,135,84,.12); color: #198754; }
+.rg-timeline strong { font-size: .88rem; display: block; margin-bottom: 2px; }
+.rg-timeline p { font-size: .8rem; color: #6c7688; margin: 0; }
+.rg-tips { list-style: none; margin: 0; padding: 0; }
+.rg-tips li { display: flex; gap: 8px; align-items: flex-start; font-size: .85rem; color: #33404a; padding: 6px 0; }
+.rg-tips i { color: #16a34a; margin-top: 3px; }
+
+/* Floating Help button */
+.rg-help-fab { position: fixed; right: 22px; bottom: 22px; z-index: 1050; width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg, #0b5ed7, #073a86); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 28px -10px rgba(11,94,215,.55); text-decoration: none; font-size: 1.4rem; transition: transform .18s ease, box-shadow .18s ease; animation: rgHelpPulse 2.6s ease-in-out infinite; }
+.rg-help-fab:hover { color: #fff; transform: translateY(-3px) scale(1.04); box-shadow: 0 16px 34px -8px rgba(11,94,215,.6); }
+.rg-help-fab__label { position: absolute; right: 68px; background: #16203a; color: #fff; font-size: .76rem; font-weight: 700; padding: 6px 10px; border-radius: 8px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+.rg-help-fab:hover .rg-help-fab__label { opacity: 1; }
+@keyframes rgHelpPulse { 0%, 100% { box-shadow: 0 12px 28px -10px rgba(11,94,215,.55), 0 0 0 0 rgba(11,94,215,.35); } 50% { box-shadow: 0 12px 28px -10px rgba(11,94,215,.55), 0 0 0 10px rgba(11,94,215,0); } }
+@media (max-width: 576px) { .rg-help-fab { width: 50px; height: 50px; font-size: 1.2rem; right: 16px; bottom: 16px; } }
+
+/* ============================================================
+   RANIAG — App loading screen
+============================================================ */
+#rg-app-loader { position: fixed; inset: 0; z-index: 9999; background: radial-gradient(120% 120% at 30% 20%, #1671e8 0%, #0b5ed7 45%, #073a86 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; transition: opacity .45s ease, visibility .45s ease; }
+#rg-app-loader.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.rg-loader-mark { width: 96px; height: 96px; animation: rgLoaderFloat 2.2s ease-in-out infinite; filter: drop-shadow(0 12px 24px rgba(0,0,0,.3)); }
+.rg-loader-ring { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: rgLoaderSpin .9s linear infinite; }
+.rg-loader-text { color: #fff; font-weight: 700; letter-spacing: .08em; font-size: .8rem; opacity: .85; text-transform: uppercase; }
+@keyframes rgLoaderFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes rgLoaderSpin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   RANIAG — Landing page: Updates & Announcements + Download App
+============================================================ */
+.rg-announce-card { border: 1px solid var(--rg-line, rgba(11,18,32,.08)); border-radius: 16px; padding: 20px; background: #fff; height: 100%; transition: transform .15s ease, box-shadow .15s ease; }
+.rg-announce-card:hover { transform: translateY(-3px); box-shadow: var(--rg-shadow-sm, 0 6px 18px -10px rgba(11,18,32,.35)); }
+.rg-announce-badge { display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .06em; padding: 3px 10px; border-radius: 999px; background: rgba(11,94,215,.1); color: var(--rg-brand, #0b5ed7); margin-bottom: 10px; }
+.rg-announce-date { font-size: .74rem; color: #8892a3; }
+.rg-download-cta { background: linear-gradient(135deg, #0b1220, #16203a); color: #fff; border-radius: 20px; padding: 34px 32px; }
+.rg-download-cta .btn-light { font-weight: 700; }
