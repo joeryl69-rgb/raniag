@@ -7,11 +7,12 @@
 
     <title>@yield('title', 'Staff Portal') — RANIAG · MDRRMO Pamplona</title>
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link rel="preload" href="{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/public.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0e4a6b">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -41,22 +42,30 @@
             background-color: var(--raniag-sidebar);
             color: #a9c1cf;
             flex-shrink: 0;
-            transition: all 0.25s ease;
+            transition: margin-left 0.25s ease;
             display: flex;
-            flex-column: column;
             flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.06);
-            overflow-y: auto;
-            overflow-x: hidden;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.25) transparent;
+            overflow: hidden;
         }
 
-        #sidebar-wrapper::-webkit-scrollbar {
+        #sidebar-wrapper .sidebar-nav-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.25) transparent;
+            padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+        }
+
+        #sidebar-wrapper .sidebar-nav-scroll::-webkit-scrollbar {
             width: 6px;
         }
 
-        #sidebar-wrapper::-webkit-scrollbar-thumb {
+        #sidebar-wrapper .sidebar-nav-scroll::-webkit-scrollbar-thumb {
             background-color: rgba(255,255,255,0.25);
             border-radius: 3px;
         }
@@ -204,6 +213,7 @@
                 top: 0;
                 left: 0;
                 height: 100vh;
+                height: 100dvh;
                 z-index: 1040;
             }
 
@@ -222,11 +232,21 @@
             #sidebar-wrapper {
                 margin-left: -260px;
                 position: fixed;
+                top: 0;
+                left: 0;
                 height: 100vh;
+                height: 100dvh;
                 z-index: 1040;
             }
             #wrapper.toggled #sidebar-wrapper {
                 margin-left: 0;
+            }
+            body.sidebar-open {
+                overflow: hidden;
+                touch-action: none;
+            }
+            body.sidebar-open #page-content-wrapper {
+                touch-action: none;
             }
             #sidebar-overlay {
                 display: none;
@@ -243,6 +263,14 @@
         .fs-8 {
             font-size: 0.75rem;
         }
+
+        @font-face {
+            font-family: bootstrap-icons;
+            font-display: swap;
+            src: url("{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}") format("woff2");
+        }
+
+        [data-live-refresh-target] [data-rg-reveal] { opacity: 1; transform: none; }
     </style>
 </head>
 <body>
@@ -251,7 +279,7 @@
     @endif
     <div id="wrapper">
         <!-- Overlay for mobile toggle -->
-        <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+        <div id="sidebar-overlay" role="presentation" aria-hidden="true"></div>
 
         <!-- Sidebar -->
         <div id="sidebar-wrapper">
@@ -346,10 +374,30 @@
     </div>
  
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="{{ asset('js/live-refresh.js') }}?v={{ @filemtime(public_path('js/live-refresh.js')) }}"></script>
     <script>
-        function toggleSidebar() {
-            document.getElementById('wrapper').classList.toggle('toggled');
+        function toggleSidebar(force) {
+            const wrapper = document.getElementById('wrapper');
+            if (!wrapper) return;
+            const open = typeof force === 'boolean' ? force : !wrapper.classList.contains('toggled');
+            wrapper.classList.toggle('toggled', open);
+            document.body.classList.toggle('sidebar-open', open);
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const overlay = document.getElementById('sidebar-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', function () { toggleSidebar(false); });
+            }
+
+            document.querySelectorAll('#sidebar-wrapper .nav-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.matchMedia('(max-width: 991.98px)').matches) {
+                        toggleSidebar(false);
+                    }
+                });
+            });
+        });
  
         let staffLockedScrollY = 0;
         function showLoadingOverlay(message = 'Processing, please wait...') {
@@ -438,15 +486,11 @@
                 });
             });
 
-            window.addEventListener('load', function () {
-                hideLoadingOverlay();
-            });
+            // Hide overlay as soon as DOM is ready — don't wait for every image/font
+            // (window.load), which made icons and page content feel delayed.
+            hideLoadingOverlay();
 
             window.addEventListener('pageshow', function () {
-                hideLoadingOverlay();
-            });
-
-            window.addEventListener('focus', function () {
                 hideLoadingOverlay();
             });
         });

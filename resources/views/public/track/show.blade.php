@@ -53,7 +53,9 @@
         $isOutsideAor = $statusValue === 'outside_aor';
     @endphp
 
-    <div class="card raniag-card mb-4" data-rg-reveal>
+    <div data-live-refresh data-live-refresh-target="#rg-track-status" data-live-refresh-interval="8000">
+    <div id="rg-track-status">
+    <div class="card raniag-card mb-4">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
             <span class="raniag-step-badge"><i class="bi bi-signpost-2"></i></span>
             <span>Progress</span>
@@ -106,7 +108,7 @@
         </div>
     </div>
 
-    <div class="row g-4" data-rg-reveal>
+    <div class="row g-4">
         <div class="col-lg-4">
             <div class="card raniag-card mb-4">
                 <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
@@ -240,17 +242,17 @@
         </div>
     </div>
 
-    <div class="card raniag-card mt-4" data-rg-reveal>
+    <div class="card raniag-card mt-4">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
             <span class="raniag-step-badge"><i class="bi bi-list-ul"></i></span>
             <span>Full History</span>
         </div>
         <div class="card-body p-4">
-            @if ($incident->statusTimeline->isEmpty())
+            @if ($incident->publicTimeline->isEmpty())
                 <p class="text-muted mb-0">No public updates yet. Please check back later.</p>
             @else
                 <div class="raniag-timeline raniag-timeline-wide">
-                    @foreach ($incident->statusTimeline as $update)
+                    @foreach ($incident->publicTimeline as $update)
                         @php $tKey = $update->to_status->value ?? $update->to_status; @endphp
                         <div class="raniag-timeline-item" data-status="{{ $tKey }}">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
@@ -265,6 +267,8 @@
                 </div>
             @endif
         </div>
+    </div>
+    </div>
     </div>
 </div>
 @endsection

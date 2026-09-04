@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container">
-    <div class="raniag-hero p-4 p-lg-5 mb-5">
+    <div class="raniag-hero p-4 p-lg-5 mb-5" data-rg-reveal>
         <div class="row align-items-center g-4">
             <div class="col-lg-7">
                 <p class="text-uppercase small fw-semibold text-white-50 mb-2">{{ config('raniag.organization') }}</p>
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <div class="row g-4 mb-2">
+    <div class="row g-4 mb-2" data-rg-reveal>
         <div class="col-md-4">
             <div class="card raniag-card h-100 text-center p-4">
                 <div class="text-primary fs-2 mb-3"><i class="bi bi-eye-slash"></i></div>
@@ -63,7 +63,7 @@
     </div>
 
     {{-- ===================== UPDATES & ANNOUNCEMENTS ===================== --}}
-    <div class="mt-5" id="updates">
+    <div class="mt-5" id="updates" data-rg-reveal>
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <div>
                 <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>UPDATES</span>
@@ -71,6 +71,8 @@
             </div>
         </div>
 
+        <div data-live-refresh data-live-refresh-target="#rg-public-announcements" data-live-refresh-interval="4000">
+        <div id="rg-public-announcements">
         @if($announcements->isNotEmpty())
             <div class="row g-3">
                 @foreach($announcements as $item)
@@ -95,10 +97,12 @@
                 No announcements yet. Check back soon for the latest updates from {{ config('raniag.organization') }}.
             </div>
         @endif
+        </div>
+        </div>
     </div>
 
     {{-- ===================== DOWNLOAD APP ===================== --}}
-    <div class="rg-download-cta mt-5 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="rg-download-cta mt-5 d-flex flex-wrap align-items-center justify-content-between gap-3" data-rg-reveal>
         <div class="d-flex align-items-center gap-3">
             <img src="/images/icons/icon-96x96.png" alt="RANIAG app icon" width="64" height="64" class="rounded-4">
             <div>
@@ -112,7 +116,7 @@
     </div>
 
     {{-- ===================== NEED HELP → SUPPORT CENTER ===================== --}}
-    <div class="row justify-content-center mt-5" id="help">
+    <div class="row justify-content-center mt-5" id="help" data-rg-reveal>
         <div class="col-lg-8">
             <div class="rg-support-card text-center p-4 p-lg-5">
                 <div class="text-primary fs-2 mb-2"><i class="bi bi-headset"></i></div>

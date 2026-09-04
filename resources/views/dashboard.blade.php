@@ -548,41 +548,156 @@
                 return 'p-medium';
             }
 
-            function plotPoints(points) {
-                if (!map) return;
-                currentPoints = points;
-                markerLayer.clearLayers();
+            // Grouping radius in meters. Two reports of "the same spot" almost
+            // never come back with identical coordinates — consumer phone GPS
+            // is typically accurate to only 5-20m (worse indoors/under cover),
+            // so two genuine duplicate reports can easily land 10+ meters
+            // apart. The previous version snapped lat/lng to a ~1.1m grid
+            // cell (toFixed(5)) and grouped only exact-same-cell points; that
+            // was tighter than real GPS jitter, so duplicates almost never
+            // shared a cell and kept rendering as separate, visually
+            // overlapping pins — indistinguishable from the original
+            // "stacked pins" bug even though the clustering code was present.
+            // Distance is measured against each group's running centroid
+            // (not a fixed grid), so two points don't miss each other by
+            // sitting just across a cell boundary either.
+            const CLUSTER_RADIUS_METERS = 20;
+            let expandedClusterKey = null;
 
+            function metersBetween(lat1, lng1, lat2, lng2) {
+                const R = 6371000;
+                const toRad = d => d * Math.PI / 180;
+                const dLat = toRad(lat2 - lat1);
+                const dLng = toRad(lng2 - lng1);
+                const a = Math.sin(dLat / 2) ** 2 +
+                    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+                return 2 * R * Math.asin(Math.sqrt(a));
+            }
+
+            // Builds groups by proximity instead of grid bucketing: each point
+            // joins the nearest existing group within CLUSTER_RADIUS_METERS
+            // (rolling the group's centroid to the running average), or starts
+            // a new group. Keyed by the group's first incident id so the
+            // spiderfy/collapse click handlers keep pointing at the right
+            // group across re-renders.
+            function buildGroups(points) {
+                const groups = [];
                 points.forEach(function (pt) {
                     if (!pt.latitude || !pt.longitude) return;
                     const lat = parseFloat(pt.latitude), lng = parseFloat(pt.longitude);
                     if (Number.isNaN(lat) || Number.isNaN(lng)) return;
 
-                    const typeObj = pt.incident_type || pt.incidentType || {};
-                    // Centralized icon+color resolution (see public/js/incident-map-icons.js)
-                    // keeps this pin visually identical to every other incident map
-                    // in the system, driven by the incident type's own configured icon.
-                    const marker = L.marker([lat, lng], {
-                        icon: window.RaniagIcons.buildDivIcon({
-                            icon: typeObj.icon,
-                            color: typeObj.color,
-                            priority: pt.priority,
-                            size: 26,
-                        })
-                    });
+                    let target = null;
+                    for (let i = 0; i < groups.length; i++) {
+                        if (metersBetween(lat, lng, groups[i].lat, groups[i].lng) <= CLUSTER_RADIUS_METERS) {
+                            target = groups[i];
+                            break;
+                        }
+                    }
+                    if (target) {
+                        const n = target.items.length + 1;
+                        target.lat += (lat - target.lat) / n;
+                        target.lng += (lng - target.lng) / n;
+                        target.items.push(pt);
+                    } else {
+                        groups.push({ key: 'g' + (pt.id ?? groups.length), lat, lng, items: [pt] });
+                    }
+                });
+                return groups;
+            }
 
-                    const typeName = typeObj.name || 'Incident';
-                    marker.bindPopup(
-                        `<strong>${escapeHtml(pt.tracking_number || ('#' + pt.id))}</strong><br>` +
-                        `${escapeHtml(typeName)}<br>` +
-                        `<span class="text-capitalize">${escapeHtml((pt.status || '').replace(/_/g, ' '))}</span>` +
-                        (pt.barangay ? `<br><small class="text-muted">${escapeHtml(pt.barangay)}</small>` : '') +
-                        `<br><a class="popup-view-btn" href="${INCIDENT_URL_BASE}/${pt.id}"><i class="bi bi-box-arrow-up-right"></i> View</a>`
-                    );
-                    marker.addTo(markerLayer);
+            function addIncidentMarker(pt, lat, lng) {
+                const typeObj = pt.incident_type || pt.incidentType || {};
+                // Centralized icon+color resolution (see public/js/incident-map-icons.js)
+                // keeps this pin visually identical to every other incident map
+                // in the system, driven by the incident type's own configured icon.
+                const marker = L.marker([lat, lng], {
+                    icon: window.RaniagIcons.buildDivIcon({
+                        icon: typeObj.icon,
+                        color: typeObj.color,
+                        priority: pt.priority,
+                        size: 26,
+                    })
                 });
 
-                const plotted = markerLayer.getLayers().length;
+                const typeName = typeObj.name || 'Incident';
+                marker.bindPopup(
+                    `<strong>${escapeHtml(pt.tracking_number || ('#' + pt.id))}</strong><br>` +
+                    `${escapeHtml(typeName)}<br>` +
+                    `<span class="text-capitalize">${escapeHtml((pt.status || '').replace(/_/g, ' '))}</span>` +
+                    (pt.barangay ? `<br><small class="text-muted">${escapeHtml(pt.barangay)}</small>` : '') +
+                    `<br><a class="popup-view-btn" href="${INCIDENT_URL_BASE}/${pt.id}"><i class="bi bi-box-arrow-up-right"></i> View</a>`
+                );
+                marker.addTo(markerLayer);
+            }
+
+            // Fans a group's pins out in a small ring around their true
+            // coordinates (computed in screen pixels so the spacing looks
+            // right at any zoom level) instead of leaving them stacked.
+            function spiderfyOffset(lat, lng, index, total) {
+                const center = map.latLngToLayerPoint([lat, lng]);
+                const radius = 24 + Math.min(total, 8) * 4;
+                const angle = (2 * Math.PI * index) / total;
+                const point = L.point(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle));
+                const latlng = map.layerPointToLatLng(point);
+                return [latlng.lat, latlng.lng];
+            }
+
+            function addClusterMarker(group, key) {
+                // Highest-priority report in the group drives the badge color,
+                // so a cluster hiding a critical incident still reads urgent.
+                const rank = { critical: 4, high: 3, medium: 2, low: 1 };
+                const top = group.items.reduce((a, b) =>
+                    (rank[(b.priority || '').toLowerCase()] || 2) > (rank[(a.priority || '').toLowerCase()] || 2) ? b : a
+                );
+                const marker = L.marker([group.lat, group.lng], {
+                    icon: window.RaniagIcons.buildClusterIcon({ count: group.items.length, priority: top.priority, size: 34 }),
+                    zIndexOffset: 1000,
+                });
+                marker.bindTooltip(`${group.items.length} reports at this location — click to separate`, { direction: 'top' });
+                marker.on('click', function () {
+                    expandedClusterKey = key;
+                    plotPoints(currentPoints);
+                });
+                marker.addTo(markerLayer);
+            }
+
+            function addCollapseHandle(group, key) {
+                const handle = L.marker([group.lat, group.lng], {
+                    icon: L.divIcon({ html: '<div class="raniag-marker-collapse"></div>', className: 'raniag-marker-marker', iconSize: [10, 10], iconAnchor: [5, 5] }),
+                    zIndexOffset: 999,
+                });
+                handle.bindTooltip('Click to collapse back into a group', { direction: 'top' });
+                handle.on('click', function () {
+                    if (expandedClusterKey === key) expandedClusterKey = null;
+                    plotPoints(currentPoints);
+                });
+                handle.addTo(markerLayer);
+            }
+
+            function plotPoints(points) {
+                if (!map) return;
+                currentPoints = points;
+                markerLayer.clearLayers();
+
+                const groups = buildGroups(points);
+
+                groups.forEach(function (group) {
+                    const key = group.key;
+                    if (group.items.length === 1) {
+                        addIncidentMarker(group.items[0], group.lat, group.lng);
+                    } else if (key === expandedClusterKey) {
+                        group.items.forEach(function (pt, i) {
+                            const [lat, lng] = spiderfyOffset(group.lat, group.lng, i, group.items.length);
+                            addIncidentMarker(pt, lat, lng);
+                        });
+                        addCollapseHandle(group, key);
+                    } else {
+                        addClusterMarker(group, key);
+                    }
+                });
+
+                const plotted = points.filter(p => p.latitude && p.longitude && !Number.isNaN(parseFloat(p.latitude)) && !Number.isNaN(parseFloat(p.longitude))).length;
                 const label = document.getElementById('map-count-label');
                 if (label) label.textContent = `${plotted} point${plotted === 1 ? '' : 's'} plotted`;
             }

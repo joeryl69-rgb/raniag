@@ -312,7 +312,7 @@
                     <p class="mt-2 mb-0">No document requests found.</p>
                 </div>
             @else
-                <div class="table-responsive">
+                <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-agency-doc-requests-tbody" data-live-refresh-interval="4000">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light text-muted">
                             <tr>
@@ -324,7 +324,7 @@
                                 <th class="px-3 py-3 text-end">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="rg-agency-doc-requests-tbody">
                             @foreach($documentRequests as $dr)
                                 <tr>
                                     <td class="px-3 py-3 fw-bold text-primary">{{ $dr->incident->tracking_number ?? 'N/A' }}</td>

@@ -44,6 +44,8 @@
         </div>
     </div>
 
+    <div data-live-refresh data-live-refresh-target="#rg-incident-documents-results" data-live-refresh-interval="4000">
+    <div id="rg-incident-documents-results">
     @if($incidents->isEmpty())
         <div class="text-center text-muted py-5">
             <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
@@ -90,4 +92,6 @@
             {!! $incidents->links('pagination::bootstrap-5') !!}
         </div>
     @endif
+    </div>
+    </div>
 </x-app-layout>

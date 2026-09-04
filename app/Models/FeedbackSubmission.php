@@ -30,6 +30,21 @@ class FeedbackSubmission extends Model
         'bug' => ['label' => 'Bug Report', 'hint' => 'Something is broken', 'icon' => 'bi-bug'],
     ];
 
+    /**
+     * Keys of the categories a person can actually choose today on the
+     * Support Center form (matches the icon-card grid exactly). Used for
+     * filter dropdowns so admins never see options nobody can pick.
+     * The legacy entries above stay in CATEGORIES so any old row still
+     * renders its correct label/icon — they're just excluded from filters.
+     */
+    private const CURRENT_CATEGORY_KEYS = ['login', 'account', 'report', 'technical', 'data', 'suggestion', 'other'];
+
+    /** Category list for filter UIs: current, selectable categories only. */
+    public static function filterableCategories(): array
+    {
+        return array_intersect_key(self::CATEGORIES, array_flip(self::CURRENT_CATEGORY_KEYS));
+    }
+
     protected $fillable = [
         'category',
         'submitted_via',

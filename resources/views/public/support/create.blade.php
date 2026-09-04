@@ -2,7 +2,7 @@
 @section('title', 'Support Center')
 @section('content')
 <div class="container">
-    <div class="rg-support-hero">
+    <div class="rg-support-hero" data-rg-reveal>
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
                 <span class="rg-support-hero__badge"><i class="bi bi-headset me-1"></i>SUPPORT CENTER</span>

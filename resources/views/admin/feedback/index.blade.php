@@ -14,30 +14,59 @@
 
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
-        <form method="GET" class="d-flex flex-wrap gap-2">
-            <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
-                <option value="all">All statuses</option>
-                <option value="new" @selected(request('status')==='new')>New</option>
-                <option value="reviewed" @selected(request('status')==='reviewed')>Reviewed</option>
-                <option value="resolved" @selected(request('status')==='resolved')>Resolved</option>
-            </select>
-            <select name="category" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
-                <option value="all">All categories</option>
-                @foreach(\App\Models\FeedbackSubmission::CATEGORIES as $key => $cat)
-                    <option value="{{ $key }}" @selected(request('category')===$key)>{{ $cat['label'] }}</option>
-                @endforeach
-            </select>
-            <select name="source" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
-                <option value="all">All sources</option>
-                <option value="public" @selected(request('source')==='public')>Public (Landing Page)</option>
-                <option value="agency" @selected(request('source')==='agency')>Support Center (Agency/Personnel)</option>
-            </select>
+        <form method="GET" action="{{ route('admin.feedback.index') }}" class="row g-2 align-items-end" data-loading-message="Filtering feedback...">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Search</label>
+                <input type="search" name="q" value="{{ request('q') }}" class="form-control" placeholder="Search subject, message, name, email">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Status</label>
+                <select name="status" class="form-select">
+                    <option value="all" @selected(request('status', 'all') === 'all')>All statuses</option>
+                    <option value="new" @selected(request('status')==='new')>New</option>
+                    <option value="reviewed" @selected(request('status')==='reviewed')>Reviewed</option>
+                    <option value="resolved" @selected(request('status')==='resolved')>Resolved</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Category</label>
+                <select name="category" class="form-select">
+                    <option value="all" @selected(request('category', 'all') === 'all')>All categories</option>
+                    @foreach(\App\Models\FeedbackSubmission::filterableCategories() as $key => $cat)
+                        <option value="{{ $key }}" @selected(request('category')===$key)>{{ $cat['label'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Source</label>
+                <select name="source" class="form-select">
+                    <option value="all" @selected(request('source', 'all') === 'all')>All sources</option>
+                    <option value="public" @selected(request('source')==='public')>Public (Landing Page)</option>
+                    <option value="agency" @selected(request('source')==='agency')>Support Center (Agency/Personnel)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">From</label>
+                <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">To</label>
+                <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
+            </div>
+            <div class="col-md-auto d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i>Filter
+                </button>
+                <a href="{{ route('admin.feedback.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Clear
+                </a>
+            </div>
         </form>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="list-group list-group-flush">
+<div class="card border-0 shadow-sm" data-live-refresh data-live-refresh-target="#rg-feedback-list" data-live-refresh-interval="4000">
+    <div class="list-group list-group-flush" id="rg-feedback-list">
         @forelse($submissions as $item)
             <div class="list-group-item py-3">
                 <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
@@ -105,7 +134,11 @@
     </div>
 </div>
 
-<div class="mt-3">{{ $submissions->links() }}</div>
+@if($submissions->hasPages())
+<div class="mt-3">
+    {{ $submissions->links('pagination::bootstrap-5') }}
+</div>
+@endif
 
 {{-- Reply modal: full rich-text editor (bold/italic/underline, headings,
      lists, links, blockquote) so the admin's response reads like a proper

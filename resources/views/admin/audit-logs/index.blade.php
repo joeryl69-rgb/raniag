@@ -47,7 +47,7 @@
                     </form>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
+                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-audit-logs-tbody" data-live-refresh-interval="4000">
                         <table class="table table-hover table-striped mb-0 align-middle">
                             <thead class="table-light text-muted small">
                                 <tr>
@@ -59,7 +59,7 @@
                                     <th class="py-3">Occurred At</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="rg-audit-logs-tbody">
                                 @forelse ($logs as $log)
                                     <tr>
                                         <td class="px-4 py-3 text-muted small">#{{ $log->id }}</td>

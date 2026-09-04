@@ -15,7 +15,8 @@
     <meta property="og:description" content="Report incidents fast, track them transparently.">
     <meta name="twitter:card" content="summary_large_image">
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link rel="preload" href="{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700|instrument-serif:400&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
@@ -217,9 +218,19 @@
         #global-loading-overlay .spinner-border { width: 2.75rem; height: 2.75rem; border-width: .28rem; color: var(--rg-brand-soft) !important; }
         #global-loading-overlay .loading-text { margin-top: .9rem; color: #f8fafc; font-weight: 600; letter-spacing: .01em; }
 
+        /* Icons: bootstrap-icons.min.css uses font-display:block (FOIT).
+           Swap shows text/layout immediately; icon glyph fills in when ready. */
+        @font-face {
+            font-family: bootstrap-icons;
+            font-display: swap;
+            src: url("{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}") format("woff2");
+        }
+
         /* ---------- reveal on scroll (progressive enhancement) ---------- */
-        [data-rg-reveal] { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
+        [data-rg-reveal] { opacity: 0; transform: translateY(14px); transition: opacity .35s ease, transform .35s ease; }
         [data-rg-reveal].is-in { opacity: 1; transform: none; }
+        /* Live-refresh regions must never flash invisible after a DOM swap */
+        [data-live-refresh-target] [data-rg-reveal] { opacity: 1; transform: none; }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -678,6 +689,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('js/live-refresh.js') }}?v={{ @filemtime(public_path('js/live-refresh.js')) }}"></script>
     <script>
     // Robust scroll lock: `overflow:hidden` on <body> alone doesn't stop
     // touch/rubber-band scrolling on iOS Safari, which let the page scroll
@@ -719,19 +731,33 @@
         onScroll();
     })();
 
-    // Reveal-on-scroll for any element with data-rg-reveal
+    // Reveal-on-scroll — show above-the-fold blocks immediately so first paint
+    // is not blank (especially on mobile track/status pages).
     (function () {
         const items = document.querySelectorAll('[data-rg-reveal]');
-        if (!items.length || !('IntersectionObserver' in window)) {
-            items.forEach(el => el.classList.add('is-in'));
+        if (!items.length) return;
+
+        const revealNow = (el) => el.classList.add('is-in');
+
+        if (!('IntersectionObserver' in window)) {
+            items.forEach(revealNow);
             return;
         }
+
         const io = new IntersectionObserver((entries) => {
             entries.forEach(e => {
-                if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+                if (e.isIntersecting) { revealNow(e.target); io.unobserve(e.target); }
             });
-        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
-        items.forEach(el => io.observe(el));
+        }, { rootMargin: '0px 0px -4% 0px', threshold: 0.01 });
+
+        items.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                revealNow(el);
+            } else {
+                io.observe(el);
+            }
+        });
     })();
 
     // Auto-dismiss flash messages

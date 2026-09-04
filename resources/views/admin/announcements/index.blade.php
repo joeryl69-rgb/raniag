@@ -8,8 +8,8 @@
         </button>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="list-group list-group-flush">
+    <div class="card border-0 shadow-sm" data-live-refresh data-live-refresh-target="#rg-announcements-list" data-live-refresh-interval="4000">
+        <div class="list-group list-group-flush" id="rg-announcements-list">
             @forelse($announcements as $item)
                 <div class="list-group-item py-3">
                     <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
@@ -50,7 +50,11 @@
             @endforelse
         </div>
     </div>
-    <div class="mt-3">{{ $announcements->links() }}</div>
+    @if($announcements->hasPages())
+    <div class="mt-3">
+        {{ $announcements->links('pagination::bootstrap-5') }}
+    </div>
+    @endif
 
     {{-- Create / Edit Modal --}}
     <div class="modal fade" id="annModal" tabindex="-1">

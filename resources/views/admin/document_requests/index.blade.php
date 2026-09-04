@@ -57,7 +57,7 @@
 
 
             @if($documentRequests && $documentRequests->count())
-                <div class="table-responsive">
+                <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-doc-requests-tbody" data-live-refresh-interval="4000">
                     <table class="table table-sm table-hover align-middle mb-0">
                         <thead class="table-light text-muted">
                             <tr>
@@ -72,7 +72,7 @@
                                 <th class="py-3">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="rg-doc-requests-tbody">
                             @foreach($documentRequests as $dr)
                                 <tr>
                                     <td class="font-monospace">{{ $dr->incident->tracking_number ?? 'N/A' }}</td>

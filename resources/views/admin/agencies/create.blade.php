@@ -76,7 +76,7 @@
             </div>
 
             <!-- Officer Login Card -->
-            <div class="col-md-6">
+            <div class="col-12 col-md-6" id="account-details-col">
                 <div class="card raniag-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i>Account Details</h5>
@@ -130,7 +130,7 @@
                 </div>
             </div>
 
-            <div class="col-12 mt-4 text-end">
+            <div class="col-12 mt-2 d-grid d-md-flex justify-content-md-end">
                 <button type="submit" class="btn btn-primary btn-lg px-4"><i class="bi bi-check-lg me-1"></i>Save & Create Account</button>
             </div>
         </div>
@@ -151,10 +151,9 @@
                 const accountType = document.querySelector('input[name="account_type"]:checked')?.value;
                 const agencyFields = document.getElementById('agency-creation-fields');
                 const personnelFields = document.getElementById('personnel-fields');
+                const accountDetailsCol = document.getElementById('account-details-col');
 
-                if (!agencyFields || !personnelFields) {
-                    return;
-                }
+                if (!agencyFields || !personnelFields) return;
 
                 const agencyInputs = agencyFields.querySelectorAll('input, textarea, select');
                 const personnelInputs = personnelFields.querySelectorAll('input, textarea, select');
@@ -162,15 +161,22 @@
                 if (accountType === 'personnel') {
                     agencyFields.classList.add('d-none');
                     personnelFields.classList.remove('d-none');
-
                     agencyInputs.forEach((field) => field.disabled = true);
                     personnelInputs.forEach((field) => field.disabled = false);
+                    // Expand account details card to full-width when agency panel is hidden
+                    if (accountDetailsCol) {
+                        accountDetailsCol.classList.remove('col-md-6');
+                        accountDetailsCol.classList.add('col-md-8', 'mx-auto');
+                    }
                 } else {
                     agencyFields.classList.remove('d-none');
                     personnelFields.classList.add('d-none');
-
                     agencyInputs.forEach((field) => field.disabled = false);
                     personnelInputs.forEach((field) => field.disabled = true);
+                    if (accountDetailsCol) {
+                        accountDetailsCol.classList.remove('col-md-8', 'mx-auto');
+                        accountDetailsCol.classList.add('col-md-6');
+                    }
                 }
             }
 

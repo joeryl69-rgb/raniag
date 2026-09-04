@@ -43,7 +43,7 @@
                     </form>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
+                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-personnel-incidents-tbody" data-live-refresh-interval="4000">
                         <table class="table table-hover table-striped mb-0 align-middle">
                             <thead class="table-light text-muted">
                                 <tr>
@@ -64,7 +64,7 @@
                                     <th class="px-4 py-3 text-end">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="rg-personnel-incidents-tbody">
                                 @forelse ($incidents as $inc)
                                     @php
                                         $assignment = $inc->currentAssignments()->where('assigned_to', auth()->user()->id)->where('is_active', true)->first();

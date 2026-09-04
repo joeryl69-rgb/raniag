@@ -41,7 +41,7 @@
                     </form>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
+                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-agencies-tbody" data-live-refresh-interval="4000">
                         <table class="table table-hover table-striped mb-0 align-middle">
                             <thead class="table-light text-muted">
                                 <tr>
@@ -54,7 +54,7 @@
                                     <th class="px-4 py-3 text-end">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="rg-agencies-tbody">
                                 @forelse ($agencies as $agency)
                                     @php
                                         $primaryUser = $agency->users->first();
@@ -157,7 +157,7 @@
                     </form>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
+                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-personnel-tbody" data-live-refresh-interval="4000">
                         <table class="table table-hover table-striped mb-0 align-middle">
                             <thead class="table-light text-muted">
                                 <tr>
@@ -170,7 +170,7 @@
                                     <th class="px-4 py-3 text-end">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="rg-personnel-tbody">
                                 @forelse ($personnelAccounts as $personnel)
                                     <tr>
                                         <td class="px-4 py-3 text-dark fw-semibold">{{ $personnel->name }}</td>

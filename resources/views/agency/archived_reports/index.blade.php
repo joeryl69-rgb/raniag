@@ -60,7 +60,7 @@
     </div>
 
     <div class="card raniag-card shadow-sm border-0">
-        <div class="table-responsive">
+        <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-archived-reports-tbody" data-live-refresh-interval="4000">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
@@ -73,7 +73,7 @@
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="rg-archived-reports-tbody">
                     @forelse($reports as $incident)
                         <tr>
                             <td class="fw-semibold">{{ $incident->tracking_number }}</td>
@@ -111,7 +111,7 @@
         </div>
         @if($reports->hasPages())
             <div class="card-footer bg-white py-3">
-                {{ $reports->links() }}
+                {{ $reports->links('pagination::bootstrap-5') }}
             </div>
         @endif
     </div>

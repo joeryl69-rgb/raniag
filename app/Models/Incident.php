@@ -101,6 +101,20 @@ class Incident extends Model
         })->sortBy('created_at')->values();
     }
 
+    /**
+     * Public-safe version of the timeline: excludes any status update
+     * flagged internal-only (is_public === false), such as "awaiting
+     * information" requests, which may reference internal notes and are
+     * only meant to be seen by staff. Used by the public tracking page;
+     * staff-facing pages should keep using statusTimeline/statusUpdates.
+     */
+    public function getPublicTimelineAttribute()
+    {
+        return $this->statusTimeline->filter(function ($update) {
+            return $update->is_public !== false;
+        })->values();
+    }
+
     public function resolutions(): HasMany
     {
         return $this->hasMany(Resolution::class);

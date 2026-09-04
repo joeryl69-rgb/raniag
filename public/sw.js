@@ -1,17 +1,12 @@
-const CACHE_NAME = 'raniag-cache-dev-v3';
+const CACHE_NAME = 'raniag-cache-dev-v4';
 const OFFLINE_URL = '/offline';
 
-// DEV SAFETY: keep cache minimal so ngrok always shows latest UI/JS.
-// If you want full offline later, revert this section.
 const ASSETS_TO_CACHE = [
     OFFLINE_URL,
-    // DEV NOTE: do not cache CSS/JS aggressively; prevents “different UI / dead buttons” on ngrok.
-    // '/css/public.css',
-    // '/js/public-report.js',
-    // '/js/gps-camera.js',
+    '/vendor/bootstrap-icons/bootstrap-icons.min.css',
+    '/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
-    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];

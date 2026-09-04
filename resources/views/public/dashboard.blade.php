@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container">
-    <div class="rg-support-hero text-center mb-4">
+    <div class="rg-support-hero text-center mb-4" data-rg-reveal>
         <span class="rg-support-hero__badge"><i class="bi bi-bar-chart-line me-1"></i>TRANSPARENCY</span>
         <h1 class="rg-support-hero__title mb-2">Community Situational Dashboard</h1>
         <p class="rg-support-hero__sub mb-0" style="max-width:640px; margin:0 auto;">

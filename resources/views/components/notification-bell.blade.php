@@ -72,35 +72,35 @@
         overflow-y: auto;
     }
 
-    /* Full-viewport sheet on phones, matching common mobile/PWA
-       notification-center conventions instead of a cramped corner popover.
-       Uses inset:0 (not a hardcoded "top: Npx" guess at the navbar's
-       height) so it always covers the full screen correctly no matter
-       which page it opens from — this is what previously caused the panel
-       to land in the wrong place / overlap content on some pages.
-       Breakpoint raised to 767.98px (covers phones in both orientations,
-       not just narrow portrait) so it never falls through to the desktop
-       right-aligned popover on a phone-sized viewport. */
     @media (max-width: 767.98px) {
+        /* Full-screen sheet — portaled to <body> by JS so it escapes
+           .navbar-top's sticky stacking context (z-index:1015 root)
+           which otherwise traps children below the sidebar (z-index:1040). */
         .notif-dropdown {
             position: fixed !important;
-            inset: 0 !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            height: 100% !important;
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
             border-radius: 0 !important;
             transform: none !important;
-            z-index: 1060;
-        }
-
-        .notif-list {
-            max-height: none;
-            flex: 1 1 auto;
+            overflow-x: hidden;
+            z-index: 2075;
         }
 
         .notif-dropdown.show {
             display: flex;
             flex-direction: column;
+        }
+
+        .notif-list {
+            max-height: none;
+            flex: 1 1 auto;
+            overflow-x: hidden;
         }
 
         body.rg-notif-open {
@@ -191,20 +191,100 @@
         });
     }
 
-    if (closeBtn && bellToggle && window.bootstrap) {
-        closeBtn.addEventListener('click', function () {
-            bootstrap.Dropdown.getOrCreateInstance(bellToggle).hide();
+    // --- Mobile portal (capture-phase approach) ---
+    // Root cause: .navbar-top has position:sticky + z-index:1015 → creates
+    // a stacking context. The sidebar (position:fixed, z-index:1040) lives
+    // at ROOT level, so it paints ABOVE the entire .navbar-top layer —
+    // the dropdown's own z-index is irrelevant; it's invisible.
+    //
+    // Previous fix used shown.bs.dropdown to portal, but Bootstrap's global
+    // click-outside listener fires at the same time, sees the menu is now
+    // outside the .dropdown wrapper, and immediately hides it (hence "not
+    // appearing"). Fix: intercept in CAPTURE phase — before Bootstrap's
+    // bubble handler — so Bootstrap never sees the mobile click at all.
+    // Desktop falls through to Bootstrap normally.
+    const notifMenu = document.querySelector('#notif-bell-wrapper .notif-dropdown');
+    const notifSlot  = document.createComment('notif-menu-slot');
+    let mobileOpen   = false;
+    let notifPortaled = false;
+    const isMob = function () { return window.matchMedia('(max-width: 767.98px)').matches; };
+
+    // Inline styles with setProperty(..., 'important') always win over any
+    // external stylesheet, regardless of load order, media-query matching,
+    // or cache — removes all dependency on the CSS above actually landing.
+    function forceSheetStyles(el) {
+        const set = function (prop, val) { el.style.setProperty(prop, val, 'important'); };
+        set('position', 'fixed');
+        set('top', '0');
+        set('right', '0');
+        set('bottom', '0');
+        set('left', '0');
+        set('width', '100%');
+        set('height', '100%');
+        set('max-width', '100%');
+        set('margin', '0');
+        set('border-radius', '0');
+        set('transform', 'none');
+        set('z-index', '2147483647'); // max valid z-index — nothing can sit above it
+        set('display', 'flex');
+        set('flex-direction', 'column');
+        set('overflow-x', 'hidden');
+        set('overflow-y', 'auto');
+    }
+
+    function clearSheetStyles(el) {
+        ['position', 'top', 'right', 'bottom', 'left', 'width', 'height', 'max-width',
+         'margin', 'border-radius', 'transform', 'z-index', 'display', 'flex-direction',
+         'overflow-x', 'overflow-y'].forEach(function (p) { el.style.removeProperty(p); });
+    }
+
+    function openMobileSheet() {
+        if (!notifPortaled) {
+            notifMenu.parentNode.insertBefore(notifSlot, notifMenu);
+            document.body.appendChild(notifMenu);
+            notifPortaled = true;
+        }
+        notifMenu.classList.add('show');
+        forceSheetStyles(notifMenu);
+        document.body.classList.add('rg-notif-open');
+        if (bellToggle) bellToggle.setAttribute('aria-expanded', 'true');
+        mobileOpen = true;
+    }
+
+    function closeMobileSheet() {
+        notifMenu.classList.remove('show');
+        clearSheetStyles(notifMenu);
+        document.body.classList.remove('rg-notif-open');
+        if (bellToggle) bellToggle.setAttribute('aria-expanded', 'false');
+        mobileOpen = false;
+        if (notifPortaled && notifSlot.parentNode) {
+            notifSlot.parentNode.replaceChild(notifMenu, notifSlot);
+            notifPortaled = false;
+        }
+    }
+
+    if (bellToggle) {
+        // Capture phase (3rd arg = true) → runs before Bootstrap's bubble handler.
+        bellToggle.addEventListener('click', function (e) {
+            if (!isMob()) return;           // desktop: Bootstrap handles it
+            e.stopImmediatePropagation();   // prevent Bootstrap toggle
+            e.preventDefault();
+            mobileOpen ? closeMobileSheet() : openMobileSheet();
+        }, true);
+
+        // Desktop only: Bootstrap fires hidden.bs.dropdown → clean up scroll lock.
+        bellToggle.addEventListener('hidden.bs.dropdown', function () {
+            document.body.classList.remove('rg-notif-open');
         });
     }
 
-    // Lock background scroll while the full-screen mobile sheet is open,
-    // so the page underneath can't be dragged behind the panel.
-    if (bellToggle) {
-        bellToggle.addEventListener('shown.bs.dropdown', function () {
-            document.body.classList.add('rg-notif-open');
-        });
-        bellToggle.addEventListener('hidden.bs.dropdown', function () {
-            document.body.classList.remove('rg-notif-open');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+            if (isMob()) {
+                closeMobileSheet();
+            } else if (window.bootstrap) {
+                bootstrap.Dropdown.getOrCreateInstance(bellToggle).hide();
+            }
         });
     }
 

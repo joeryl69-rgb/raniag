@@ -19,6 +19,24 @@ class FeedbackController extends Controller
     {
         $query = FeedbackSubmission::with(['reviewer', 'replier'])->latest();
 
+        if ($request->filled('q')) {
+            $term = $request->string('q')->trim()->value();
+            $query->where(function ($sub) use ($term) {
+                $sub->where('subject', 'like', "%{$term}%")
+                    ->orWhere('message', 'like', "%{$term}%")
+                    ->orWhere('submitter_name', 'like', "%{$term}%")
+                    ->orWhere('submitter_email', 'like', "%{$term}%");
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->string('date_from')->value());
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->string('date_to')->value());
+        }
+
         if ($request->filled('status') && $request->string('status')->value() !== 'all') {
             $query->where('status', $request->string('status')->value());
         }

@@ -122,8 +122,10 @@ class IncidentController extends Controller
         }
 
         $comment = $data['comment'] ?? null;
+        $isPublicUpdate = true;
         if ($newStatus->value === 'pending_info') {
             $comment = 'Awaiting information: '.($data['needs_info'] ?? $comment);
+            $isPublicUpdate = false;
         }
 
         $updated = $this->incidentService->recordStatusChange(
@@ -131,7 +133,7 @@ class IncidentController extends Controller
             toStatus: $newStatus,
             user: $request->user(),
             comment: $comment,
-            isPublic: true,
+            isPublic: $isPublicUpdate,
         );
 
         if ($request->wantsJson()) {

@@ -85,13 +85,19 @@
                         </div>
 
                         <div class="col-12 mt-4">
-                            <button type="submit" class="btn btn-primary" data-loading-message="Generating your PDF report...">
-                                <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF Report
-                            </button>
-                            <button type="submit" formaction="{{ route('admin.reports.generate_excel') }}" class="btn btn-success" data-loading-message="Generating your Excel report...">
-                                <i class="bi bi-file-earmark-excel me-2"></i>Generate Excel Report
-                            </button>
-                            <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary ms-2" data-loading-link data-loading-message="Returning to the dashboard...">Cancel</a>
+                            {{-- flex-column on mobile: Bootstrap's default align-items:stretch on a
+                                 column flex container makes each button fill the row's width, so
+                                 the three actions stack cleanly instead of squeezing side-by-side.
+                                 flex-sm-row + gap-2 restores the normal inline row on wider screens. --}}
+                            <div class="d-flex flex-column flex-sm-row gap-2">
+                                <button type="submit" class="btn btn-primary" data-loading-message="Generating your PDF report...">
+                                    <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF Report
+                                </button>
+                                <button type="submit" formaction="{{ route('admin.reports.generate_excel') }}" class="btn btn-success" data-loading-message="Generating your Excel report...">
+                                    <i class="bi bi-file-earmark-excel me-2"></i>Generate Excel Report
+                                </button>
+                                <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary" data-loading-link data-loading-message="Returning to the dashboard...">Cancel</a>
+                            </div>
                         </div>
                     </form>
                 </div>

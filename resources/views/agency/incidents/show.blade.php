@@ -123,13 +123,13 @@
                     @if ($incident->statusUpdates->isEmpty())
                         <p class="text-muted mb-0">No history logged.</p>
                     @else
-                        <div class="raniag-timeline">
+                        <div class="raniag-timeline raniag-timeline-wide">
                             @foreach ($incident->statusUpdates as $update)
-                                <div class="raniag-timeline-item">
+                                <div class="raniag-timeline-item" data-status="{{ $update->to_status->value ?? $update->to_status }}">
                                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
                                         <div>
                                             <x-public.status-badge :status="$update->to_status" />
-                                            <span class="text-muted small ms-2">by {{ $update->user?->display_title ?? 'System/Public' }}</span>
+                                            <span class="text-muted small ms-2">by {{ $update->user?->display_title ?? 'System/Public' }}{{ $update->user?->agency ? ' · '.$update->user->agency->name : '' }}</span>
                                         </div>
                                         <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
                                     </div>

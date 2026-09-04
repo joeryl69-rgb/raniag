@@ -1,5 +1,5 @@
 <!-- Centralized Navigation - Single source of truth for all roles -->
-<div class="flex-grow-1 py-3 overflow-y-auto">
+<div class="sidebar-nav-scroll py-3">
     <ul class="nav flex-column">
         <!-- Dashboard (All Roles) -->
         <li class="nav-item">

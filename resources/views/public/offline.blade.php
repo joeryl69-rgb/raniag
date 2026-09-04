@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container my-5 text-center">
-    <div class="card raniag-card max-w-lg mx-auto py-5 px-4 shadow-lg border-0" style="max-width: 500px; margin: 0 auto;">
+    <div class="card raniag-card max-w-lg mx-auto py-5 px-4 shadow-lg border-0" style="max-width: 500px; margin: 0 auto;" data-rg-reveal>
         <div class="card-body">
             <div class="mb-4">
                 <span class="display-1 text-secondary"><i class="bi bi-wifi-off"></i></span>

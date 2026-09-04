@@ -99,9 +99,11 @@
     </div>
 </div>
 
+@if($notifications->hasPages())
 <div class="mt-3">
-    {{ $notifications->links() }}
+    {{ $notifications->links('pagination::bootstrap-5') }}
 </div>
+@endif
 
 <form id="notif-bulk-delete-form" method="POST" action="{{ route('notifications.destroy_selected') }}" class="d-none">
     @csrf

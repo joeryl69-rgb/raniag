@@ -77,14 +77,12 @@
                 <div class="rg-support-card__head">Category <span class="text-danger">*</span></div>
                 <input type="hidden" name="category" id="supportCategory" value="{{ old('category') }}" required>
                 <div class="rg-cat-grid" id="supportCatGrid">
-                    @foreach($categories as $key => $cat)
-                        @if(!in_array($key, ['feedback','concern','bug']))
-                            <div class="rg-cat-choice" data-value="{{ $key }}" data-label="{{ $cat['label'] }}" role="button" tabindex="0">
-                                <i class="bi {{ $cat['icon'] }}"></i>
-                                <span class="rg-cat-choice__label">{{ $cat['label'] }}</span>
-                                <span class="rg-cat-choice__hint">{{ $cat['hint'] }}</span>
-                            </div>
-                        @endif
+                    @foreach(\App\Models\FeedbackSubmission::filterableCategories() as $key => $cat)
+                        <div class="rg-cat-choice" data-value="{{ $key }}" data-label="{{ $cat['label'] }}" role="button" tabindex="0">
+                            <i class="bi {{ $cat['icon'] }}"></i>
+                            <span class="rg-cat-choice__label">{{ $cat['label'] }}</span>
+                            <span class="rg-cat-choice__hint">{{ $cat['hint'] }}</span>
+                        </div>
                     @endforeach
                 </div>
                 @error('category')<div class="text-danger small mt-2">{{ $message }}</div>@enderror

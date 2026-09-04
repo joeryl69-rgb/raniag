@@ -47,7 +47,7 @@
                         </x-filters.toolbar>
                     </div>
 
-                    <div class="table-responsive">
+                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-admin-incidents-tbody" data-live-refresh-interval="4000">
                         <table class="table table-hover table-striped mb-0 align-middle">
                             <thead class="table-light text-muted">
                                 <tr>
@@ -60,7 +60,7 @@
                                     <th class="px-4 py-3 text-end">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="rg-admin-incidents-tbody">
                                 @forelse ($incidents as $inc)
                                     <tr class="{{ $inc->status->value === 'submitted' ? 'table-light' : '' }}">
                                         <td class="px-4 py-3 fw-bold text-primary">

@@ -95,12 +95,17 @@
             margin-top: 15px;
         }
         .evidence-item {
-            margin-bottom: 15px;
+            display: inline-block;
+            width: 48%;
+            vertical-align: top;
+            margin-bottom: 10px;
+            margin-right: 1%;
             text-align: center;
+            page-break-inside: avoid;
         }
         .evidence-img {
             max-width: 100%;
-            max-height: 300px;
+            max-height: 180px;
             border: 1px solid #cbd5e1;
             padding: 4px;
             background: white;

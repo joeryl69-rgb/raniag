@@ -50,7 +50,7 @@
             <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true" id="login-spinner"></span>
         </button>
     </form>
-    <x-slot name="footer">Need an account? Contact your MIS/MDRRMO administrator.</x-slot>
+    <x-slot name="footer">Need an account? Contact your MDRRMO administrator.</x-slot>
     <x-slot name="scripts">
         <script>
         document.addEventListener('DOMContentLoaded', function () {
