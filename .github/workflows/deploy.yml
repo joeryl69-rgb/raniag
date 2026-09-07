@@ -8,6 +8,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Start deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+
       - name: SSH and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -26,3 +34,14 @@ jobs:
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+
+      - name: Finish deployment
+        uses: bobheadxi/deployments@v1
+        if: always()
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: production
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          env_url: https://mediumorchid-weasel-407759.hostingersite.com
