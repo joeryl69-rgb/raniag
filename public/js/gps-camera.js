@@ -211,11 +211,18 @@
         }
         updateMapThumbnail(latitude, longitude);
 
-        // Re-resolve barangay periodically so the overlay stays dynamic, not static
-        const now = Date.now();
-        if (window.RANIAG_LOCATION_API?.resolve && now - lastGeocodedAt > 8000) {
-            lastGeocodedAt = now;
-            window.RANIAG_LOCATION_API.resolve(latitude, longitude);
+        // Send camera fixes through the map API so the hidden form fields,
+        // marker, map center, geofence warning, and address stay synchronized.
+        // Previously only reverse geocoding was called here, which displayed
+        // "Near Sanchez Mira" while latitude/longitude remained blank.
+        if (window.RANIAG_MAP_API?.setCoordinates) {
+            window.RANIAG_MAP_API.setCoordinates(latitude, longitude, { pan: true });
+        } else {
+            const now = Date.now();
+            if (window.RANIAG_LOCATION_API?.resolve && now - lastGeocodedAt > 8000) {
+                lastGeocodedAt = now;
+                window.RANIAG_LOCATION_API.resolve(latitude, longitude);
+            }
         }
     }
 
@@ -257,6 +264,11 @@
 
     function syncEvidenceInput() {
         if (!evidenceInput) {
+            return;
+        }
+
+        if (typeof DataTransfer === 'undefined') {
+            setError('This browser cannot attach camera photos. Please use Upload files instead.');
             return;
         }
 
@@ -313,28 +325,25 @@
         captures.push(pendingCapture);
         pendingCapture = null;
 
-        // A photo was captured — clear any "please capture a geotagged
-        // photo" error state left over from a previous failed submit.
-        document.getElementById('evidence')?.classList.remove('is-invalid');
+        try {
+            // A photo was captured — clear any "please capture a geotagged
+            // photo" error state left over from a previous failed submit.
+            document.getElementById('evidence')?.classList.remove('is-invalid');
 
-        syncEvidenceInput();
-        syncCaptureLog();
-        renderPreviews();
-        applyPositionToMap(lastPosition, true);
-        updateCaptureReadiness();
-        exitReviewMode();
+            syncEvidenceInput();
+            syncCaptureLog();
+            renderPreviews();
+            applyPositionToMap(lastPosition, true);
+            updateCaptureReadiness();
+            exitReviewMode();
 
-        if (coordsEl) {
-            coordsEl.classList.add('text-success');
-            setTimeout(() => coordsEl.classList.remove('text-success'), 800);
-        }
-
-        // Return to the thumbnail grid after confirming the shot. Keeping
-        // the live camera open here made the Use Photo button appear stuck.
-        const cameraModal = getModal(cameraModalEl);
-        if (cameraModal) {
-            cameraModal.hide();
-        } else {
+            if (coordsEl) {
+                coordsEl.classList.add('text-success');
+                setTimeout(() => coordsEl.classList.remove('text-success'), 800);
+            }
+        } finally {
+            // Always return to the evidence list, even if a mobile browser
+            // rejects the FileList/DataTransfer assignment above.
             stopCamera();
         }
     }
@@ -471,20 +480,9 @@
     function onGeoSuccess(position) {
         const accuracy = position.coords.accuracy;
 
-        // Browsers often report a fast, coarse (Wi-Fi/cell-tower) fix first,
-        // then correct to a precise GPS fix seconds later. Without this
-        // check, every incoming reading — coarse or precise — overwrites the
-        // map pin, so it visibly jumps between the two. Only accept a new
-        // reading if it's the first one we've seen, or it's as good/better
-        // than the best accuracy seen so far (with a little slack so a
-        // temporarily noisier-but-still-good fix isn't dropped).
-        const isFirstReading = bestAccuracy === Infinity;
-        const isAcceptable = accuracy == null || accuracy <= bestAccuracy * 1.2;
-
-        if (!isFirstReading && !isAcceptable) {
-            return;
-        }
-
+        // watchPosition already applies the browser's GPS/network filtering.
+        // Do not reject a later reading just because it is less accurate than
+        // the first fix: that prevented real movement from updating the map.
         if (accuracy != null) {
             bestAccuracy = Math.min(bestAccuracy, accuracy);
         }
@@ -508,6 +506,10 @@
     function startGeolocationWatch() {
         if (!supportsGeolocation()) {
             setError('Geolocation is not supported on this device.');
+            return;
+        }
+
+        if (watchId !== null) {
             return;
         }
 
@@ -797,8 +799,14 @@
         // Spinner lives on the map itself (not the button, not a full-screen
         // overlay) — scoped feedback right where the pin is about to appear.
         if (mapLocatingOverlay) mapLocatingOverlay.classList.remove('d-none');
+        const locatingTimeout = setTimeout(() => {
+            if (useLocationBtn) useLocationBtn.disabled = false;
+            if (mapLocatingOverlay) mapLocatingOverlay.classList.add('d-none');
+            setLocationButtonStatus('Location is taking too long. Check permission or try again.', 'exclamation-triangle', 'text-warning');
+        }, 30000);
 
         function finishLocating() {
+            clearTimeout(locatingTimeout);
             if (useLocationBtn) {
                 useLocationBtn.disabled = false;
             }
@@ -806,15 +814,20 @@
         }
 
         function onSuccess(position) {
-            lastPosition = position;
-            updateCoordsDisplay(position);
-            applyPositionToMap(position, true);
-            setStatus('Location set', 'success');
-            setError('');
-            finishLocating();
-            // applyPositionToMap triggers public-report.js's resolveLocation(),
-            // which will overwrite setLocationButtonStatus with the
-            // barangay result — no need to set it again here.
+            try {
+                lastPosition = position;
+                updateCoordsDisplay(position);
+                startGeolocationWatch();
+                setStatus('Location set', 'success');
+                setError('');
+            } catch (err) {
+                setError('Location was found, but the map could not be updated. Please try again.');
+                setLocationButtonStatus('Location found, but the map could not be updated.', 'exclamation-triangle', 'text-warning');
+            } finally {
+                // Never leave the pinpointing overlay active if a map update
+                // fails after the browser has already returned a GPS fix.
+                finishLocating();
+            }
         }
 
         function onFail(error) {

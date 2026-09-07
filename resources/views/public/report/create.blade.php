@@ -117,7 +117,10 @@
                                   name="description" rows="5" required minlength="10" maxlength="5000"
                                   placeholder="Describe what happened, when it occurred, and who may be affected...">{{ old('description') }}</textarea>
                         @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        <div class="form-text">Minimum 10 characters.</div>
+                        <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
+                            <div class="form-text" id="description-guidance">Minimum 10 characters.</div>
+                            <div class="form-text text-nowrap" id="description-counter" aria-live="polite">0 / 5000</div>
+                        </div>
                     </div>
                 </div>
             </div>
