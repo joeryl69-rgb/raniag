@@ -14,6 +14,10 @@ return [
 
     'tagline' => env('RANIAG_TAGLINE', 'Your safety is our priority'),
 
+    // Target turnaround time (assignment start to completion) used to score
+    // the "SLA Compliance" ring on the admin Command Center dashboard.
+    'sla_target_hours' => (int) env('RANIAG_SLA_TARGET_HOURS', 48),
+
     'tracking' => [
         'prefix' => env('RANIAG_TRACKING_PREFIX', 'RAN'),
         'segment_length' => 4,

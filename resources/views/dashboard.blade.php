@@ -76,6 +76,24 @@
             .kpi-card .kpi-value { font-size: 1.65rem; font-weight: 700; color: var(--raniag-ink); line-height: 1.25; }
             .kpi-card .kpi-sub { font-size: .74rem; color: var(--raniag-muted); }
 
+            /* ---- Performance rings ---- */
+            .perf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+            @media (max-width: 991.98px) { .perf-grid { grid-template-columns: 1fr 1fr; } }
+            @media (max-width: 575.98px) { .perf-grid { grid-template-columns: 1fr; } }
+            .perf-ring-card { padding: 1.2rem 1rem 1.35rem; display: flex; flex-direction: column; align-items: center; text-align: center; }
+            .ring-wrap { position: relative; width: 128px; height: 128px; margin-bottom: .7rem; }
+            .ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+            .ring-track { fill: none; stroke: var(--raniag-surface); stroke-width: 10; }
+            .ring-fill { fill: none; stroke-width: 10; stroke-linecap: round; stroke-dasharray: 326.73 326.73; stroke-dashoffset: 326.73; transition: stroke-dashoffset 1s cubic-bezier(.4,0,.2,1); }
+            .ring-fill.tone-primary { stroke: var(--raniag-primary); }
+            .ring-fill.tone-success { stroke: var(--raniag-success); }
+            .ring-fill.tone-warning { stroke: #b45309; }
+            .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+            .ring-value { font-size: 1.55rem; font-weight: 800; color: var(--raniag-ink); line-height: 1; }
+            .ring-unit { font-size: .68rem; font-weight: 700; color: var(--raniag-muted); margin-top: .15rem; text-transform: uppercase; letter-spacing: .03em; }
+            .ring-label { font-weight: 700; font-size: .85rem; color: var(--raniag-ink); display: flex; align-items: center; gap: .35rem; }
+            .ring-sub { font-size: .74rem; color: var(--raniag-muted); margin-top: .2rem; min-height: 1.1em; }
+
             /* ---- Section headers ---- */
             .section-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .85rem; flex-wrap: wrap; }
             .section-head h5 { font-weight: 800; font-size: 1rem; margin: 0; color: var(--raniag-ink); display: flex; align-items: center; gap: .5rem; }
@@ -243,6 +261,60 @@
             </div>
         @endif
     </div>
+
+    @if($isAdmin)
+        {{-- ===================== PERFORMANCE OVERVIEW ===================== --}}
+        <div class="mb-4">
+            <div class="section-head">
+                <h5><i class="bi bi-speedometer2 text-primary"></i> Performance Overview</h5>
+                <p class="section-sub mb-0">How the response system is performing right now</p>
+            </div>
+            <div class="perf-grid">
+                <div class="dash-card perf-ring-card">
+                    <div class="ring-wrap">
+                        <svg viewBox="0 0 120 120" class="ring-svg">
+                            <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+                            <circle class="ring-fill tone-primary" id="ring-resolution-fill" cx="60" cy="60" r="52"></circle>
+                        </svg>
+                        <div class="ring-center">
+                            <div class="ring-value" id="ring-resolution-value">—</div>
+                            <div class="ring-unit">%</div>
+                        </div>
+                    </div>
+                    <div class="ring-label"><i class="bi bi-check-circle"></i> Resolution Rate</div>
+                    <div class="ring-sub" id="ring-resolution-sub">Cases resolved or closed</div>
+                </div>
+                <div class="dash-card perf-ring-card">
+                    <div class="ring-wrap">
+                        <svg viewBox="0 0 120 120" class="ring-svg">
+                            <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+                            <circle class="ring-fill tone-success" id="ring-coverage-fill" cx="60" cy="60" r="52"></circle>
+                        </svg>
+                        <div class="ring-center">
+                            <div class="ring-value" id="ring-coverage-value">—</div>
+                            <div class="ring-unit">%</div>
+                        </div>
+                    </div>
+                    <div class="ring-label"><i class="bi bi-diagram-3"></i> Dispatch Coverage</div>
+                    <div class="ring-sub" id="ring-coverage-sub">Open cases with an active assignment</div>
+                </div>
+                <div class="dash-card perf-ring-card">
+                    <div class="ring-wrap">
+                        <svg viewBox="0 0 120 120" class="ring-svg">
+                            <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+                            <circle class="ring-fill tone-warning" id="ring-sla-fill" cx="60" cy="60" r="52"></circle>
+                        </svg>
+                        <div class="ring-center">
+                            <div class="ring-value" id="ring-sla-value">—</div>
+                            <div class="ring-unit">%</div>
+                        </div>
+                    </div>
+                    <div class="ring-label"><i class="bi bi-stopwatch"></i> SLA Compliance</div>
+                    <div class="ring-sub" id="ring-sla-sub">Avg. resolution vs. target</div>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- ===================== LIVE MAP ===================== --}}
     <div class="row mb-4">
@@ -742,11 +814,34 @@
                 renderPriorityChart(analytics.priority_breakdown || {});
                 renderAgencyResponseChart(analytics.agency_response_times || {});
                 renderHotspots(analytics.redundancy_hotspots || []);
+
+                const perf = data.performance || {};
+                setRing('ring-resolution-fill', 'ring-resolution-value', perf.resolution_rate);
+                setText('ring-resolution-sub', `${perf.resolved_closed_count ?? 0} of ${data.total_incidents ?? 0} cases resolved`);
+
+                setRing('ring-coverage-fill', 'ring-coverage-value', perf.assignment_coverage_rate);
+                setText('ring-coverage-sub', `${data.active_assignments ?? 0} of ${perf.open_incidents_count ?? 0} open cases dispatched`);
+
+                setRing('ring-sla-fill', 'ring-sla-value', perf.sla_compliance);
+                setText('ring-sla-sub', perf.avg_resolution_hours
+                    ? `Avg ${perf.avg_resolution_hours}h vs ${perf.sla_target_hours ?? 48}h target`
+                    : 'No completed cases yet');
             }
 
             function setText(id, val) {
                 const el = document.getElementById(id);
                 if (el) el.textContent = val;
+            }
+
+            // r=52 circle circumference, matches the CSS stroke-dasharray above
+            const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+            function setRing(fillId, valueId, percent) {
+                const fill = document.getElementById(fillId);
+                const label = document.getElementById(valueId);
+                const hasValue = percent !== null && percent !== undefined && !Number.isNaN(percent);
+                const pct = hasValue ? Math.max(0, Math.min(100, percent)) : 0;
+                if (fill) fill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - pct / 100);
+                if (label) label.textContent = hasValue ? Math.round(pct) : '—';
             }
 
             function ensureChart(key, ctxId, config) {

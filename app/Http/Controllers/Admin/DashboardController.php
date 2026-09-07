@@ -105,9 +105,21 @@ class DashboardController extends Controller
             'closed' => $statusCountsRaw[IncidentStatus::Closed->value] ?? 0,
         ];
 
+        // Situational Map feed: only currently-open incidents belong here.
+        // Once a case is resolved/closed/rejected/referred outside the AOR
+        // it's done — it should disappear from the live map immediately
+        // rather than linger just because it was "recent". No arbitrary
+        // limit either: a live map should show every open case, not just
+        // the last 10 reported (which could hide older still-open ones).
         $recentIncidents = Incident::with(['incidentType', 'agency'])
+            ->whereIn('status', [
+                IncidentStatus::Submitted->value,
+                IncidentStatus::Received->value,
+                IncidentStatus::Assigned->value,
+                IncidentStatus::InProgress->value,
+                IncidentStatus::PendingInfo->value,
+            ])
             ->orderByDesc('reported_at')
-            ->limit(10)
             ->get()
             ->map(function (Incident $inc) {
                 return [
@@ -222,10 +234,49 @@ class DashboardController extends Controller
                 ];
             });
 
+        // ---- Performance Overview (Command Center rings) ----
+        $totalIncidents = Incident::count();
+
+        $resolvedClosedCount = Incident::whereIn('status', [
+            IncidentStatus::Resolved->value,
+            IncidentStatus::Closed->value,
+        ])->count();
+
+        $openIncidentsCount = Incident::whereIn('status', [
+            IncidentStatus::Submitted->value,
+            IncidentStatus::Received->value,
+            IncidentStatus::Assigned->value,
+            IncidentStatus::InProgress->value,
+            IncidentStatus::PendingInfo->value,
+        ])->count();
+
+        $resolutionRate = $totalIncidents > 0
+            ? round(($resolvedClosedCount / $totalIncidents) * 100)
+            : 0;
+
+        // Nothing open to dispatch counts as fully covered rather than 0%.
+        $assignmentCoverageRate = $openIncidentsCount > 0
+            ? min(100, round(($activeAssignments / $openIncidentsCount) * 100))
+            : 100;
+
+        $slaTargetHours = (int) config('raniag.sla_target_hours', 48);
+        $slaCompliance = $avgResolutionHours > 0
+            ? min(100, round(($slaTargetHours / $avgResolutionHours) * 100))
+            : null; // no completed cases yet — ring shows "no data" instead of a misleading 100%
+
         return response()->json([
             'incident_status_breakdown' => $statusCounts,
-            'total_incidents' => Incident::count(),
+            'total_incidents' => $totalIncidents,
             'active_agencies' => $agencies,
+            'performance' => [
+                'resolution_rate' => $resolutionRate,
+                'resolved_closed_count' => $resolvedClosedCount,
+                'assignment_coverage_rate' => $assignmentCoverageRate,
+                'open_incidents_count' => $openIncidentsCount,
+                'sla_compliance' => $slaCompliance,
+                'sla_target_hours' => $slaTargetHours,
+                'avg_resolution_hours' => $avgResolutionHours,
+            ],
             'recent_incidents' => $recentIncidents,
             'active_assignments' => $activeAssignments,
             'assignments_completed_this_week' => $completedThisWeek,

@@ -21,24 +21,13 @@
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0">
                 <div class="p-3 border-bottom bg-light-subtle">
-                    <form method="GET" class="row g-2 align-items-end" data-loading-message="Filtering agency accounts...">
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted mb-1">Search agencies</label>
-                            <input type="search" name="agency_q" value="{{ request('agency_q') }}" class="form-control" placeholder="Search name, code, email">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">From</label>
-                            <input type="date" name="agency_date_from" value="{{ request('agency_date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">To</label>
-                            <input type="date" name="agency_date_to" value="{{ request('agency_date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-                        </div>
-                        <div class="col-md-2 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Filter</button>
-                            <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary">Clear</a>
-                        </div>
-                    </form>
+                    <x-filters.toolbar
+                        search-placeholder="Search name, code, email"
+                        search-name="agency_q"
+                        date-from-name="agency_date_from"
+                        date-to-name="agency_date_to"
+                        :clear-url="route('admin.agencies.index')"
+                    />
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-agencies-tbody" data-live-refresh-interval="4000">
@@ -137,24 +126,13 @@
                     </div>
                 </div>
                 <div class="p-3 border-bottom bg-light-subtle">
-                    <form method="GET" class="row g-2 align-items-end" data-loading-message="Filtering personnel accounts...">
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted mb-1">Search personnel</label>
-                            <input type="search" name="personnel_q" value="{{ request('personnel_q') }}" class="form-control" placeholder="Search name, email, role, team">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">From</label>
-                            <input type="date" name="personnel_date_from" value="{{ request('personnel_date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">To</label>
-                            <input type="date" name="personnel_date_to" value="{{ request('personnel_date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-                        </div>
-                        <div class="col-md-2 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Filter</button>
-                            <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary">Clear</a>
-                        </div>
-                    </form>
+                    <x-filters.toolbar
+                        search-placeholder="Search name, email, role, team"
+                        search-name="personnel_q"
+                        date-from-name="personnel_date_from"
+                        date-to-name="personnel_date_to"
+                        :clear-url="route('admin.agencies.index')"
+                    />
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-personnel-tbody" data-live-refresh-interval="4000">

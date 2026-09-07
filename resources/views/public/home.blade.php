@@ -4,16 +4,16 @@
 
 @section('content')
 <div class="container">
-    <div class="raniag-hero p-4 p-lg-5 mb-5" data-rg-reveal>
+    <div class="raniag-hero p-4 p-lg-5 mb-5">
         <div class="row align-items-center g-4">
             <div class="col-lg-7">
-                <p class="text-uppercase small fw-semibold text-white-50 mb-2">{{ config('raniag.organization') }}</p>
-                <h1 class="display-5 fw-bold mb-2">{{ config('raniag.name') }}</h1>
-                <p class="rg-tagline mb-3">{{ config('raniag.tagline') }}</p>
-                <p class="lead mb-4 text-white-50">
+                <p class="text-uppercase small fw-semibold text-white-50 mb-2" data-rg-hero-eyebrow>{{ config('raniag.organization') }}</p>
+                <h1 class="display-5 fw-bold mb-2" data-rg-hero-title>{{ config('raniag.name') }}</h1>
+                <p class="rg-tagline mb-3" data-rg-hero-tag>{{ config('raniag.tagline') }}</p>
+                <p class="lead mb-4 text-white-50" data-rg-hero-desc>
                     Report incidents quickly and track their status securely. Your report helps keep our community safe and responsive.
                 </p>
-                <div class="d-flex flex-wrap gap-3">
+                <div class="d-flex flex-wrap gap-3" data-rg-hero-btns>
                     <a href="{{ route('public.report.create') }}" class="btn btn-light btn-lg px-4">
                         <i class="bi bi-megaphone me-2"></i>Report an Incident
                     </a>
@@ -22,8 +22,8 @@
                     </a>
                 </div>
             </div>
-            <div class="col-lg-5">
-                <div class="card raniag-card border-0">
+            <div class="col-lg-5" data-rg-hero-card>
+                <div class="card raniag-card rg-card-hover border-0">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-bold mb-3">How it works</h2>
                         <ol class="mb-0 ps-3">
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <div class="row g-4 mb-2" data-rg-reveal>
+    <div class="row g-4 mb-2" data-rg-stagger>
         <div class="col-md-4">
             <div class="card raniag-card h-100 text-center p-4">
                 <div class="text-primary fs-2 mb-3"><i class="bi bi-eye-slash"></i></div>
@@ -63,7 +63,7 @@
     </div>
 
     {{-- ===================== UPDATES & ANNOUNCEMENTS ===================== --}}
-    <div class="mt-5" id="updates" data-rg-reveal>
+    <div class="mt-5" id="updates" data-rg-reveal data-rg-stagger>
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <div>
                 <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>UPDATES</span>
@@ -102,7 +102,7 @@
     </div>
 
     {{-- ===================== DOWNLOAD APP ===================== --}}
-    <div class="rg-download-cta mt-5 d-flex flex-wrap align-items-center justify-content-between gap-3" data-rg-reveal>
+    <div class="rg-download-cta mt-5 d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
             <img src="/images/icons/icon-96x96.png" alt="RANIAG app icon" width="64" height="64" class="rounded-4">
             <div>
@@ -115,8 +115,70 @@
         </button>
     </div>
 
+    {{-- ===================== FAQ ===================== --}}
+    <div class="row justify-content-center mt-5" id="faq">
+        <div class="col-lg-9">
+            <div class="rg-page-head text-center" data-rg-reveal>
+                <span class="rg-eyebrow"><i class="bi bi-question-circle"></i>Good to know</span>
+                <h2 class="rg-page-title h4">Frequently Asked Questions</h2>
+            </div>
+            <div class="accordion rg-faq-accordion" id="rgFaqAccordion" data-rg-reveal>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq1">
+                            Is my report really anonymous if I choose to be?
+                        </button>
+                    </h3>
+                    <div id="rgFaq1" class="accordion-collapse collapse show" data-bs-parent="#rgFaqAccordion">
+                        <div class="accordion-body">Yes. Leave the name and contact fields blank and no identifying details are attached to the report — only your tracking number links back to it, and only you hold that number.</div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq2">
+                            How fast will {{ config('raniag.organization') }} respond?
+                        </button>
+                    </h3>
+                    <div id="rgFaq2" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
+                        <div class="accordion-body">Response time depends on the incident's priority and current caseload, but every report is reviewed and assigned to a responder — you'll see the status change on your tracking page as it moves.</div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq3">
+                            Do I need to install the app to file a report?
+                        </button>
+                    </h3>
+                    <div id="rgFaq3" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
+                        <div class="accordion-body">No — the website works on any browser. Installing the app just makes reporting faster and lets you keep using it with limited functionality when you're offline.</div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq4">
+                            What happens if my location is outside Pamplona?
+                        </button>
+                    </h3>
+                    <div id="rgFaq4" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
+                        <div class="accordion-body">Your report is flagged as outside MDRRMO Pamplona's area of responsibility and referred onward — it won't just sit unprocessed. Your tracking page will show this status clearly.</div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq5">
+                            Where can I see community-wide incident trends?
+                        </button>
+                    </h3>
+                    <div id="rgFaq5" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
+                        <div class="accordion-body">The <a href="{{ route('public.dashboard') }}">Community Dashboard</a> shows aggregated, anonymized counts by month, barangay, and incident type — never individual reports or reporter details.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- ===================== NEED HELP → SUPPORT CENTER ===================== --}}
-    <div class="row justify-content-center mt-5" id="help" data-rg-reveal>
+    <div class="row justify-content-center mt-5" id="help">
         <div class="col-lg-8">
             <div class="rg-support-card text-center p-4 p-lg-5">
                 <div class="text-primary fs-2 mb-2"><i class="bi bi-headset"></i></div>

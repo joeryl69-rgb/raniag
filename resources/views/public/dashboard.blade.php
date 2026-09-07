@@ -19,7 +19,7 @@
 
     <div id="pd-content" class="d-none">
         {{-- KPI strip --}}
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4" data-rg-stagger>
             <div class="col-6 col-md-3">
                 <div class="rg-support-card h-100 text-center">
                     <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 text-primary mb-2" style="width:44px;height:44px;"><i class="bi bi-calendar-week"></i></div>
@@ -50,7 +50,7 @@
             </div>
         </div>
 
-        <div class="row g-4 mb-4">
+        <div class="row g-4 mb-4" data-rg-stagger>
             <div class="col-lg-6">
                 <div class="rg-support-card h-100">
                     <div class="rg-support-card__head"><i class="bi bi-bar-chart-line me-2"></i>6-Month Trend</div>
@@ -65,7 +65,7 @@
             </div>
         </div>
 
-        <div class="row g-4 mb-4">
+        <div class="row g-4 mb-4" data-rg-stagger>
             <div class="col-lg-6">
                 <div class="rg-support-card h-100">
                     <div class="rg-support-card__head"><i class="bi bi-geo-alt me-2"></i>Top Barangays (Report Count)</div>
@@ -109,6 +109,10 @@
     function render(data) {
         document.getElementById('pd-loading').classList.add('d-none');
         document.getElementById('pd-content').classList.remove('d-none');
+        // Content was hidden (d-none) when GSAP/ScrollTrigger first scanned
+        // the page, so it never got a reveal animation. Trigger it manually
+        // now that the container is actually visible.
+        window.rgRevealNow && window.rgRevealNow('#pd-content');
 
         document.getElementById('pd-total-month').textContent = data.total_this_month;
         document.getElementById('pd-resolved-month').textContent = data.resolved_this_month;

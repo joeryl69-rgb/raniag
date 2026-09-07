@@ -14,14 +14,14 @@ class FeedbackController extends Controller
     public function create(): View
     {
         return view('public.support.create', [
-            'categories' => FeedbackSubmission::CATEGORIES,
+            'categories' => FeedbackSubmission::filterableCategories(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'category' => ['required', 'string', 'in:'.implode(',', array_keys(FeedbackSubmission::CATEGORIES))],
+            'category' => ['required', 'string', 'in:'.implode(',', array_keys(FeedbackSubmission::filterableCategories()))],
             'subject' => ['required', 'string', 'max:150'],
             'message' => ['required', 'string', 'max:2000'],
             'submitter_name' => ['nullable', 'string', 'max:150'],

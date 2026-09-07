@@ -19,7 +19,7 @@ class FeedbackController extends Controller
     public function create(Request $request): View
     {
         return view('agency.support.create', [
-            'categories' => FeedbackSubmission::CATEGORIES,
+            'categories' => FeedbackSubmission::filterableCategories(),
             'user' => $request->user(),
         ]);
     }
@@ -27,7 +27,7 @@ class FeedbackController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'category' => ['required', 'string', 'in:'.implode(',', array_keys(FeedbackSubmission::CATEGORIES))],
+            'category' => ['required', 'string', 'in:'.implode(',', array_keys(FeedbackSubmission::filterableCategories()))],
             'subject' => ['required', 'string', 'max:150'],
             'message' => ['required', 'string', 'max:2000'],
         ]);

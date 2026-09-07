@@ -9,7 +9,7 @@
 ])
 @if (session('sent'))
     <div class="rg-support-card text-center py-5 mb-4" id="supportSentCard">
-        <i class="bi bi-check-circle-fill text-success" style="font-size:2.75rem;"></i>
+        <i class="bi bi-check-circle-fill text-success" style="font-size:2.75rem;" data-rg-pop></i>
         <h2 class="h5 fw-bold mt-3 mb-2">Your message has been sent</h2>
         <p class="text-muted mb-1" style="max-width:520px; margin-inline:auto;">
             It's been forwarded to the {{ $orgLabel ?? config('raniag.organization') }} team for review.
@@ -76,8 +76,8 @@
             <div class="rg-support-card mb-4">
                 <div class="rg-support-card__head">Category <span class="text-danger">*</span></div>
                 <input type="hidden" name="category" id="supportCategory" value="{{ old('category') }}" required>
-                <div class="rg-cat-grid" id="supportCatGrid">
-                    @foreach(\App\Models\FeedbackSubmission::filterableCategories() as $key => $cat)
+                <div class="rg-cat-grid" id="supportCatGrid" data-rg-stagger="css">
+                    @foreach($categories as $key => $cat)
                         <div class="rg-cat-choice" data-value="{{ $key }}" data-label="{{ $cat['label'] }}" role="button" tabindex="0">
                             <i class="bi {{ $cat['icon'] }}"></i>
                             <span class="rg-cat-choice__label">{{ $cat['label'] }}</span>
@@ -109,7 +109,7 @@
         </form>
     </div>
 
-    <div class="col-lg-4">
+    <div class="col-lg-4" data-rg-stagger="css">
         <div class="rg-support-card mb-4">
             <div class="rg-support-card__head rg-support-card__head--dark" style="margin:-20px -20px 16px;"><i class="bi bi-graph-up-arrow me-2"></i>What happens next</div>
             <ul class="rg-timeline">

@@ -90,7 +90,34 @@ a:hover { color: var(--raniag-accent); }
     border-bottom: 2px solid var(--raniag-border);
 }
 .table > :not(caption) > * > td { vertical-align: middle; }
+.table-hover > tbody > tr {
+    position: relative;
+    border-left: 3px solid transparent;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+.table-hover > tbody > tr:hover {
+    border-left-color: var(--raniag-primary);
+}
 .table-hover > tbody > tr:hover > * { background-color: var(--raniag-primary-light); }
+
+/* Empty-state pattern already used across every list page (sms-logs,
+   audit-logs, feedback, document requests, agencies, incidents, ...):
+   a centered icon + message inside a full-width <td>. Styling it here
+   uplifts all of those pages at once, no per-page markup changes. */
+.text-center.py-5.text-muted {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+}
+.text-center.py-5.text-muted i.display-4,
+.text-center.py-5.text-muted i.bi {
+    color: var(--raniag-border);
+    display: block;
+    margin: 0 auto .75rem;
+}
+.text-center.py-5.text-muted p {
+    font-size: .9rem;
+    font-weight: 500;
+}
 
 /* Badges: rounded pill everywhere so status labels look uniform across admin/agency/public */
 .badge {
@@ -102,6 +129,19 @@ a:hover { color: var(--raniag-accent); }
 .badge.bg-primary, .badge.bg-primary-subtle { background-color: var(--raniag-primary) !important; color: #fff !important; }
 .badge.bg-primary-subtle { background-color: var(--raniag-primary-light) !important; color: var(--raniag-primary-dark) !important; }
 .badge.bg-secondary-subtle { background-color: #eef1f3 !important; color: #556069 !important; }
+
+/* Shared status/priority badge components (x-public.status-badge,
+   x-priority-badge) get a slightly bolder treatment than a plain
+   Bootstrap badge, since they carry the most important glance-value on
+   every incident row across all three roles. */
+.raniag-status-badge,
+.raniag-priority-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 0.38em 0.7em;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+}
 
 /* Form controls: bigger touch targets for mobile, consistent focus ring */
 .form-control, .form-select {
@@ -245,12 +285,6 @@ body.raniag-public {
     font-size: 1.35rem;
     font-weight: 700;
     color: var(--raniag-primary-dark);
-}
-
-.raniag-status-badge {
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: capitalize;
 }
 
 .raniag-timeline {
@@ -1003,6 +1037,33 @@ body.raniag-public {
 .rg-cat-choice:hover { border-color: var(--rg-brand-soft, #3d8bfd); transform: translateY(-2px); }
 .rg-cat-choice.is-selected { border-color: var(--rg-brand, #0b5ed7); background: rgba(11,94,215,.06); box-shadow: 0 6px 16px -8px rgba(11,94,215,.4); }
 .rg-cat-choice.is-selected i, .rg-cat-choice.is-selected .rg-cat-choice__label { color: var(--rg-brand, #0b5ed7); }
+
+@keyframes rg-support-stagger-in {
+    from { opacity: 0; transform: translateY(44px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.rg-cat-grid[data-rg-stagger="css"] > *,
+[data-rg-stagger="css"].col-lg-4 > .rg-support-card {
+    animation: rg-support-stagger-in .6s cubic-bezier(.22, 1, .36, 1) both;
+}
+.rg-cat-grid[data-rg-stagger="css"] > :nth-child(2),
+[data-rg-stagger="css"].col-lg-4 > .rg-support-card:nth-child(2) { animation-delay: 50ms; }
+.rg-cat-grid[data-rg-stagger="css"] > :nth-child(3),
+[data-rg-stagger="css"].col-lg-4 > .rg-support-card:nth-child(3) { animation-delay: 100ms; }
+.rg-cat-grid[data-rg-stagger="css"] > :nth-child(4),
+[data-rg-stagger="css"].col-lg-4 > .rg-support-card:nth-child(4) { animation-delay: 150ms; }
+.rg-cat-grid[data-rg-stagger="css"] > :nth-child(5),
+[data-rg-stagger="css"].col-lg-4 > .rg-support-card:nth-child(5) { animation-delay: 200ms; }
+.rg-cat-grid[data-rg-stagger="css"] > :nth-child(6) { animation-delay: 250ms; }
+.rg-cat-grid[data-rg-stagger="css"] > :nth-child(7) { animation-delay: 300ms; }
+@media (prefers-reduced-motion: reduce) {
+    .rg-cat-grid[data-rg-stagger="css"] > *,
+    [data-rg-stagger="css"].col-lg-4 > .rg-support-card {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
 .rg-support-submit { background: linear-gradient(135deg, #0b5ed7, #073a86); color: #fff; font-weight: 700; border: none; padding: 10px 22px; border-radius: 10px; box-shadow: 0 10px 22px -10px rgba(11,94,215,.5); }
 .rg-support-submit:hover { color: #fff; opacity: .92; }
 .rg-timeline { list-style: none; margin: 0; padding: 0; }
@@ -1045,3 +1106,22 @@ body.raniag-public {
 .rg-announce-date { font-size: .74rem; color: #8892a3; }
 .rg-download-cta { background: linear-gradient(135deg, #0b1220, #16203a); color: #fff; border-radius: 20px; padding: 34px 32px; }
 .rg-download-cta .btn-light { font-weight: 700; }
+
+/* ============================================================
+   RANIAG — Reusable filter bar (Alpine-powered): search icon,
+   active-filter chips, and Alpine's pre-init flash guard.
+============================================================ */
+[x-cloak] { display: none !important; }
+
+.rg-filter-bar { position: relative; }
+.rg-search-input { position: relative; }
+.rg-search-input i { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--raniag-muted, #64748b); font-size: .85rem; pointer-events: none; }
+.rg-search-input input.form-control { padding-left: 2rem; }
+
+.rg-filter-chips { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed var(--raniag-border); }
+.rg-filter-chip-count { font-size: .72rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--raniag-primary); display: inline-flex; align-items: center; gap: .3rem; margin-right: .25rem; }
+.rg-filter-chip { display: inline-flex; align-items: center; gap: .4rem; background: var(--raniag-primary-light); color: var(--raniag-primary-dark); font-size: .78rem; font-weight: 600; padding: .28rem .5rem .28rem .7rem; border-radius: 999px; }
+.rg-filter-chip button { border: 0; background: rgba(11,94,215,.15); color: var(--raniag-primary-dark); width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .72rem; line-height: 1; padding: 0; cursor: pointer; }
+.rg-filter-chip button:hover { background: rgba(11,94,215,.28); }
+.rg-filter-chip-clear { font-size: .78rem; font-weight: 700; color: var(--raniag-danger, #dc3545); text-decoration: none; margin-left: .25rem; }
+.rg-filter-chip-clear:hover { text-decoration: underline; }

@@ -14,14 +14,10 @@
 
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
-        <form method="GET" action="{{ route('admin.feedback.index') }}" class="row g-2 align-items-end" data-loading-message="Filtering feedback...">
-            <div class="col-md-3">
-                <label class="form-label small text-muted mb-1">Search</label>
-                <input type="search" name="q" value="{{ request('q') }}" class="form-control" placeholder="Search subject, message, name, email">
-            </div>
+        <x-filters.toolbar search-placeholder="Search subject, message, name, email" :action="route('admin.feedback.index')">
             <div class="col-md-2">
                 <label class="form-label small text-muted mb-1">Status</label>
-                <select name="status" class="form-select">
+                <select name="status" class="form-select" data-filter-default="all">
                     <option value="all" @selected(request('status', 'all') === 'all')>All statuses</option>
                     <option value="new" @selected(request('status')==='new')>New</option>
                     <option value="reviewed" @selected(request('status')==='reviewed')>Reviewed</option>
@@ -30,7 +26,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small text-muted mb-1">Category</label>
-                <select name="category" class="form-select">
+                <select name="category" class="form-select" data-filter-default="all">
                     <option value="all" @selected(request('category', 'all') === 'all')>All categories</option>
                     @foreach(\App\Models\FeedbackSubmission::filterableCategories() as $key => $cat)
                         <option value="{{ $key }}" @selected(request('category')===$key)>{{ $cat['label'] }}</option>
@@ -39,29 +35,13 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small text-muted mb-1">Source</label>
-                <select name="source" class="form-select">
+                <select name="source" class="form-select" data-filter-default="all">
                     <option value="all" @selected(request('source', 'all') === 'all')>All sources</option>
                     <option value="public" @selected(request('source')==='public')>Public (Landing Page)</option>
                     <option value="agency" @selected(request('source')==='agency')>Support Center (Agency/Personnel)</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label small text-muted mb-1">From</label>
-                <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small text-muted mb-1">To</label>
-                <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-            </div>
-            <div class="col-md-auto d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-funnel me-1"></i>Filter
-                </button>
-                <a href="{{ route('admin.feedback.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle me-1"></i>Clear
-                </a>
-            </div>
-        </form>
+        </x-filters.toolbar>
     </div>
 </div>
 

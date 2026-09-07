@@ -7,7 +7,7 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card raniag-card text-center p-4 p-lg-5" data-rg-reveal>
-                <div class="text-success display-4 mb-3"><i class="bi bi-check-circle-fill"></i></div>
+                <div class="text-success display-4 mb-3" data-rg-pop><i class="bi bi-check-circle-fill"></i></div>
                 <h1 class="h3 fw-bold mb-2">Report Submitted Successfully</h1>
                 <p class="text-muted mb-4">
                     Your incident has been received by {{ config('raniag.organization') }}.
@@ -31,6 +31,24 @@
                 </div>
 
                 <hr class="my-4">
+
+                <div class="text-start mx-auto mb-4" style="max-width: 480px;" data-rg-stagger>
+                    <p class="text-muted small text-uppercase fw-semibold mb-3 text-center">What happens next</p>
+                    <div class="raniag-timeline">
+                        <div class="raniag-timeline-item">
+                            <div class="fw-semibold small">Reviewed by {{ config('raniag.organization') }}</div>
+                            <div class="text-muted small">Your report enters the queue for staff review.</div>
+                        </div>
+                        <div class="raniag-timeline-item">
+                            <div class="fw-semibold small">Assigned to a responder</div>
+                            <div class="text-muted small">It's routed to the agency or personnel best suited to handle it.</div>
+                        </div>
+                        <div class="raniag-timeline-item">
+                            <div class="fw-semibold small">Status updates as it progresses</div>
+                            <div class="text-muted small">Check back anytime with your tracking number above.</div>
+                        </div>
+                    </div>
+                </div>
 
                 <p class="text-muted small mb-3">
                     You can return anytime to track progress. If you provided contact details, the LGU may reach out for clarification.

@@ -94,7 +94,7 @@
                         
                         <div class="progress-steps">
                             @foreach($stepOrder as $i => $key)
-                                <div class="progress-step {{ $i <= $currentIndex ? 'completed' : '' }}" data-status="{{ $key }}">
+                                <div class="progress-step {{ $i <= $currentIndex ? 'completed' : '' }}" data-status="{{ $key }}" data-rg-pop>
                                     <div class="step-dot">
                                         <i class="bi {{ $steps[$key]['icon'] }}"></i>
                                     </div>
@@ -108,7 +108,7 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4" data-rg-stagger>
         <div class="col-lg-4">
             <div class="card raniag-card mb-4">
                 <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">

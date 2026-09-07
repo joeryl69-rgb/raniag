@@ -12,18 +12,14 @@
         </div>
 
         <div class="p-3 border-bottom bg-light-subtle">
-            <form method="GET" action="{{ route('admin.document_requests.index') }}" class="row g-2 align-items-end" data-loading-message="Filtering document requests...">
-                <div class="col-md-4">
-                    <label class="form-label small text-muted mb-1">Search</label>
-                    <input type="search" name="q" value="{{ request('q') }}" class="form-control" placeholder="Search tracking #, agency, notes">
-                </div>
+            <x-filters.toolbar search-placeholder="Search tracking #, agency, notes" :action="route('admin.document_requests.index')">
                 @php
                     $currentStatus = request()->query('status', null);
                     $selected = $currentStatus === null ? '0' : $currentStatus;
                 @endphp
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Status</label>
-                    <select name="status" id="status" class="form-select">
+                    <select name="status" id="status" class="form-select" data-filter-default="0">
                         <option value="0" @selected($selected === '0')>Pending</option>
                         <option value="sent" @selected($selected === 'sent')>Sent</option>
                         <option value="failed" @selected($selected === 'failed')>Failed</option>
@@ -31,23 +27,7 @@
                         <option value="all" @selected($selected === 'all')>All</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">From</label>
-                    <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">To</label>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control">
-                </div>
-                <div class="col-md-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-funnel me-1"></i>Filter
-                    </button>
-                    <a href="{{ route('admin.document_requests.index') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle me-1"></i>Clear
-                    </a>
-                </div>
-            </form>
+            </x-filters.toolbar>
         </div>
 
         <div class="card-body">

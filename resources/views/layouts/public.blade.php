@@ -18,6 +18,11 @@
     <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
     <link rel="preload" href="{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700|instrument-serif:400&display=swap" rel="stylesheet">
+    {{-- GSAP + ScrollTrigger (animation engine) --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+    {{-- Lenis (smooth scroll, synced with GSAP ticker) --}}
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js" defer></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
@@ -226,15 +231,24 @@
             src: url("{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}") format("woff2");
         }
 
-        /* ---------- reveal on scroll (progressive enhancement) ---------- */
-        [data-rg-reveal] { opacity: 0; transform: translateY(14px); transition: opacity .35s ease, transform .35s ease; }
-        [data-rg-reveal].is-in { opacity: 1; transform: none; }
+        /* ---------- reveal on scroll — GSAP handles opacity/transform ---------- */
+        /* GSAP sets inline styles; this only hides elements before GSAP loads */
+        [data-rg-reveal]:not(.gsap-ready) { opacity: 0; }
+        [data-rg-reveal].gsap-ready { opacity: 1; }
         /* Live-refresh regions must never flash invisible after a DOM swap */
-        [data-live-refresh-target] [data-rg-reveal] { opacity: 1; transform: none; }
+        [data-live-refresh-target] [data-rg-reveal] { opacity: 1 !important; transform: none !important; }
+
+        /* Lenis smooth-scroll html setup */
+        html.lenis, html.lenis body { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto !important; }
+        .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+
+        /* Hero word reveal — clip-path animation base */
+        [data-rg-hero-word] { display: inline-block; }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation: none !important; transition: none !important; }
-            [data-rg-reveal] { opacity: 1; transform: none; }
+            [data-rg-reveal]:not(.gsap-ready) { opacity: 1; }
         }
 
         /* ============================================================
@@ -524,6 +538,35 @@
         /* ---------- map ---------- */
         #incident-map { height: 340px; border-radius: 14px; border: 1px solid var(--rg-line); overflow: hidden; }
 
+        /* ---------- incident type cards ---------- */
+        .rg-type-tile {
+            display: flex; align-items: flex-start; gap: .85rem;
+            background: var(--rg-card); border: 1px solid var(--rg-line);
+            border-left: 3px solid var(--rg-brand-soft);
+            border-radius: var(--rg-radius); box-shadow: var(--rg-shadow-sm);
+            padding: 1rem 1.1rem; text-align: left;
+            transition: transform .2s ease, box-shadow .2s ease, border-left-color .2s ease;
+        }
+        .rg-type-tile:hover {
+            transform: translateY(-3px); box-shadow: var(--rg-shadow);
+            border-left-color: var(--rg-brand);
+        }
+        .rg-type-tile .rg-icon-tile { flex: 0 0 auto; margin-top: .1rem; }
+        .rg-type-tile__desc { font-size: .78rem; margin-top: .15rem; line-height: 1.35; }
+
+        /* ---------- FAQ accordion ---------- */
+        .rg-faq-accordion .accordion-item {
+            border: 1px solid var(--rg-line); border-radius: var(--rg-radius) !important;
+            margin-bottom: .6rem; overflow: hidden;
+        }
+        .rg-faq-accordion .accordion-button {
+            font-weight: 600; color: var(--rg-ink);
+        }
+        .rg-faq-accordion .accordion-button:not(.collapsed) {
+            background: rgba(11,94,215,.06); color: var(--rg-brand-dark); box-shadow: none;
+        }
+        .rg-faq-accordion .accordion-button:focus { box-shadow: 0 0 0 3px rgba(11,94,215,.14); }
+
     </style>
 </head>
 <body class="raniag-public d-flex flex-column min-vh-100">
@@ -715,50 +758,288 @@
         window.scrollTo(0, rgLockedScrollY);
     }
 
-    // Sticky navbar state + scroll progress bar
-    (function () {
-        const nav = document.getElementById('rg-nav');
-        const bar = document.getElementById('rg-progress');
-        const onScroll = () => {
-            const y = window.scrollY || 0;
-            if (nav) nav.classList.toggle('is-scrolled', y > 8);
-            if (bar) {
-                const h = document.documentElement.scrollHeight - window.innerHeight;
-                bar.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
-            }
-        };
-        window.addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
-    })();
+    // Reveal helper for content that renders AFTER the initial GSAP/
+    // ScrollTrigger setup below (e.g. dashboard KPIs injected once an
+    // async fetch resolves). ScrollTrigger can't watch something that
+    // doesn't exist yet, so pages with async content call this manually,
+    // right after they un-hide their container, instead of relying on
+    // data-rg-reveal/data-rg-stagger.
+    window.rgRevealNow = function (root) {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced || typeof gsap === 'undefined') return;
+        const scope = (typeof root === 'string') ? document.querySelector(root) : (root || document);
+        if (!scope) return;
+        scope.querySelectorAll('[data-rg-stagger]').forEach(container => {
+            if (container.dataset.rgStagger === 'css') return;
+            const children = Array.from(container.children);
+            if (!children.length) return;
+            gsap.from(children, { y: 30, opacity: 0, duration: 0.55, stagger: { amount: 0.3, from: 'start' }, ease: 'power3.out' });
+        });
+        scope.querySelectorAll('[data-rg-pop]').forEach((el, i) => {
+            gsap.from(el, { scale: 0.7, opacity: 0, duration: 0.45, delay: i * 0.06, ease: 'back.out(1.7)' });
+        });
+    };
 
-    // Reveal-on-scroll — show above-the-fold blocks immediately so first paint
-    // is not blank (especially on mobile track/status pages).
-    (function () {
-        const items = document.querySelectorAll('[data-rg-reveal]');
-        if (!items.length) return;
+    // ============================================================
+    //  GSAP + Lenis — initialised after scripts are deferred-loaded
+    // ============================================================
+    window.addEventListener('DOMContentLoaded', function () {
+        // ------ respect reduced-motion preference ------
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        const revealNow = (el) => el.classList.add('is-in');
+        // ------ mark all reveal elements as gsap-ready (removes CSS opacity:0) ------
+        document.querySelectorAll('[data-rg-reveal]').forEach(el => el.classList.add('gsap-ready'));
 
-        if (!('IntersectionObserver' in window)) {
-            items.forEach(revealNow);
+        if (prefersReduced || typeof gsap === 'undefined') {
+            // Fallback: ensure everything visible, run navbar logic natively
+            const nav = document.getElementById('rg-nav');
+            const bar = document.getElementById('rg-progress');
+            const onScroll = () => {
+                const y = window.scrollY || 0;
+                if (nav) nav.classList.toggle('is-scrolled', y > 8);
+                if (bar) { const h = document.documentElement.scrollHeight - window.innerHeight; bar.style.width = (h > 0 ? (y / h) * 100 : 0) + '%'; }
+            };
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
             return;
         }
 
-        const io = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                if (e.isIntersecting) { revealNow(e.target); io.unobserve(e.target); }
-            });
-        }, { rootMargin: '0px 0px -4% 0px', threshold: 0.01 });
-
-        items.forEach(el => {
-            const rect = el.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                revealNow(el);
-            } else {
-                io.observe(el);
-            }
+        // ------ 1. Lenis smooth scroll ------
+        const lenis = new Lenis({
+            duration: 1.15,
+            easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            smoothTouch: false,
+            touchMultiplier: 1.8,
+            infinite: false,
         });
-    })();
+
+        // Sync Lenis with GSAP ticker for frame-perfect timing
+        gsap.ticker.add(time => lenis.raf(time * 1000));
+        gsap.ticker.lagSmoothing(0);
+
+        // ------ 2. ScrollTrigger ------
+        gsap.registerPlugin(ScrollTrigger);
+        lenis.on('scroll', ScrollTrigger.update);
+        ScrollTrigger.scrollerProxy(document.documentElement, {
+            scrollTop(value) { return arguments.length ? lenis.scrollTo(value, { immediate: true }) : lenis.scroll; },
+            getBoundingClientRect() { return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight }; },
+        });
+
+        // ------ 3. Scroll progress bar (via Lenis event) ------
+        const bar = document.getElementById('rg-progress');
+        if (bar) {
+            lenis.on('scroll', ({ scroll, limit }) => {
+                bar.style.width = (limit > 0 ? (scroll / limit) * 100 : 0) + '%';
+            });
+        }
+
+        // ------ 4. Navbar sticky state (via Lenis) ------
+        const nav = document.getElementById('rg-nav');
+        if (nav) {
+            lenis.on('scroll', ({ scroll }) => nav.classList.toggle('is-scrolled', scroll > 8));
+        }
+
+        // ------ 6. Hero section — staggered entrance ------
+        const heroEyebrow = document.querySelector('[data-rg-hero-eyebrow]');
+        const heroTitle   = document.querySelector('[data-rg-hero-title]');
+        const heroTag     = document.querySelector('[data-rg-hero-tag]');
+        const heroDesc    = document.querySelector('[data-rg-hero-desc]');
+        const heroBtns    = document.querySelector('[data-rg-hero-btns]');
+        const heroCard    = document.querySelector('[data-rg-hero-card]');
+
+        if (heroTitle) {
+            const heroTl = gsap.timeline({ delay: 0.22 });
+            if (heroEyebrow) heroTl.from(heroEyebrow, { y: 22, opacity: 0, duration: 0.55, ease: 'power3.out' });
+            heroTl.from(heroTitle,   { y: 38, opacity: 0, duration: 0.75, ease: 'power4.out' }, heroEyebrow ? '-=0.25' : '+=0');
+            if (heroTag)  heroTl.from(heroTag,  { y: 18, opacity: 0, duration: 0.5, ease: 'power3.out' }, '-=0.5');
+            if (heroDesc) heroTl.from(heroDesc, { y: 18, opacity: 0, duration: 0.5, ease: 'power3.out' }, '-=0.42');
+            if (heroBtns) heroTl.from(heroBtns, { y: 16, opacity: 0, duration: 0.45, ease: 'power3.out' }, '-=0.38');
+            if (heroCard) heroTl.from(heroCard,  { x: 32, opacity: 0, duration: 0.65, ease: 'power3.out' }, '-=0.52');
+        }
+
+        // ------ 7. Generic reveal blocks (data-rg-reveal) ------
+        gsap.utils.toArray('[data-rg-reveal]').forEach(el => {
+            // Skip if inside a live-refresh zone (those are always visible)
+            if (el.closest('[data-live-refresh-target]')) return;
+            // Skip elements that start hidden (e.g. inside a d-none container
+            // awaiting an async fetch) — ScrollTrigger can't measure a
+            // display:none element, so it locks in a wrong trigger position
+            // and the element is left part-transparent forever. Pages with
+            // this pattern call window.rgRevealNow() themselves once the
+            // container is un-hidden (see dashboard.blade.php).
+            if (el.offsetParent === null) return;
+            gsap.from(el, {
+                y: 38,
+                opacity: 0,
+                duration: 0.72,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: el,
+                    start: 'top 90%',
+                    toggleActions: 'play none none none',
+                    once: true,
+                },
+            });
+        });
+
+        // ------ 8. Card stagger groups (data-rg-stagger) ------
+        gsap.utils.toArray('[data-rg-stagger]').forEach(container => {
+            if (container.dataset.rgStagger === 'css') return;
+            // Skip containers that start hidden (e.g. #pd-content on the
+            // dashboard, which is d-none until its fetch() resolves). Same
+            // reasoning as the data-rg-reveal guard above — a tween created
+            // against a display:none container leaves its children stuck at
+            // a dimmed, never-completed opacity once the container is later
+            // shown. window.rgRevealNow() handles the reveal for these once
+            // they're actually visible.
+            if (container.offsetParent === null) return;
+            const children = Array.from(container.children);
+            if (!children.length) return;
+            const staggerAnimation = {
+                y: 44,
+                opacity: 0,
+                duration: 0.6,
+                stagger: { amount: 0.35, from: 'start' },
+                ease: 'power3.out',
+            };
+            if (container.dataset.rgStagger !== 'on-load') {
+                staggerAnimation.scrollTrigger = {
+                    trigger: container,
+                    start: 'top 88%',
+                    toggleActions: 'play none none none',
+                    once: true,
+                };
+            }
+            gsap.from(children, staggerAnimation);
+        });
+
+        // ------ 9. Feature icon tiles — subtle scale pop ------
+        gsap.utils.toArray('.rg-icon-tile').forEach(tile => {
+            gsap.from(tile, {
+                scale: 0.6,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'back.out(1.7)',
+                scrollTrigger: { trigger: tile, start: 'top 90%', once: true },
+            });
+        });
+
+        // ------ 9a. Generic scale-pop for one-off elements (data-rg-pop) ------
+        // (Fine to use inside a live-refresh zone too — the periodic
+        // refresh only swaps innerHTML after this initial pass has
+        // already played once; it doesn't re-trigger this animation.)
+        gsap.utils.toArray('[data-rg-pop]').forEach((el, i) => {
+            gsap.from(el, {
+                scale: 0.65, opacity: 0, duration: 0.5, delay: i * 0.06,
+                ease: 'back.out(1.7)',
+                scrollTrigger: { trigger: el, start: 'top 92%', once: true },
+            });
+        });
+
+        // ------ 9b. Live impact counters — count up from 0 ------
+        gsap.utils.toArray('[data-rg-counter]').forEach(el => {
+            const target = parseInt(el.dataset.rgCounterTo || '0', 10);
+            const counterObj = { val: 0 };
+            gsap.to(counterObj, {
+                val: target,
+                duration: 1.4,
+                ease: 'power2.out',
+                onUpdate: () => { el.textContent = Math.round(counterObj.val).toLocaleString(); },
+                scrollTrigger: { trigger: el, start: 'top 90%', once: true },
+            });
+        });
+
+        // ------ 10. Download CTA — slide from left ------
+        const dlCta = document.querySelector('.rg-download-cta');
+        if (dlCta) {
+            gsap.from(dlCta, {
+                x: -28,
+                opacity: 0,
+                duration: 0.7,
+                ease: 'power3.out',
+                scrollTrigger: { trigger: dlCta, start: 'top 88%', once: true },
+            });
+        }
+
+        // ------ 11. Footer columns stagger ------
+        const footerCols = document.querySelectorAll('.raniag-footer .row > [class*="col"]');
+        if (footerCols.length) {
+            gsap.from(footerCols, {
+                y: 28,
+                opacity: 0,
+                duration: 0.6,
+                stagger: 0.1,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: '.raniag-footer',
+                    start: 'top 92%',
+                    once: true,
+                },
+            });
+        }
+
+        // ------ 12. Announce cards — horizontal stagger ------
+        gsap.utils.toArray('.rg-announce-card').forEach((card, i) => {
+            gsap.from(card, {
+                y: 30,
+                opacity: 0,
+                duration: 0.55,
+                delay: i * 0.1,
+                ease: 'power3.out',
+                scrollTrigger: { trigger: card, start: 'top 90%', once: true },
+            });
+        });
+
+        // ------ 13. Support card — subtle scale ------
+        const supportCard = document.querySelector('.rg-support-card');
+        if (supportCard) {
+            gsap.from(supportCard, {
+                scale: 0.97,
+                opacity: 0,
+                duration: 0.65,
+                ease: 'power3.out',
+                scrollTrigger: { trigger: supportCard, start: 'top 88%', once: true },
+            });
+        }
+
+        // ------ 14. GSAP card hover micro-interactions ------
+        document.querySelectorAll('.raniag-card, .rg-announce-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                gsap.to(card, { y: -4, boxShadow: '0 22px 44px -18px rgba(11,18,32,.32)', duration: 0.25, ease: 'power2.out' });
+            });
+            card.addEventListener('mouseleave', () => {
+                gsap.to(card, { y: 0, boxShadow: '', duration: 0.3, ease: 'power2.out' });
+            });
+        });
+
+        // ------ 15. Announcement section header slide ------
+        const updatesHead = document.querySelector('#updates .d-flex.align-items-center.justify-content-between');
+        if (updatesHead) {
+            gsap.from(updatesHead, {
+                y: 22, opacity: 0, duration: 0.55, ease: 'power3.out',
+                scrollTrigger: { trigger: updatesHead, start: 'top 90%', once: true },
+            });
+        }
+
+        // ------ 16. rg-strip top bar fade ------
+        const strip = document.querySelector('.rg-strip');
+        if (strip) gsap.from(strip, { opacity: 0, duration: 0.5, ease: 'power2.out' });
+
+        // Refresh ScrollTrigger after all setup
+        ScrollTrigger.refresh();
+
+        // Positions computed above can be stale: Bootstrap Icons (a webfont)
+        // and any late CSS/images can reflow the page after this point,
+        // shifting elements out from under the trigger markers ScrollTrigger
+        // just recorded. When that happens, an element whose "from" state
+        // (opacity:0) already rendered never gets its trigger re-checked,
+        // so it stays invisible even though it's on screen. Recompute once
+        // fonts finish and once more on full window load to catch both.
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => ScrollTrigger.refresh());
+        }
+        window.addEventListener('load', () => ScrollTrigger.refresh());
+    });
 
     // Auto-dismiss flash messages
     setTimeout(() => {

@@ -85,19 +85,7 @@
                                             <x-public.status-badge :status="$inc->status" />
                                         </td>
                                         <td class="py-3">
-                                            @php
-                                                $priorityData = match($inc->priority->value ?? $inc->priority) {
-                                                    'low' => ['class' => 'bg-info text-dark', 'icon' => 'bi-info-circle'],
-                                                    'medium' => ['class' => 'bg-warning text-dark', 'icon' => 'bi-exclamation-circle'],
-                                                    'high' => ['class' => 'bg-danger text-white', 'icon' => 'bi-exclamation-triangle-fill'],
-                                                    'critical' => ['class' => 'bg-dark text-white', 'icon' => 'bi-exclamation-octagon-fill'],
-                                                    default => ['class' => 'bg-secondary text-white', 'icon' => 'bi-record-circle']
-                                                };
-                                            @endphp
-                                            <span class="badge {{ $priorityData['class'] }} text-capitalize px-2 py-1 shadow-sm">
-                                                <i class="bi {{ $priorityData['icon'] }} me-1"></i>
-                                                {{ $inc->priority->label() ?? $inc->priority }}
-                                            </span>
+                                            <x-priority-badge :priority="$inc->priority" class="shadow-sm" />
                                         </td>
                                         <td class="py-3">{{ $inc->barangay ?? 'N/A' }}</td>
                                         <td class="py-3 text-muted">

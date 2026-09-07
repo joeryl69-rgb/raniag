@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Models\IncidentType;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -15,6 +16,12 @@ class HomeController extends Controller
             ->take(3)
             ->get();
 
-        return view('public.home', compact('announcements'));
+        $incidentTypes = IncidentType::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->take(8)
+            ->get(['name', 'icon', 'color', 'description']);
+
+        return view('public.home', compact('announcements', 'incidentTypes'));
     }
 }
