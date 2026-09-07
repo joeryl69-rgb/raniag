@@ -1049,10 +1049,10 @@
     // idle window. The page remains interactive if a CDN is slow or blocked.
     window.addEventListener('load', () => {
         const start = () => {
-            // Mobile keeps the polished layout and native scroll, but skips
-            // the heavier ScrollTrigger graph. This protects LCP/TBT on
-            // slower phones while desktop retains the full motion system.
-            if (window.matchMedia('(prefers-reduced-motion: reduce), (max-width: 767px)').matches) {
+            // Keep the full motion system on mobile too. It is still loaded
+            // after the first screen and during idle time, so it does not
+            // block the initial render.
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 initPublicMotion();
                 return;
             }
