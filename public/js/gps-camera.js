@@ -329,9 +329,13 @@
             setTimeout(() => coordsEl.classList.remove('text-success'), 800);
         }
 
-        // Out of slots — close the modal straight back to the thumbnail grid.
-        if (!canAddMoreCaptures()) {
-            getModal(cameraModalEl) ? getModal(cameraModalEl).hide() : stopCamera();
+        // Return to the thumbnail grid after confirming the shot. Keeping
+        // the live camera open here made the Use Photo button appear stuck.
+        const cameraModal = getModal(cameraModalEl);
+        if (cameraModal) {
+            cameraModal.hide();
+        } else {
+            stopCamera();
         }
     }
 
