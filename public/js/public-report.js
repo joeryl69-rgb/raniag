@@ -140,6 +140,9 @@
     function resolveLocation(lat, lng) {
         clearTimeout(geocodeTimer);
         const myToken = ++geocodeToken;
+        const withinMunicipality = boundaryGeometry
+            ? pointInGeometry(lng, lat, boundaryGeometry)
+            : null;
 
         // A pin was placed — clear any "please pin the location" error state.
         [barangayInput, addressInput,
@@ -171,6 +174,8 @@
 
         if (geofenced) {
             setResolveStatus(`Detected: Barangay ${geofenced}, Pamplona`, 'check-circle', 'text-success');
+        } else if (withinMunicipality === false) {
+            setResolveStatus('Outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
         }
 
         window.dispatchEvent(new CustomEvent('raniag:location-resolved', {

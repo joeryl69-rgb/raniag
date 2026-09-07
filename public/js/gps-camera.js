@@ -242,12 +242,11 @@
         return totalEvidenceCount() < maxCaptures;
     }
 
-    // Single source of truth for whether "Capture Photo" should be
-    // clickable — previously the button stayed enabled even before GPS/
-    // address resolved, so the first tap silently no-op'd (just an inline
-    // error) and felt like the button "needed two clicks."
+    // A live GPS fix is enough to capture. Address and barangay resolution
+    // can fail or be slow, especially outside the mapped municipality, but
+    // neither should make the camera appear unresponsive.
     function isLocationReady() {
-        return !!lastResolved && (lastResolved.barangay || lastResolved.municipality);
+        return !!lastPosition;
     }
     function updateCaptureReadiness() {
         if (!captureBtn) return;
@@ -671,16 +670,6 @@
 
         if (!lastPosition) {
             setError('Waiting for GPS fix. Hold steady until coordinates appear, then capture.');
-            return;
-        }
-
-        // Guard against baking the "Resolving location…" placeholder
-        // permanently into the photo — this is the exact race that let
-        // unresolved captures through: geofence lookup is instant, but
-        // the Nominatim address fetch can lag 1-2s+ on a slow connection,
-        // and a fast tap on Capture Photo used to fire before it landed.
-        if (!lastResolved || !lastResolved.barangay && !lastResolved.municipality) {
-            setError('Still resolving your exact location — wait a second, then capture.');
             return;
         }
 

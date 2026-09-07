@@ -399,6 +399,6 @@
     window.RANIAG_BOUNDARY = @json($boundaryGeometry);
     window.RANIAG_BARANGAY_BOUNDARIES = @json($barangayBoundaries);
 </script>
-<script src="{{ asset('js/public-report.js') }}"></script>
+<script src="{{ asset('js/public-report.js') }}?v={{ @filemtime(public_path('js/public-report.js')) }}"></script>
 <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
 @endpush
