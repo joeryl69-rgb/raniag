@@ -15,14 +15,6 @@
     <meta property="og:description" content="Report incidents fast, track them transparently.">
     <meta name="twitter:card" content="summary_large_image">
 
-    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
-    <link rel="preload" href="{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700|instrument-serif:400&display=swap" rel="stylesheet">
-    {{-- GSAP + ScrollTrigger (animation engine) --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
-    {{-- Lenis (smooth scroll, synced with GSAP ticker) --}}
-    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js" defer></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
@@ -233,8 +225,10 @@
 
         /* ---------- reveal on scroll — GSAP handles opacity/transform ---------- */
         /* GSAP sets inline styles; this only hides elements before GSAP loads */
-        [data-rg-reveal]:not(.gsap-ready) { opacity: 0; }
-        [data-rg-reveal].gsap-ready { opacity: 1; }
+          /* Content remains visible even when optional animation assets are
+              unavailable or intentionally omitted for a faster first paint. */
+          [data-rg-reveal]:not(.gsap-ready) { opacity: 1; }
+          [data-rg-reveal].gsap-ready { opacity: 1; }
         /* Live-refresh regions must never flash invisible after a DOM swap */
         [data-live-refresh-target] [data-rg-reveal] { opacity: 1 !important; transform: none !important; }
 
@@ -783,14 +777,14 @@
     // ============================================================
     //  GSAP + Lenis — initialised after scripts are deferred-loaded
     // ============================================================
-    window.addEventListener('DOMContentLoaded', function () {
+    function initPublicMotion() {
         // ------ respect reduced-motion preference ------
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         // ------ mark all reveal elements as gsap-ready (removes CSS opacity:0) ------
         document.querySelectorAll('[data-rg-reveal]').forEach(el => el.classList.add('gsap-ready'));
 
-        if (prefersReduced || typeof gsap === 'undefined') {
+        if (prefersReduced || typeof gsap === 'undefined' || typeof Lenis === 'undefined' || typeof ScrollTrigger === 'undefined') {
             // Fallback: ensure everything visible, run navbar logic natively
             const nav = document.getElementById('rg-nav');
             const bar = document.getElementById('rg-progress');
@@ -1039,7 +1033,40 @@
             document.fonts.ready.then(() => ScrollTrigger.refresh());
         }
         window.addEventListener('load', () => ScrollTrigger.refresh());
-    });
+    }
+
+    function loadPublicScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    // Motion is decorative, so load it after the first screen and during an
+    // idle window. The page remains interactive if a CDN is slow or blocked.
+    window.addEventListener('load', () => {
+        const start = () => {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                initPublicMotion();
+                return;
+            }
+
+            loadPublicScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js')
+                .then(() => loadPublicScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js'))
+                .then(() => loadPublicScript('https://unpkg.com/lenis@1.1.14/dist/lenis.min.js'))
+                .then(initPublicMotion)
+                .catch(() => initPublicMotion());
+        };
+
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(start, { timeout: 2000 });
+        } else {
+            setTimeout(start, 1000);
+        }
+    }, { once: true });
 
     // Auto-dismiss flash messages
     setTimeout(() => {
