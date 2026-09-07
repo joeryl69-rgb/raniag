@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\SmsLogStatus;
 use App\Enums\UserRole;
 use App\Jobs\DispatchSmsJob;
+use App\Mail\IncidentStatusUpdateMail;
 use App\Models\Assignment;
 use App\Models\DocumentRequest;
 use App\Models\Incident;
@@ -14,6 +15,7 @@ use App\Models\SmsLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Twilio\Rest\Client;
 
 class NotificationService
@@ -93,6 +95,20 @@ class NotificationService
 
     public function notifyReporterStatusUpdate(Incident $incident, string $updateMessage): void
     {
+        if (! $incident->is_anonymous && $incident->reporter_email) {
+            try {
+                Mail::to($incident->reporter_email)->send(
+                    new IncidentStatusUpdateMail($incident->fresh(['incidentType']), $updateMessage)
+                );
+            } catch (\Throwable $e) {
+                Log::error('Incident status email failed.', [
+                    'incident_id' => $incident->id,
+                    'recipient' => $incident->reporter_email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         if (! $incident->is_anonymous && $incident->reporter_phone) {
             $message = "RANIAG UPDATE: Your incident report (Tracking #: {$incident->tracking_number}) has a status update: {$updateMessage} You may check full details anytime using your tracking number on the RANIAG public tracking page.";
             $this->sendSms(
