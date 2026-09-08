@@ -20,8 +20,8 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg">
-    <link rel="alternate icon" type="image/png" href="/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg?v=8">
+    <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
     @stack('styles')
     <link href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}" rel="stylesheet">
