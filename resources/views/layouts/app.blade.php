@@ -17,7 +17,8 @@
     <meta name="theme-color" content="#0e4a6b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg">
+    <link rel="alternate icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
     @stack('styles')
 
@@ -297,7 +298,7 @@
             <div class="sidebar-brand">
                 <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2 fs-5" href="{{ route('dashboard') }}">
                     <span class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded overflow-hidden" style="width: 2rem; height: 2rem;">
-                        <img src="/images/icons/icon-72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
+                        <img src="/images/icons/raniag-master.svg" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
                     </span>
                     <span class="d-flex flex-column lh-sm">
                         <span>RANIAG</span>
@@ -379,7 +380,7 @@
  
     <div id="global-loading-overlay" class="d-none">
         <div class="text-center">
-            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/icon-96.png" alt=""></div>
+            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/raniag-master.svg" alt=""></div>
             <div class="loading-text">Processing, please wait...</div>
         </div>
     </div>

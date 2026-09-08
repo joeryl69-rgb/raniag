@@ -20,7 +20,8 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg">
+    <link rel="alternate icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
     @stack('styles')
     <link href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}" rel="stylesheet">
@@ -607,7 +608,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark raniag-navbar" id="rg-nav">
         <div class="container">
             <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ route('public.home') }}">
-                <span class="raniag-brand-icon"><img src="/images/icons/icon-72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
+                <span class="raniag-brand-icon"><img src="/images/icons/raniag-master.svg" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
                 <span class="d-flex flex-column lh-1">
                     {{ config('raniag.name') }}
                     <span class="raniag-brand-sub">{{ config('raniag.organization') }}</span>
@@ -701,7 +702,7 @@
             <div class="row g-4">
                 <div class="col-lg-5">
                     <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="raniag-brand-icon"><img src="/images/icons/icon-72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
+                        <span class="raniag-brand-icon"><img src="/images/icons/raniag-master.svg" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
                         <span class="text-white fw-semibold">{{ config('raniag.name') }}</span>
                     </div>
                     <p class="small mb-0" style="max-width: 34ch;">
@@ -744,7 +745,7 @@
     {{-- ================= loading overlay ================= --}}
     <div id="global-loading-overlay" class="d-none" role="status" aria-live="polite">
         <div class="rg-loader">
-            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/icon-96.png" alt=""></div>
+            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/raniag-master.svg" alt=""></div>
             <div class="loading-text">Processing, please wait...</div>
         </div>
     </div>
