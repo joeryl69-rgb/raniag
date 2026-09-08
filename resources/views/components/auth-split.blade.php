@@ -10,11 +10,11 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/manifest.json?v=8">
     <meta name="theme-color" content="#0b5ed7">
     <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg?v=8">
     <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192.png?v=8">
     <link href="{{ asset('css/auth.css') }}?v={{ @filemtime(public_path('css/auth.css')) }}" rel="stylesheet">
     <script>
         window.addEventListener('pageshow', function (event) {
