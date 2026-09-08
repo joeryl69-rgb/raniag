@@ -17,7 +17,8 @@
     <meta name="theme-color" content="#0e4a6b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
+    <link rel="icon" type="image/x-icon" href="/favicon-v2.ico">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192-v2.png">
     @stack('styles')
 
     <style>
@@ -286,7 +287,7 @@
             <div class="sidebar-brand">
                 <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2 fs-5" href="{{ route('dashboard') }}">
                     <span class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded overflow-hidden" style="width: 2rem; height: 2rem;">
-                        <img src="/images/icons/icon-72x72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
+                        <img src="/images/icons/icon-72x72-v2.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
                     </span>
                     <span class="d-flex flex-column lh-sm">
                         <span>RANIAG</span>
