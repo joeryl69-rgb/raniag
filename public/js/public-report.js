@@ -153,6 +153,14 @@
     // retain coordinates even if the map API is unavailable.
     window.addEventListener('raniag:location-resolved', (event) => {
         finishLocationUi();
+        // The Location card is hidden until the GPS camera actually
+        // resolves a fix — reveal it now and force Leaflet to recompute
+        // its size, since it was initialized while display:none.
+        const summaryCard = document.getElementById('location-summary-card');
+        if (summaryCard && summaryCard.classList.contains('d-none')) {
+            summaryCard.classList.remove('d-none');
+            requestAnimationFrame(() => mapInstance?.invalidateSize());
+        }
         const { lat, lng } = event.detail || {};
         if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
             if (latInput) latInput.value = Number(lat).toFixed(8);
@@ -164,6 +172,28 @@
     let mapMarker = null;
     let geocodeTimer = null;
     let geocodeToken = 0;
+    // Tracks whether this session has ever produced a real resolved label
+    // (barangay match or completed reverse-geocode), so an early/repeat GPS
+    // tick doesn't blank out a result that was already found.
+    let lastResolvedLabel = null;
+    // Throttle: re-run the (network-hitting) resolution pipeline at most
+    // once every 4s per position, unless the fix moved meaningfully —
+    // watchPosition can fire far more often than that, and re-resolving on
+    // every tick was what caused the "keeps resolving" flicker.
+    let lastResolveAttemptAt = 0;
+    let lastResolveAttemptCoords = null;
+    function shouldReResolve(lat, lng) {
+        const now = Date.now();
+        if (lastResolveAttemptCoords && now - lastResolveAttemptAt < 4000) {
+            const dLat = lat - lastResolveAttemptCoords.lat;
+            const dLng = lng - lastResolveAttemptCoords.lng;
+            const approxMeters = Math.sqrt(dLat * dLat + dLng * dLng) * 111000;
+            if (approxMeters < 15) return false;
+        }
+        lastResolveAttemptAt = now;
+        lastResolveAttemptCoords = { lat, lng };
+        return true;
+    }
 
     function setResolveStatus(text, icon = 'geo-alt', tone = 'text-muted') {
         if (!resolveStatusEl) return;
@@ -190,21 +220,29 @@
 
         if (geofenced) {
             setResolveStatus(`Detected: Barangay ${geofenced}, Pamplona`, 'check-circle', 'text-success');
-        } else if (withinMunicipality === false) {
+            lastResolvedLabel = `Detected: Barangay ${geofenced}, ${addressDefaults.municipality}`;
+            // Only dispatch immediately for a confirmed in-boundary match —
+            // this is a fast, reliable local calculation. Outside the
+            // mapped boundaries we wait for the debounced reverse-geocode
+            // below instead of firing a "not resolved yet" event on every
+            // single GPS tick, which was overwriting an already-resolved
+            // barangay/municipality with nulls and made the GPS camera's
+            // "ready to capture" state flicker on and off.
+            window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                detail: {
+                    lat, lng,
+                    barangay: geofenced,
+                    municipality: addressDefaults.municipality,
+                    province: addressDefaults.province,
+                    country: addressDefaults.country,
+                    label: `Detected: Barangay ${geofenced}, ${addressDefaults.municipality}`,
+                },
+            }));
+        } else if (withinMunicipality === false && !lastResolvedLabel) {
+            // First-ever tick with no prior resolution: show a status right
+            // away, but still don't touch lastResolved/dispatch yet.
             setResolveStatus('Outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
         }
-
-        window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-            detail: {
-                lat,
-                lng,
-                barangay: geofenced,
-                municipality: geofenced ? addressDefaults.municipality : null,
-                province: geofenced ? addressDefaults.province : null,
-                country: geofenced ? addressDefaults.country : null,
-                label: geofenced ? `Detected: Barangay ${geofenced}, ${addressDefaults.municipality}` : null,
-            },
-        }));
 
         geocodeTimer = setTimeout(async () => {
             try {
@@ -253,6 +291,7 @@
                         ? `Near ${municipality} (outside Pamplona — closest area: ${barangayDisplay})`
                         : `Near ${municipality} (outside mapped barangays — pin closer to a known barangay)`;
                 setResolveStatus(label, barangayDisplay ? 'check-circle' : 'exclamation-circle', barangayDisplay ? 'text-success' : 'text-warning');
+                lastResolvedLabel = label;
 
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                     detail: { lat, lng, barangay: barangayDisplay, municipality, province, country, label },
@@ -275,6 +314,7 @@
                         municipality: geofenced ? addressDefaults.municipality : (withinMunicipality === false ? 'Outside Pamplona' : addressDefaults.municipality),
                     },
                 }));
+                lastResolvedLabel = lastResolvedLabel || 'resolved (offline fallback)';
             }
         }, 500);
     }
@@ -289,7 +329,9 @@
         if (lngInput) {
             lngInput.value = Number(lng).toFixed(8);
         }
-        resolveLocation(lat, lng);
+        if (shouldReResolve(lat, lng)) {
+            resolveLocation(lat, lng);
+        }
     }
 
     function setMarker(lat, lng, options = {}) {

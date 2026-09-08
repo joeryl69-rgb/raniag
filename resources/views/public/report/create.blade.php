@@ -33,7 +33,7 @@
         <h1 class="rg-page-title">Report an Incident</h1>
         <p class="rg-page-sub">
             Provide accurate details to help {{ config('raniag.organization') }} respond faster.
-            Five short steps — you'll get a tracking number the moment you submit.
+            Four short steps — you'll get a tracking number the moment you submit.
         </p>
     </div>
 
@@ -129,66 +129,6 @@
         <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">3</span>
-                <span>Location</span>
-            </div>
-            <div class="card-body p-4">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                    <p class="text-muted small mb-0" style="max-width: 60ch;">Use your current location or capture with the GPS camera — the map shows your pinned location and isn't clickable.</p>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="use-current-location">
-                        <i class="bi bi-crosshair me-1"></i>Use Current Location
-                    </button>
-                </div>
-                <div class="position-relative mb-2">
-                    <div id="incident-map"></div>
-                    <div id="map-locating-overlay" class="raniag-map-overlay d-none">
-                        <div class="spinner-border" role="status" style="color: var(--rg-brand);"></div>
-                        <div class="raniag-map-overlay-text">Pinpointing your location…</div>
-                    </div>
-                </div>
-                <p class="small mb-3" id="location-resolve-status">
-                    <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Pin a location or enable GPS to auto-fill the barangay and coordinates.</span>
-                </p>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="barangay" class="form-label">Barangay</label>
-                        <input class="form-control @error('barangay') is-invalid @enderror" list="barangay-list"
-                               id="barangay" name="barangay" value="{{ old('barangay') }}" placeholder="Auto-filled from GPS"
-                               readonly aria-readonly="true">
-                        <datalist id="barangay-list">
-                            @foreach ($barangays as $barangay)
-                                <option value="{{ $barangay }}">
-                            @endforeach
-                        </datalist>
-                        <div class="form-text">Locked until you use GPS to resolve the location.</div>
-                        @error('barangay')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-8">
-                        <label for="location_address" class="form-label">Street / Landmark</label>
-                        <input type="text" class="form-control @error('location_address') is-invalid @enderror"
-                               id="location_address" name="location_address" value="{{ old('location_address') }}"
-                               placeholder="Auto-filled from GPS"
-                               readonly aria-readonly="true">
-                        @error('location_address')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="latitude" class="form-label">Latitude</label>
-                        <input type="text" class="form-control @error('latitude') is-invalid @enderror" id="latitude"
-                               name="latitude" value="{{ old('latitude') }}" readonly aria-readonly="true">
-                        @error('latitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="longitude" class="form-label">Longitude</label>
-                        <input type="text" class="form-control @error('longitude') is-invalid @enderror" id="longitude"
-                               name="longitude" value="{{ old('longitude') }}" readonly aria-readonly="true">
-                        @error('longitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card raniag-card mb-4" data-rg-reveal>
-            <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                <span class="raniag-step-badge">4</span>
                 <span>Reporter Information</span>
             </div>
             <div class="card-body p-4">
@@ -223,7 +163,7 @@
 
         <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                <span class="raniag-step-badge">5</span>
+                <span class="raniag-step-badge">4</span>
                 <span>Evidence <span class="text-danger">*</span></span>
             </div>
             <div class="card-body p-4">
@@ -368,6 +308,65 @@
                 </div>
                 @error('evidence')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                 @error('evidence.*')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+            </div>
+        </div>
+
+        <!-- Location is captured entirely by the GPS Camera above — this
+             card is a read-only confirmation, hidden until a photo has
+             actually resolved a location (JS removes d-none on the first
+             raniag:location-resolved event). No separate "pin it yourself"
+             step: one location source, no redundant/duplicate action. -->
+        <div class="card raniag-card mb-4 d-none" id="location-summary-card" data-rg-reveal>
+            <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
+                <i class="bi bi-geo-alt-fill" style="color: var(--rg-brand);"></i>
+                <span>Location Captured</span>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3" style="max-width: 60ch;">Detected automatically from your GPS camera photo — the map isn't clickable.</p>
+                <div class="position-relative mb-2">
+                    <div id="incident-map"></div>
+                    <div id="map-locating-overlay" class="raniag-map-overlay d-none">
+                        <div class="spinner-border" role="status" style="color: var(--rg-brand);"></div>
+                        <div class="raniag-map-overlay-text">Pinpointing your location…</div>
+                    </div>
+                </div>
+                <p class="small mb-3" id="location-resolve-status">
+                    <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Resolving location…</span>
+                </p>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="barangay" class="form-label">Barangay</label>
+                        <input class="form-control @error('barangay') is-invalid @enderror" list="barangay-list"
+                               id="barangay" name="barangay" value="{{ old('barangay') }}" placeholder="Auto-filled from GPS"
+                               readonly aria-readonly="true">
+                        <datalist id="barangay-list">
+                            @foreach ($barangays as $barangay)
+                                <option value="{{ $barangay }}">
+                            @endforeach
+                        </datalist>
+                        @error('barangay')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-8">
+                        <label for="location_address" class="form-label">Street / Landmark</label>
+                        <input type="text" class="form-control @error('location_address') is-invalid @enderror"
+                               id="location_address" name="location_address" value="{{ old('location_address') }}"
+                               placeholder="Auto-filled from GPS"
+                               readonly aria-readonly="true">
+                        @error('location_address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="latitude" class="form-label">Latitude</label>
+                        <input type="text" class="form-control @error('latitude') is-invalid @enderror" id="latitude"
+                               name="latitude" value="{{ old('latitude') }}" readonly aria-readonly="true">
+                        @error('latitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="longitude" class="form-label">Longitude</label>
+                        <input type="text" class="form-control @error('longitude') is-invalid @enderror" id="longitude"
+                               name="longitude" value="{{ old('longitude') }}" readonly aria-readonly="true">
+                        @error('longitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                </div>
             </div>
         </div>
 
