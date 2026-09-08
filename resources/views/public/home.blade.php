@@ -104,7 +104,7 @@
     {{-- ===================== DOWNLOAD APP ===================== --}}
     <div class="rg-download-cta mt-5 d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
-            <img src="/images/icons/icon-96x96.png" alt="RANIAG app icon" width="64" height="64" class="rounded-4">
+            <img src="/images/icons/icon-96x96-v2.png" alt="RANIAG app icon" width="64" height="64" class="rounded-4">
             <div>
                 <h3 class="h5 fw-bold mb-1">Get the RANIAG App</h3>
                 <p class="small text-white-50 mb-0">Install RANIAG on your phone for faster reporting and offline access — works in portrait or landscape.</p>
