@@ -520,6 +520,15 @@
             2: 'Location unavailable. Try moving to an open area.',
             3: 'Location request timed out. Please try again.',
         };
+        // watchPosition keeps refining in the background after the first fix
+        // (e.g. while the camera is open). A later timeout/unavailable blip
+        // from that ongoing watch must not blow away an already-good fix —
+        // "Use Current Location" or the camera's own first read already put
+        // a usable lastPosition in hand, so downgrading the badge back to
+        // "GPS Error" here is a false alarm, not a real loss of location.
+        if (lastPosition) {
+            return;
+        }
         setStatus('GPS error', 'danger');
         setError(messages[error.code] || error.message || 'Unable to read GPS location.');
     }
