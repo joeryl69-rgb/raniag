@@ -1074,9 +1074,6 @@
     // idle window. The page remains interactive if a CDN is slow or blocked.
     window.addEventListener('load', () => {
         const start = () => {
-            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-                return;
-            }
             // Keep the full motion system on mobile too. It is still loaded
             // after the first screen and during idle time, so it does not
             // block the initial render.
