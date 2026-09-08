@@ -141,13 +141,6 @@
                 <li><i class="bi bi-check-circle-fill"></i>Leave a valid email if you want a reply</li>
             </ul>
         </div>
-
-        <div class="rg-support-card text-center">
-            <i class="bi bi-headset fs-2 text-primary mb-2 d-block"></i>
-            <strong class="d-block mb-1">Need urgent help?</strong>
-            <p class="small text-muted mb-3">Contact {{ config('raniag.organization') }} directly for emergencies.</p>
-            <a href="tel:911" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-telephone-fill me-1"></i>Call Emergency Line</a>
-        </div>
     </div>
 </div>
 
