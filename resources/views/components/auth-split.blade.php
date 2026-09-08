@@ -12,8 +12,8 @@
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0b5ed7">
-    <link rel="icon" type="image/x-icon" href="/favicon-v2.ico">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192x192-v3.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
     <link href="{{ asset('css/auth.css') }}?v={{ @filemtime(public_path('css/auth.css')) }}" rel="stylesheet">
     <script>
         window.addEventListener('pageshow', function (event) {
@@ -25,7 +25,7 @@
     <div class="auth-shell">
         <div class="auth-panel">
             <div class="auth-panel__glow"></div>
-            <img src="/images/icons/icon-192x192-v3.png" alt="RANIAG" class="auth-panel__mark">
+            <img src="/images/icons/icon-192.png" alt="RANIAG" class="auth-panel__mark">
             <h1 class="auth-panel__title">RANIAG</h1>
             <p class="auth-panel__org">{{ config('raniag.organization') }}</p>
             <p class="auth-panel__tagline">"{{ config('raniag.tagline') }}"</p>

@@ -20,8 +20,8 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/x-icon" href="/favicon-v2.ico">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192x192-v3.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
     @stack('styles')
     <link href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}" rel="stylesheet">
 
@@ -213,8 +213,31 @@
             border: 1px solid rgba(255,255,255,.12);
             border-radius: 18px; padding: 1.75rem 2.25rem; text-align: center;
         }
-        #global-loading-overlay .spinner-border { width: 2.75rem; height: 2.75rem; border-width: .28rem; color: var(--rg-brand-soft) !important; }
-        #global-loading-overlay .loading-text { margin-top: .9rem; color: #f8fafc; font-weight: 600; letter-spacing: .01em; }
+        #global-loading-overlay .loading-text { margin-top: 1rem; color: #f8fafc; font-weight: 600; letter-spacing: .01em; }
+        #global-loading-overlay .rg-mark {
+            width: 56px; height: 56px; margin: 0 auto; position: relative;
+        }
+        #global-loading-overlay .rg-mark img {
+            width: 100%; height: 100%; border-radius: 14px;
+            animation: rg-pulse 1.15s ease-in-out infinite;
+        }
+        #global-loading-overlay .rg-mark::after {
+            content: ""; position: absolute; inset: -8px; border-radius: 18px;
+            border: 2px solid var(--rg-brand-soft); opacity: 0;
+            animation: rg-ring 1.15s ease-out infinite;
+        }
+        @keyframes rg-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(.9); }
+        }
+        @keyframes rg-ring {
+            0% { transform: scale(.85); opacity: .6; }
+            100% { transform: scale(1.35); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #global-loading-overlay .rg-mark img,
+            #global-loading-overlay .rg-mark::after { animation: none; }
+        }
 
         /* Icons: bootstrap-icons.min.css uses font-display:block (FOIT).
            Swap shows text/layout immediately; icon glyph fills in when ready. */
@@ -584,7 +607,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark raniag-navbar" id="rg-nav">
         <div class="container">
             <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ route('public.home') }}">
-                <span class="raniag-brand-icon"><img src="/images/icons/icon-72x72-v3.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
+                <span class="raniag-brand-icon"><img src="/images/icons/icon-72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
                 <span class="d-flex flex-column lh-1">
                     {{ config('raniag.name') }}
                     <span class="raniag-brand-sub">{{ config('raniag.organization') }}</span>
@@ -678,7 +701,7 @@
             <div class="row g-4">
                 <div class="col-lg-5">
                     <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="raniag-brand-icon"><img src="/images/icons/icon-72x72-v3.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
+                        <span class="raniag-brand-icon"><img src="/images/icons/icon-72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
                         <span class="text-white fw-semibold">{{ config('raniag.name') }}</span>
                     </div>
                     <p class="small mb-0" style="max-width: 34ch;">
@@ -721,7 +744,7 @@
     {{-- ================= loading overlay ================= --}}
     <div id="global-loading-overlay" class="d-none" role="status" aria-live="polite">
         <div class="rg-loader">
-            <div class="spinner-border" role="status" aria-hidden="true"></div>
+            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/icon-96.png" alt=""></div>
             <div class="loading-text">Processing, please wait...</div>
         </div>
     </div>

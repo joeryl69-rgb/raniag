@@ -17,8 +17,8 @@
     <meta name="theme-color" content="#0e4a6b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/x-icon" href="/favicon-v2.ico">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192x192-v3.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
     @stack('styles')
 
     <style>
@@ -159,15 +159,25 @@
             width: 100%;
         }
  
-        #global-loading-overlay .spinner-border {
-            width: 3rem;
-            height: 3rem;
-        }
- 
         #global-loading-overlay .loading-text {
             margin-top: 1rem;
             color: #f8fafc;
             font-weight: 600;
+        }
+        #global-loading-overlay .rg-mark { width: 56px; height: 56px; margin: 0 auto; position: relative; }
+        #global-loading-overlay .rg-mark img {
+            width: 100%; height: 100%; border-radius: 14px;
+            animation: rg-pulse 1.15s ease-in-out infinite;
+        }
+        #global-loading-overlay .rg-mark::after {
+            content: ""; position: absolute; inset: -8px; border-radius: 18px;
+            border: 2px solid #93c5fd; opacity: 0;
+            animation: rg-ring 1.15s ease-out infinite;
+        }
+        @keyframes rg-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(.9); } }
+        @keyframes rg-ring { 0% { transform: scale(.85); opacity: .6; } 100% { transform: scale(1.35); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+            #global-loading-overlay .rg-mark img, #global-loading-overlay .rg-mark::after { animation: none; }
         }
  
         .leaflet-control-attribution {
@@ -287,7 +297,7 @@
             <div class="sidebar-brand">
                 <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2 fs-5" href="{{ route('dashboard') }}">
                     <span class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded overflow-hidden" style="width: 2rem; height: 2rem;">
-                        <img src="/images/icons/icon-72x72-v3.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
+                        <img src="/images/icons/icon-72.png" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
                     </span>
                     <span class="d-flex flex-column lh-sm">
                         <span>RANIAG</span>
@@ -369,7 +379,7 @@
  
     <div id="global-loading-overlay" class="d-none">
         <div class="text-center">
-            <div class="spinner-border text-white" role="status" aria-hidden="true"></div>
+            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/icon-96.png" alt=""></div>
             <div class="loading-text">Processing, please wait...</div>
         </div>
     </div>
