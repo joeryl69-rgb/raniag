@@ -145,10 +145,6 @@
                         <div class="raniag-map-overlay-text">Pinpointing your location…</div>
                     </div>
                 </div>
-                <p class="small mb-2 d-none" id="jurisdiction-warning">
-                    <i class="bi bi-exclamation-triangle-fill me-1" style="color: var(--rg-alert);"></i>
-                    <span style="color: var(--rg-alert);">Pinned location looks like it's outside Pamplona municipality limits. You can still submit, but please double-check the pin.</span>
-                </p>
                 <p class="small mb-3" id="location-resolve-status">
                     <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Pin a location or enable GPS to auto-fill the barangay and coordinates.</span>
                 </p>

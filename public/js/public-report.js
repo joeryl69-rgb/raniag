@@ -79,7 +79,6 @@
     const barangayInput = document.getElementById('barangay');
     const addressInput = document.getElementById('location_address');
     const resolveStatusEl = document.getElementById('location-resolve-status');
-    const jurisdictionWarningEl = document.getElementById('jurisdiction-warning');
     const mapLocatingOverlay = document.getElementById('map-locating-overlay');
     const useLocationButton = document.getElementById('use-current-location');
     const barangayList = window.RANIAG_BARANGAYS || [];
@@ -140,15 +139,9 @@
         return null;
     }
 
-    function checkJurisdiction(lat, lng) {
-        if (!jurisdictionWarningEl) return;
-        const result = boundaryGeometry ? pointInGeometry(lng, lat, boundaryGeometry) : null;
-        jurisdictionWarningEl.classList.toggle('d-none', result !== false);
-    }
-
-    function setOutsideWarning(isOutside) {
-        jurisdictionWarningEl?.classList.toggle('d-none', !isOutside);
-    }
+    // Jurisdiction status now lives solely in #location-resolve-status
+    // (setResolveStatus below) so only one warning is ever shown at once.
+    function setOutsideWarning() {}
 
     function finishLocationUi() {
         mapLocatingOverlay?.classList.add('d-none');
@@ -271,6 +264,17 @@
                 } else if (!geofenced) {
                     setResolveStatus('Could not auto-detect barangay. Please try again.', 'exclamation-triangle', 'text-warning');
                 }
+                // Reverse geocoding failed (e.g. offline/blocked request) —
+                // still mark resolution as finished using the coordinates
+                // we already have, so the GPS camera isn't stuck waiting
+                // on an external service before it will allow a capture.
+                window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                    detail: {
+                        lat, lng,
+                        barangay: geofenced,
+                        municipality: geofenced ? addressDefaults.municipality : (withinMunicipality === false ? 'Outside Pamplona' : addressDefaults.municipality),
+                    },
+                }));
             }
         }, 500);
     }
@@ -285,7 +289,6 @@
         if (lngInput) {
             lngInput.value = Number(lng).toFixed(8);
         }
-        checkJurisdiction(lat, lng);
         resolveLocation(lat, lng);
     }
 

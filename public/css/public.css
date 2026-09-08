@@ -723,6 +723,15 @@ body.raniag-public {
     height: 100%;
     object-fit: cover;
     display: block;
+    /* Hidden until the tile finishes loading (JS adds .is-loaded) so a
+       slow/failed OpenStreetMap tile request can't flash the browser's
+       broken-image placeholder — a grid-lined icon — over the live feed. */
+    opacity: 0;
+    transition: opacity .12s ease;
+}
+
+.gps-watermark-map img.is-loaded {
+    opacity: 1;
 }
 
 .gps-watermark-map-pin {

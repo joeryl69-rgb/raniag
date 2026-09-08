@@ -145,7 +145,20 @@
         const url = `https://tile.openstreetmap.org/${MAP_THUMB_ZOOM}/${xTile}/${yTile}.png`;
         if (mapThumbImg.dataset.tileUrl !== url) {
             mapThumbImg.dataset.tileUrl = url;
-            mapThumbImg.src = url;
+            // Keep the previous tile visible (no opacity reset) until the
+            // new one has actually decoded, then swap — avoids a blank/
+            // broken-image flash between tiles on a slow connection.
+            const swapImg = new Image();
+            swapImg.onload = () => {
+                if (mapThumbImg.dataset.tileUrl !== url) return; // superseded
+                mapThumbImg.src = url;
+                mapThumbImg.classList.add('is-loaded');
+            };
+            swapImg.onerror = () => {
+                if (mapThumbImg.dataset.tileUrl !== url) return;
+                mapThumbImg.classList.remove('is-loaded');
+            };
+            swapImg.src = url;
         }
 
         if (mapThumbPin) {
@@ -249,11 +262,13 @@
         return totalEvidenceCount() < maxCaptures;
     }
 
-    // A live GPS fix is enough to capture. Address and barangay resolution
-    // can fail or be slow, especially outside the mapped municipality, but
-    // neither should make the camera appear unresponsive.
+    // A raw GPS fix isn't enough — that's what left the shutter enabled
+    // while the watermark still read "Resolving location…". Capture now
+    // waits until that resolution has actually finished: either a
+    // barangay was matched, or the outside-municipality fallback (which
+    // always carries a municipality name) has been set.
     function isLocationReady() {
-        return !!lastPosition;
+        return !!lastPosition && !!lastResolved && !!(lastResolved.barangay || lastResolved.municipality);
     }
     function updateCaptureReadiness() {
         if (!captureBtn) return;
@@ -301,7 +316,10 @@
         if (rp && placeEl) rp.textContent = placeEl.textContent;
         if (rt && timeEl) rt.textContent = timeEl.textContent;
         const rMapImg = document.getElementById('gps-review-map-img');
-        if (rMapImg && mapThumbImg?.src) rMapImg.src = mapThumbImg.src;
+        if (rMapImg && mapThumbImg?.src) {
+            rMapImg.src = mapThumbImg.src;
+            rMapImg.classList.add('is-loaded'); // already-loaded tile, show immediately
+        }
         liveViewEl?.classList.add('d-none');
         reviewViewEl?.classList.remove('d-none');
         reviewViewEl?.classList.add('d-flex');
@@ -369,7 +387,10 @@
             document.getElementById('gps-lightbox-place').textContent = item.place || '—';
             document.getElementById('gps-lightbox-time').textContent = timeTxt;
             const mapImg = document.getElementById('gps-lightbox-map-img');
-            if (mapImg) mapImg.src = item.mapThumbSrc || '';
+            if (mapImg) {
+                mapImg.src = item.mapThumbSrc || '';
+                mapImg.classList.add('is-loaded'); // already-loaded tile, show immediately
+            }
         }
 
         if (lightboxModalEl.parentElement !== document.body) {
