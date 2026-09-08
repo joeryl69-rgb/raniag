@@ -333,6 +333,10 @@
                 <p class="small mb-3" id="location-resolve-status">
                     <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Resolving location…</span>
                 </p>
+                <div class="alert alert-warning d-none py-2 px-3 mb-3" id="outside-jurisdiction-banner" role="alert" style="border-left: 4px solid #d9a406;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <span id="outside-jurisdiction-text"></span>
+                </div>
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label for="barangay" class="form-label">Barangay</label>

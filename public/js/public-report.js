@@ -79,6 +79,8 @@
     const barangayInput = document.getElementById('barangay');
     const addressInput = document.getElementById('location_address');
     const resolveStatusEl = document.getElementById('location-resolve-status');
+    const outsideBannerEl = document.getElementById('outside-jurisdiction-banner');
+    const outsideBannerTextEl = document.getElementById('outside-jurisdiction-text');
     const mapLocatingOverlay = document.getElementById('map-locating-overlay');
     const useLocationButton = document.getElementById('use-current-location');
     const barangayList = window.RANIAG_BARANGAYS || [];
@@ -142,6 +144,23 @@
     // Jurisdiction status now lives solely in #location-resolve-status
     // (setResolveStatus below) so only one warning is ever shown at once.
     function setOutsideWarning() {}
+
+    // Separate, higher-contrast banner for "outside Pamplona" specifically —
+    // #location-resolve-status stays a quiet one-line detail (what/where was
+    // detected); this is the attention-grabbing one, shown only when it's
+    // actually true, and it never gets silently overwritten by the status
+    // line the way a single shared element did before.
+    function setOutsideBanner(isOutside, municipality) {
+        if (!outsideBannerEl) return;
+        if (isOutside) {
+            if (outsideBannerTextEl) {
+                outsideBannerTextEl.textContent = `This location is outside Pamplona (in ${municipality || 'a neighboring area'}). You can still submit — MDRRMO Pamplona will forward it to the correct city/municipality or agency.`;
+            }
+            outsideBannerEl.classList.remove('d-none');
+        } else {
+            outsideBannerEl.classList.add('d-none');
+        }
+    }
 
     function finishLocationUi() {
         mapLocatingOverlay?.classList.add('d-none');
@@ -220,6 +239,7 @@
 
         if (geofenced) {
             setResolveStatus(`Detected: Barangay ${geofenced}, Pamplona`, 'check-circle', 'text-success');
+            setOutsideBanner(false);
             lastResolvedLabel = `Detected: Barangay ${geofenced}, ${addressDefaults.municipality}`;
             // Only dispatch immediately for a confirmed in-boundary match —
             // this is a fast, reliable local calculation. Outside the
@@ -284,12 +304,17 @@
                     addressInput.value = [addr.road, municipality].filter(Boolean).join(', ') || municipality || 'Unknown';
                 }
                 setOutsideWarning(outsideMunicipality);
+                setOutsideBanner(outsideMunicipality, municipality);
 
+                // Clearer, plain-language wording: state the actual barangay
+                // and municipality up front, then the jurisdiction note as a
+                // separate clause — instead of a "Near X (outside Y...)"
+                // phrasing that read like a distance estimate.
                 const label = matched
                     ? `Detected: Barangay ${matched}, ${municipality}`
                     : barangayDisplay
-                        ? `Near ${municipality} (outside Pamplona — closest area: ${barangayDisplay})`
-                        : `Near ${municipality} (outside mapped barangays — pin closer to a known barangay)`;
+                        ? `Detected: Barangay ${barangayDisplay}, ${municipality} — outside Pamplona`
+                        : `Near ${municipality} — could not match a specific barangay (outside Pamplona's mapped area)`;
                 setResolveStatus(label, barangayDisplay ? 'check-circle' : 'exclamation-circle', barangayDisplay ? 'text-success' : 'text-warning');
                 lastResolvedLabel = label;
 
@@ -300,6 +325,7 @@
                 if (myToken !== geocodeToken) return;
                 if (withinMunicipality === false) {
                     setResolveStatus('Outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
+                    setOutsideBanner(true, null);
                 } else if (!geofenced) {
                     setResolveStatus('Could not auto-detect barangay. Please try again.', 'exclamation-triangle', 'text-warning');
                 }
