@@ -91,10 +91,10 @@
         .raniag-navbar .navbar-brand { letter-spacing: -.02em; color: #fff; }
         .raniag-brand-icon {
             display: inline-grid; place-items: center;
-            width: 36px; height: 36px; border-radius: 11px;
-            background: var(--rg-grad);
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #fff; overflow: hidden;
             color: #fff; font-size: 1.05rem;
-            box-shadow: 0 8px 20px -10px rgba(11,94,215,.9);
+            box-shadow: 0 8px 20px -10px rgba(0,0,0,.55);
         }
         .raniag-brand-sub {
             display: block; font-size: .66rem; font-weight: 500; line-height: 1;
