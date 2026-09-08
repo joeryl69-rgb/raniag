@@ -14,7 +14,7 @@
 <!-- Header -->
 <tr>
 <td style="background:linear-gradient(135deg,#1671e8,#0b5ed7 55%,#073a86); padding:28px 32px; text-align:center;">
-<img src="{{ config('app.url') }}/images/icons/icon-96x96-v2.png" width="48" height="48" alt="RANIAG" style="display:block; margin:0 auto 10px; border-radius:12px;">
+<img src="{{ config('app.url') }}/images/icons/icon-96x96-v3.png" width="48" height="48" alt="RANIAG" style="display:block; margin:0 auto 10px; border-radius:12px;">
 <div style="color:#ffffff; font-size:20px; font-weight:800; letter-spacing:.02em;">RANIAG</div>
 <div style="color:#ffe8a3; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin-top:2px;">{{ config('raniag.organization') }}</div>
 </td>
