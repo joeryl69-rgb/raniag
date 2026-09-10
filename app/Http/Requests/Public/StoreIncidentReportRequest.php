@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Public;
 
+use App\Models\IncidentType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,9 +27,15 @@ class StoreIncidentReportRequest extends FormRequest
             ]);
         }
 
-        // Priority is always set to 'medium' by system, not user
+        // Priority is derived from the selected incident type's admin-configured
+        // default_priority (Admin > Incident Types), not a fixed system value and
+        // not something the reporter picks. Falls back to 'medium' only if the
+        // type can't be resolved (e.g. invalid incident_type_id — the separate
+        // 'exists' rule below still catches that as a validation error).
+        $incidentType = IncidentType::find($this->input('incident_type_id'));
+
         $this->merge([
-            'priority' => 'medium',
+            'priority' => $incidentType?->default_priority?->value ?? 'medium',
         ]);
     }
 

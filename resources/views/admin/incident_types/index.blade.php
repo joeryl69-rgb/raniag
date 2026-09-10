@@ -18,6 +18,7 @@
                     <th style="width:60px;">Icon</th>
                     <th>Name</th>
                     <th>Description</th>
+                    <th>Default Priority</th>
                     <th class="text-center">In Use</th>
                     <th class="text-center">Status</th>
                     <th class="text-end">Actions</th>
@@ -31,6 +32,9 @@
                         </td>
                         <td class="fw-semibold">{{ $type->name }}</td>
                         <td class="text-muted small">{{ Str::limit($type->description, 60) ?: '—' }}</td>
+                        <td>
+                            <x-priority-badge :priority="$type->default_priority" />
+                        </td>
                         <td class="text-center">
                             <span class="badge bg-light text-dark border">{{ $type->incidents_count }}</span>
                         </td>
@@ -57,7 +61,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">No incident types yet. Add one to get started.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">No incident types yet. Add one to get started.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -143,6 +147,15 @@
                         </div>
                         <p class="form-text mb-0">Use a preset swatch, the color wheel, or type any hex code — the palette isn't limited to the presets above.</p>
                     </div>
+                    <div class="mb-1">
+                        <label class="form-label small fw-semibold">Default Priority</label>
+                        <select name="default_priority" id="typeDefaultPriority" class="form-select form-select-sm" style="max-width:200px;" required>
+                            @foreach($priorityChoices as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <p class="form-text mb-0">Priority a new public report under this type starts at. The agency/admin can still change an individual report's priority afterward — this only sets the starting point.</p>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -191,6 +204,7 @@
         document.getElementById('typeIcon').value = '';
         document.getElementById('iconSearch').value = '';
         document.getElementById('typeColor').value = '';
+        document.getElementById('typeDefaultPriority').value = 'medium';
         currentDefault = null;
         document.getElementById('iconResetBtn').classList.add('d-none');
         filterIcons();
@@ -212,6 +226,7 @@
 
         selectIcon(type.icon);
         document.getElementById('typeColor').value = type.color;
+        document.getElementById('typeDefaultPriority').value = type.default_priority || 'medium';
 
         // Every type (seeded or custom, old or new) now has its own
         // default_icon/default_color captured at creation time, so the

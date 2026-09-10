@@ -8,6 +8,7 @@ use App\Support\IconLibrary;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class IncidentTypeController extends Controller
@@ -53,6 +54,19 @@ class IncidentTypeController extends Controller
         'other' => ['icon' => 'bi-question-circle-fill', 'color' => '#adb5bd'],
     ];
 
+    /**
+     * Choices offered in the "Default Priority" picker. This is what a new
+     * public incident report is stamped with when it's submitted under this
+     * type (see IncidentService::submitAnonymousReport) — the agency/admin
+     * decides the mapping per type instead of it being fixed at 'medium'.
+     */
+    public const PRIORITY_CHOICES = [
+        'low' => 'Low',
+        'medium' => 'Medium',
+        'high' => 'High',
+        'critical' => 'Critical',
+    ];
+
     public function index(): View
     {
         $types = IncidentType::withCount('incidents')
@@ -65,6 +79,7 @@ class IncidentTypeController extends Controller
             'iconChoices' => IconLibrary::DEFAULT_SET,
             'iconCatalog' => IconLibrary::CATALOG,
             'colorChoices' => self::COLOR_PRESETS,
+            'priorityChoices' => self::PRIORITY_CHOICES,
         ]);
     }
 
@@ -130,6 +145,7 @@ class IncidentTypeController extends Controller
             'color' => ['required', 'string', 'max:16', 'regex:/^#[0-9a-fA-F]{3,8}$/'],
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'default_priority' => ['required', 'string', Rule::in(array_keys(self::PRIORITY_CHOICES))],
         ]);
     }
 

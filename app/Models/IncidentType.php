@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IncidentPriority;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +19,7 @@ class IncidentType extends Model
         'color',
         'default_icon',
         'default_color',
+        'default_priority',
         'is_active',
         'sort_order',
     ];
@@ -27,6 +29,7 @@ class IncidentType extends Model
         return [
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'default_priority' => IncidentPriority::class,
         ];
     }
 
