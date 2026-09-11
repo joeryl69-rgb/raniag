@@ -46,19 +46,19 @@
         position: fixed;
         left: 50%;
         transform: translateX(-50%);
-        bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
+        bottom: max(0.9rem, env(safe-area-inset-bottom, 0px));
         z-index: 1035;
         display: flex;
         align-items: stretch;
-        gap: 0.2rem;
-        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        gap: 0.22rem;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border-radius: 999px;
-        padding: 0.35rem 0.4rem;
-        box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.28);
-        max-width: calc(100vw - 1.1rem);
+        padding: 0.38rem 0.42rem;
+        box-shadow: 0 0.9rem 1.8rem rgba(15, 23, 42, 0.18);
+        max-width: calc(100vw - 1.2rem);
         overflow-x: auto;
     }
 
@@ -68,7 +68,7 @@
         align-items: center;
         justify-content: center;
         gap: 0.18rem;
-        color: rgba(255, 255, 255, 0.75);
+        color: #49576b;
         text-decoration: none;
         background: transparent;
         border: none;
@@ -79,7 +79,7 @@
         letter-spacing: 0.02em;
         white-space: nowrap;
         min-width: 4rem;
-        transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
     }
 
     .mobile-dock-link i {
@@ -90,17 +90,17 @@
     .mobile-dock-link.active,
     .mobile-dock-link:hover {
         color: #fff;
-        background: linear-gradient(135deg, var(--raniag-accent), var(--raniag-primary));
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 0.4rem 0.9rem rgba(13, 110, 253, 0.24);
+        background: linear-gradient(135deg, var(--raniag-primary), var(--raniag-accent));
+        box-shadow: 0 0.45rem 0.9rem rgba(11, 94, 215, 0.20);
         transform: translateY(-1px);
     }
 
     .mobile-dock-more {
-        border: 1px solid rgba(255,255,255,0.06);
+        border: 1px solid rgba(15, 23, 42, 0.05);
     }
 
     body.has-mobile-dock #page-content-wrapper .container-fluid {
-        padding-bottom: calc(5.2rem + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(5.4rem + env(safe-area-inset-bottom, 0px));
     }
 
     @media (min-width: 992px) {

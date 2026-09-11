@@ -81,24 +81,33 @@
 
     async function refreshToggleLabel() {
         const label = document.getElementById('pushNotifToggleLabel');
-        const toggleBtn = document.getElementById('pushNotifToggleBtn');
-        if (!label || !toggleBtn) return;
+        const toggle = document.getElementById('pushPermissionSwitch');
+        const status = document.getElementById('pushNotifStatus');
+        if (!toggle) return;
 
         const subscribed = await isSubscribed();
         const permission = Notification.permission || 'default';
         const blocked = permission === 'denied';
 
-        label.dataset.subscribed = subscribed ? '1' : '0';
-        label.textContent = blocked
-            ? 'Notifications blocked in browser'
-            : subscribed ? 'Disable Push Notifications' : 'Enable Push Notifications';
-
-        toggleBtn.classList.remove('btn-success', 'btn-outline-success', 'btn-warning', 'btn-outline-warning', 'btn-danger');
-        toggleBtn.classList.add(blocked ? 'btn-danger' : subscribed ? 'btn-success' : 'btn-outline-primary');
-        toggleBtn.title = blocked
+        toggle.checked = subscribed;
+        toggle.disabled = blocked && !subscribed;
+        toggle.title = blocked
             ? 'Allow notifications in Edge site settings.'
             : subscribed ? 'Push notifications are enabled.' : 'Enable browser notifications.';
-        toggleBtn.setAttribute('aria-pressed', String(subscribed));
+
+        if (status) {
+            status.textContent = blocked
+                ? 'Notifications are blocked in your browser. Allow them in site settings.'
+                : subscribed ? 'Push notifications are on.' : 'Notifications are currently off.';
+            status.classList.toggle('text-muted', !subscribed);
+            status.classList.toggle('text-success', subscribed);
+            status.classList.toggle('text-warning', blocked);
+        }
+
+        if (label) {
+            label.dataset.subscribed = subscribed ? '1' : '0';
+            label.textContent = blocked ? 'Notifications blocked in browser' : subscribed ? 'Disable Push Notifications' : 'Enable Push Notifications';
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -110,27 +119,32 @@
             });
         }
 
-        const toggleBtn = document.getElementById('pushNotifToggleBtn');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', async function () {
-                const label = document.getElementById('pushNotifToggleLabel');
-                const subscribed = label && label.dataset.subscribed === '1';
-                toggleBtn.disabled = true;
+        const toggle = document.getElementById('pushPermissionSwitch');
+        const label = document.getElementById('pushNotifToggleLabel');
+        if (toggle) {
+            toggle.addEventListener('change', async function () {
+                const subscribed = this.checked;
+                toggle.disabled = true;
                 try {
                     if (subscribed) {
-                        await unsubscribe();
-                    } else {
                         if (Notification.permission === 'denied') {
                             alert('Notifications are blocked in Microsoft Edge. Please allow them in the site settings and try again.');
+                            this.checked = false;
                             return;
                         }
                         await subscribe();
+                    } else {
+                        await unsubscribe();
                     }
                 } finally {
-                    toggleBtn.disabled = false;
+                    toggle.disabled = false;
                     refreshToggleLabel();
                 }
             });
+        }
+
+        if (label) {
+            label.dataset.subscribed = '0';
         }
 
         refreshToggleLabel();

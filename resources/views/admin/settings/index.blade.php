@@ -3,7 +3,7 @@
         {{ __('System Settings') }}
     </x-slot>
 
-    <p class="small text-muted mb-3">Set the whole system to your preferred look, sync it with your device appearance, and control notifications from one place.</p>
+    <p class="small text-muted mb-3">Control the system appearance and browser notifications from a single, consistent settings area.</p>
 
     <form method="POST" action="{{ route('admin.settings.update') }}">
         @csrf
@@ -15,16 +15,25 @@
                 <h6 class="mb-0 fw-bold"><i class="bi bi-display me-2 text-primary"></i>Appearance</h6>
             </div>
             <div class="card-body">
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" role="switch" id="systemThemeSwitch">
-                    <label class="form-check-label" for="systemThemeSwitch">Follow system appearance</label>
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
+                    <div>
+                        <div class="fw-semibold">Follow system appearance</div>
+                        <div class="small text-muted">Use the same light or dark theme as your device.</div>
+                    </div>
+                    <div class="form-check form-switch ms-md-auto mb-0">
+                        <input class="form-check-input settings-toggle" type="checkbox" role="switch" id="systemThemeSwitch">
+                    </div>
                 </div>
 
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch" name="dark_mode" value="1" {{ $setting->dark_mode ? 'checked' : '' }}>
-                    <label class="form-check-label" for="darkModeSwitch">Dark mode override</label>
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <div class="fw-semibold">Dark mode</div>
+                        <div class="small text-muted">Apply a dark interface layer over the current theme.</div>
+                    </div>
+                    <div class="form-check form-switch ms-md-auto mb-0">
+                        <input class="form-check-input settings-toggle" type="checkbox" role="switch" id="darkModeSwitch" name="dark_mode" value="1" {{ $setting->dark_mode ? 'checked' : '' }}>
+                    </div>
                 </div>
-                <div class="form-text mt-2">When the system setting is active, the app follows your device theme automatically. Dark mode overrides the selected palette while the theme swatches stay locked to avoid poor contrast combinations.</div>
             </div>
         </div>
 
@@ -59,10 +68,11 @@
                         <div class="fw-semibold">Push notifications</div>
                         <div class="small text-muted">Allow the app to send browser notifications even when the tab is closed.</div>
                     </div>
-                    <button type="button" class="btn btn-primary px-3" id="pushNotifToggleBtn">
-                        <span id="pushNotifToggleLabel">Enable Push Notifications</span>
-                    </button>
+                    <div class="form-check form-switch ms-md-auto mb-0">
+                        <input class="form-check-input settings-toggle" id="pushPermissionSwitch" type="checkbox" role="switch" aria-label="Toggle push notifications">
+                    </div>
                 </div>
+                <div id="pushNotifStatus" class="small mt-3 mb-0 text-muted">Notifications are currently off.</div>
             </div>
         </div>
 
@@ -86,6 +96,25 @@
     .settings-card .card-header {
         background-color: transparent;
         border-bottom: 1px solid var(--raniag-border);
+    }
+
+    .settings-toggle {
+        width: 3.2rem;
+        height: 1.8rem;
+        border-radius: 999px;
+        cursor: pointer;
+        background-color: rgba(148, 163, 184, 0.5);
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .settings-toggle:checked {
+        background-color: var(--raniag-primary);
+        border-color: var(--raniag-primary);
+    }
+
+    .settings-toggle:focus {
+        box-shadow: 0 0 0 0.2rem var(--raniag-primary-light);
     }
 
     .theme-swatch-btn {

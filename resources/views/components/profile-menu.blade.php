@@ -68,10 +68,19 @@
 @push('styles')
 <style>
     .profile-menu-btn {
-        width: 2.75rem;
-        height: 2.75rem;
+        width: 2.8rem;
+        height: 2.8rem;
         overflow: hidden;
-        border: 1px solid var(--raniag-border);
+        border: 2px solid rgba(255,255,255,0.9);
+        box-shadow: 0 0.3rem 0.8rem rgba(15, 23, 42, 0.12);
+        background: linear-gradient(135deg, var(--raniag-surface), rgba(255,255,255,0.72));
+    }
+
+    .profile-menu-btn img,
+    .profile-menu-btn span {
+        width: 100%;
+        height: 100%;
+        display: block;
     }
 
     .profile-dropdown {
