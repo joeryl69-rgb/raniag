@@ -81,10 +81,24 @@
 
     async function refreshToggleLabel() {
         const label = document.getElementById('pushNotifToggleLabel');
-        if (!label) return;
+        const toggleBtn = document.getElementById('pushNotifToggleBtn');
+        if (!label || !toggleBtn) return;
+
         const subscribed = await isSubscribed();
-        label.textContent = subscribed ? 'Disable Push Notifications' : 'Enable Push Notifications';
+        const permission = Notification.permission || 'default';
+        const blocked = permission === 'denied';
+
         label.dataset.subscribed = subscribed ? '1' : '0';
+        label.textContent = blocked
+            ? 'Notifications blocked in browser'
+            : subscribed ? 'Disable Push Notifications' : 'Enable Push Notifications';
+
+        toggleBtn.classList.remove('btn-success', 'btn-outline-success', 'btn-warning', 'btn-outline-warning', 'btn-danger');
+        toggleBtn.classList.add(blocked ? 'btn-danger' : subscribed ? 'btn-success' : 'btn-outline-primary');
+        toggleBtn.title = blocked
+            ? 'Allow notifications in Edge site settings.'
+            : subscribed ? 'Push notifications are enabled.' : 'Enable browser notifications.';
+        toggleBtn.setAttribute('aria-pressed', String(subscribed));
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -106,6 +120,10 @@
                     if (subscribed) {
                         await unsubscribe();
                     } else {
+                        if (Notification.permission === 'denied') {
+                            alert('Notifications are blocked in Microsoft Edge. Please allow them in the site settings and try again.');
+                            return;
+                        }
                         await subscribe();
                     }
                 } finally {
@@ -114,5 +132,7 @@
                 }
             });
         }
+
+        refreshToggleLabel();
     });
 })();

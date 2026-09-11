@@ -127,20 +127,5 @@
             </li>
         @endif
 
-        <!-- Account Section (All Roles) -->
-        <li class="nav-section-label" data-role="all">Account</li>
-        <li class="nav-item" data-role="all">
-            <a class="nav-link {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">
-                <i class="bi bi-gear"></i><span>My Profile</span>
-            </a>
-        </li>
-        <li class="nav-item" data-role="all">
-            <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form">
-                @csrf
-                <a class="nav-link text-danger" href="#" onclick="event.preventDefault(); if(this.dataset.submitted) return; this.dataset.submitted='1'; document.getElementById('sidebar-logout-form').submit();">
-                    <i class="bi bi-box-arrow-right"></i><span>Log Out</span>
-                </a>
-            </form>
-        </li>
     </ul>
 </div>

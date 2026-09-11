@@ -46,17 +46,19 @@
         position: fixed;
         left: 50%;
         transform: translateX(-50%);
-        bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+        bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
         z-index: 1035;
         display: flex;
         align-items: stretch;
-        gap: 0.15rem;
-        background-color: rgba(15, 23, 42, 0.92);
-        backdrop-filter: blur(8px);
+        gap: 0.2rem;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         border-radius: 999px;
-        padding: 0.35rem;
-        box-shadow: 0 0.75rem 1.75rem rgba(15, 23, 42, 0.28);
-        max-width: calc(100vw - 1.5rem);
+        padding: 0.35rem 0.4rem;
+        box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.28);
+        max-width: calc(100vw - 1.1rem);
         overflow-x: auto;
     }
 
@@ -65,35 +67,40 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.15rem;
-        color: #a9c1cf;
+        gap: 0.18rem;
+        color: rgba(255, 255, 255, 0.75);
         text-decoration: none;
         background: transparent;
         border: none;
-        padding: 0.45rem 0.85rem;
+        padding: 0.5rem 0.8rem;
         border-radius: 999px;
-        font-size: 0.65rem;
-        font-weight: 600;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
         white-space: nowrap;
-        min-width: 3.5rem;
-        transition: background-color 0.15s ease, color 0.15s ease;
+        min-width: 4rem;
+        transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
     }
 
     .mobile-dock-link i {
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         line-height: 1;
     }
 
     .mobile-dock-link.active,
     .mobile-dock-link:hover {
         color: #fff;
-        background-color: var(--raniag-accent);
+        background: linear-gradient(135deg, var(--raniag-accent), var(--raniag-primary));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 0.4rem 0.9rem rgba(13, 110, 253, 0.24);
+        transform: translateY(-1px);
     }
 
-    /* Keep dock-covered content clear of the floating bar, and clear of the
-       browser chrome / home-indicator area on phones. */
+    .mobile-dock-more {
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+
     body.has-mobile-dock #page-content-wrapper .container-fluid {
-        padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(5.2rem + env(safe-area-inset-bottom, 0px));
     }
 
     @media (min-width: 992px) {

@@ -43,18 +43,6 @@
                 <span>My Profile</span>
             </a>
 
-            <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="pushNotifToggleBtn">
-                <span class="profile-item-icon"><i class="bi bi-bell"></i></span>
-                <span id="pushNotifToggleLabel">Enable Push Notifications</span>
-            </button>
-
-            @if (auth()->user()->isAdministrator())
-                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.settings.index') }}">
-                    <span class="profile-item-icon"><i class="bi bi-palette"></i></span>
-                    <span>System Settings &amp; Theme</span>
-                </a>
-            @endif
-
             @if (auth()->user()->isAgency() || auth()->user()->isPersonnel())
                 <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('agency.support.create') }}">
                     <span class="profile-item-icon"><i class="bi bi-headset"></i></span>
