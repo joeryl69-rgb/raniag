@@ -35,9 +35,27 @@
 
             <li class="nav-section-label" data-role="administrator">Coordination</li>
             <li class="nav-item" data-role="administrator">
-                <a class="nav-link {{ request()->routeIs('admin.agencies.*') ? 'active' : '' }}" href="{{ route('admin.agencies.index') }}">
-                    <i class="bi bi-building"></i><span>Agencies &amp; Personnel</span>
+                <a class="nav-link d-flex align-items-center {{ request()->routeIs('admin.agencies.*', 'admin.personnel.*', 'admin.personnel_roles.*') ? 'active' : '' }}"
+                   href="#coordinationSubmenu" data-bs-toggle="collapse" role="button"
+                   aria-expanded="{{ request()->routeIs('admin.agencies.*', 'admin.personnel.*', 'admin.personnel_roles.*') ? 'true' : 'false' }}"
+                   aria-controls="coordinationSubmenu">
+                    <i class="bi bi-building"></i><span class="flex-grow-1">Agencies &amp; Personnel</span>
+                    <i class="bi bi-chevron-down small nav-caret"></i>
                 </a>
+                <div class="collapse {{ request()->routeIs('admin.agencies.*', 'admin.personnel.*', 'admin.personnel_roles.*') ? 'show' : '' }}" id="coordinationSubmenu">
+                    <ul class="nav flex-column nav-submenu">
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.agencies.*', 'admin.personnel.*') ? 'active' : '' }}" href="{{ route('admin.agencies.index') }}">
+                                <i class="bi bi-person-badge"></i><span>Accounts List</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.personnel_roles.*') ? 'active' : '' }}" href="{{ route('admin.personnel_roles.index') }}">
+                                <i class="bi bi-diagram-3"></i><span>Personnel Roles</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </li>
             <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.document_requests.*') ? 'active' : '' }}" href="{{ route('admin.document_requests.index') }}">
@@ -64,6 +82,11 @@
             <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}" href="{{ route('admin.announcements.index') }}">
                     <i class="bi bi-megaphone-fill"></i><span>Updates &amp; Announcements</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}">
+                    <i class="bi bi-palette-fill"></i><span>System Settings</span>
                 </a>
             </li>
         @endif

@@ -51,7 +51,12 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="role_title" class="form-label">Personnel Role Title <span class="text-danger">*</span></label>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <label for="role_title" class="form-label mb-0">Personnel Role Title <span class="text-danger">*</span></label>
+                                <a href="{{ route('admin.personnel_roles.index') }}" class="small text-decoration-none" target="_blank" title="Add or edit personnel roles">
+                                    <i class="bi bi-gear me-1"></i>Manage Roles
+                                </a>
+                            </div>
                             <select class="form-select" id="role_title" name="role_title" required>
                                 <option value="">Select role title</option>
                                 @foreach ($roleTitles as $title)

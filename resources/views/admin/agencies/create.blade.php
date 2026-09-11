@@ -90,14 +90,19 @@
  
                         <div id="personnel-fields" class="{{ old('account_type', 'agency') !== 'personnel' ? 'd-none' : '' }}">
                             <div class="mb-3">
-                                <label for="role_title" class="form-label">Personnel Role Title <span class="text-danger">*</span></label>
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <label for="role_title" class="form-label mb-0">Personnel Role Title <span class="text-danger">*</span></label>
+                                    <a href="{{ route('admin.personnel_roles.index') }}" class="small text-decoration-none" target="_blank" title="Add or edit personnel roles">
+                                        <i class="bi bi-gear me-1"></i>Manage Roles
+                                    </a>
+                                </div>
                                 <select class="form-select" id="role_title" name="role_title">
                                     <option value="">Select personnel role</option>
                                     @foreach ($roleTitles as $title)
                                         <option value="{{ $title }}" @selected(old('role_title') === $title)>{{ $title }}</option>
                                     @endforeach
                                 </select>
-                                <div class="form-text">This defines the personnel account role displayed within the response team.</div>
+                                <div class="form-text">This defines the personnel account role displayed within the response team. Don't see the right title? <a href="{{ route('admin.personnel_roles.index') }}" target="_blank">Add one here</a>, then come back and refresh this page.</div>
                             </div>
 
                             <div class="mb-3">

@@ -1,9 +1,13 @@
+@php
+    $__raniagSetting = \App\Models\SystemSetting::current();
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagSetting->dark_mode ? 'dark' : 'light' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="vapid-public-key" content="{{ config('services.webpush.public_key') }}">
 
     <title>@yield('title', 'Staff Portal') — RANIAG · MDRRMO Pamplona</title>
 
@@ -21,6 +25,12 @@
     <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png?v=8">
     @stack('styles')
+
+    {{-- Admin-selected theme (System Settings) — overrides the --raniag-*
+         tokens defined in public.css :root, so every screen using those
+         tokens (109 usages across public/admin/agency/personnel layouts)
+         recolors together, no per-page exceptions. --}}
+    <style>{!! \App\Support\ThemePresets::cssVariables($__raniagSetting->theme_key, $__raniagSetting->dark_mode) !!}</style>
 
     <style>
         html {
@@ -124,6 +134,22 @@
         #sidebar-wrapper .nav-item + .nav-section-label {
             border-top: 1px solid rgba(255,255,255,0.06);
             margin-top: 0.4rem;
+        }
+
+        /* Collapsible "Agencies & Personnel" group (Coordination section) */
+        #sidebar-wrapper .nav-caret {
+            transition: transform 0.2s ease;
+        }
+        #sidebar-wrapper a[aria-expanded="true"] .nav-caret {
+            transform: rotate(180deg);
+        }
+        #sidebar-wrapper .nav-submenu {
+            padding-left: 0.5rem;
+        }
+        #sidebar-wrapper .nav-submenu .nav-link {
+            padding-left: 2.5rem;
+            min-height: 38px;
+            font-size: 0.9rem;
         }
 
         #page-content-wrapper {
@@ -285,7 +311,7 @@
         [data-live-refresh-target] [data-rg-reveal] { opacity: 1; transform: none; }
     </style>
 </head>
-<body>
+<body class="has-mobile-dock">
     @if(auth()->user()->isAgency() || auth()->user()->isPersonnel())
         <x-help-fab :href="route('agency.support.create')" />
     @endif
@@ -305,27 +331,6 @@
                         <span class="fw-normal text-white-50" style="font-size: 0.62rem; letter-spacing: 0.04em;">MDRRMO PAMPLONA</span>
                     </span>
                 </a>
-            </div>
-
-            <!-- Profile Widget -->
-            <div class="sidebar-profile d-flex align-items-center gap-3">
-                <a href="{{ route('profile.edit') }}" class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0 text-decoration-none fw-bold" style="width: 2.5rem; height: 2.5rem;" title="Edit profile">
-                    @if (auth()->user()->avatar_url)
-                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-100 h-100" style="object-fit:cover;">
-                    @else
-                        {{ auth()->user()->initials }}
-                    @endif
-                </a>
-                <div class="text-truncate">
-                    <div class="fw-bold text-white small text-truncate" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</div>
-                    @if (auth()->user()->isAdministrator())
-                        <span class="badge bg-danger fs-8 fw-normal">Administrator</span>
-                    @elseif (auth()->user()->isPersonnel())
-                        <span class="badge fs-8 fw-normal" style="background-color: var(--raniag-accent); color: #fff;">Personnel</span>
-                    @else
-                        <span class="badge fs-8 fw-normal" style="background-color: var(--raniag-accent); color: #fff;">{{ auth()->user()->agency->code ?? 'Agency' }}</span>
-                    @endif
-                </div>
             </div>
 
             <!-- Centralized Navigation Component -->
@@ -350,6 +355,7 @@
                         <i class="bi bi-calendar3 me-1"></i>{{ date('l, M d, Y') }}
                     </div>
                     <x-notification-bell />
+                    <x-profile-menu />
                 </div>
             </nav>
 
@@ -377,7 +383,9 @@
     </div>
 
     </div>
- 
+
+    <x-mobile-dock />
+
     <div id="global-loading-overlay" class="d-none">
         <div class="text-center">
             <div class="rg-mark" aria-hidden="true"><img src="/images/icons/raniag-master.svg" alt=""></div>
@@ -388,6 +396,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{{ asset('js/live-refresh.js') }}?v={{ @filemtime(public_path('js/live-refresh.js')) }}"></script>
     <script src="{{ asset('js/filter-bar.js') }}?v={{ @filemtime(public_path('js/filter-bar.js')) }}"></script>
+    <script src="{{ asset('js/push-notifications.js') }}?v={{ @filemtime(public_path('js/push-notifications.js')) }}"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <script>
         function toggleSidebar(force) {

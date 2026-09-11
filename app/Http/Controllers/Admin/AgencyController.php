@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Agency;
+use App\Models\PersonnelRole;
 use App\Models\User;
 use App\Support\Filters;
 use Illuminate\Http\Request;
@@ -43,15 +44,7 @@ class AgencyController extends Controller
 
     public function create()
     {
-        $roleTitles = [
-            'Research and Planning Chief',
-            'Operations and Warning Chief',
-            'Admin and Training Chief',
-            'PQRT Chief',
-            'PQRT Deputy Chief',
-            'Team Leader',
-            'Responder',
-        ];
+        $roleTitles = PersonnelRole::activeTitles();
 
         return view('admin.agencies.create', compact('roleTitles'));
     }
@@ -64,15 +57,7 @@ class AgencyController extends Controller
             'code' => ['required_if:account_type,agency', 'string', 'max:32', 'unique:agencies,code'],
             'description' => ['nullable', 'string', 'max:1000'],
             'address' => ['nullable', 'string', 'max:255'],
-            'role_title' => ['required_if:account_type,personnel', Rule::in([
-                'Research and Planning Chief',
-                'Operations and Warning Chief',
-                'Admin and Training Chief',
-                'PQRT Chief',
-                'PQRT Deputy Chief',
-                'Team Leader',
-                'Responder',
-            ])],
+            'role_title' => ['required_if:account_type,personnel', Rule::in(PersonnelRole::activeTitles())],
             'team_assignment' => ['required_if:account_type,personnel', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:32'],
             'officer_name' => ['required', 'string', 'max:255'],

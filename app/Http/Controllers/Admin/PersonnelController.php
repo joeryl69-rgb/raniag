@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\PersonnelRole;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -17,15 +18,14 @@ class PersonnelController extends Controller
             abort(404);
         }
 
-        $roleTitles = [
-            'Research and Planning Chief',
-            'Operations and Warning Chief',
-            'Admin and Training Chief',
-            'PQRT Chief',
-            'PQRT Deputy Chief',
-            'Team Leader',
-            'Responder',
-        ];
+        $roleTitles = PersonnelRole::activeTitles();
+
+        // Keep the personnel's current title selectable even if an admin
+        // has since deactivated or renamed that role — otherwise editing
+        // this account would silently drop their existing title.
+        if ($personnel->role_title && ! in_array($personnel->role_title, $roleTitles, true)) {
+            array_unshift($roleTitles, $personnel->role_title);
+        }
 
         return view('admin.personnel.edit', compact('personnel', 'roleTitles'));
     }
@@ -40,15 +40,7 @@ class PersonnelController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($personnel->id)],
             'phone' => ['nullable', 'string', 'max:32'],
-            'role_title' => ['required', Rule::in([
-                'Research and Planning Chief',
-                'Operations and Warning Chief',
-                'Admin and Training Chief',
-                'PQRT Chief',
-                'PQRT Deputy Chief',
-                'Team Leader',
-                'Responder',
-            ])],
+            'role_title' => ['required', Rule::in(array_unique(array_merge(PersonnelRole::activeTitles(), [$personnel->role_title])))],
             'team_assignment' => ['required', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'string', 'min:8'],

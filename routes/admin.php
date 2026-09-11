@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\IncidentController;
 use App\Http\Controllers\Admin\IncidentDocumentController;
 use App\Http\Controllers\Admin\IncidentTypeController;
 use App\Http\Controllers\Admin\PersonnelController;
+use App\Http\Controllers\Admin\PersonnelRoleController;
+use App\Http\Controllers\Admin\SystemSettingController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResolutionController;
@@ -72,6 +74,20 @@ Route::prefix('admin')
             Route::get('/{personnel}/edit', [PersonnelController::class, 'edit'])->name('edit');
             Route::put('/{personnel}', [PersonnelController::class, 'update'])->name('update');
             Route::delete('/{personnel}', [PersonnelController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('personnel-roles')->name('personnel_roles.')->group(function () {
+            Route::get('/', [PersonnelRoleController::class, 'index'])->name('index');
+            Route::post('/', [PersonnelRoleController::class, 'store'])->name('store');
+            Route::put('/{personnelRole}', [PersonnelRoleController::class, 'update'])->name('update');
+            Route::post('/{personnelRole}/toggle', [PersonnelRoleController::class, 'toggle'])->name('toggle');
+            Route::delete('/{personnelRole}', [PersonnelRoleController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', [SystemSettingController::class, 'index'])->name('index');
+            Route::put('/', [SystemSettingController::class, 'update'])->name('update');
+            Route::post('/reset', [SystemSettingController::class, 'reset'])->name('reset');
         });
 
         // Printable document requests (admin approve + generate)

@@ -41,6 +41,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::delete('/bulk/delete', [NotificationController::class, 'destroySelected'])->name('destroy_selected');
         Route::delete('/bulk/delete-all', [NotificationController::class, 'destroyAll'])->name('destroy_all');
     });
+
+    Route::prefix('push-subscriptions')->name('push_subscriptions.')->group(function () {
+        Route::post('/', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('store');
+        Route::delete('/', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('destroy');
+    });
 });
 
 Route::get('/debug-session', function () {

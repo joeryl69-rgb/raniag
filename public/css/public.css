@@ -1123,3 +1123,104 @@ body.raniag-public {
 .rg-filter-chip button:hover { background: rgba(11,94,215,.28); }
 .rg-filter-chip-clear { font-size: .78rem; font-weight: 700; color: var(--raniag-danger, #dc3545); text-decoration: none; margin-left: .25rem; }
 .rg-filter-chip-clear:hover { text-decoration: underline; }
+
+/* ============================================================
+   DARK MODE (System Settings -> Appearance -> Dark mode)
+   Layered on top of whichever --raniag-* theme is active (the
+   inline <style> in layouts/app.blade.php already swaps
+   --raniag-surface/--raniag-border for dark values). This block
+   covers the plain Bootstrap surfaces that aren't driven by those
+   custom properties, so switching to dark mode recolors the whole
+   staff portal — body text, cards, tables, forms, dropdowns,
+   modals — not just the sidebar (which was already dark).
+   ============================================================ */
+[data-theme="dark"] body {
+    background-color: var(--raniag-surface);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .navbar-top,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .list-group-item {
+    background-color: #16213a !important;
+    color: #e2e8f0;
+    border-color: var(--raniag-border) !important;
+}
+
+[data-theme="dark"] .table {
+    color: #e2e8f0;
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: rgba(255,255,255,0.04);
+    --bs-table-hover-bg: rgba(255,255,255,0.06);
+    border-color: var(--raniag-border);
+}
+
+[data-theme="dark"] .table-light,
+[data-theme="dark"] thead.table-light th {
+    background-color: #1c2b47 !important;
+    color: #e2e8f0;
+    border-color: var(--raniag-border);
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] textarea {
+    background-color: #1c2b47;
+    color: #e2e8f0;
+    border-color: var(--raniag-border);
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: #8fa3bf;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background-color: #1c2b47;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .text-dark,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+[data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 {
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .border,
+[data-theme="dark"] .border-top,
+[data-theme="dark"] .border-bottom,
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-footer {
+    border-color: var(--raniag-border) !important;
+    background-color: transparent;
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+    color: #cbd5e1;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+    background-color: #334155;
+    color: #fff;
+}
+
+[data-theme="dark"] .btn-light {
+    background-color: #1c2b47;
+    border-color: var(--raniag-border);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .badge.bg-light {
+    background-color: #1c2b47 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .profile-dropdown-card,
+[data-theme="dark"] .theme-swatch-btn {
+    background-color: #1c2b47 !important;
+}

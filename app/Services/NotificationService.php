@@ -35,7 +35,7 @@ class NotificationService
         ?Incident $incident = null,
         array $data = [],
     ): Notification {
-        return Notification::create([
+        $notification = Notification::create([
             'user_id' => $user->id,
             'incident_id' => $incident?->id,
             'type' => $type,
@@ -44,6 +44,15 @@ class NotificationService
             'data' => $data ?: null,
             'channel' => 'database',
         ]);
+
+        // Also push this to any browser/device the user has subscribed
+        // (see App\Http\Controllers\PushSubscriptionController), so it
+        // shows as a real OS notification even if RANIAG isn't open —
+        // afterCommit so a slow/unreachable push service never blocks
+        // whatever request/transaction triggered this notification.
+        \App\Jobs\DispatchWebPushJob::dispatch($notification->id)->afterCommit();
+
+        return $notification;
     }
 
     /**

@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             IncidentTypeSeeder::class,
+            PersonnelRoleSeeder::class,
             AdministratorSeeder::class,
             AgencySeeder::class,
         ]);
