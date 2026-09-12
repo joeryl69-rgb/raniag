@@ -84,12 +84,10 @@
                     <i class="bi bi-megaphone-fill"></i><span>Updates &amp; Announcements</span>
                 </a>
             </li>
-            <li class="nav-item" data-role="administrator">
-                <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}">
-                    <i class="bi bi-palette-fill"></i><span>System Settings</span>
-                </a>
-            </li>
         @endif
+        {{-- System Settings now lives in the profile avatar dropdown
+             (top navbar, Facebook-style account menu) — see
+             components/profile-menu.blade.php — instead of the sidebar. --}}
 
         <!-- Agency & Personnel Menu -->
         @if(auth()->user()->isAgency() || auth()->user()->isPersonnel())

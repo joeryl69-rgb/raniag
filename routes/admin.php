@@ -10,7 +10,6 @@ use App\Http\Controllers\Admin\IncidentDocumentController;
 use App\Http\Controllers\Admin\IncidentTypeController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PersonnelRoleController;
-use App\Http\Controllers\Admin\SystemSettingController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResolutionController;
@@ -18,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')
     ->name('admin.')
-    ->middleware(['auth', 'verified', 'active', 'role:administrator'])
+    ->middleware(['auth', 'verified', 'active', 'role:administrator', 'no-cache'])
     ->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
@@ -84,11 +83,9 @@ Route::prefix('admin')
             Route::delete('/{personnelRole}', [PersonnelRoleController::class, 'destroy'])->name('destroy');
         });
 
-        Route::prefix('settings')->name('settings.')->group(function () {
-            Route::get('/', [SystemSettingController::class, 'index'])->name('index');
-            Route::put('/', [SystemSettingController::class, 'update'])->name('update');
-            Route::post('/reset', [SystemSettingController::class, 'reset'])->name('reset');
-        });
+        // Appearance ("System Settings") moved to a per-user preference —
+        // see routes/web.php's 'settings.appearance.*' group, available to
+        // every authenticated role instead of only administrators.
 
         // Printable document requests (admin approve + generate)
         Route::prefix('document-requests')->name('document_requests.')->group(function () {

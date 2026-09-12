@@ -53,11 +53,20 @@
 </div>
 
 @once
-@push('styles')
+{{-- Inline <style> on purpose, not @push('styles') — see mobile-dock.blade.php
+     for why: pushing from a component printed after @stack('styles') in
+     layouts/app.blade.php's <head> was silently discarded. --}}
 <style>
     .notif-bell-btn {
         width: 2.75rem;
         height: 2.75rem;
+        border: 2px solid rgba(255,255,255,0.9);
+        box-shadow: 0 0.3rem 0.8rem rgba(15, 23, 42, 0.12);
+    }
+
+    [data-theme="dark"] .notif-bell-btn {
+        border-color: rgba(255,255,255,0.12);
+        background-color: #1c2b47 !important;
     }
 
     .notif-dropdown {
@@ -127,7 +136,6 @@
         }
     }
 </style>
-@endpush
 @endonce
 
 @once

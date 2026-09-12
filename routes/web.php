@@ -12,9 +12,9 @@ require __DIR__.'/personnel.php';
 
 Route::get('/dashboard', function () {
     return redirect()->route(auth()->user()->homeRoute());
-})->middleware(['auth', 'verified', 'active'])->name('dashboard');
+})->middleware(['auth', 'verified', 'active', 'no-cache'])->name('dashboard');
 
-Route::middleware(['auth', 'active'])->group(function () {
+Route::middleware(['auth', 'active', 'no-cache'])->group(function () {
     // Support Center for signed-in staff (agency + personnel accounts).
     // Shared here (instead of duplicated in agency.php/personnel.php)
     // since both roles get identical access to file a message.
@@ -46,21 +46,35 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('store');
         Route::delete('/', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('destroy');
     });
+
+    // Appearance: theme, dark mode, follow-system, font — a per-user
+    // preference (see App\Models\User::appearance()), reachable by every
+    // authenticated role from their own profile-menu avatar dropdown.
+    // Previously this was admin-only and applied globally to every account.
+    Route::prefix('settings/appearance')->name('settings.appearance.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AppearanceSettingController::class, 'index'])->name('index');
+        Route::put('/', [\App\Http\Controllers\AppearanceSettingController::class, 'update'])->name('update');
+        Route::post('/reset', [\App\Http\Controllers\AppearanceSettingController::class, 'reset'])->name('reset');
+    });
 });
 
-Route::get('/debug-session', function () {
-    return response()->json([
-        'session_id'          => session()->getId(),
-        'csrf_token'          => csrf_token(),
-        'is_secure'           => request()->isSecure(),
-        'x_forwarded_proto'   => request()->header('X-Forwarded-Proto'),
-        'scheme'              => request()->getScheme(),
-        'session_cookie_seen' => request()->hasCookie(config('session.cookie')),
-        'session_cookie_name' => config('session.cookie'),
-        'session_driver'      => config('session.driver'),
-        'session_secure_cfg'  => config('session.secure'),
-        'app_url'             => config('app.url'),
-    ]);
-});
+// Diagnostic only — never exposed outside local development, since it
+// echoes the live session ID and CSRF token as plain, unauthenticated JSON.
+if (app()->environment('local')) {
+    Route::get('/debug-session', function () {
+        return response()->json([
+            'session_id'          => session()->getId(),
+            'csrf_token'          => csrf_token(),
+            'is_secure'           => request()->isSecure(),
+            'x_forwarded_proto'   => request()->header('X-Forwarded-Proto'),
+            'scheme'              => request()->getScheme(),
+            'session_cookie_seen' => request()->hasCookie(config('session.cookie')),
+            'session_cookie_name' => config('session.cookie'),
+            'session_driver'      => config('session.driver'),
+            'session_secure_cfg'  => config('session.secure'),
+            'app_url'             => config('app.url'),
+        ]);
+    });
+}
 
 require __DIR__.'/auth.php';

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('agency')
     ->name('agency.')
-    ->middleware(['auth', 'verified', 'active', 'role:agency'])
+    ->middleware(['auth', 'verified', 'active', 'role:agency', 'no-cache'])
     ->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');

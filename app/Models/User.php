@@ -43,6 +43,11 @@ class User extends Authenticatable
         'team_assignment',
         'is_active',
         'avatar_path',
+        'theme_key',
+        'dark_mode',
+        'follow_system',
+        'font_key',
+        'font_size',
     ];
 
     protected $hidden = [
@@ -57,6 +62,24 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_active' => 'boolean',
+            'dark_mode' => 'boolean',
+            'follow_system' => 'boolean',
+        ];
+    }
+
+    /**
+     * This user's own appearance preferences, each independently falling
+     * back to the system default the moment it hasn't been set — no more
+     * shared global row, so one account's theme never leaks into another's.
+     */
+    public function appearance(): array
+    {
+        return [
+            'theme_key' => $this->theme_key ?? \App\Support\ThemePresets::DEFAULT_KEY,
+            'dark_mode' => (bool) ($this->dark_mode ?? false),
+            'follow_system' => (bool) ($this->follow_system ?? false),
+            'font_key' => $this->font_key ?? \App\Support\ThemePresets::DEFAULT_FONT_KEY,
+            'font_size' => $this->font_size ?? \App\Support\ThemePresets::DEFAULT_FONT_SIZE,
         ];
     }
 

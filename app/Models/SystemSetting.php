@@ -11,6 +11,9 @@ class SystemSetting extends Model
     protected $fillable = [
         'theme_key',
         'dark_mode',
+        'follow_system',
+        'font_key',
+        'font_size',
         'updated_by',
     ];
 
@@ -18,6 +21,7 @@ class SystemSetting extends Model
     {
         return [
             'dark_mode' => 'boolean',
+            'follow_system' => 'boolean',
         ];
     }
 
@@ -37,6 +41,9 @@ class SystemSetting extends Model
             return static::firstOrCreate(['id' => 1], [
                 'theme_key' => ThemePresets::DEFAULT_KEY,
                 'dark_mode' => false,
+                'follow_system' => false,
+                'font_key' => ThemePresets::DEFAULT_FONT_KEY,
+                'font_size' => ThemePresets::DEFAULT_FONT_SIZE,
             ]);
         });
     }

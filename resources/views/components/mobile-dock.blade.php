@@ -40,7 +40,11 @@
 </nav>
 
 @once
-@push('styles')
+{{-- Rendered inline (not via @push('styles')) on purpose: this component is
+     printed inside layouts/app.blade.php's own body, AFTER @stack('styles')
+     has already been output in <head>. Pushing here was silently dropped —
+     which is why the dock previously showed as bare unstyled links. A plain
+     <style> tag works from anywhere in the document, so it always applies. --}}
 <style>
     .mobile-dock {
         position: fixed;
@@ -106,6 +110,18 @@
     @media (min-width: 992px) {
         .mobile-dock { display: none !important; }
     }
+
+    [data-theme="dark"] .mobile-dock {
+        background: rgba(22, 33, 58, 0.92);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    [data-theme="dark"] .mobile-dock-link {
+        color: #a9c1cf;
+    }
+
+    [data-theme="dark"] .mobile-dock-more {
+        border-color: rgba(255, 255, 255, 0.08);
+    }
 </style>
-@endpush
 @endonce

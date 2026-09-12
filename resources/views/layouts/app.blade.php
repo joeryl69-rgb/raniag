@@ -1,9 +1,49 @@
 @php
-    $__raniagSetting = \App\Models\SystemSetting::current();
+    // Per-user appearance now (App\Models\User::appearance()) — no more
+    // shared global row, so one account's theme/dark-mode choice never
+    // bleeds into another account's session. See AppearanceSettingController.
+    $__raniagAppearance = (object) (auth()->user()?->appearance() ?? [
+        'theme_key' => \App\Support\ThemePresets::DEFAULT_KEY,
+        'dark_mode' => false,
+        'follow_system' => false,
+        'font_key' => \App\Support\ThemePresets::DEFAULT_FONT_KEY,
+        'font_size' => \App\Support\ThemePresets::DEFAULT_FONT_SIZE,
+    ]);
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagSetting->dark_mode ? 'dark' : 'light' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagAppearance->dark_mode ? 'dark' : 'light' }}">
 <head>
+    @if ($__raniagAppearance->follow_system)
+        {{-- "Follow system appearance" is per-device, not just per-account:
+             this runs before any CSS/paint and flips data-theme to match
+             *this visitor's browser*, overriding the server-rendered
+             default above (the user's own last-saved dark_mode value) so
+             the same account still adapts correctly across their devices. --}}
+        <script>
+            (function () {
+                try {
+                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                    } else {
+                        document.documentElement.setAttribute('data-theme', 'light');
+                    }
+                } catch (e) {}
+            })();
+        </script>
+    @endif
+
+    <script>
+        // Applied before paint (like the follow-system block above) to avoid
+        // a flash of the sidebar snapping from expanded to collapsed once JS
+        // catches up after first render.
+        (function () {
+            try {
+                if (window.matchMedia('(min-width: 992px)').matches && localStorage.getItem('raniag-sidebar-collapsed') === '1') {
+                    document.documentElement.classList.add('rg-sidebar-collapsed-init');
+                }
+            } catch (e) {}
+        })();
+    </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -30,15 +70,16 @@
          tokens defined in public.css :root, so every screen using those
          tokens (109 usages across public/admin/agency/personnel layouts)
          recolors together, no per-page exceptions. --}}
-    <style>{!! \App\Support\ThemePresets::cssVariables($__raniagSetting->theme_key, $__raniagSetting->dark_mode) !!}</style>
+    <style>{!! \App\Support\ThemePresets::cssVariables($__raniagAppearance->theme_key, $__raniagAppearance->dark_mode, $__raniagAppearance->font_key, $__raniagAppearance->font_size) !!}</style>
 
     <style>
         html {
             scrollbar-gutter: stable;
+            font-size: var(--raniag-font-root, 16px);
         }
 
         body {
-            font-family: 'Figtree', sans-serif;
+            font-family: var(--raniag-font-family, 'Figtree', sans-serif);
             background-color: var(--raniag-surface);
             overflow-x: hidden;
         }
@@ -253,15 +294,79 @@
                 height: 100vh;
                 height: 100dvh;
                 z-index: 1040;
+                width: 260px;
+                transition: width 0.2s ease;
             }
 
             /* Shift page content to account for fixed sidebar on desktop */
             #page-content-wrapper {
                 margin-left: 260px;
+                transition: margin-left 0.2s ease;
             }
 
             #page-content-wrapper .container-fluid {
                 padding-top: 1rem;
+            }
+
+            /* Desktop collapse (icon rail) — independent of the mobile
+               off-canvas "toggled" state, which only exists below 992px. */
+            html.rg-sidebar-collapsed-init #sidebar-wrapper {
+                width: 76px;
+            }
+
+            html.rg-sidebar-collapsed-init #page-content-wrapper {
+                margin-left: 76px;
+            }
+
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .sidebar-brand span:not(.rg-brand-mark),
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-link span:not(.nav-caret),
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-section-label,
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-caret,
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-submenu {
+                display: none !important;
+            }
+
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .sidebar-brand {
+                padding: 1.5rem 0;
+                display: flex;
+                justify-content: center;
+            }
+
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-link {
+                justify-content: center;
+                padding: 0.8rem 0;
+            }
+
+            html.rg-sidebar-collapsed-init #sidebar-wrapper [data-bs-toggle="collapse"] {
+                pointer-events: none;
+            }
+
+            .rg-sidebar-collapse-btn {
+                position: absolute;
+                top: 1.4rem;
+                right: -0.9rem;
+                width: 1.8rem;
+                height: 1.8rem;
+                border-radius: 50%;
+                background-color: var(--raniag-primary);
+                color: #fff;
+                border: 2px solid var(--raniag-surface);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1041;
+                transition: transform 0.2s ease;
+                cursor: pointer;
+            }
+
+            html.rg-sidebar-collapsed-init .rg-sidebar-collapse-btn i {
+                transform: rotate(180deg);
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .rg-sidebar-collapse-btn {
+                display: none !important;
             }
         }
 
@@ -321,9 +426,12 @@
 
         <!-- Sidebar -->
         <div id="sidebar-wrapper">
+            <button type="button" class="rg-sidebar-collapse-btn d-none d-lg-flex" id="sidebarCollapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+                <i class="bi bi-chevron-left"></i>
+            </button>
             <div class="sidebar-brand">
                 <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2 fs-5" href="{{ route('dashboard') }}">
-                    <span class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded overflow-hidden" style="width: 2rem; height: 2rem;">
+                    <span class="rg-brand-mark bg-primary text-white d-inline-flex align-items-center justify-content-center rounded overflow-hidden flex-shrink-0" style="width: 2rem; height: 2rem;">
                         <img src="/images/icons/raniag-master.svg" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
                     </span>
                     <span class="d-flex flex-column lh-sm">
@@ -406,6 +514,25 @@
             wrapper.classList.toggle('toggled', open);
             document.body.classList.toggle('sidebar-open', open);
         }
+
+        // Desktop-only collapse (icon rail) — separate state from the mobile
+        // off-canvas toggle above, so the two never interfere with each
+        // other. Persisted so it stays collapsed across page loads.
+        function setSidebarCollapsed(collapsed) {
+            document.documentElement.classList.toggle('rg-sidebar-collapsed-init', collapsed);
+            try { localStorage.setItem('raniag-sidebar-collapsed', collapsed ? '1' : '0'); } catch (e) {}
+            const btn = document.getElementById('sidebarCollapseBtn');
+            if (btn) btn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const collapseBtn = document.getElementById('sidebarCollapseBtn');
+            if (collapseBtn) {
+                collapseBtn.addEventListener('click', function () {
+                    setSidebarCollapsed(!document.documentElement.classList.contains('rg-sidebar-collapsed-init'));
+                });
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', function () {
             const overlay = document.getElementById('sidebar-overlay');
@@ -515,6 +642,18 @@
 
             window.addEventListener('pageshow', function () {
                 hideLoadingOverlay();
+            });
+
+            // Defense in depth alongside the 'no-cache' route middleware:
+            // if the browser still restores this page from bfcache (back/
+            // forward), force a fresh request instead of showing a page
+            // whose CSRF token or auth state may no longer match — this is
+            // what caused "logout says page expired" / "no permission"
+            // after switching accounts in another tab.
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
             });
         });
     </script>

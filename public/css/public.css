@@ -1215,6 +1215,10 @@ body.raniag-public {
     color: #e2e8f0;
 }
 
+[data-theme="dark"] .notif-bell-btn .text-secondary {
+    color: #a9c1cf !important;
+}
+
 [data-theme="dark"] .badge.bg-light {
     background-color: #1c2b47 !important;
     color: #e2e8f0 !important;
@@ -1223,4 +1227,210 @@ body.raniag-public {
 [data-theme="dark"] .profile-dropdown-card,
 [data-theme="dark"] .theme-swatch-btn {
     background-color: #1c2b47 !important;
+}
+
+/* Sidebar toggle (hamburger) and other .btn-outline-dark buttons rendered
+   black-on-black in dark mode — Bootstrap's outline-dark text/icon color
+   is a hardcoded near-black that this file never overrode. */
+[data-theme="dark"] .btn-outline-dark {
+    color: #e2e8f0;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .btn-outline-dark:hover,
+[data-theme="dark"] .btn-outline-dark:focus {
+    background-color: #334155;
+    color: #fff;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .dropdown-item {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .dropdown-item:focus {
+    background-color: #22304d;
+    color: #fff;
+}
+
+[data-theme="dark"] a:not(.btn):not(.nav-link):not(.dropdown-item):not(.mobile-dock-link) {
+    color: #7db4ff;
+}
+
+[data-theme="dark"] .container-fluid,
+[data-theme="dark"] label,
+[data-theme="dark"] .fw-semibold,
+[data-theme="dark"] .fw-bold,
+[data-theme="dark"] .small {
+    color: #e2e8f0;
+}
+
+/* ============================================================
+   DASHBOARD (resources/views/dashboard.blade.php) — this page defines its
+   own local color system (--raniag-ink/--raniag-muted/tone-* classes) with
+   hardcoded light pastels (#fff, #fff4e0, #e7f8ee, #fde8ea) that never
+   checked for dark mode at all. In dark mode this produced bright white
+   cards with pastel badges sitting on a dark page — the "colors fighting"
+   / eye-fatigue effect. Tinted, translucent versions blend into the dark
+   surface instead of sitting on top of it.
+   ============================================================ */
+[data-theme="dark"] .dash-card {
+    background-color: var(--raniag-surface);
+}
+
+[data-theme="dark"] .kpi-card:hover {
+    background-color: #1c2b47;
+}
+
+[data-theme="dark"] .kpi-icon.tone-primary {
+    background-color: rgba(61, 139, 253, 0.16);
+    color: #7db4ff;
+}
+
+[data-theme="dark"] .kpi-icon.tone-warning {
+    background-color: rgba(245, 158, 11, 0.16);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .kpi-icon.tone-success {
+    background-color: rgba(22, 163, 74, 0.18);
+    color: #4ade80;
+}
+
+[data-theme="dark"] .kpi-icon.tone-danger {
+    background-color: rgba(220, 53, 69, 0.18);
+    color: #f87171;
+}
+
+[data-theme="dark"] .kpi-card .kpi-value,
+[data-theme="dark"] .ring-value,
+[data-theme="dark"] .ring-label,
+[data-theme="dark"] .section-head h5 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .kpi-card .kpi-label,
+[data-theme="dark"] .kpi-card .kpi-sub,
+[data-theme="dark"] .ring-unit,
+[data-theme="dark"] .ring-sub,
+[data-theme="dark"] .section-head .section-sub {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .ring-track {
+    stroke: #253449;
+}
+
+/* ============================================================
+   SYSTEM SETTINGS — real toggle switches
+   Bootstrap's .form-switch relies on a background-image knob that a
+   plain background-color override (the old .settings-toggle rule)
+   silently erases, leaving a bare, unstyled circle in every browser.
+   This rebuilds the switch from scratch with appearance:none + a
+   ::before thumb, so it looks and behaves the same everywhere and in
+   both themes, independent of Bootstrap's own switch implementation.
+   ============================================================ */
+.settings-toggle {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+    width: 3.2rem;
+    height: 1.8rem;
+    margin: 0;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background-color: #cbd5e1;
+    border: 1px solid #b8c4d4;
+    cursor: pointer;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.settings-toggle::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.35);
+    transition: transform 0.18s ease;
+}
+
+.settings-toggle:checked {
+    background-color: var(--raniag-primary);
+    border-color: var(--raniag-primary);
+}
+
+.settings-toggle:checked::before {
+    transform: translateX(1.4rem);
+}
+
+.settings-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem var(--raniag-primary-light);
+}
+
+.settings-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+[data-theme="dark"] .settings-toggle {
+    background-color: #334155;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .settings-toggle::before {
+    background-color: #e2e8f0;
+}
+
+[data-theme="dark"] .settings-toggle:checked {
+    background-color: var(--raniag-primary);
+    border-color: var(--raniag-primary);
+}
+
+/* Font preview swatches on the System Settings page */
+.font-swatch-btn {
+    background-color: rgba(255,255,255,0.7);
+    border-color: var(--raniag-border);
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.font-swatch-btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--raniag-primary) !important;
+    box-shadow: 0 0 0 0.2rem var(--raniag-primary-light);
+}
+
+.font-swatch-btn.selected {
+    border-color: var(--raniag-primary) !important;
+    box-shadow: 0 0 0 0.2rem var(--raniag-primary-light);
+}
+
+.font-swatch-btn .font-swatch-preview {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+[data-theme="dark"] .font-swatch-btn {
+    background-color: #1c2b47 !important;
+}
+
+.font-size-btn-group .btn-check:checked + .btn-outline-primary {
+    color: #fff;
+}
+
+[data-theme="dark"] .font-size-btn-group .btn-outline-primary {
+    color: #cbd5e1;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .font-size-btn-group .btn-check:checked + .btn-outline-primary {
+    color: #fff;
 }

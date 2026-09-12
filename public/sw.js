@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v9';
+const CACHE_NAME = 'raniag-cache-dev-v10';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [
@@ -12,10 +12,23 @@ const ASSETS_TO_CACHE = [
 ];
 
 // Install Event
+// cache.addAll() is atomic — if ANY single URL fails (a CDN hiccup, a CORS
+// response, a transient 404), the whole install rejects and the worker
+// never activates. Since push subscribe() waits on
+// navigator.serviceWorker.ready (which only resolves once a worker is
+// active), a failed install silently broke push notifications entirely —
+// "allow" would do nothing and the UI would just fall back to default.
+// Caching each asset independently means one bad URL can't take the rest
+// down, and installation (so push still works) no longer depends on
+// third-party CDNs being reachable at that exact moment.
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS_TO_CACHE);
+            return Promise.allSettled(
+                ASSETS_TO_CACHE.map((url) => cache.add(url).catch((err) => {
+                    console.warn('[sw] failed to precache', url, err);
+                }))
+            );
         })
     );
     self.skipWaiting();

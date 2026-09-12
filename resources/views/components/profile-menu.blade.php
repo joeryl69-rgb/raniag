@@ -49,6 +49,11 @@
                     <span>Support Center</span>
                 </a>
             @endif
+
+            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('settings.appearance.index') }}">
+                <span class="profile-item-icon"><i class="bi bi-gear-fill"></i></span>
+                <span>Appearance</span>
+            </a>
         </div>
 
         <div class="border-top py-2">
@@ -65,11 +70,18 @@
 </div>
 
 @once
-@push('styles')
+{{-- Inline <style> on purpose, not @push('styles') — see mobile-dock.blade.php
+     for why: pushing from a component printed after @stack('styles') in
+     layouts/app.blade.php's <head> was silently discarded, which is why this
+     button previously fell back to Bootstrap's unsized .rounded-circle (not
+     a true circle once it's wrapping 2-letter initials) with no visible ring. --}}
 <style>
     .profile-menu-btn {
         width: 2.8rem;
         height: 2.8rem;
+        min-width: 2.8rem;
+        min-height: 2.8rem;
+        flex-shrink: 0;
         overflow: hidden;
         border: 2px solid rgba(255,255,255,0.9);
         box-shadow: 0 0.3rem 0.8rem rgba(15, 23, 42, 0.12);
@@ -81,6 +93,11 @@
         width: 100%;
         height: 100%;
         display: block;
+    }
+
+    [data-theme="dark"] .profile-menu-btn {
+        border-color: rgba(255,255,255,0.14);
+        background: linear-gradient(135deg, #1c2b47, #16213a);
     }
 
     .profile-dropdown {
@@ -100,5 +117,4 @@
         color: var(--raniag-primary);
     }
 </style>
-@endpush
 @endonce

@@ -13,6 +13,44 @@ namespace App\Support;
 class ThemePresets
 {
     public const DEFAULT_KEY = 'ocean';
+    public const DEFAULT_FONT_KEY = 'figtree';
+    public const DEFAULT_FONT_SIZE = 'normal';
+
+    /**
+     * Font choices for the System Settings "Appearance" screen. Each stack
+     * leads with a bunny.net-hosted webfont already safe to load (no new
+     * <link> needed beyond what's already in layouts/app.blade.php for
+     * Figtree) and falls back to sensible system fonts.
+     */
+    public const FONTS = [
+        'figtree' => [
+            'label' => 'Figtree (Default)',
+            'preview' => 'Aa',
+            'stack' => "'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        ],
+        'inter' => [
+            'label' => 'Inter',
+            'preview' => 'Aa',
+            'stack' => "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        ],
+        'system' => [
+            'label' => 'System UI',
+            'preview' => 'Aa',
+            'stack' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
+        ],
+        'serif' => [
+            'label' => 'Serif',
+            'preview' => 'Aa',
+            'stack' => "'Georgia', 'Times New Roman', serif",
+        ],
+    ];
+
+    /** Relative root font-size per size option — everything using rem scales with it. */
+    public const FONT_SIZES = [
+        'small' => ['label' => 'Small', 'root_px' => '14px'],
+        'normal' => ['label' => 'Default', 'root_px' => '16px'],
+        'large' => ['label' => 'Large', 'root_px' => '18px'],
+    ];
 
     public const PRESETS = [
         'ocean' => [
@@ -117,10 +155,32 @@ class ThemePresets
         return array_key_exists($key, self::PRESETS);
     }
 
-    /** Renders the current theme's variables (plus dark-mode adjustments) as a <style> body. */
-    public static function cssVariables(string $key, bool $darkMode = false): string
+    public static function isValidFontKey(string $key): bool
+    {
+        return array_key_exists($key, self::FONTS);
+    }
+
+    public static function isValidFontSize(string $key): bool
+    {
+        return array_key_exists($key, self::FONT_SIZES);
+    }
+
+    public static function fontStack(string $key): string
+    {
+        return self::FONTS[$key]['stack'] ?? self::FONTS[self::DEFAULT_FONT_KEY]['stack'];
+    }
+
+    public static function fontRootPx(string $key): string
+    {
+        return self::FONT_SIZES[$key]['root_px'] ?? self::FONT_SIZES[self::DEFAULT_FONT_SIZE]['root_px'];
+    }
+
+    /** Renders the current theme's variables (plus dark-mode / font adjustments) as a <style> body. */
+    public static function cssVariables(string $key, bool $darkMode = false, string $fontKey = self::DEFAULT_FONT_KEY, string $fontSize = self::DEFAULT_FONT_SIZE): string
     {
         $vars = self::vars($key);
+        $vars['--raniag-font-family'] = self::fontStack($fontKey);
+        $vars['--raniag-font-root'] = self::fontRootPx($fontSize);
 
         $lines = [];
         foreach ($vars as $name => $value) {

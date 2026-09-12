@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('personnel')
     ->name('personnel.')
-    ->middleware(['auth', 'verified', 'active', 'role:personnel'])
+    ->middleware(['auth', 'verified', 'active', 'role:personnel', 'no-cache'])
     ->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
