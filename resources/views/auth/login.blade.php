@@ -1,4 +1,4 @@
-<x-auth-split eyebrow="RANIAG PORTAL" :title="'Welcome back!'" subtitle="Sign in with your staff credentials to access the incident reporting dashboard.">
+<x-auth-split eyebrow="RANIAG PORTAL" :title="'Sign in to your account'" subtitle="Welcome back. Sign in with your staff credentials to access the incident reporting dashboard.">
     @if (session('status'))
         <div class="auth-alert auth-alert--info"><i class="bi bi-info-circle-fill"></i><div>{{ session('status') }}</div></div>
     @endif
@@ -32,7 +32,7 @@
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock"></i></span>
                 <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" placeholder="Password" required autocomplete="current-password">
-                <button class="btn btn-outline-secondary" type="button" id="toggle-password">Show</button>
+                <button class="btn btn-outline-secondary" type="button" id="toggle-password">Show password</button>
             </div>
             @error('password')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>

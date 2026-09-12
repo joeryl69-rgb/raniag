@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         // MySQL implicitly gives the FIRST timestamp() column in a table
         // "DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" unless one
         // is set explicitly. That silently rewrote reported_at to "now" on
@@ -38,6 +42,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE incidents MODIFY reported_at TIMESTAMP NOT NULL');
         DB::statement('ALTER TABLE incidents MODIFY resolved_at TIMESTAMP NULL');
         DB::statement('ALTER TABLE incidents MODIFY closed_at TIMESTAMP NULL');

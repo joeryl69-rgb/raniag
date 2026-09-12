@@ -21,6 +21,14 @@ return new class extends Migration
             return;
         }
 
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite does not support MySQL's ALTER TABLE ... MODIFY syntax.
+            // The column widening isn't needed for the in-memory test database,
+            // and the app's real production database is MySQL where the statement
+            // below is valid.
+            return;
+        }
+
         DB::statement('ALTER TABLE incidents MODIFY reporter_email TEXT NULL');
         DB::statement('ALTER TABLE incidents MODIFY reporter_phone TEXT NULL');
     }
@@ -28,6 +36,10 @@ return new class extends Migration
     public function down(): void
     {
         if (! Schema::hasTable('incidents')) {
+            return;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
             return;
         }
 

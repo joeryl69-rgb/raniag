@@ -15,20 +15,36 @@ class AgencySeeder extends Seeder
      */
     public function run(): void
     {
-        if (! app()->environment(['local', 'development'])) {
+        if (! app()->environment(['local', 'development', 'testing'])) {
             return;
         }
 
+        $defaultAgencies = [
+            ['name' => 'Philippine National Police', 'code' => 'PNP'],
+            ['name' => 'Bureau of Fire Protection', 'code' => 'BFP'],
+            ['name' => 'Barangay Health Workers', 'code' => 'BHW'],
+        ];
+
+        foreach ($defaultAgencies as $agencyData) {
+            Agency::query()->firstOrCreate(
+                ['code' => $agencyData['code']],
+                [
+                    'name' => $agencyData['name'],
+                    'description' => 'Baseline agency record for local/test development.',
+                    'email' => null,
+                    'phone' => null,
+                    'address' => null,
+                    'is_active' => true,
+                ]
+            );
+        }
+
         // Test users for existing agencies.
-        // IMPORTANT: This seeder must NOT create new rows in `agencies`.
-        // It only creates/updates users for agencies that already exist.
-        // Skip MDRRMO entirely to avoid duplication.
         $testAgencyCodes = ['PNP', 'BFP', 'BHW'];
 
         foreach ($testAgencyCodes as $code) {
             $agency = Agency::query()->where('code', $code)->first();
             if (! $agency) {
-                // If the agency row doesn't exist in `agencies`, skip it.
                 continue;
             }
 
@@ -44,6 +60,5 @@ class AgencySeeder extends Seeder
                 ]
             );
         }
-
     }
 }

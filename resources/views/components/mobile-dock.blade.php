@@ -55,15 +55,14 @@
         display: flex;
         align-items: stretch;
         gap: 0.22rem;
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.96);
         border: 1px solid rgba(15, 23, 42, 0.08);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
         border-radius: 999px;
         padding: 0.38rem 0.42rem;
-        box-shadow: 0 0.9rem 1.8rem rgba(15, 23, 42, 0.18);
+        box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.14);
         max-width: calc(100vw - 1.2rem);
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .mobile-dock-link {
@@ -83,7 +82,9 @@
         letter-spacing: 0.02em;
         white-space: nowrap;
         min-width: 4rem;
-        transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
     }
 
     .mobile-dock-link i {

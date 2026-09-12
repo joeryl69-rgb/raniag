@@ -541,8 +541,12 @@
             }
 
             document.querySelectorAll('#sidebar-wrapper .nav-link').forEach(function (link) {
-                link.addEventListener('click', function () {
-                    if (window.matchMedia('(max-width: 991.98px)').matches) {
+                link.addEventListener('click', function (event) {
+                    const isCollapseToggle = link.getAttribute('data-bs-toggle') === 'collapse' || link.closest('[data-bs-toggle="collapse"]');
+                    const href = link.getAttribute('href') || '';
+                    const isHashOnlyLink = href === '#' || href.startsWith('#');
+
+                    if (window.matchMedia('(max-width: 991.98px)').matches && !isCollapseToggle && !isHashOnlyLink) {
                         toggleSidebar(false);
                     }
                 });
