@@ -63,6 +63,19 @@
         max-width: calc(100vw - 1.2rem);
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        transition: transform 0.22s ease, opacity 0.22s ease, bottom 0.22s ease;
+        will-change: transform, opacity;
+    }
+
+    .mobile-dock.is-hidden {
+        transform: translateX(-50%) translateY(calc(100% + 0.8rem));
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .mobile-dock.is-visible {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .mobile-dock-link {
@@ -108,6 +121,12 @@
         padding-bottom: calc(5.4rem + env(safe-area-inset-bottom, 0px));
     }
 
+    @media (max-width: 991.98px) {
+        .rg-help-fab {
+            bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+        }
+    }
+
     @media (min-width: 992px) {
         .mobile-dock { display: none !important; }
     }
@@ -125,4 +144,42 @@
         border-color: rgba(255, 255, 255, 0.08);
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dock = document.querySelector('.mobile-dock');
+        if (!dock || window.matchMedia('(min-width: 992px)').matches) return;
+
+        dock.classList.add('is-visible');
+
+        let lastScrollY = window.scrollY || window.pageYOffset || 0;
+        let ticking = false;
+
+        function updateDockState() {
+            const currentY = window.scrollY || window.pageYOffset || 0;
+            const delta = currentY - lastScrollY;
+
+            if (currentY <= 12) {
+                dock.classList.remove('is-hidden');
+                dock.classList.add('is-visible');
+            } else if (delta > 4) {
+                dock.classList.remove('is-visible');
+                dock.classList.add('is-hidden');
+            } else if (delta < -4) {
+                dock.classList.remove('is-hidden');
+                dock.classList.add('is-visible');
+            }
+
+            lastScrollY = currentY;
+            ticking = false;
+        }
+
+        window.addEventListener('scroll', function () {
+            if (!ticking) {
+                window.requestAnimationFrame(updateDockState);
+                ticking = true;
+            }
+        }, { passive: true });
+    });
+</script>
 @endonce

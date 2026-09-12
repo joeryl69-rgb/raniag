@@ -251,7 +251,7 @@
         const forceDark = darkModeSwitch.checked;
 
         darkModeSwitch.disabled = followSystem;
-        systemThemeSwitch.disabled = forceDark;
+        systemThemeSwitch.disabled = false;
 
         const themeDisabled = followSystem || forceDark;
         themeButtons.forEach((btn) => {
