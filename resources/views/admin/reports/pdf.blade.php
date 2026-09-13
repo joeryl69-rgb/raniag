@@ -153,8 +153,16 @@
                         <td>
                             @php
                                 $statusValue = $incident->status instanceof \UnitEnum ? $incident->status->value : $incident->status;
+                                // "Outside aor" (raw ucfirst/str_replace) reads as a typo, not a
+                                // real distinct status — these rows are only in this report at
+                                // all when the admin explicitly opted in via "Include Outside-AOR
+                                // incidents", so label them plainly so they're not mistaken for a
+                                // normal MDRRMO Pamplona case.
+                                $statusLabel = $statusValue === 'outside_aor'
+                                    ? 'Outside AOR (Referred)'
+                                    : ucfirst(str_replace('_', ' ', $statusValue));
                             @endphp
-                            <span class="badge badge-{{ $statusValue }}">{{ ucfirst(str_replace('_', ' ', $statusValue)) }}</span>
+                            <span class="badge badge-{{ $statusValue }}">{{ $statusLabel }}</span>
                         </td>
                         <td>{{ $resolvedAgencyNames[$incident->id] ?? '' }}</td>
                     </tr>

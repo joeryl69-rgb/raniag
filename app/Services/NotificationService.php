@@ -16,7 +16,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Twilio\Rest\Client;
 
 class NotificationService
 {
@@ -301,7 +300,7 @@ class NotificationService
             'recipient_phone' => $recipientPhone,
             'message' => $message,
             'status' => SmsLogStatus::Pending->value,
-            'provider' => config('services.sms.provider', env('SMS_PROVIDER', 'textbee')),
+            'provider' => config('services.sms.provider', env('SMS_PROVIDER', 'philsms')),
             'sent_at' => null,
             'failed_at' => null,
         ]);
@@ -320,20 +319,12 @@ class NotificationService
      */
     public function dispatchSms(SmsLog $smsLog): void
     {
-        // Normalize case/whitespace before comparing — SMS_PROVIDER is a
-        // free-text .env value (commonly written "PhilSMS", "TextBee",
-        // etc. for readability) and a case-sensitive match here was
-        // silently missing every branch, falling through to the local
-        // placeholder (which fakes a "Sent" status without ever calling
-        // the real API) or failing outright outside local. That's why
-        // logs could show "Sent" while no SMS ever actually arrived.
-        $provider = strtolower(trim((string) config('services.sms.provider', env('SMS_PROVIDER', 'textbee'))));
+        // PhilSMS is the only supported provider. Twilio, TextBee, and
+        // Semaphore integrations were removed (unused, and left stale
+        // credentials/config lying around) — see CHANGES-round13.md.
+        $provider = strtolower(trim((string) config('services.sms.provider', env('SMS_PROVIDER', 'philsms'))));
 
-        if ($provider === 'textbee') {
-            $this->sendViaTextBee($smsLog);
-        } elseif ($provider === 'twilio') {
-            $this->sendViaTwilio($smsLog);
-        } elseif ($provider === 'philsms') {
+        if ($provider === 'philsms') {
             $this->sendViaPhilSms($smsLog);
         } elseif (app()->environment('local')) {
             $this->sendViaPlaceholder($smsLog);
@@ -354,100 +345,6 @@ class NotificationService
                 'sms_log_id' => $smsLog->id,
                 'provider' => $provider,
                 'environment' => app()->environment(),
-            ]);
-        }
-    }
-
-    private function sendViaTextBee(SmsLog $smsLog): void
-    {
-        try {
-            $deviceId = config('services.textbee.device_id');
-            $apiKey = config('services.textbee.api_key');
-
-            if (! $deviceId || ! $apiKey) {
-                throw new \Exception('TextBee configuration incomplete. Check services.php and .env');
-            }
-
-            $response = Http::withHeaders([
-                'x-api-key' => $apiKey,
-            ])->post("https://api.textbee.dev/api/v1/gateway/devices/{$deviceId}/send-sms", [
-                'recipients' => [$smsLog->recipient_phone],
-                'message' => $smsLog->message,
-            ]);
-
-            if ($response->failed()) {
-                throw new \Exception('TextBee API response failed: '.$response->body());
-            }
-
-            $smsLog->update([
-                'status' => SmsLogStatus::Sent->value,
-                'sent_at' => now(),
-                'provider_message_id' => $response->json('data.messageId') ?? $response->json('messageId') ?? 'textbee_'.uniqid(),
-                'provider_response' => [
-                    'body' => $response->json(),
-                    'timestamp' => now()->toIso8601String(),
-                ],
-            ]);
-        } catch (\Exception $e) {
-            $smsLog->update([
-                'status' => SmsLogStatus::Failed->value,
-                'failed_at' => now(),
-                'provider_response' => [
-                    'error' => $e->getMessage(),
-                    'timestamp' => now()->toIso8601String(),
-                ],
-            ]);
-
-            Log::error('SMS dispatch via TextBee failed', [
-                'sms_log_id' => $smsLog->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    private function sendViaTwilio(SmsLog $smsLog): void
-    {
-        try {
-            $accountSid = config('services.twilio.account_sid');
-            $authToken = config('services.twilio.auth_token');
-            $twilioPhone = config('services.twilio.phone_number');
-
-            if (! $accountSid || ! $authToken || ! $twilioPhone) {
-                throw new \Exception('Twilio configuration incomplete. Check .env');
-            }
-
-            $twilio = new Client($accountSid, $authToken);
-
-            $message = $twilio->messages->create(
-                $smsLog->recipient_phone,
-                [
-                    'from' => $twilioPhone,
-                    'body' => $smsLog->message,
-                ]
-            );
-
-            $smsLog->update([
-                'status' => SmsLogStatus::Sent->value,
-                'sent_at' => now(),
-                'provider_message_id' => $message->sid,
-                'provider_response' => [
-                    'status' => $message->status,
-                    'timestamp' => now()->toIso8601String(),
-                ],
-            ]);
-        } catch (\Exception $e) {
-            $smsLog->update([
-                'status' => SmsLogStatus::Failed->value,
-                'failed_at' => now(),
-                'provider_response' => [
-                    'error' => $e->getMessage(),
-                    'timestamp' => now()->toIso8601String(),
-                ],
-            ]);
-
-            Log::error('SMS dispatch failed', [
-                'sms_log_id' => $smsLog->id,
-                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -535,7 +432,7 @@ class NotificationService
             'provider_message_id' => 'msg_'.uniqid(),
             'provider_response' => [
                 'status' => 'queued_placeholder',
-                'note' => 'Using placeholder SMS dispatcher. Configure TextBee or Twilio to send real SMS.',
+                'note' => 'Using placeholder SMS dispatcher. Configure PhilSMS (PHILSMS_API_TOKEN) to send real SMS.',
                 'timestamp' => now()->toIso8601String(),
             ],
         ]);

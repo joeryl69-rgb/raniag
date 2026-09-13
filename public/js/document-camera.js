@@ -135,6 +135,7 @@
             videoEl.srcObject = mediaStream;
             await videoEl.play();
             updateFlashAvailability();
+            startReadinessCheck();
         } catch (err) {
             const messages = {
                 NotAllowedError: 'Camera permission denied. Allow camera access to scan documents.',
@@ -151,6 +152,7 @@
             mediaStream = null;
         }
         torchOn = false;
+        stopReadinessCheck();
     }
 
     async function switchCamera() {
@@ -175,7 +177,103 @@
             document.getElementById('docCamReviewControls').classList.remove('d-none');
             switchBtn.classList.add('d-none');
             flashBtn.classList.add('d-none');
+            stopReadinessCheck();
         }, 'image/jpeg', 0.92);
+    }
+
+    // ------------------------------------------------------------------
+    // Capture readiness check
+    //
+    // This does NOT do true document-edge/perspective detection (that
+    // needs a real computer-vision library — OpenCV.js or similar — which
+    // isn't part of this app and would be a much bigger addition to pull
+    // in and test than fits here). What it DOES do: sample the live frame
+    // a few times a second and estimate (a) sharpness, via a simple
+    // Laplacian-style edge-variance score on a small downscaled grayscale
+    // copy, and (b) average brightness. A blurry frame (camera still
+    // moving, not focused) or a too-dark frame reliably produces the
+    // garbled/unrelated OCR text this was meant to fix — not because the
+    // wrong region got scanned, but because Tesseract is reading noise.
+    // Gating the shutter on "sharp enough + bright enough" is a real,
+    // honest improvement on that specific failure mode, distinct from (and
+    // not a substitute for) actually detecting the document's placement.
+    let readinessTimer = null;
+    const READY_SHARPNESS_MIN = 18; // empirical threshold on the 0-255 scale
+    const READY_BRIGHTNESS_MIN = 60;
+    const READY_BRIGHTNESS_MAX = 235;
+    const sampleCanvas = document.createElement('canvas');
+    sampleCanvas.width = 160;
+    sampleCanvas.height = 120;
+
+    function sampleReadiness() {
+        if (!mediaStream || !videoEl.videoWidth) return null;
+        const sctx = sampleCanvas.getContext('2d');
+        sctx.drawImage(videoEl, 0, 0, sampleCanvas.width, sampleCanvas.height);
+        const { data } = sctx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height);
+        const w = sampleCanvas.width;
+        const h = sampleCanvas.height;
+        const gray = new Float32Array(w * h);
+        let brightnessSum = 0;
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+            const g = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            gray[p] = g;
+            brightnessSum += g;
+        }
+        const avgBrightness = brightnessSum / gray.length;
+
+        // Crude Laplacian: |4*center - up - down - left - right|, averaged.
+        let edgeSum = 0;
+        let edgeCount = 0;
+        for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+                const i = y * w + x;
+                const lap = 4 * gray[i] - gray[i - 1] - gray[i + 1] - gray[i - w] - gray[i + w];
+                edgeSum += Math.abs(lap);
+                edgeCount++;
+            }
+        }
+        const sharpness = edgeSum / edgeCount;
+
+        return { sharpness, avgBrightness };
+    }
+
+    function updateReadinessUi() {
+        const result = sampleReadiness();
+        const hintEl = document.getElementById('docCamHint');
+        if (!result || !hintEl) return;
+
+        const { sharpness, avgBrightness } = result;
+        let ready = true;
+        let message = '<i class="bi bi-check-circle-fill me-1 text-success"></i>Looks sharp and well-lit — ready to capture.';
+
+        if (avgBrightness < READY_BRIGHTNESS_MIN) {
+            ready = false;
+            message = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Too dark — move to better light or use the flash icon.';
+        } else if (avgBrightness > READY_BRIGHTNESS_MAX) {
+            ready = false;
+            message = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Too bright/glare — tilt away from direct light.';
+        } else if (sharpness < READY_SHARPNESS_MIN) {
+            ready = false;
+            message = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Hold steady — image looks blurry.';
+        } else {
+            message = '<i class="bi bi-check-circle-fill me-1 text-success"></i>Lay the document flat inside the frame, then capture.';
+        }
+
+        hintEl.innerHTML = message;
+        guideEl.classList.toggle('doc-cam-guide-ready', ready);
+        guideEl.classList.toggle('doc-cam-guide-not-ready', !ready);
+    }
+
+    function startReadinessCheck() {
+        stopReadinessCheck();
+        readinessTimer = window.setInterval(updateReadinessUi, 400);
+    }
+
+    function stopReadinessCheck() {
+        if (readinessTimer) {
+            window.clearInterval(readinessTimer);
+            readinessTimer = null;
+        }
     }
 
     function retake() {
@@ -188,6 +286,7 @@
         document.getElementById('docCamReviewControls').classList.add('d-none');
         switchBtn.classList.remove('d-none');
         updateFlashAvailability();
+        startReadinessCheck();
     }
 
     function confirmUse() {

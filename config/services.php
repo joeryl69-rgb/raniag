@@ -35,30 +35,22 @@ return [
         ],
     ],
 
-    'textbee' => [
-        'device_id' => env('TEXTBEE_DEVICE_ID'),
-        'api_key' => env('TEXTBEE_API_KEY'),
-    ],
-
     'philsms' => [
         'api_token' => env('PHILSMS_API_TOKEN'),
         'sender_id' => env('PHILSMS_SENDER_ID', 'PhilSMS'),
     ],
 
+    // PhilSMS is the only supported SMS provider. Twilio, TextBee, and
+    // Semaphore config blocks were removed in Round 13 — unused and no
+    // longer configured on Hostinger.
     'sms' => [
-        'provider' => env('SMS_PROVIDER', 'textbee'),
+        'provider' => env('SMS_PROVIDER', 'philsms'),
     ],
 
     'webpush' => [
         'public_key' => env('VAPID_PUBLIC_KEY'),
         'private_key' => env('VAPID_PRIVATE_KEY'),
         'subject' => env('VAPID_SUBJECT', env('APP_URL', 'http://localhost')),
-    ],
-
-    'twilio' => [
-        'account_sid' => env('TWILIO_ACCOUNT_SID'),
-        'auth_token' => env('TWILIO_AUTH_TOKEN'),
-        'phone_number' => env('TWILIO_PHONE_NUMBER'),
     ],
 
 ];

@@ -802,15 +802,23 @@ body.raniag-public {
    each 70x70 thumb; this keeps a compact, evenly-gapped grid with
    no dead space regardless of how many documents are on file.
    ============================================================ */
+.rg-docgroup {
+    display: flex;
+    flex-direction: column;
+}
+
 .rg-docthumb-row {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-start;
     gap: 0.85rem 0.75rem;
 }
 
 .rg-docthumb {
     position: relative;
+    box-sizing: border-box;
     width: 72px;
+    flex: 0 0 72px;
     line-height: 0;
     /* Room for the delete button, which sits partly outside the thumb's
        own box — without this the button could clip/overlap the next
@@ -851,6 +859,12 @@ body.raniag-public {
     border-radius: 0.25rem;
 }
 
+/* Explicit box-sizing + !important on the delete button's own size:
+   Bootstrap's .btn/.btn-sm classes share the same selector specificity as
+   a single custom class, so source order alone decided which one's
+   padding/line-height won — on some pages Bootstrap's won, inflating this
+   past its intended 20px circle into the oversized, egg-shaped badge seen
+   on mobile and desktop. Forcing size here removes that ordering risk. */
 .rg-docthumb-delform {
     position: absolute;
     top: -6px;
@@ -860,20 +874,35 @@ body.raniag-public {
 }
 
 .rg-docthumb-delbtn {
+    box-sizing: border-box !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px;
     line-height: 1;
-    padding: 0.15rem 0.35rem;
-    border-radius: 50%;
+    padding: 0 !important;
+    border-radius: 50% !important;
     font-size: 0.65rem;
     box-shadow: 0 0 0 2px #fff;
 }
 
-/* Take Photo / Upload File buttons below the thumbnails — force them to
-   wrap onto their own line on narrow screens instead of squeezing
-   side-by-side, which is what was causing them to overlap/clip on mobile. */
-@media (max-width: 420px) {
-    #case-documents .d-flex.gap-2 > .btn {
-        flex: 1 1 100%;
-    }
+.rg-docthumb-delbtn i {
+    font-size: 0.65rem;
+    line-height: 1;
+}
+
+/* Take Photo / Upload File buttons below the thumbnails — always full-width
+   and stacked so they line up consistently across every document group
+   card, on both mobile and desktop, instead of only wrapping under a
+   single narrow breakpoint. */
+#case-documents .rg-docgroup .d-flex.gap-2 {
+    flex-direction: column;
+}
+
+#case-documents .rg-docgroup .d-flex.gap-2 > .btn {
+    width: 100%;
 }
 
 /* ============================================================
@@ -1006,6 +1035,11 @@ body.raniag-public {
 
 .doc-cam-guide::before { top: -3px; left: -3px; border-right: none; border-bottom: none; }
 .doc-cam-guide::after { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+
+/* Live readiness feedback (public/js/document-camera.js) — border color
+   confirms/warns without the user needing to read the hint text every time. */
+.doc-cam-guide-ready { border-color: rgba(25, 200, 120, 0.9); }
+.doc-cam-guide-not-ready { border-color: rgba(255, 193, 7, 0.85); }
 
 .doc-cam-error {
     position: absolute;
@@ -1433,4 +1467,17 @@ body.raniag-public {
 
 [data-theme="dark"] .font-size-btn-group .btn-check:checked + .btn-outline-primary {
     color: #fff;
+}
+
+/* Scan modal — extracted text editor. Textareas are horizontally
+   resizable by default in most browsers; once a user drags one wider
+   than the modal (easy to do by accident on the resize handle) it stays
+   that size for the rest of the session and forces the modal into
+   horizontal scroll on phones. Lock resizing to vertical only. */
+#scanTextArea,
+#textDocArea {
+    max-width: 100%;
+    width: 100%;
+    resize: vertical;
+    box-sizing: border-box;
 }

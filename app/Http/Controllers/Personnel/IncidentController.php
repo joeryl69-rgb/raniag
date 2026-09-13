@@ -70,7 +70,18 @@ class IncidentController extends Controller
             return response()->json($record);
         }
 
-        return view('personnel.incidents.show', ['incident' => $record]);
+        return view('personnel.incidents.show', [
+            'incident' => $record,
+            'gpsConfig' => [
+                'max_captures' => config('raniag.gps_camera.max_captures'),
+                'jpeg_quality' => config('raniag.gps_camera.jpeg_quality'),
+                'geolocation' => [
+                    'enableHighAccuracy' => config('raniag.geolocation.enable_high_accuracy'),
+                    'timeout' => config('raniag.geolocation.timeout_ms'),
+                    'maximumAge' => config('raniag.geolocation.maximum_age_ms'),
+                ],
+            ],
+        ]);
     }
 
     public function updateStatus(UpdateStatusRequest $request, int $incident): RedirectResponse|JsonResponse

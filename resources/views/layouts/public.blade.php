@@ -625,25 +625,25 @@
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.home') ? 'active' : '' }}"
                            href="{{ route('public.home') }}">
-                            <i class="bi bi-house-door me-1 d-lg-none"></i>Home
+                            <i class="bi bi-house-door me-1 d-lg-none"></i>{{ __('Home') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.track*') ? 'active' : '' }}"
                            href="{{ route('public.track') }}">
-                            <i class="bi bi-search me-1 d-lg-none"></i>Track Report
+                            <i class="bi bi-search me-1 d-lg-none"></i>{{ __('Track Report') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.dashboard') ? 'active' : '' }}"
                            href="{{ route('public.dashboard') }}">
-                            <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>Community Dashboard
+                            <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>{{ __('Community Dashboard') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.support') ? 'active' : '' }}"
                            href="{{ route('public.support') }}">
-                            <i class="bi bi-headset me-1 d-lg-none"></i>Support
+                            <i class="bi bi-headset me-1 d-lg-none"></i>{{ __('Support') }}
                         </a>
                     </li>
                     @auth
@@ -655,14 +655,14 @@
                     @else
                         <li class="nav-item">
                             <a class="nav-link rg-btn-ghost" href="{{ route('login') }}">
-                                <i class="bi bi-person-badge me-1"></i>Staff Login
+                                <i class="bi bi-person-badge me-1"></i>{{ __('Staff Login') }}
                             </a>
                         </li>
                     @endauth
                     <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
                         <a class="nav-link rg-btn-report {{ request()->routeIs('public.report.*') ? 'active' : '' }}"
                            href="{{ route('public.report.create') }}">
-                            <i class="bi bi-megaphone-fill me-1"></i>Report an Incident
+                            <i class="bi bi-megaphone-fill me-1"></i>{{ __('Report an Incident') }}
                         </a>
                     </li>
                 </ul>

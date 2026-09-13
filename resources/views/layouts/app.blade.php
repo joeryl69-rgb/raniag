@@ -577,10 +577,26 @@
             window.scrollTo(0, staffLockedScrollY);
         }
 
+        // Any btn-success/btn-primary/etc. color is swapped to a neutral
+        // btn-secondary for the duration of the "Processing..." state, then
+        // restored on reset. A solid green "Processing, please wait..." bar
+        // reads as if the action already succeeded before it actually has —
+        // neutral gray during the wait avoids that false signal, regardless
+        // of which color the button (e.g. "Resolve Incident") normally is.
+        const RG_LOADING_COLOR_CLASSES = ['btn-success', 'btn-primary', 'btn-danger', 'btn-warning', 'btn-info', 'btn-dark', 'btn-light'];
+
         function setButtonLoading(button, message = 'Processing, please wait...') {
             if (!button) return;
             if (!button.dataset.originalText) {
                 button.dataset.originalText = button.innerHTML;
+            }
+            if (!button.dataset.originalColorClass) {
+                const colorClass = RG_LOADING_COLOR_CLASSES.find((c) => button.classList.contains(c));
+                button.dataset.originalColorClass = colorClass || '';
+                if (colorClass) {
+                    button.classList.remove(colorClass);
+                    button.classList.add('btn-secondary');
+                }
             }
             button.disabled = true;
             button.classList.add('disabled');
@@ -592,6 +608,11 @@
             if (!button) return;
             button.disabled = false;
             button.classList.remove('disabled');
+            if (button.dataset.originalColorClass) {
+                button.classList.remove('btn-secondary');
+                button.classList.add(button.dataset.originalColorClass);
+                delete button.dataset.originalColorClass;
+            }
             if (button.dataset.originalText) {
                 button.innerHTML = button.dataset.originalText;
             }
@@ -640,12 +661,27 @@
                 });
             });
 
+            // Undo any button previously swapped into its "Processing, please
+            // wait..." spinner state (see setButtonLoading above). A submit
+            // button's innerHTML swap is never re-rendered by the server, so
+            // if the browser restores this exact DOM — via bfcache, or via a
+            // mobile browser reopening a backgrounded tab without firing our
+            // pageshow/reload guard below — the button (e.g. the green
+            // "Resolve Incident" button on the resolution-photos form) is
+            // left stuck showing the spinner even though nothing is actually
+            // submitting. Sweep and reset on every load, not just pageshow.
+            function resetAllLoadingButtons() {
+                document.querySelectorAll('button[data-original-text]').forEach(resetButtonLoading);
+            }
+
             // Hide overlay as soon as DOM is ready — don't wait for every image/font
             // (window.load), which made icons and page content feel delayed.
             hideLoadingOverlay();
+            resetAllLoadingButtons();
 
             window.addEventListener('pageshow', function () {
                 hideLoadingOverlay();
+                resetAllLoadingButtons();
             });
 
             // Defense in depth alongside the 'no-cache' route middleware:

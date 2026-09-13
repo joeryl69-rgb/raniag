@@ -58,10 +58,16 @@ class ResolutionController extends Controller
         );
 
         if (! empty($data['evidence'])) {
+            $gpsCaptures = [];
+            if (! empty($data['meta']['gps_captures'])) {
+                $decoded = json_decode($data['meta']['gps_captures'], true);
+                $gpsCaptures = is_array($decoded) ? $decoded : [];
+            }
+
             $this->evidenceService->attachToIncident(
                 $record,
                 $data['evidence'],
-                [],
+                $gpsCaptures,
                 $request->user()->id
             );
         }

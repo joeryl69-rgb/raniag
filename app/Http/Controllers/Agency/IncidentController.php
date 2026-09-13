@@ -80,7 +80,18 @@ class IncidentController extends Controller
             return response()->json($record);
         }
 
-        return view('agency.incidents.show', ['incident' => $record]);
+        return view('agency.incidents.show', [
+            'incident' => $record,
+            'gpsConfig' => [
+                'max_captures' => config('raniag.gps_camera.max_captures'),
+                'jpeg_quality' => config('raniag.gps_camera.jpeg_quality'),
+                'geolocation' => [
+                    'enableHighAccuracy' => config('raniag.geolocation.enable_high_accuracy'),
+                    'timeout' => config('raniag.geolocation.timeout_ms'),
+                    'maximumAge' => config('raniag.geolocation.maximum_age_ms'),
+                ],
+            ],
+        ]);
 
     }
 
@@ -123,9 +134,11 @@ class IncidentController extends Controller
 
         $comment = $data['comment'] ?? null;
         $isPublicUpdate = true;
+        $successMessage = 'Case investigation status successfully logged.';
         if ($newStatus->value === 'pending_info') {
             $comment = 'Awaiting information: '.($data['needs_info'] ?? $comment);
             $isPublicUpdate = false;
+            $successMessage = 'Info request sent to the MDRRMO Pamplona admin. You will be notified here once they reply.';
         }
 
         $updated = $this->incidentService->recordStatusChange(
@@ -145,7 +158,7 @@ class IncidentController extends Controller
 
         return redirect()
             ->route('agency.incidents.show', $record->id)
-            ->with('success', 'Case investigation status successfully logged.');
+            ->with('success', $successMessage);
     }
 
     public function acceptAssignment(Request $request, int $incident): RedirectResponse|JsonResponse

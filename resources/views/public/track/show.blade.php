@@ -256,7 +256,7 @@
                         @php $tKey = $update->to_status->value ?? $update->to_status; @endphp
                         <div class="raniag-timeline-item" data-status="{{ $tKey }}">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
-                                <x-public.status-badge :status="$update->to_status" />
+                                <x-public.status-badge :status="$update->to_status" :comment="$update->comment" />
                                 <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
                             </div>
                             @if ($update->comment)

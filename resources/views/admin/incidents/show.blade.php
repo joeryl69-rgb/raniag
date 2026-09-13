@@ -153,9 +153,9 @@
                     <div class="row g-3">
                         @foreach ($documentGroups as $docType)
                             @php $docsOfType = $existingDocuments->where('document_type', $docType); @endphp
-                            <div class="col-md-6">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="col-12 col-md-6">
+                                <div class="border rounded p-3 h-100 rg-docgroup">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                                         <span class="fw-semibold small">{{ $docType->label() }}</span>
                                         <span class="badge {{ $docsOfType->isEmpty() ? 'bg-secondary' : 'bg-success' }}">{{ $docsOfType->count() }} on file</span>
                                     </div>
@@ -435,7 +435,7 @@
                                 <div class="raniag-timeline-item" data-status="{{ $update->to_status->value ?? $update->to_status }}">
                                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
                                         <div>
-                                            <x-public.status-badge :status="$update->to_status" />
+                                            <x-public.status-badge :status="$update->to_status" :comment="$update->comment" />
                                             <span class="text-muted small ms-2">by {{ $update->user?->display_title ?? 'System/Public' }}{{ $update->user?->agency ? ' · '.$update->user->agency->name : '' }}</span>
                                         </div>
                                         <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
@@ -739,10 +739,99 @@
                             @else
                                 <h6 class="fw-bold text-dark mt-1 mb-0">{{ $incident->agency->name }} ({{ $incident->agency->code }})</h6>
                             @endif
+
+                            @if (! in_array($incident->status->value, ['resolved', 'closed', 'rejected', 'outside_aor'], true))
+                                {{-- Re-dispatch: add another agency/personnel to a case that is already
+                                     assigned/in-progress, e.g. when it turns out a second agency needs
+                                     to coordinate. Reuses the same admin.incidents.validate(action=approve)
+                                     endpoint the initial dispatch uses — that endpoint always creates new
+                                     Assignment rows, it never required the incident to still be "received". --}}
+                                <div class="mt-3 pt-3 border-top">
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#redispatchForm">
+                                        <i class="bi bi-send-plus me-1"></i>Re-dispatch / Add Another Agency
+                                    </button>
+                                    <div class="collapse mt-3" id="redispatchForm">
+                                        @if ($agencies->isEmpty() && $personnel->isEmpty())
+                                            <div class="alert alert-light border small mb-0">
+                                                <i class="bi bi-check-circle me-1 text-success"></i>Every active agency and personnel account has already been dispatched to this incident — there's no one left to add.
+                                            </div>
+                                        @else
+                                        <form action="{{ route('admin.incidents.validate', $incident->id) }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="action" value="approve">
+                                            <div class="mb-3">
+                                                <label class="form-label">Select Additional Government Branch(es) or Personnel</label>
+                                                <div class="border rounded-3 p-3 bg-white" style="max-height: 220px; overflow-y: auto;">
+                                                    @foreach ($agencies as $agency)
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="assigned_agency_id[]" value="{{ $agency->id }}" id="redispatch_agency_{{ $agency->id }}">
+                                                            <label class="form-check-label" for="redispatch_agency_{{ $agency->id }}">
+                                                                {{ $agency->code }} ({{ $agency->name }})
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                    @if ($personnel->isNotEmpty())
+                                                        <hr class="my-3">
+                                                        <div class="fw-semibold mb-2">Internal Personnel</div>
+                                                        @foreach ($personnel as $person)
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" name="assigned_personnel_id[]" value="{{ $person->id }}" id="redispatch_personnel_{{ $person->id }}">
+                                                                <label class="form-check-label" for="redispatch_personnel_{{ $person->id }}">
+                                                                    {{ $person->name }} @if($person->role_title) ({{ $person->role_title }}) @endif
+                                                                </label>
+                                                            </div>
+                                                        @endforeach
+                                                    @endif
+                                                </div>
+                                                <div class="form-text">Existing assignments are untouched — this only adds new agencies/personnel for coordination.</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Dispatch Notes</label>
+                                                <textarea class="form-control" name="notes" rows="2" placeholder="Reason for coordinating another agency..."></textarea>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-send-fill me-1"></i>Confirm Re-dispatch
+                                            </button>
+                                        </form>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+
                             @if ($incident->status->value === 'assigned')
                                 <span class="badge bg-warning text-dark mt-2">Awaiting Agency Response</span>
                             @elseif ($incident->status->value === 'in_progress')
                                 <span class="badge bg-info mt-2">Under Investigation</span>
+                            @elseif ($incident->status->value === 'pending_info')
+                                @php
+                                    // The admin view had no branch at all for pending_info before this fix —
+                                    // the request was invisible here and only surfaced buried inside the
+                                    // Full History log below, with no way to answer it.
+                                    $latestInfoRequest = $incident->statusUpdates
+                                        ->where('to_status', \App\Enums\IncidentStatus::PendingInfo)
+                                        ->sortByDesc('created_at')
+                                        ->first();
+                                @endphp
+                                <span class="badge bg-warning text-dark mt-2 mb-2"><i class="bi bi-hourglass-split me-1"></i>Awaiting Info / Pending Request</span>
+                                <div class="alert alert-warning small mb-3">
+                                    <strong>Requested by agency:</strong><br>
+                                    {{ $latestInfoRequest?->comment ?? 'The assigned agency marked this case as awaiting information.' }}
+                                </div>
+                                <form action="{{ route('admin.incidents.reply', $incident->id) }}" method="POST">
+                                    @csrf
+                                    <div class="mb-2">
+                                        <label class="form-label small">Reply</label>
+                                        <textarea class="form-control" name="reply" rows="3" required maxlength="2000" placeholder="Answer the agency's request..."></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Then</label>
+                                        <select class="form-select form-select-sm" name="resume_investigation">
+                                            <option value="0">Send reply, keep awaiting (agency asked for more)</option>
+                                            <option value="1">Send reply and resume investigation now</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-reply-fill me-1"></i>Send Reply to Agency</button>
+                                </form>
                             @elseif ($incident->status->value === 'resolved')
                                 <span class="badge bg-success mt-2">Resolved</span>
                                 <div class="mt-3">

@@ -22,6 +22,11 @@ class SubmitResolutionRequest extends FormRequest
             'actions_taken' => ['required', 'string', 'min:20', 'max:5000'],
             'evidence' => ['sometimes', 'array', 'max:'.$maxFiles],
             'evidence.*' => ['file', 'max:'.$maxSize, 'mimes:'.implode(',', $mimes)],
+            // JSON-encoded metadata from the GPS Camera capture widget (see
+            // resources/views/components/gps-camera.blade.php). Optional —
+            // agency/personnel can still attach plain files with no camera
+            // capture at all, unlike the public report form where it's required.
+            'meta.gps_captures' => ['sometimes', 'nullable', 'string'],
         ];
     }
 

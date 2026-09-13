@@ -66,9 +66,19 @@ class IncidentController extends Controller
             return response()->json($record);
         }
 
-        $agencies = Agency::where('is_active', true)->orderBy('name')->get();
+        // Agencies/personnel already assigned (at any point) to this incident are excluded
+        // from every dispatch/re-dispatch checklist below — once dispatched, an agency or
+        // personnel cannot be dispatched to the same incident again.
+        $alreadyAssignedAgencyIds = $record->assignments()->whereNotNull('agency_id')->pluck('agency_id')->unique();
+        $alreadyAssignedPersonnelIds = $record->assignments()->whereNotNull('assigned_to')->pluck('assigned_to')->unique();
+
+        $agencies = Agency::where('is_active', true)
+            ->whereNotIn('id', $alreadyAssignedAgencyIds)
+            ->orderBy('name')
+            ->get();
         $personnel = User::where('role', UserRole::Personnel)
             ->where('is_active', true)
+            ->whereNotIn('id', $alreadyAssignedPersonnelIds)
             ->orderBy('name')
             ->get();
 
@@ -212,6 +222,52 @@ class IncidentController extends Controller
         return redirect()
             ->route('admin.incidents.show', $record->id)
             ->with('success', 'Incident approved and successfully assigned to: '.$assignmentNames.'.');
+    }
+
+    public function reply(Request $request, int $incident): RedirectResponse|JsonResponse
+    {
+        $record = $this->incidents->findById($incident);
+        abort_if(! $record, 404);
+
+        abort_unless(
+            $record->status === IncidentStatus::PendingInfo,
+            422,
+            'This incident is not currently awaiting information from an agency.'
+        );
+
+        $data = $request->validate([
+            'reply' => ['required', 'string', 'max:2000'],
+            // "confirmation dropdown": lets the admin either just answer the
+            // agency's question (stay in Pending Information) or answer AND
+            // immediately clear the hold so the agency resumes investigating,
+            // instead of the agency having to make a separate follow-up move.
+            'resume_investigation' => ['nullable', 'boolean'],
+        ]);
+
+        $toStatus = $request->boolean('resume_investigation')
+            ? IncidentStatus::InProgress
+            : IncidentStatus::PendingInfo;
+
+        $this->incidentService->recordStatusChange(
+            incident: $record,
+            toStatus: $toStatus,
+            user: $request->user(),
+            comment: 'Admin reply: '.$data['reply'],
+            isPublic: false,
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Reply sent to the assigned agency.',
+                'incident' => $record->fresh(),
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.incidents.show', $record->id)
+            ->with('success', $toStatus === IncidentStatus::InProgress
+                ? 'Reply sent and investigation resumed.'
+                : 'Reply sent to the assigned agency.');
     }
 
     public function assignments(int $incident, Request $request): JsonResponse

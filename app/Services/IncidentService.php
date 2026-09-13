@@ -140,10 +140,17 @@ class IncidentService
                 ],
             );
 
-            try {
-                $this->notifications->notifyReporterStatusUpdate($incident, $comment ?: 'Status is now '.$toStatus->label());
-            } catch (\Exception $e) {
-                Log::warning('SMS alert to reporter failed: '.$e->getMessage());
+            // Only tell the original reporter about status changes meant to be
+            // public. Internal agency<->admin exchanges (e.g. a "pending_info"
+            // request/reply) are marked is_public=false specifically so they
+            // stay internal — notifying the reporter here regardless of that
+            // flag was leaking that internal comment text to them by SMS/email.
+            if ($isPublic) {
+                try {
+                    $this->notifications->notifyReporterStatusUpdate($incident, $comment ?: 'Status is now '.$toStatus->label());
+                } catch (\Exception $e) {
+                    Log::warning('SMS alert to reporter failed: '.$e->getMessage());
+                }
             }
 
             return $incident;

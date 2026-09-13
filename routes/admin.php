@@ -54,6 +54,7 @@ Route::prefix('admin')
             Route::get('/', [IncidentController::class, 'index'])->name('index');
             Route::get('/{incident}', [IncidentController::class, 'show'])->name('show');
             Route::post('/{incident}/validate', [IncidentController::class, 'validate'])->name('validate');
+            Route::post('/{incident}/reply', [IncidentController::class, 'reply'])->name('reply');
             Route::get('/{incident}/assignments', [IncidentController::class, 'assignments'])->name('assignments');
             Route::put('/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('resolutions.update');
             Route::post('/{incident}/documents', [IncidentDocumentController::class, 'store'])->name('documents.store');

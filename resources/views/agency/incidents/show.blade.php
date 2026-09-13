@@ -104,6 +104,16 @@
                                         @endif
                                         <div class="card-body p-2 small">
                                             <div class="text-truncate">{{ $ev->original_filename }}</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">
+                                                @if ($ev->is_gps_capture)
+                                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-geo-alt-fill"></i> GPS Capture</span>
+                                                @endif
+                                                @if ($ev->uploader)
+                                                    <div class="mt-1"><i class="bi bi-person-fill me-1"></i>{{ $ev->uploader->name }}</div>
+                                                @else
+                                                    <div class="mt-1"><i class="bi bi-person me-1"></i>Public reporter</div>
+                                                @endif
+                                            </div>
                                             <a href="{{ Storage::url($ev->file_path) }}" download class="btn btn-link btn-sm p-0 mt-1"><i class="bi bi-download me-1"></i>Download</a>
                                         </div>
                                     </div>
@@ -128,7 +138,7 @@
                                 <div class="raniag-timeline-item" data-status="{{ $update->to_status->value ?? $update->to_status }}">
                                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
                                         <div>
-                                            <x-public.status-badge :status="$update->to_status" />
+                                            <x-public.status-badge :status="$update->to_status" :comment="$update->comment" />
                                             <span class="text-muted small ms-2">by {{ $update->user?->display_title ?? 'System/Public' }}{{ $update->user?->agency ? ' · '.$update->user->agency->name : '' }}</span>
                                         </div>
                                         <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
@@ -243,8 +253,10 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <x-gps-camera />
                                     <label for="evidence" class="form-label">Resolution Photos / Reports <span class="text-muted">(optional)</span></label>
                                     <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.pdf">
+                                    <div class="form-text">Use the GPS Camera above for a geotagged, watermarked photo, or attach files directly here.</div>
                                 </div>
 
                                 <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
@@ -383,6 +395,21 @@
     </div>
 
     @push('scripts')
+        @php
+            $__gpsConfig = $gpsConfig ?? [
+                'max_captures' => config('raniag.gps_camera.max_captures'),
+                'jpeg_quality' => config('raniag.gps_camera.jpeg_quality'),
+                'geolocation' => [
+                    'enableHighAccuracy' => config('raniag.geolocation.enable_high_accuracy'),
+                    'timeout' => config('raniag.geolocation.timeout_ms'),
+                    'maximumAge' => config('raniag.geolocation.maximum_age_ms'),
+                ],
+            ];
+        @endphp
+        <script>
+            window.RANIAG_GPS = @json($__gpsConfig);
+        </script>
+        <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
         @if ($incident->latitude && $incident->longitude)
                         <style>
                 /* Pin styling now lives in the shared .raniag-marker-pin class

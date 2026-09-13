@@ -29,13 +29,26 @@ class ReportController extends Controller
             'barangay' => 'nullable|string|in:'.implode(',', config('raniag.barangays')),
             'agency_id' => 'nullable|exists:agencies,id',
             'incident_type_id' => 'nullable|exists:incident_types,id',
+            'include_outside_aor' => 'nullable|boolean',
         ]);
+
+        $includeOutsideAor = $Request->boolean('include_outside_aor');
 
         $query = Incident::with(['incidentType', 'agency', 'statusUpdates', 'assignments.agency'])
             ->whereBetween('reported_at', [
                 $validated['date_from'].' 00:00:00',
                 $validated['date_to'].' 23:59:59',
             ]);
+
+        // Incidents outside this LGU's Area of Responsibility (referred to
+        // another agency at intake) were previously mixed into the official
+        // report indistinguishably from real MDRRMO Pamplona cases. They're
+        // now excluded by default; the admin can opt in via the "Include
+        // Outside-AOR incidents" checkbox on the Generate Reports form, and
+        // the PDF/Excel output clearly labels them when included.
+        if (! $includeOutsideAor) {
+            $query->where('status', '!=', \App\Enums\IncidentStatus::OutsideAor->value);
+        }
 
         if (! empty($validated['barangay'])) {
             $query->where('barangay', $validated['barangay']);
@@ -93,13 +106,20 @@ class ReportController extends Controller
             'barangay' => 'nullable|string|in:'.implode(',', config('raniag.barangays')),
             'agency_id' => 'nullable|exists:agencies,id',
             'incident_type_id' => 'nullable|exists:incident_types,id',
+            'include_outside_aor' => 'nullable|boolean',
         ]);
+
+        $includeOutsideAor = $request->boolean('include_outside_aor');
 
         $query = Incident::with(['incidentType', 'agency', 'assignments.agency'])
             ->whereBetween('reported_at', [
                 $validated['date_from'].' 00:00:00',
                 $validated['date_to'].' 23:59:59',
             ]);
+
+        if (! $includeOutsideAor) {
+            $query->where('status', '!=', \App\Enums\IncidentStatus::OutsideAor->value);
+        }
 
         if (! empty($validated['barangay'])) {
             $query->where('barangay', $validated['barangay']);

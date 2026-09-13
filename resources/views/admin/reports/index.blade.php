@@ -84,6 +84,16 @@
                             @enderror
                         </div>
 
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="include_outside_aor" value="1" id="include_outside_aor" {{ old('include_outside_aor') ? 'checked' : '' }}>
+                                <label class="form-check-label" for="include_outside_aor">
+                                    Include Outside-AOR incidents (referred to another jurisdiction/agency)
+                                </label>
+                                <div class="form-text">Off by default — these were previously mixed into the official report indistinguishably from real MDRRMO Pamplona cases. When included, they're clearly labeled in the output.</div>
+                            </div>
+                        </div>
+
                         <div class="col-12 mt-4">
                             {{-- flex-column on mobile: Bootstrap's default align-items:stretch on a
                                  column flex container makes each button fill the row's width, so

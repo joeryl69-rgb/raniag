@@ -230,13 +230,63 @@
         // "Near Sanchez Mira" while latitude/longitude remained blank.
         if (window.RANIAG_MAP_API?.setCoordinates) {
             window.RANIAG_MAP_API.setCoordinates(latitude, longitude, { pan: true });
-        } else {
+        } else if (window.RANIAG_LOCATION_API?.resolve) {
             const now = Date.now();
-            if (window.RANIAG_LOCATION_API?.resolve && now - lastGeocodedAt > 8000) {
+            if (now - lastGeocodedAt > 8000) {
                 lastGeocodedAt = now;
                 window.RANIAG_LOCATION_API.resolve(latitude, longitude);
             }
+        } else {
+            // Neither global exists here — this page (agency/personnel incident
+            // detail) never loads public-report.js, which is the only place
+            // those two are defined. Previously that silently meant address
+            // resolution never ran on these pages at all: the watermark stayed
+            // on "Resolving address…" forever and the capture button never
+            // enabled, because isLocationReady() waits on a resolved
+            // barangay/municipality that was never going to arrive. Do a
+            // simple, self-contained reverse geocode instead so this page
+            // doesn't depend on the public form's script being present.
+            standaloneResolveAddress(latitude, longitude);
         }
+    }
+
+    // Lightweight fallback reverse-geocode, used only when this page has no
+    // RANIAG_MAP_API/RANIAG_LOCATION_API (i.e. it isn't the public report
+    // form). Dispatches the same 'raniag:location-resolved' event the public
+    // page uses, so the rest of this file needs no special-casing.
+    function standaloneResolveAddress(lat, lng) {
+        const now = Date.now();
+        if (now - lastGeocodedAt < 8000) {
+            return;
+        }
+        lastGeocodedAt = now;
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
+        fetch(url, { headers: { Accept: 'application/json' } })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                const addr = data?.address || {};
+                const barangay = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || null;
+                const municipality = addr.city || addr.town || addr.municipality || addr.county || null;
+                const province = addr.state || null;
+                const country = addr.country || null;
+                window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                    detail: {
+                        lat, lng, barangay,
+                        // isLocationReady() requires barangay OR municipality — fall
+                        // back to the raw display_name so a real fix is never stuck
+                        // waiting on structured fields Nominatim didn't return.
+                        municipality: municipality || data?.display_name || 'Location detected',
+                        province, country,
+                    },
+                }));
+            })
+            .catch(() => {
+                // Network/geocoder failure: still unblock capture using the raw
+                // coordinates rather than leaving the operator stuck indefinitely.
+                window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                    detail: { lat, lng, municipality: `${lat.toFixed(5)}, ${lng.toFixed(5)}` },
+                }));
+            });
     }
 
     function syncCaptureLog() {

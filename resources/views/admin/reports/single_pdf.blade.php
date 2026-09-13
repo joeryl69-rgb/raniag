@@ -127,7 +127,7 @@
 
     <div class="meta-info">
         <strong>Generated:</strong> {{ $generated_at->format('M d, Y h:i A') }}<br>
-        <strong>System Ref:</strong> {{ $incident->id }}
+        <strong>Tracking #:</strong> {{ $incident->tracking_number }}
     </div>
 
     @if(! isset($sections) || in_array('incident_details', $sections))
@@ -228,11 +228,20 @@
     @if($docsToShow->isEmpty())
         <div style="font-style: italic; color: #666; font-size: 10pt;">No repository documents attached for the selected content.</div>
     @else
+        @php
+            // The 48%-wide grid column below is sized for several documents
+            // side by side. With only one document on the page (the common
+            // case for a single agency's single-report request), that same
+            // fixed 48% box rendered it as an unreadably tiny thumbnail on an
+            // otherwise mostly-empty page. Give a lone document its own
+            // full-width, larger presentation instead.
+            $isSingleDoc = $docsToShow->count() === 1;
+        @endphp
         <div class="evidence-grid">
             @foreach($docsToShow as $doc)
-                <div class="evidence-item">
+                <div class="evidence-item" @if($isSingleDoc) style="width: 100%; margin-right: 0;" @endif>
                     @if(str_starts_with((string) $doc->mime_type, 'image/'))
-                        <img src="{{ storage_path('app/public/'.$doc->file_path) }}" class="evidence-img" alt="{{ $doc->document_type->label() }}">
+                        <img src="{{ storage_path('app/public/'.$doc->file_path) }}" class="evidence-img" alt="{{ $doc->document_type->label() }}" @if($isSingleDoc) style="max-height: 520px;" @endif>
                     @else
                         <div style="font-size: 9pt; padding: 5px; border: 1px dashed #ccc;">[Document Attached]: {{ $doc->original_filename }}</div>
                     @endif
