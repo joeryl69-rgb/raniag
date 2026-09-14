@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'no-cache' => PreventBackHistoryCache::class,
         ]);
 
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         // Trust all proxies (Railway, Render, etc. sit behind a load balancer
         // that terminates SSL). Without this, Laravel thinks requests are
         // plain HTTP, which breaks HTTPS asset URLs, secure cookies, and CSRF.
