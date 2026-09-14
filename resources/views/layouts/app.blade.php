@@ -505,7 +505,7 @@
     <script src="{{ asset('js/live-refresh.js') }}?v={{ @filemtime(public_path('js/live-refresh.js')) }}"></script>
     <script src="{{ asset('js/filter-bar.js') }}?v={{ @filemtime(public_path('js/filter-bar.js')) }}"></script>
     <script src="{{ asset('js/push-notifications.js') }}?v={{ @filemtime(public_path('js/push-notifications.js')) }}"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" integrity="sha384-X9kJyAubVxnP0hcA+AMMs21U445qsnqhnUF8EBlEpP3a42Kh/JwWjlv2ZcvGfphb" crossorigin="anonymous"</script>
     <script>
         function toggleSidebar(force) {
             const wrapper = document.getElementById('wrapper');

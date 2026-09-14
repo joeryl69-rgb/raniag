@@ -288,7 +288,7 @@
             </div>
 
             @push('scripts')
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js" integrity="sha384-llrj4SUC221pVa/E3xKZwmp2zd8q9ReUcs9N37u6A5pQhjiymLsQRg+1AysLVKOZ" crossorigin="anonymous"></script>
             <script src="{{ asset('js/document-camera.js') }}?v={{ @filemtime(public_path('js/document-camera.js')) }}"></script>
             <script>
                 const incidentDocumentsBaseUrl = @json(route('admin.incidents.documents.store', $incident->id));
