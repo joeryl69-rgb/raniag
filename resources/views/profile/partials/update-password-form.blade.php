@@ -23,7 +23,7 @@
         <!-- New Password -->
         <div class="mb-3">
             <label for="update_password_password" class="form-label fw-semibold text-dark">{{ __('New Password') }}</label>
-            <input id="update_password_password" name="password" type="password" class="form-control @if($errors->updatePassword->has('password')) is-invalid @endif" autocomplete="new-password">
+            <input id="update_password_password" name="password" type="password" class="form-control @if($errors->updatePassword->has('password')) is-invalid @endif" autocomplete="new-password" data-password-strength>
             @if($errors->updatePassword->has('password'))
                 <div class="invalid-feedback">
                     {{ $errors->updatePassword->first('password') }}
@@ -34,7 +34,7 @@
         <!-- Confirm Password -->
         <div class="mb-3">
             <label for="update_password_password_confirmation" class="form-label fw-semibold text-dark">{{ __('Confirm Password') }}</label>
-            <input id="update_password_password_confirmation" name="password_confirmation" type="password" class="form-control @if($errors->updatePassword->has('password_confirmation')) is-invalid @endif" autocomplete="new-password">
+            <input id="update_password_password_confirmation" name="password_confirmation" type="password" class="form-control @if($errors->updatePassword->has('password_confirmation')) is-invalid @endif" autocomplete="new-password" data-password-confirm-of="update_password_password">
             @if($errors->updatePassword->has('password_confirmation'))
                 <div class="invalid-feedback">
                     {{ $errors->updatePassword->first('password_confirmation') }}
@@ -51,3 +51,7 @@
         </div>
     </form>
 </section>
+
+@push('scripts')
+    <script src="{{ asset('js/password-strength.js') }}"></script>
+@endpush

@@ -86,7 +86,23 @@
             });
         } catch (err) {
             console.error('Push subscribe failed', err);
-            alert('Could not enable push notifications: ' + (err && err.message ? err.message : 'unknown error') + '.');
+            // "Registration failed - permission denied" (NotAllowedError) is a
+            // known Chromium/Edge behavior: it can fire even after the in-page
+            // permission prompt says "granted," because the browser's own
+            // site-level notification setting (or Windows' notification
+            // settings for the browser) is separately blocking it. The raw
+            // browser message doesn't tell the person that, so replace it
+            // with actual next steps instead of just echoing the error text.
+            if (err && err.name === 'NotAllowedError') {
+                alert(
+                    'Notifications are blocked at the browser or system level, even though you just allowed the prompt. ' +
+                    'In Edge: click the lock icon in the address bar → Notifications → Allow, and check ' +
+                    'edge://settings/content/notifications that this site isn\'t listed under Block. ' +
+                    'Also check Windows Settings → System → Notifications that notifications are on for your browser.'
+                );
+            } else {
+                alert('Could not enable push notifications: ' + (err && err.message ? err.message : 'unknown error') + '.');
+            }
             return false;
         }
 

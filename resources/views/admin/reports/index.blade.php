@@ -84,14 +84,49 @@
                             @enderror
                         </div>
 
+                        <div class="col-md-6">
+                            <label for="aor_scope" class="form-label fw-semibold">AOR Scope</label>
+                            <select class="form-select @error('aor_scope') is-invalid @enderror" id="aor_scope" name="aor_scope">
+                                <option value="aor_only" {{ old('aor_scope', 'aor_only') == 'aor_only' ? 'selected' : '' }}>MDRRMO Pamplona AOR Only (Default)</option>
+                                <option value="outside_aor_only" {{ old('aor_scope') == 'outside_aor_only' ? 'selected' : '' }}>Outside-AOR Only (referred to another jurisdiction)</option>
+                                <option value="all" {{ old('aor_scope') == 'all' ? 'selected' : '' }}>All (AOR + Outside-AOR, clearly labeled)</option>
+                            </select>
+                            @error('aor_scope')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">Replaces the old "include outside-AOR" checkbox with an explicit choice, so AOR vs. Outside-AOR is a real distinction on every report type below.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="view_mode" class="form-label fw-semibold">Report View <span class="text-muted fw-normal">(Chart Summary only)</span></label>
+                            <select class="form-select @error('view_mode') is-invalid @enderror" id="view_mode" name="view_mode">
+                                <option value="periodic" {{ old('view_mode', 'periodic') == 'periodic' ? 'selected' : '' }}>Periodic (single total for the whole date range)</option>
+                                <option value="weekly" {{ old('view_mode') == 'weekly' ? 'selected' : '' }}>Weekly (grouped by calendar week)</option>
+                                <option value="monthly" {{ old('view_mode') == 'monthly' ? 'selected' : '' }}>Monthly (grouped by calendar month)</option>
+                            </select>
+                            @error('view_mode')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">Controls how the Trend chart and period-over-period comparison in the Chart Summary are bucketed. PDF/Excel reports ignore this.</div>
+                        </div>
+
                         <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="include_outside_aor" value="1" id="include_outside_aor" {{ old('include_outside_aor') ? 'checked' : '' }}>
-                                <label class="form-check-label" for="include_outside_aor">
-                                    Include Outside-AOR incidents (referred to another jurisdiction/agency)
-                                </label>
-                                <div class="form-text">Off by default — these were previously mixed into the official report indistinguishably from real MDRRMO Pamplona cases. When included, they're clearly labeled in the output.</div>
+                            <label class="form-label fw-semibold">Charts to Include <span class="text-muted fw-normal">(Chart Summary only)</span></label>
+                            <div class="border rounded-3 p-3 bg-white">
+                                <div class="row g-2">
+                                    @foreach($chartKeys as $chartKey)
+                                        <div class="col-sm-6 col-lg-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="charts[]" value="{{ $chartKey }}" id="chart_{{ $chartKey }}" {{ old('charts') ? (in_array($chartKey, old('charts')) ? 'checked' : '') : 'checked' }}>
+                                                <label class="form-check-label" for="chart_{{ $chartKey }}">
+                                                    {{ $chartLabels[$chartKey] }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
+                            <div class="form-text">Pick which charts to generate — the Chart Summary PDF renders exactly the ones checked, in this order, every time.</div>
                         </div>
 
                         <div class="col-12 mt-4">
@@ -105,6 +140,9 @@
                                 </button>
                                 <button type="submit" formaction="{{ route('admin.reports.generate_excel') }}" class="btn btn-success" data-loading-message="Generating your Excel report...">
                                     <i class="bi bi-file-earmark-excel me-2"></i>Generate Excel Report
+                                </button>
+                                <button type="submit" formaction="{{ route('admin.reports.generate_chart_summary') }}" class="btn btn-info text-white" data-loading-message="Generating your Chart Summary...">
+                                    <i class="bi bi-bar-chart-line me-2"></i>Generate Chart Summary
                                 </button>
                                 <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary" data-loading-link data-loading-message="Returning to the dashboard...">Cancel</a>
                             </div>

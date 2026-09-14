@@ -13,22 +13,14 @@
             </p>
         </div>
         <div class="card-body">
-            <form method="GET" action="{{ route('agency.archived_reports.index') }}" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label small mb-1">Search Tracking #</label>
-                    <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="e.g. RAN-1234">
-                </div>
+            <x-filters.toolbar
+                :action="route('agency.archived_reports.index')"
+                search-placeholder="e.g. RAN-1234"
+                :clear-url="route('agency.archived_reports.index')"
+            >
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">From</label>
-                    <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">To</label>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Barangay</label>
-                    <select name="barangay" class="form-select form-select-sm">
+                    <label class="form-label small text-muted mb-1">Barangay</label>
+                    <select name="barangay" class="form-select" data-filter-default="all">
                         <option value="all">All Barangays</option>
                         @foreach($barangays as $b)
                             <option value="{{ $b }}" @selected(request('barangay') === $b)>{{ $b }}</option>
@@ -36,26 +28,22 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <label class="form-label small text-muted mb-1">Status</label>
+                    <select name="status" class="form-select" data-filter-default="all">
                         <option value="all" @selected(request('status', 'all') === 'all')>All</option>
                         <option value="resolved" @selected(request('status') === 'resolved')>Resolved</option>
                         <option value="closed" @selected(request('status') === 'closed')>Closed</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">Sort By</label>
-                    <select name="sort" class="form-select form-select-sm">
+                    <label class="form-label small text-muted mb-1">Sort By</label>
+                    <select name="sort" class="form-select" data-filter-default="reported_at">
                         <option value="reported_at" @selected(request('sort', 'reported_at') === 'reported_at')>Date Reported</option>
                         <option value="tracking_number" @selected(request('sort') === 'tracking_number')>Tracking #</option>
                         <option value="barangay" @selected(request('sort') === 'barangay')>Barangay</option>
                     </select>
                 </div>
-                <div class="col-12 d-flex gap-2 mt-2">
-                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Apply Filters</button>
-                    <a href="{{ route('agency.archived_reports.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-                </div>
-            </form>
+            </x-filters.toolbar>
         </div>
     </div>
 

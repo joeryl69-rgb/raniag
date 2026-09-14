@@ -8,32 +8,36 @@
                     <p class="small text-muted mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Track printable requests and approval updates.</p>
                 </div>
 
-                <form method="GET" action="{{ route('agency.document_requests.index') }}" class="d-flex gap-2 align-items-center flex-wrap" data-loading-message="Filtering document requests...">
-                    <input type="search" name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width: 190px;" placeholder="Search tracking # or note">
+                <x-filters.toolbar
+                    :action="route('agency.document_requests.index')"
+                    search-placeholder="Search tracking # or note"
+                    :clear-url="route('agency.document_requests.index')"
+                >
                     @php
                         $currentStatus = request()->query('status', 'all');
                         $currentType = request()->query('request_type', 'all');
                     @endphp
-                    <select name="status" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="all" @selected($currentStatus === 'all')>All Statuses</option>
-                        <option value="pending" @selected($currentStatus === 'pending')>Pending</option>
-                        <option value="approved" @selected($currentStatus === 'approved')>Approved</option>
-                        <option value="sent" @selected($currentStatus === 'sent')>Sent</option>
-                        <option value="failed" @selected($currentStatus === 'failed')>Failed</option>
-                        <option value="rejected" @selected($currentStatus === 'rejected')>Rejected</option>
-                        <option value="archived" @selected($currentStatus === 'archived')>Archived</option>
-                    </select>
-                    <select name="request_type" class="form-select form-select-sm" style="width: 140px;">
-                        <option value="all" @selected($currentType === 'all')>All Types</option>
-                        <option value="single" @selected($currentType === 'single')>Single</option>
-                        <option value="bulk" @selected($currentType === 'bulk')>Bulk</option>
-                    </select>
-                    <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 145px;" title="From date">
-                    <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 145px;" title="To date">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="bi bi-funnel me-1"></i>Filter
-                    </button>
-                </form>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted mb-1">Status</label>
+                        <select name="status" class="form-select" data-filter-default="all">
+                            <option value="all" @selected($currentStatus === 'all')>All Statuses</option>
+                            <option value="pending" @selected($currentStatus === 'pending')>Pending</option>
+                            <option value="approved" @selected($currentStatus === 'approved')>Approved</option>
+                            <option value="sent" @selected($currentStatus === 'sent')>Sent</option>
+                            <option value="failed" @selected($currentStatus === 'failed')>Failed</option>
+                            <option value="rejected" @selected($currentStatus === 'rejected')>Rejected</option>
+                            <option value="archived" @selected($currentStatus === 'archived')>Archived</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted mb-1">Type</label>
+                        <select name="request_type" class="form-select" data-filter-default="all">
+                            <option value="all" @selected($currentType === 'all')>All Types</option>
+                            <option value="single" @selected($currentType === 'single')>Single</option>
+                            <option value="bulk" @selected($currentType === 'bulk')>Bulk</option>
+                        </select>
+                    </div>
+                </x-filters.toolbar>
             </div>
         </div>
 

@@ -25,6 +25,7 @@
     const flashBtn = document.getElementById('gps-camera-flash');
     const previewEl = document.getElementById('gps-camera-preview');
     const statusEl = document.getElementById('gps-camera-status');
+    const evidenceBadgeEl = document.getElementById('gps-camera-evidence-badge');
     const coordsEl = document.getElementById('gps-camera-coords');
     const placeEl = document.getElementById('gps-camera-place');
     const timeEl = document.getElementById('gps-camera-time');
@@ -320,11 +321,34 @@
     function isLocationReady() {
         return !!lastPosition && !!lastResolved && !!(lastResolved.barangay || lastResolved.municipality);
     }
+    // Ready = actionable. The button's *color*, not just its opacity, now
+    // reflects that: neutral/outline while not ready (waiting on GPS/address
+    // resolution, or the evidence cap already reached), green only once a
+    // tap will genuinely capture a photo. This replaces relying on a dimmed
+    // green (which agencies read as "already active") with an unambiguous
+    // color swap.
     function updateCaptureReadiness() {
         if (!captureBtn) return;
         const ready = isLocationReady() && canAddMoreCaptures();
         captureBtn.disabled = !ready;
-        captureBtn.classList.toggle('gps-capture-pending', !isLocationReady());
+        captureBtn.classList.toggle('gps-capture-pending', !ready);
+        captureBtn.classList.toggle('btn-success', ready);
+        captureBtn.classList.toggle('btn-outline-light', !ready);
+    }
+
+    // Counts actual attached evidence (GPS captures + any manually chosen
+    // files in the same #evidence input) and reflects it in a badge that's
+    // separate from the GPS-signal badge above — the GPS one turns green
+    // as soon as a location lock is found, which agencies were mistaking
+    // for "I've already provided a photo."
+    function updateEvidenceBadge() {
+        if (!evidenceBadgeEl) return;
+        const count = captures.length + manualFiles.length;
+        evidenceBadgeEl.classList.toggle('bg-secondary', count === 0);
+        evidenceBadgeEl.classList.toggle('bg-success', count > 0);
+        evidenceBadgeEl.innerHTML = count > 0
+            ? `<i class="bi bi-camera-fill me-1"></i>${count} evidence photo${count === 1 ? '' : 's'} attached`
+            : '<i class="bi bi-camera me-1"></i>No evidence photo yet';
     }
 
     function syncEvidenceInput() {
@@ -403,6 +427,7 @@
             renderPreviews();
             applyPositionToMap(lastPosition, true);
             updateCaptureReadiness();
+            updateEvidenceBadge();
             exitReviewMode();
 
             if (coordsEl) {
@@ -536,6 +561,7 @@
         syncCaptureLog();
         renderPreviews();
         updateCaptureReadiness();
+        updateEvidenceBadge();
     }
 
     function applyPositionToMap(position, pan = true) {
@@ -961,6 +987,7 @@
         if (captureBtn) {
             updateCaptureReadiness();
         }
+        updateEvidenceBadge();
     });
 
     window.addEventListener('beforeunload', () => {
@@ -976,4 +1003,7 @@
         startBtn.disabled = true;
         setError('Camera API is not available. Use file upload instead.');
     }
+
+    refreshManualFiles();
+    updateEvidenceBadge();
 })();

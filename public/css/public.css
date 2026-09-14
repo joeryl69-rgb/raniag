@@ -817,25 +817,35 @@ body.raniag-public {
 .rg-docthumb {
     position: relative;
     box-sizing: border-box;
-    width: 72px;
-    flex: 0 0 72px;
+    width: 84px;
+    flex: 0 0 84px;
     line-height: 0;
-    /* Room for the delete button, which sits partly outside the thumb's
-       own box — without this the button could clip/overlap the next
-       thumbnail's controls when thumbs wrap onto a new row. */
-    margin-top: 6px;
+    /* Room for the delete button (top-right) and the scan-text button
+       (bottom-left), both of which sit partly outside the thumb's own
+       box — without this margin on all sides, those buttons could clip
+       or overlap a neighboring thumbnail's own controls when thumbs
+       wrap onto a new row, which is what produced the "merging into
+       one another" look when a document type had 2+ files on file. */
+    margin: 8px 8px 10px 8px;
 }
 
 .rg-docthumb-link {
     display: block;
-    width: 72px;
-    height: 72px;
+    width: 84px;
+    height: 84px;
 }
 
 .rg-docthumb-img {
-    width: 72px;
-    height: 72px;
-    object-fit: cover;
+    /* !important on every sizing property here for the same reason as
+       the delete button below: a single custom class and Bootstrap's
+       own classes share the same CSS specificity, so without forcing
+       it, source order alone could let an inherited/utility style win
+       and stretch this into a non-square, portrait-cropped thumbnail
+       — which is what made these look tall/misshapen and crowd
+       against each other instead of sitting in a clean uniform grid. */
+    width: 84px !important;
+    height: 84px !important;
+    object-fit: cover !important;
     border-radius: 0.4rem;
     border: 1px solid var(--raniag-border, #dee2e6);
     display: block;
@@ -849,14 +859,33 @@ body.raniag-public {
     color: #6c757d;
 }
 
+/* Sits at the opposite corner from the delete button (bottom-left vs
+   top-right) so the two controls never crowd each other or the photo
+   itself — same circular-badge treatment and !important guard as
+   .rg-docthumb-delbtn, for the same specificity reason. */
 .rg-docthumb-textbtn {
     position: absolute;
-    bottom: 2px;
-    left: 2px;
+    bottom: -6px;
+    left: -6px;
+    z-index: 2;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px;
     line-height: 1;
-    font-size: 0.65rem;
-    padding: 0.15rem 0.3rem;
-    border-radius: 0.25rem;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 0.7rem;
+    box-shadow: 0 0 0 2px #fff;
+    margin: 0;
+}
+
+.rg-docthumb-textbtn i {
+    font-size: 0.7rem;
+    line-height: 1;
 }
 
 /* Explicit box-sizing + !important on the delete button's own size:
@@ -1481,3 +1510,76 @@ body.raniag-public {
     resize: vertical;
     box-sizing: border-box;
 }
+
+/* Shared password-creation UX (register/reset/change-password) — see
+   public/js/password-strength.js. Also duplicated in css/auth.css since
+   the auth pages load that stylesheet instead of this one; keep both in
+   sync if this ever changes. */
+.rg-pw-meter-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rg-pw-meter {
+    flex: 1 1 auto;
+    height: 6px;
+    border-radius: 999px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.rg-pw-meter-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    transition: width 0.2s ease, background-color 0.2s ease;
+    background: #dc3545;
+}
+
+.rg-pw-meter-fill.rg-pw-weak { background: #dc3545; }
+.rg-pw-meter-fill.rg-pw-okay { background: #fd7e14; }
+.rg-pw-meter-fill.rg-pw-strong { background: #198754; }
+
+.rg-pw-meter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex: 0 0 auto;
+}
+
+.rg-pw-meter-label.rg-pw-weak { color: #dc3545; }
+.rg-pw-meter-label.rg-pw-okay { color: #fd7e14; }
+.rg-pw-meter-label.rg-pw-strong { color: #198754; }
+
+.rg-pw-checklist {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.25rem 0.75rem;
+}
+
+.rg-pw-checklist li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.rg-pw-checklist li i {
+    font-size: 0.85rem;
+}
+
+.rg-pw-checklist li.rg-pw-met {
+    color: #198754;
+}
+
+.rg-pw-match {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.rg-pw-match.rg-pw-weak { color: #dc3545; }
+.rg-pw-match.rg-pw-strong { color: #198754; }

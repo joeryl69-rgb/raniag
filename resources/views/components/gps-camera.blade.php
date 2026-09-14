@@ -30,6 +30,17 @@
         <span class="badge rounded-pill bg-secondary" id="gps-camera-status">Camera off</span>
     </div>
 
+    {{-- Distinct from the GPS-signal badge above on purpose: that badge
+         turns green ("GPS active") the moment a location lock is found,
+         before any photo has actually been taken — agencies were reading
+         that green as "evidence already provided." This one only turns
+         green once a photo has actually been captured/attached. --}}
+    <div class="mb-3">
+        <span class="badge rounded-pill bg-secondary" id="gps-camera-evidence-badge">
+            <i class="bi bi-camera me-1"></i>No evidence photo yet
+        </span>
+    </div>
+
     <div id="gps-camera-error" class="alert alert-warning d-none small" role="alert"></div>
 
     {{-- Matches the public reporting form's own "Start Camera" button exactly
@@ -87,7 +98,14 @@
                         <button type="button" class="btn btn-outline-light" id="gps-camera-switch" title="Switch camera">
                             <i class="bi bi-arrow-repeat"></i>
                         </button>
-                        <button type="button" class="btn btn-success px-4" id="gps-camera-capture">
+                        {{-- Starts neutral (btn-outline-light), not green — it only switches to
+                             btn-success once GPS/address resolution is actually ready and the
+                             tap will do something. A dimmed *green* button during "Waiting for
+                             GPS signal…" read as "already active" to agencies; a genuinely
+                             different, neutral color while pending removes that ambiguity
+                             instead of relying on opacity alone. See gps-camera.js
+                             updateCaptureReadiness(). --}}
+                        <button type="button" class="btn btn-outline-light px-4 gps-capture-pending" id="gps-camera-capture" disabled>
                             <i class="bi bi-camera-fill me-1"></i>Capture Photo
                         </button>
                         <button type="button" class="btn btn-outline-danger" id="gps-camera-stop" data-bs-dismiss="modal">

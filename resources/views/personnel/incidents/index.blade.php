@@ -13,34 +13,40 @@
                             <p class="small text-muted mb-0 mt-1">Dispatches currently assigned to your account</p>
                         </div>
                     </div>
-                    <form method="GET" action="{{ route('personnel.incidents.index') }}" class="d-flex flex-wrap gap-2 align-items-center">
-                        <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control form-control-sm" style="width: 180px;" placeholder="Search tracking # or title">
-                        <select name="status" class="form-select form-select-sm" style="width: 160px;">
-                            <option value="all">All Statuses</option>
-                            @foreach (\App\Enums\IncidentStatus::cases() as $s)
-                                @continue(in_array($s->value, ['resolved', 'closed']))
-                                <option value="{{ $s->value }}" @selected(($filters['status'] ?? '') === $s->value)>{{ $s->label() }}</option>
-                            @endforeach
-                        </select>
-                        <select name="priority" class="form-select form-select-sm" style="width: 140px;">
-                            <option value="all">All Priorities</option>
-                            @foreach (\App\Enums\IncidentPriority::cases() as $p)
-                                <option value="{{ $p->value }}" @selected(($filters['priority'] ?? '') === $p->value)>{{ $p->label() }}</option>
-                            @endforeach
-                        </select>
-                        <select name="barangay" class="form-select form-select-sm" style="width: 160px;">
-                            <option value="all">All Barangays</option>
-                            @foreach ($barangays as $b)
-                                <option value="{{ $b }}" @selected(($filters['barangay'] ?? '') === $b)>{{ $b }}</option>
-                            @endforeach
-                        </select>
-                        <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 150px;" title="From date">
-                        <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm" style="width: 150px;" title="To date">
-                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
-                        @if (array_filter($filters ?? []))
-                            <a href="{{ route('personnel.incidents.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
-                        @endif
-                    </form>
+                    <x-filters.toolbar
+                        :action="route('personnel.incidents.index')"
+                        search-placeholder="Search tracking # or title"
+                        :clear-url="route('personnel.incidents.index')"
+                    >
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Status</label>
+                            <select name="status" class="form-select" data-filter-default="all">
+                                <option value="all">All Statuses</option>
+                                @foreach (\App\Enums\IncidentStatus::cases() as $s)
+                                    @continue(in_array($s->value, ['resolved', 'closed']))
+                                    <option value="{{ $s->value }}" @selected(request('status') === $s->value)>{{ $s->label() }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Priority</label>
+                            <select name="priority" class="form-select" data-filter-default="all">
+                                <option value="all">All Priorities</option>
+                                @foreach (\App\Enums\IncidentPriority::cases() as $p)
+                                    <option value="{{ $p->value }}" @selected(request('priority') === $p->value)>{{ $p->label() }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Barangay</label>
+                            <select name="barangay" class="form-select" data-filter-default="all">
+                                <option value="all">All Barangays</option>
+                                @foreach ($barangays as $b)
+                                    <option value="{{ $b }}" @selected(request('barangay') === $b)>{{ $b }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </x-filters.toolbar>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-personnel-incidents-tbody" data-live-refresh-interval="4000">

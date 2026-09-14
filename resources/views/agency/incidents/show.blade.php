@@ -240,7 +240,7 @@
 
                             <!-- Submit Resolution Form -->
                             <h6 class="fw-bold mb-3 border-bottom pb-2">Complete & Close Incident</h6>
-                            <form action="{{ route('agency.incidents.resolution', $incident->id) }}" method="POST" enctype="multipart/form-data">
+                            <form action="{{ route('agency.incidents.resolution', $incident->id) }}" method="POST" enctype="multipart/form-data" id="resolutionForm">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="summary" class="form-label">Resolution Summary <span class="text-danger">*</span></label>
@@ -259,8 +259,106 @@
                                     <div class="form-text">Use the GPS Camera above for a geotagged, watermarked photo, or attach files directly here.</div>
                                 </div>
 
-                                <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
+                                <button type="button" class="btn btn-success w-100" id="resolutionReviewBtn"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
                             </form>
+
+                            {{-- Review-before-submit: shows exactly what's about to be sent so the
+                                 agency can catch a mistake before it's locked in, instead of only
+                                 finding out after the resolution is already recorded. --}}
+                            <div class="modal fade" id="resolutionReviewModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title"><i class="bi bi-clipboard-check me-2 text-success"></i>Confirm Resolution Submission</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="text-muted small">Review what you're about to submit — this can't be edited after other agencies have also resolved.</p>
+                                            <div class="mb-3">
+                                                <div class="text-muted small fw-semibold">Resolution Summary</div>
+                                                <p class="mb-0" id="reviewSummary" style="white-space: pre-wrap;"></p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <div class="text-muted small fw-semibold">Actions Taken</div>
+                                                <p class="mb-0" id="reviewActionsTaken" style="white-space: pre-wrap;"></p>
+                                            </div>
+                                            <div class="mb-0">
+                                                <div class="text-muted small fw-semibold">Evidence Attached</div>
+                                                <p class="mb-0" id="reviewEvidenceCount"></p>
+                                            </div>
+                                            <div class="alert alert-light border small mt-3 mb-0">
+                                                <i class="bi bi-info-circle me-1"></i>This records <strong>your agency's</strong> resolution. If other agencies are also assigned to this incident, they submit theirs independently — the incident closes once every assigned agency has resolved.
+                                            </div>
+                                            {{-- The green "Confirm & Submit" button used to be enabled the moment
+                                                 the modal opened, so it read as active/actionable before the agency
+                                                 had actually looked at what they were about to send. It now starts
+                                                 neutral (btn-outline-secondary) and disabled, and only switches to
+                                                 green once this box is checked — green means "reviewed and ready",
+                                                 not just "modal is open". --}}
+                                            <div class="form-check mt-3">
+                                                <input class="form-check-input" type="checkbox" id="resolutionReviewAck">
+                                                <label class="form-check-label small" for="resolutionReviewAck">
+                                                    I've reviewed the above and confirm it's accurate.
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-pencil me-1"></i>Go Back & Edit</button>
+                                            <button type="button" class="btn btn-outline-secondary" id="resolutionConfirmSubmitBtn" disabled><i class="bi bi-check-all me-1"></i>Confirm & Submit</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <script>
+                                (function () {
+                                    const form = document.getElementById('resolutionForm');
+                                    const reviewBtn = document.getElementById('resolutionReviewBtn');
+                                    if (!form || !reviewBtn) return;
+
+                                    const ackCheckbox = document.getElementById('resolutionReviewAck');
+                                    const confirmBtn = document.getElementById('resolutionConfirmSubmitBtn');
+                                    const reviewModalEl = document.getElementById('resolutionReviewModal');
+
+                                    function setConfirmReady(ready) {
+                                        confirmBtn.disabled = !ready;
+                                        confirmBtn.classList.toggle('btn-success', ready);
+                                        confirmBtn.classList.toggle('btn-outline-secondary', !ready);
+                                    }
+
+                                    // Reset every time the modal opens — otherwise re-opening after
+                                    // "Go Back & Edit" (or a previous confirm) could silently leave the
+                                    // button green/enabled from a prior visit instead of a clean state.
+                                    reviewModalEl.addEventListener('show.bs.modal', function () {
+                                        ackCheckbox.checked = false;
+                                        setConfirmReady(false);
+                                    });
+
+                                    ackCheckbox.addEventListener('change', function () {
+                                        setConfirmReady(this.checked);
+                                    });
+
+                                    reviewBtn.addEventListener('click', function () {
+                                        if (!form.reportValidity()) return;
+
+                                        document.getElementById('reviewSummary').textContent = document.getElementById('summary').value.trim();
+                                        document.getElementById('reviewActionsTaken').textContent = document.getElementById('actions_taken').value.trim();
+                                        const fileCount = document.getElementById('evidence').files.length;
+                                        document.getElementById('reviewEvidenceCount').textContent = fileCount > 0
+                                            ? `${fileCount} file${fileCount === 1 ? '' : 's'} attached`
+                                            : 'None attached — submitting without photo/document evidence.';
+
+                                        const modal = new bootstrap.Modal(reviewModalEl);
+                                        modal.show();
+                                    });
+
+                                    confirmBtn.addEventListener('click', function () {
+                                        if (!ackCheckbox.checked) return;
+                                        this.disabled = true;
+                                        form.submit();
+                                    });
+                                })();
+                            </script>
                         @else
                             @php
                                 $agencyResolution = null;

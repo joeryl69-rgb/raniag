@@ -756,7 +756,7 @@
                                                 <i class="bi bi-check-circle me-1 text-success"></i>Every active agency and personnel account has already been dispatched to this incident — there's no one left to add.
                                             </div>
                                         @else
-                                        <form action="{{ route('admin.incidents.validate', $incident->id) }}" method="POST">
+                                        <form action="{{ route('admin.incidents.validate', $incident->id) }}" method="POST" id="redispatchFormEl">
                                             @csrf
                                             <input type="hidden" name="action" value="approve">
                                             <div class="mb-3">
@@ -764,7 +764,7 @@
                                                 <div class="border rounded-3 p-3 bg-white" style="max-height: 220px; overflow-y: auto;">
                                                     @foreach ($agencies as $agency)
                                                         <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" name="assigned_agency_id[]" value="{{ $agency->id }}" id="redispatch_agency_{{ $agency->id }}">
+                                                            <input class="form-check-input redispatch-option" type="checkbox" name="assigned_agency_id[]" value="{{ $agency->id }}" id="redispatch_agency_{{ $agency->id }}">
                                                             <label class="form-check-label" for="redispatch_agency_{{ $agency->id }}">
                                                                 {{ $agency->code }} ({{ $agency->name }})
                                                             </label>
@@ -775,7 +775,7 @@
                                                         <div class="fw-semibold mb-2">Internal Personnel</div>
                                                         @foreach ($personnel as $person)
                                                             <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" name="assigned_personnel_id[]" value="{{ $person->id }}" id="redispatch_personnel_{{ $person->id }}">
+                                                                <input class="form-check-input redispatch-option" type="checkbox" name="assigned_personnel_id[]" value="{{ $person->id }}" id="redispatch_personnel_{{ $person->id }}">
                                                                 <label class="form-check-label" for="redispatch_personnel_{{ $person->id }}">
                                                                     {{ $person->name }} @if($person->role_title) ({{ $person->role_title }}) @endif
                                                                 </label>
@@ -789,10 +789,42 @@
                                                 <label class="form-label">Dispatch Notes</label>
                                                 <textarea class="form-control" name="notes" rows="2" placeholder="Reason for coordinating another agency..."></textarea>
                                             </div>
-                                            <button type="submit" class="btn btn-primary btn-sm">
+                                            {{-- Used to be enabled/blue no matter what was checked — nothing
+                                                 stopped an admin from submitting with zero agencies/personnel
+                                                 selected. It now starts disabled and only becomes clickable once
+                                                 at least one checkbox above is actually checked. --}}
+                                            <button type="submit" class="btn btn-primary btn-sm" id="redispatchSubmitBtn" disabled>
                                                 <i class="bi bi-send-fill me-1"></i>Confirm Re-dispatch
                                             </button>
                                         </form>
+                                        <script>
+                                            (function () {
+                                                const collapseEl = document.getElementById('redispatchForm');
+                                                const formEl = document.getElementById('redispatchFormEl');
+                                                const submitBtn = document.getElementById('redispatchSubmitBtn');
+                                                if (!collapseEl || !formEl || !submitBtn) return;
+
+                                                const options = formEl.querySelectorAll('.redispatch-option');
+
+                                                function refreshSubmitState() {
+                                                    const anyChecked = Array.from(options).some((cb) => cb.checked);
+                                                    submitBtn.disabled = !anyChecked;
+                                                }
+
+                                                options.forEach((cb) => cb.addEventListener('change', refreshSubmitState));
+
+                                                // "Static default" fix: every time this panel is collapsed back
+                                                // closed, clear it out properly — uncheck every box, blank the
+                                                // notes field, and disable the button again — instead of leaving
+                                                // a stale selection sitting there the next time it's expanded.
+                                                collapseEl.addEventListener('hidden.bs.collapse', function () {
+                                                    formEl.reset();
+                                                    refreshSubmitState();
+                                                });
+
+                                                refreshSubmitState();
+                                            })();
+                                        </script>
                                         @endif
                                     </div>
                                 </div>

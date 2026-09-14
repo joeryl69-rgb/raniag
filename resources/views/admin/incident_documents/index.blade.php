@@ -8,39 +8,28 @@
             <p class="text-muted small mb-0"><i class="bi bi-folder2-open text-primary me-2"></i>Filed forms for resolved and closed incidents &mdash; Call Taker Form, Dispatch Form, Narrative Report, Endorsement Sheet.</p>
         </div>
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.incident_documents.index') }}" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label small mb-1">Search Tracking #</label>
-                    <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="e.g. RAN-1234">
-                </div>
+            <x-filters.toolbar
+                :action="route('admin.incident_documents.index')"
+                search-placeholder="e.g. RAN-1234"
+                :clear-url="route('admin.incident_documents.index')"
+            >
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">From</label>
-                    <input type="date" name="date_from" value="{{ request('date_from') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">To</label>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}" max="{{ now()->format('Y-m-d') }}" class="form-control form-control-sm">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <label class="form-label small text-muted mb-1">Status</label>
+                    <select name="status" class="form-select" data-filter-default="all">
                         <option value="all" @selected(request('status', 'all') === 'all')>All</option>
                         <option value="resolved" @selected(request('status') === 'resolved')>Resolved</option>
                         <option value="closed" @selected(request('status') === 'closed')>Closed</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">Documents</label>
-                    <select name="completion" class="form-select form-select-sm">
+                    <label class="form-label small text-muted mb-1">Documents</label>
+                    <select name="completion" class="form-select" data-filter-default="">
                         <option value="" @selected(! request('completion'))>Any</option>
                         <option value="complete" @selected(request('completion') === 'complete')>Complete (all 4)</option>
                         <option value="missing" @selected(request('completion') === 'missing')>Missing some</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel me-1"></i>Apply Filters</button>
-                </div>
-            </form>
+            </x-filters.toolbar>
         </div>
     </div>
 
