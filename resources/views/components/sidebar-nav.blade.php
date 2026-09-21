@@ -28,6 +28,11 @@
                 </a>
             </li>
             <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.qr_posters.*') ? 'active' : '' }}" href="{{ route('admin.qr_posters.index') }}">
+                    <i class="bi bi-qr-code"></i><span>QR Posters</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
                     <i class="bi bi-file-earmark-text"></i><span>Make Report</span>
                 </a>

@@ -51,10 +51,23 @@
     <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
+        <div class="card raniag-card mb-3 p-3" id="report-wizard-nav" data-rg-reveal>
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
+                <div class="d-flex gap-1" id="wizard-dots" aria-hidden="true">
+                    <span class="badge rounded-pill text-bg-primary" data-dot="0">1</span>
+                    <span class="badge rounded-pill text-bg-secondary" data-dot="1">2</span>
+                    <span class="badge rounded-pill text-bg-secondary" data-dot="2">3</span>
+                    <span class="badge rounded-pill text-bg-secondary" data-dot="3">4</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-wizard-pane" data-wizard-step="0">
         <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">1</span>
-                <span>Incident Type</span>
+                <span>{{ __('Incident Type') }}</span>
             </div>
             <div class="card-body p-4">
                 <div class="row g-3">
@@ -99,8 +112,8 @@
 
         <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                <span class="raniag-step-badge">2</span>
-                <span>Incident Details</span>
+                <span class="raniag-step-badge">1b</span>
+                <span>{{ __('Incident Details') }}</span>
             </div>
             <div class="card-body p-4">
                 <div class="row g-3">
@@ -112,7 +125,12 @@
                         @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
-                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                            <label for="description" class="form-label mb-0">Description <span class="text-danger">*</span></label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="voice-to-text-btn" title="Dictate description">
+                                <i class="bi bi-mic"></i> Voice
+                            </button>
+                        </div>
                         <textarea class="form-control @error('description') is-invalid @enderror" id="description"
                                   name="description" rows="5" required minlength="10" maxlength="5000"
                                   placeholder="Describe what happened, when it occurred, and who may be affected...">{{ old('description') }}</textarea>
@@ -121,49 +139,81 @@
                             <div class="form-text" id="description-guidance">Minimum 10 characters.</div>
                             <div class="form-text text-nowrap" id="description-counter" aria-live="polite">0 / 5000</div>
                         </div>
+                        <div class="form-text text-muted" id="voice-to-text-status"></div>
                     </div>
                 </div>
             </div>
         </div>
+        </div>{{-- wizard step 0 --}}
 
+        <div class="report-wizard-pane d-none" data-wizard-step="1">
+        <!-- Location step (detect GPS or confirm QR barangay prefill) -->
+        <div class="card raniag-card mb-4" id="location-summary-card" data-rg-reveal>
+            <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
+                <span class="raniag-step-badge">2</span>
+                <span>{{ __('Location') }}</span>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3" style="max-width: 60ch;">Use your device GPS now, or continue — a GPS camera photo in the next step can refine this.</p>
+                <button type="button" class="btn btn-outline-primary mb-3" id="use-current-location">
+                    <i class="bi bi-crosshair me-1"></i>Use current location
+                </button>
+                <div class="position-relative mb-2">
+                    <div id="incident-map"></div>
+                    <div id="map-locating-overlay" class="raniag-map-overlay d-none">
+                        <div class="spinner-border" role="status" style="color: var(--rg-brand);"></div>
+                        <div class="raniag-map-overlay-text">Pinpointing your location…</div>
+                    </div>
+                </div>
+                <p class="small mb-3" id="location-resolve-status">
+                    <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Waiting for location…</span>
+                </p>
+                <div class="alert alert-warning d-none py-2 px-3 mb-3" id="outside-jurisdiction-banner" role="alert" style="border-left: 4px solid #d9a406;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <span id="outside-jurisdiction-text"></span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="barangay" class="form-label">Barangay</label>
+                        <input class="form-control @error('barangay') is-invalid @enderror" list="barangay-list"
+                               id="barangay" name="barangay" value="{{ old('barangay', $prefillBarangay) }}"
+                               placeholder="{{ $prefillBarangay ? 'Prefill from QR — confirm or change' : 'Auto-filled from GPS' }}">
+                        <datalist id="barangay-list">
+                            @foreach ($barangays as $barangay)
+                                <option value="{{ $barangay }}">
+                            @endforeach
+                        </datalist>
+                        @error('barangay')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-8">
+                        <label for="location_address" class="form-label">Street / Landmark</label>
+                        <input type="text" class="form-control @error('location_address') is-invalid @enderror"
+                               id="location_address" name="location_address" value="{{ old('location_address') }}"
+                               placeholder="Auto-filled from GPS"
+                               readonly aria-readonly="true">
+                        @error('location_address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="latitude" class="form-label">Latitude</label>
+                        <input type="text" class="form-control @error('latitude') is-invalid @enderror" id="latitude"
+                               name="latitude" value="{{ old('latitude') }}" readonly aria-readonly="true">
+                        @error('latitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="longitude" class="form-label">Longitude</label>
+                        <input type="text" class="form-control @error('longitude') is-invalid @enderror" id="longitude"
+                               name="longitude" value="{{ old('longitude') }}" readonly aria-readonly="true">
+                        @error('longitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>{{-- wizard step 1 --}}
+
+        <div class="report-wizard-pane d-none" data-wizard-step="2">
         <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">3</span>
-                <span>Reporter Information</span>
-            </div>
-            <div class="card-body p-4">
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" role="switch" id="is_anonymous" name="is_anonymous"
-                           value="1" @checked(old('is_anonymous', true))>
-                    <label class="form-check-label fw-semibold" for="is_anonymous">Report anonymously</label>
-                    <div class="form-text mb-0">Leave this on to keep your identity out of the record.</div>
-                </div>
-                <div class="row g-3 reporter-fields" id="reporter-fields">
-                    <div class="col-md-4">
-                        <label for="reporter_name" class="form-label">Full Name</label>
-                        <input type="text" class="form-control @error('reporter_name') is-invalid @enderror"
-                               id="reporter_name" name="reporter_name" value="{{ old('reporter_name') }}">
-                        @error('reporter_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label for="reporter_phone" class="form-label">Phone</label>
-                        <input type="text" class="form-control @error('reporter_phone') is-invalid @enderror"
-                               id="reporter_phone" name="reporter_phone" value="{{ old('reporter_phone') }}">
-                        @error('reporter_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label for="reporter_email" class="form-label">Email</label>
-                        <input type="email" class="form-control @error('reporter_email') is-invalid @enderror"
-                               id="reporter_email" name="reporter_email" value="{{ old('reporter_email') }}">
-                        @error('reporter_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card raniag-card mb-4" data-rg-reveal>
-            <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                <span class="raniag-step-badge">4</span>
                 <span>Evidence <span class="text-muted fw-normal small">(recommended)</span></span>
             </div>
             <div class="card-body p-4">
@@ -314,65 +364,39 @@
                 @error('evidence.*')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
             </div>
         </div>
+        </div>{{-- wizard step 2 --}}
 
-        <!-- Location is captured entirely by the GPS Camera above — this
-             card is a read-only confirmation, hidden until a photo has
-             actually resolved a location (JS removes d-none on the first
-             raniag:location-resolved event). No separate "pin it yourself"
-             step: one location source, no redundant/duplicate action. -->
-        <div class="card raniag-card mb-4 d-none" id="location-summary-card" data-rg-reveal>
+        <div class="report-wizard-pane d-none" data-wizard-step="3">
+        <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                <i class="bi bi-geo-alt-fill" style="color: var(--rg-brand);"></i>
-                <span>Location Captured</span>
+                <span class="raniag-step-badge">4</span>
+                <span>{{ __('Reporter Information') }}</span>
             </div>
             <div class="card-body p-4">
-                <p class="text-muted small mb-3" style="max-width: 60ch;">Detected automatically from your GPS camera photo — the map isn't clickable.</p>
-                <div class="position-relative mb-2">
-                    <div id="incident-map"></div>
-                    <div id="map-locating-overlay" class="raniag-map-overlay d-none">
-                        <div class="spinner-border" role="status" style="color: var(--rg-brand);"></div>
-                        <div class="raniag-map-overlay-text">Pinpointing your location…</div>
-                    </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="is_anonymous" name="is_anonymous"
+                           value="1" @checked(old('is_anonymous', true))>
+                    <label class="form-check-label fw-semibold" for="is_anonymous">Report anonymously</label>
+                    <div class="form-text mb-0">Leave this on to keep your identity out of the record.</div>
                 </div>
-                <p class="small mb-3" id="location-resolve-status">
-                    <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Resolving location…</span>
-                </p>
-                <div class="alert alert-warning d-none py-2 px-3 mb-3" id="outside-jurisdiction-banner" role="alert" style="border-left: 4px solid #d9a406;">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                    <span id="outside-jurisdiction-text"></span>
-                </div>
-                <div class="row g-3">
+                <div class="row g-3 reporter-fields" id="reporter-fields">
                     <div class="col-md-4">
-                        <label for="barangay" class="form-label">Barangay</label>
-                        <input class="form-control @error('barangay') is-invalid @enderror" list="barangay-list"
-                               id="barangay" name="barangay" value="{{ old('barangay') }}" placeholder="Auto-filled from GPS"
-                               readonly aria-readonly="true">
-                        <datalist id="barangay-list">
-                            @foreach ($barangays as $barangay)
-                                <option value="{{ $barangay }}">
-                            @endforeach
-                        </datalist>
-                        @error('barangay')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <label for="reporter_name" class="form-label">Full Name</label>
+                        <input type="text" class="form-control @error('reporter_name') is-invalid @enderror"
+                               id="reporter_name" name="reporter_name" value="{{ old('reporter_name') }}">
+                        @error('reporter_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-md-8">
-                        <label for="location_address" class="form-label">Street / Landmark</label>
-                        <input type="text" class="form-control @error('location_address') is-invalid @enderror"
-                               id="location_address" name="location_address" value="{{ old('location_address') }}"
-                               placeholder="Auto-filled from GPS"
-                               readonly aria-readonly="true">
-                        @error('location_address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="col-md-4">
+                        <label for="reporter_phone" class="form-label">Phone</label>
+                        <input type="text" class="form-control @error('reporter_phone') is-invalid @enderror"
+                               id="reporter_phone" name="reporter_phone" value="{{ old('reporter_phone') }}">
+                        @error('reporter_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-md-6">
-                        <label for="latitude" class="form-label">Latitude</label>
-                        <input type="text" class="form-control @error('latitude') is-invalid @enderror" id="latitude"
-                               name="latitude" value="{{ old('latitude') }}" readonly aria-readonly="true">
-                        @error('latitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="longitude" class="form-label">Longitude</label>
-                        <input type="text" class="form-control @error('longitude') is-invalid @enderror" id="longitude"
-                               name="longitude" value="{{ old('longitude') }}" readonly aria-readonly="true">
-                        @error('longitude')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="col-md-4">
+                        <label for="reporter_email" class="form-label">Email</label>
+                        <input type="email" class="form-control @error('reporter_email') is-invalid @enderror"
+                               id="reporter_email" name="reporter_email" value="{{ old('reporter_email') }}">
+                        @error('reporter_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                 </div>
             </div>
@@ -383,12 +407,18 @@
                 <p class="text-muted small mb-0" style="max-width: 46ch;">
                     <i class="bi bi-shield-lock me-1"></i>Your report is confidential and stored with a full audit trail.
                 </p>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-report">
-                        <i class="bi bi-send me-2"></i>Submit Report
-                    </button>
-                </div>
+                <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-report">
+                    <i class="bi bi-send me-2"></i>Submit Report
+                </button>
+            </div>
+        </div>
+        </div>{{-- wizard step 3 --}}
+
+        <div class="d-flex flex-wrap gap-2 justify-content-between mb-4" id="wizard-controls">
+            <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
+            <div class="d-flex gap-2">
+                <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
             </div>
         </div>
     </form>

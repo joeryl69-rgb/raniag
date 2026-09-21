@@ -3,6 +3,7 @@
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\IncidentReportController;
 use App\Http\Controllers\Public\IncidentTrackController;
+use App\Http\Controllers\Public\LocaleController;
 use App\Http\Controllers\Public\PublicDashboardController;
 use App\Http\Controllers\Public\FeedbackController;
 use Illuminate\Support\Facades\Route;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Route;
 Route::name('public.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::view('/offline', 'public.offline')->name('offline');
+
+    Route::post('/locale', [LocaleController::class, 'update'])->name('locale');
 
     Route::get('/community-dashboard', [PublicDashboardController::class, 'index'])->name('dashboard');
     Route::get('/community-dashboard/data.json', [PublicDashboardController::class, 'data'])->name('dashboard.data');

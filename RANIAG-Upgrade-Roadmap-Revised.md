@@ -41,11 +41,11 @@ Last updated: 2026-09-21 (post Phase 0a–1 access deploy)
 | Optional evidence + `needs_verification` queue | DONE |
 | Offline outbox + idempotency key | DONE |
 | Track evidence after verified lookup | DONE |
-| Step-wizard report flow | REMAINING |
-| Voice-to-text (description) | REMAINING |
-| QR posters / `?barangay=` prefill | REMAINING |
-| Duplicate/cluster detection (~150m / ~30 min) | REMAINING |
-| Filipino locale toggle (`lang/tl.json`) | REMAINING |
+| Step-wizard report flow | DONE |
+| Voice-to-text (description) | DONE |
+| QR posters / `?barangay=` prefill | DONE |
+| Duplicate/cluster detection (~150m / ~30 min) | DONE |
+| Filipino locale toggle (`lang/tl.json`) | DONE |
 | Inbound SMS reporting | DEFERRED (PhilSMS outbound-only) |
 | Ilocano / Itawis packs | DEFERRED (needs translators) |
 | Live unit GPS on tracking page | DEFERRED (needs Phase 2/3 telemetry) |

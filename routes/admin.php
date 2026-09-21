@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\IncidentTypeController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PersonnelRoleController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
+use App\Http\Controllers\Admin\QrPosterController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResolutionController;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +50,8 @@ Route::prefix('admin')
             Route::post('/{incidentType}/toggle', [IncidentTypeController::class, 'toggle'])->name('toggle');
             Route::delete('/{incidentType}', [IncidentTypeController::class, 'destroy'])->name('destroy');
         });
+
+        Route::get('/qr-posters', [QrPosterController::class, 'index'])->name('qr_posters.index');
 
         Route::prefix('incidents')->name('incidents.')->group(function () {
             Route::get('/', [IncidentController::class, 'index'])->name('index');

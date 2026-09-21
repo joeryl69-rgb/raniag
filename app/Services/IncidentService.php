@@ -98,6 +98,8 @@ class IncidentService
             $incident->forceFill(['meta' => $meta])->save();
         }
 
+        $this->linkCorroboratingCluster($incident);
+
         try {
             $this->notifications->notifyAdminNewIncident($incident);
         } catch (\Exception $e) {
@@ -228,5 +230,91 @@ class IncidentService
 
             return $incident->fresh();
         });
+    }
+
+    /**
+     * Link nearby same-type reports (~150m / ~30 min) as corroborating cluster.
+     */
+    private function linkCorroboratingCluster(Incident $incident): void
+    {
+        if ($incident->latitude === null || $incident->longitude === null) {
+            return;
+        }
+
+        $lat = (float) $incident->latitude;
+        $lng = (float) $incident->longitude;
+        $radiusM = 150;
+        $windowMinutes = 30;
+
+        $candidates = Incident::query()
+            ->where('id', '!=', $incident->id)
+            ->where('incident_type_id', $incident->incident_type_id)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->where('reported_at', '>=', now()->subMinutes($windowMinutes))
+            ->whereNotIn('status', [
+                IncidentStatus::Closed->value,
+                IncidentStatus::Rejected->value,
+            ])
+            ->limit(25)
+            ->get();
+
+        $linkedIds = [];
+        foreach ($candidates as $other) {
+            $distance = $this->haversineMeters(
+                $lat,
+                $lng,
+                (float) $other->latitude,
+                (float) $other->longitude,
+            );
+            if ($distance <= $radiusM) {
+                $linkedIds[] = $other->id;
+            }
+        }
+
+        if ($linkedIds === []) {
+            return;
+        }
+
+        $meta = is_array($incident->meta) ? $incident->meta : [];
+        $meta['cluster'] = [
+            'linked_incident_ids' => $linkedIds,
+            'radius_m' => $radiusM,
+            'window_minutes' => $windowMinutes,
+            'detected_at' => now()->toIso8601String(),
+        ];
+        $meta['redundancy_signal'] = true;
+        $incident->forceFill(['meta' => $meta])->save();
+
+        foreach ($linkedIds as $otherId) {
+            $other = Incident::query()->find($otherId);
+            if (! $other) {
+                continue;
+            }
+            $otherMeta = is_array($other->meta) ? $other->meta : [];
+            $existing = $otherMeta['cluster']['linked_incident_ids'] ?? [];
+            if (! in_array($incident->id, $existing, true)) {
+                $existing[] = $incident->id;
+            }
+            $otherMeta['cluster'] = [
+                'linked_incident_ids' => array_values(array_unique($existing)),
+                'radius_m' => $radiusM,
+                'window_minutes' => $windowMinutes,
+                'detected_at' => now()->toIso8601String(),
+            ];
+            $otherMeta['redundancy_signal'] = true;
+            $other->forceFill(['meta' => $otherMeta])->save();
+        }
+    }
+
+    private function haversineMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earth = 6371000.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return 2 * $earth * asin(min(1, sqrt($a)));
     }
 }

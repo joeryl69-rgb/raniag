@@ -21,13 +21,20 @@ class IncidentReportController extends Controller
 
     public function create(): View
     {
+        $barangays = config('raniag.barangays', []);
+        $prefillBarangay = request()->query('barangay');
+        if (! is_string($prefillBarangay) || ! in_array($prefillBarangay, $barangays, true)) {
+            $prefillBarangay = null;
+        }
+
         return view('public.report.create', [
             'incidentTypes' => IncidentType::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(),
-            'barangays' => config('raniag.barangays', []),
+            'barangays' => $barangays,
+            'prefillBarangay' => $prefillBarangay,
             'mapConfig' => config('raniag.map'),
             'addressConfig' => config('raniag.address'),
             'boundaryGeometry' => $this->geofence->boundaryGeometry(),

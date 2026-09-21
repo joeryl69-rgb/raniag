@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\PreventBackHistoryCache;
+use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,
             'no-cache' => PreventBackHistoryCache::class,
+        ]);
+
+        $middleware->web(append: [
+            SetLocale::class,
         ]);
 
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);

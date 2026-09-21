@@ -466,5 +466,134 @@
             }
         });
     }
+
+    // ---- Wizard (type → location → evidence → contact) ----
+    const wizardPanes = Array.from(document.querySelectorAll('[data-wizard-step]'));
+    const wizardBack = document.getElementById('wizard-back');
+    const wizardNext = document.getElementById('wizard-next');
+    const wizardLabel = document.getElementById('wizard-step-label');
+    const wizardDots = document.querySelectorAll('#wizard-dots [data-dot]');
+    const wizardTitles = ['Type', 'Location', 'Evidence', 'Contact'];
+    let wizardStep = 0;
+
+    function showWizardStep(step) {
+        wizardStep = Math.max(0, Math.min(wizardPanes.length - 1, step));
+        wizardPanes.forEach((pane) => {
+            const idx = Number(pane.getAttribute('data-wizard-step'));
+            pane.classList.toggle('d-none', idx !== wizardStep);
+        });
+        if (wizardLabel) {
+            wizardLabel.textContent = `Step ${wizardStep + 1} of ${wizardPanes.length} — ${wizardTitles[wizardStep] || ''}`;
+        }
+        wizardDots.forEach((dot) => {
+            const idx = Number(dot.getAttribute('data-dot'));
+            dot.classList.toggle('text-bg-primary', idx === wizardStep);
+            dot.classList.toggle('text-bg-secondary', idx !== wizardStep);
+        });
+        if (wizardBack) wizardBack.disabled = wizardStep === 0;
+        if (wizardNext) wizardNext.classList.toggle('d-none', wizardStep === wizardPanes.length - 1);
+        if (wizardStep === 1) {
+            requestAnimationFrame(() => mapInstance?.invalidateSize());
+        }
+    }
+
+    function validateWizardStep(step) {
+        if (step === 0) {
+            const typeChecked = form?.querySelector('input[name="incident_type_id"]:checked');
+            if (!typeChecked) {
+                alert('Please select an incident type.');
+                return false;
+            }
+            if (descriptionInput && descriptionInput.value.trim().length < 10) {
+                alert('Please enter a description of at least 10 characters.');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    wizardNext?.addEventListener('click', () => {
+        if (!validateWizardStep(wizardStep)) return;
+        showWizardStep(wizardStep + 1);
+    });
+    wizardBack?.addEventListener('click', () => showWizardStep(wizardStep - 1));
+    if (wizardPanes.length) showWizardStep(0);
+
+    // ---- Voice-to-text (Web Speech API) ----
+    const voiceBtn = document.getElementById('voice-to-text-btn');
+    const voiceStatus = document.getElementById('voice-to-text-status');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (voiceBtn && SpeechRecognition && descriptionInput) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = document.documentElement.lang || 'en-PH';
+        recognition.interimResults = false;
+        recognition.continuous = false;
+        let listening = false;
+
+        voiceBtn.addEventListener('click', () => {
+            if (listening) {
+                recognition.stop();
+                return;
+            }
+            try {
+                recognition.start();
+            } catch (e) {
+                if (voiceStatus) voiceStatus.textContent = 'Could not start voice input.';
+            }
+        });
+        recognition.addEventListener('start', () => {
+            listening = true;
+            voiceBtn.classList.add('btn-danger');
+            voiceBtn.classList.remove('btn-outline-secondary');
+            if (voiceStatus) voiceStatus.textContent = 'Listening… speak now.';
+        });
+        recognition.addEventListener('end', () => {
+            listening = false;
+            voiceBtn.classList.remove('btn-danger');
+            voiceBtn.classList.add('btn-outline-secondary');
+            if (voiceStatus) voiceStatus.textContent = '';
+        });
+        recognition.addEventListener('result', (event) => {
+            const transcript = Array.from(event.results).map((r) => r[0].transcript).join(' ').trim();
+            if (!transcript) return;
+            descriptionInput.value = (descriptionInput.value ? `${descriptionInput.value.trim()} ` : '') + transcript;
+            descriptionInput.dispatchEvent(new Event('input'));
+        });
+        recognition.addEventListener('error', () => {
+            if (voiceStatus) voiceStatus.textContent = 'Voice input unavailable on this device/browser.';
+        });
+    } else if (voiceBtn) {
+        voiceBtn.classList.add('d-none');
+    }
+
+    // ---- Use current location ----
+    useLocationButton?.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+            setResolveStatus('Geolocation is not supported on this device.', 'exclamation-triangle', 'text-danger');
+            return;
+        }
+        useLocationButton.disabled = true;
+        mapLocatingOverlay?.classList.remove('d-none');
+        setResolveStatus('Getting GPS fix…', 'geo-alt', 'text-muted');
+        const geoOpts = (window.RANIAG_GPS && window.RANIAG_GPS.geolocation) || {};
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                window.dispatchEvent(new CustomEvent('raniag:location-resolved', { detail: { lat, lng } }));
+                resolveLocation(lat, lng);
+                if (window.RANIAG_MAP_API) window.RANIAG_MAP_API.setCoordinates(lat, lng, { pan: true });
+            },
+            () => {
+                finishLocationUi();
+                setResolveStatus('Could not get GPS. You can still continue and use the camera later.', 'exclamation-triangle', 'text-warning');
+            },
+            {
+                enableHighAccuracy: !!geoOpts.enableHighAccuracy,
+                timeout: geoOpts.timeout || 15000,
+                maximumAge: geoOpts.maximumAge || 0,
+            }
+        );
+    });
 })();
 
