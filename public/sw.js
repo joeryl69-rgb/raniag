@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v12';
+const CACHE_NAME = 'raniag-cache-dev-v13';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [
@@ -31,6 +31,7 @@ function shouldBypassCache(pathname) {
         '/reset-password',
         '/confirm-password',
         '/verify-email',
+        '/track',
         '/support',
         '/debug-session',
     ];

@@ -39,4 +39,7 @@ Route::name('public.')->group(function () {
     Route::post('/track', [IncidentTrackController::class, 'show'])
         ->middleware('throttle:20,1')
         ->name('track.lookup');
+    Route::get('/track/evidence/{evidence}', [\App\Http\Controllers\Public\TrackEvidenceController::class, 'show'])
+        ->middleware('throttle:60,1')
+        ->name('track.evidence');
 });

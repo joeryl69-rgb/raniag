@@ -195,7 +195,7 @@
                         <div class="row g-2">
                             @foreach ($reporterEvidence as $ev)
                                 <div class="col-6 col-md-4">
-                                    <img src="{{ asset('storage/' . $ev->file_path) }}" class="img-fluid rounded shadow-sm rg-evidence-thumb" style="cursor: zoom-in;" alt="{{ $ev->original_filename }}" loading="lazy">
+                                    <img src="{{ route('public.track.evidence', $ev) }}" class="img-fluid rounded shadow-sm rg-evidence-thumb" style="cursor: zoom-in;" alt="{{ $ev->original_filename }}" loading="lazy">
                                 </div>
                             @endforeach
                         </div>

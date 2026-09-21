@@ -66,6 +66,10 @@ class IncidentTrackController extends Controller
             ]);
         }
 
+        session()->put('track_verified.'.$incident->id, true);
+
+        $incident->loadMissing('evidence');
+
         return view('public.track.show', [
             'incident' => $incident,
         ]);
