@@ -2,11 +2,13 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Queue draining is handled by Hostinger cron calling:
-// php artisan queue:work --stop-when-empty
-// (Schedule registration deferred until deploy is stable.)
+// Hostinger already runs: php artisan schedule:run every minute.
+// Queue draining: separate cron with queue:work --stop-when-empty.
+Schedule::command('raniag:escalate-sla')->hourly();
+Schedule::command('raniag:purge-retained')->dailyAt('02:15');

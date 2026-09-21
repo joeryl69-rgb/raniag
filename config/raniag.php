@@ -18,6 +18,19 @@ return [
     // the "SLA Compliance" ring on the admin Command Center dashboard.
     'sla_target_hours' => (int) env('RANIAG_SLA_TARGET_HOURS', 48),
 
+    // Email OTP after password login for administrator + agency accounts.
+    'two_factor' => [
+        'enabled' => (bool) env('RANIAG_TWO_FACTOR_ENABLED', true),
+        'otp_ttl_minutes' => (int) env('RANIAG_TWO_FACTOR_OTP_TTL', 10),
+    ],
+
+    // RA 10173-aligned retention: hard-delete soft-deleted rows, scrub PII on aged closed cases.
+    // Cron: php artisan raniag:purge-retained
+    'retention' => [
+        'soft_delete_days' => (int) env('RANIAG_RETENTION_SOFT_DELETE_DAYS', 90),
+        'closed_pii_days' => (int) env('RANIAG_RETENTION_CLOSED_PII_DAYS', 365),
+    ],
+
     'tracking' => [
         'prefix' => env('RANIAG_TRACKING_PREFIX', 'RAN'),
         'segment_length' => 4,
