@@ -68,8 +68,8 @@
                     <div class="col-6 col-md-3">
                         <div class="card h-100 border">
                             @if(str_starts_with($ev->mime_type, 'image/'))
-                                <a href="{{ Storage::url($ev->file_path) }}" class="js-lightbox" data-group="evidence-archived-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
-                                    <img src="{{ Storage::url($ev->file_path) }}" class="card-img-top" style="height:140px;object-fit:cover;" alt="Evidence">
+                                <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-archived-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
+                                    <img src="{{ $ev->url() }}" class="card-img-top" style="height:140px;object-fit:cover;" alt="Evidence">
                                 </a>
                             @else
                                 <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top" style="height:140px;">

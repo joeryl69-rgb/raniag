@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Enums\IncidentDocumentType;
 use App\Models\Incident;
 use App\Models\IncidentDocument;
+use App\Support\PrivateIncidentFiles;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class IncidentDocumentService
@@ -25,7 +25,7 @@ class IncidentDocumentService
     ): IncidentDocument {
         $directory = sprintf('incidents/%d/documents', $incident->id);
         $filename = Str::uuid()->toString().'.'.($file->getClientOriginalExtension() ?: 'jpg');
-        $path = $file->storeAs($directory, $filename, 'public');
+        $path = $file->storeAs($directory, $filename, PrivateIncidentFiles::DISK);
 
         return IncidentDocument::query()->create([
             'incident_id' => $incident->id,
@@ -46,8 +46,8 @@ class IncidentDocumentService
 
     public function deleteFile(IncidentDocument $document): void
     {
-        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
-            Storage::disk('public')->delete($document->file_path);
+        if ($document->file_path) {
+            PrivateIncidentFiles::delete($document->file_path);
         }
     }
 }

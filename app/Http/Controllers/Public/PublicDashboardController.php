@@ -86,7 +86,6 @@ class PublicDashboardController extends Controller
             ->limit(8)
             ->get()
             ->map(fn (Incident $i) => [
-                'tracking_number' => $i->tracking_number,
                 'type' => $i->incidentType?->name,
                 'icon' => $i->incidentType?->icon,
                 'color' => $i->incidentType?->color,

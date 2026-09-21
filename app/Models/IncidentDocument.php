@@ -42,4 +42,9 @@ class IncidentDocument extends Model
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
+
+    public function url(): string
+    {
+        return route('incident_documents.show', $this);
+    }
 }

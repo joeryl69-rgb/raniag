@@ -61,10 +61,11 @@ class StoreIncidentReportRequest extends FormRequest
             'reporter_phone' => ['nullable', 'string', 'max:32'],
             'is_anonymous' => ['sometimes', 'boolean'],
             'priority' => ['required', Rule::in(['low', 'medium', 'high', 'critical'])],
-            'evidence' => ['required', 'array', 'min:1', 'max:'.$maxFiles],
+            'evidence' => ['nullable', 'array', 'max:'.$maxFiles],
             'evidence.*' => ['file', 'max:'.$maxSize, 'mimes:'.implode(',', $mimes)],
             'meta' => ['sometimes', 'array'],
-            'meta.gps_captures' => ['required', 'string', 'min:10'],
+            'meta.gps_captures' => ['nullable', 'string'],
+            'idempotency_key' => ['nullable', 'string', 'max:64'],
         ];
     }
 
@@ -77,11 +78,8 @@ class StoreIncidentReportRequest extends FormRequest
             'incident_type_id.required' => 'Please select an incident type.',
             'description.min' => 'Please provide at least 10 characters describing the incident.',
             'reporter_name.required_if' => 'Please provide your name or report anonymously.',
-            'latitude.required' => 'Please pin the incident location on the map.',
-            'longitude.required' => 'Please pin the incident location on the map.',
-            'evidence.required' => 'Please attach at least one geotagged photo using the GPS camera.',
-            'evidence.min' => 'Please attach at least one geotagged photo using the GPS camera.',
-            'meta.gps_captures.required' => 'Please capture at least one geotagged photo using the GPS camera.',
+            'latitude.required' => 'Please share your current location or capture a GPS photo.',
+            'longitude.required' => 'Please share your current location or capture a GPS photo.',
         ];
     }
 }

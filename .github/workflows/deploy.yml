@@ -37,9 +37,12 @@ jobs:
             php artisan optimize:clear
             php artisan migrate --force
             php artisan storage:link
+            php artisan raniag:migrate-private-files || true
+            php artisan queue:work --stop-when-empty --max-time=60 --tries=3 || true
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+            echo "NOTE: Add Hostinger cron: * * * * * cd ~/raniag && php artisan schedule:run"
 
       - name: Finish deployment
         uses: bobheadxi/deployments@v1

@@ -45,4 +45,9 @@ class Evidence extends Model
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
+
+    public function url(): string
+    {
+        return route('evidence.show', $this);
+    }
 }

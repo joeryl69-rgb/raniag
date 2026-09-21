@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\EvidenceType;
 use App\Models\Evidence;
 use App\Models\Incident;
+use App\Support\PrivateIncidentFiles;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -54,8 +55,8 @@ class EvidenceService
 
             $directory = sprintf('incidents/%d/evidence', $incident->id);
             $filename = Str::uuid()->toString().'.'.$file->getClientOriginalExtension();
-            $path = $file->storeAs($directory, $filename, 'public');
-            $absolutePath = Storage::disk('public')->path($path);
+            $path = $file->storeAs($directory, $filename, PrivateIncidentFiles::DISK);
+            $absolutePath = Storage::disk(PrivateIncidentFiles::DISK)->path($path);
 
             // 2. If it is NOT a web capture, check if it has EXIF geotags
             $fileType = $this->resolveType($file);
@@ -114,8 +115,8 @@ class EvidenceService
             $filename = Str::uuid()->toString().'.jpg';
             $path = $directory.'/'.$filename;
 
-            Storage::disk('public')->put($path, $capture['data']);
-            $absolutePath = Storage::disk('public')->path($path);
+            Storage::disk(PrivateIncidentFiles::DISK)->put($path, $capture['data']);
+            $absolutePath = Storage::disk(PrivateIncidentFiles::DISK)->path($path);
 
             $latitude = (float) ($capture['latitude'] ?? null);
             $longitude = (float) ($capture['longitude'] ?? null);
@@ -171,8 +172,8 @@ class EvidenceService
 
     public function deleteFile(Evidence $evidence): void
     {
-        if ($evidence->file_path && Storage::disk('public')->exists($evidence->file_path)) {
-            Storage::disk('public')->delete($evidence->file_path);
+        if ($evidence->file_path) {
+            PrivateIncidentFiles::delete($evidence->file_path);
         }
     }
 

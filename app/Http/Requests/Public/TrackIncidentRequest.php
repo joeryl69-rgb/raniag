@@ -18,6 +18,7 @@ class TrackIncidentRequest extends FormRequest
     {
         return [
             'tracking_number' => ['required', 'string', 'max:32'],
+            'access_code' => ['required', 'string', 'max:16'],
         ];
     }
 
@@ -28,6 +29,7 @@ class TrackIncidentRequest extends FormRequest
     {
         return [
             'tracking_number.required' => 'Please enter your tracking number.',
+            'access_code.required' => 'Please enter your access code (shown when you submitted, or the last 4 digits of your phone).',
         ];
     }
 }

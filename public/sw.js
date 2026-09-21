@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v10';
+const CACHE_NAME = 'raniag-cache-dev-v12';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [
@@ -10,6 +10,37 @@ const ASSETS_TO_CACHE = [
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
+
+function shouldBypassCache(pathname) {
+    const blocked = [
+        '/admin',
+        '/agency',
+        '/personnel',
+        '/dashboard',
+        '/notifications',
+        '/profile',
+        '/support-center',
+        '/settings',
+        '/evidence',
+        '/incident-documents',
+        '/push-subscriptions',
+        '/login',
+        '/logout',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+        '/confirm-password',
+        '/verify-email',
+        '/support',
+        '/debug-session',
+    ];
+
+    if (pathname === '/') {
+        return true;
+    }
+
+    return blocked.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+}
 
 // Install Event
 // cache.addAll() is atomic — if ANY single URL fails (a CDN hiccup, a CORS
@@ -93,9 +124,23 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
+// Background Sync — drain offline report outbox when connectivity returns.
+self.addEventListener('sync', (event) => {
+    if (event.tag !== 'raniag-report-outbox') {
+        return;
+    }
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+            clients.forEach((client) => {
+                client.postMessage({ type: 'raniag-flush-outbox' });
+            });
+        })
+    );
+});
+
 // Fetch Event
 self.addEventListener('fetch', (event) => {
-    // Only cache GET requests
     if (event.request.method !== 'GET') {
         return;
     }
@@ -103,17 +148,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // If response is valid, clone it and cache it (if it's in our app namespace)
                 if (response.status === 200 && event.request.url.startsWith(self.location.origin)) {
                     const responseToCache = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
-                        // Do not cache backend API queries or dashboard pages dynamically
                         const path = new URL(event.request.url).pathname;
-                        if (!path.includes('/admin') && !path.includes('/agency') && !path.includes('/dashboard')
-                            && !path.includes('/login') && !path.includes('/logout') && !path.includes('/register')
-                            && !path.includes('/forgot-password') && !path.includes('/reset-password')
-                            && !path.includes('/support')
-                            && path !== '/') {
+                        if (!shouldBypassCache(path)) {
                             cache.put(event.request, responseToCache);
                         }
                     });
@@ -121,12 +160,10 @@ self.addEventListener('fetch', (event) => {
                 return response;
             })
             .catch(() => {
-                // Fallback to cache
                 return caches.match(event.request).then((cachedResponse) => {
                     if (cachedResponse) {
                         return cachedResponse;
                     }
-                    // If HTML request failed, show the offline page
                     if (event.request.headers.get('accept').includes('text/html')) {
                         return caches.match(OFFLINE_URL);
                     }

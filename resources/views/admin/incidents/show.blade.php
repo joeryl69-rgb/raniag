@@ -117,8 +117,8 @@
                                             @endif
                                             
                                             @if (str_starts_with($ev->mime_type, 'image/'))
-                                                <a href="{{ Storage::url($ev->file_path) }}" class="js-lightbox" data-group="evidence-public-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
-                                                    <img src="{{ Storage::url($ev->file_path) }}" class="card-img-top" alt="Evidence">
+                                                <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-public-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
+                                                    <img src="{{ $ev->url() }}" class="card-img-top" alt="Evidence">
                                                 </a>
                                             @else
                                                 <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top" style="height: 150px;">
@@ -129,7 +129,7 @@
                                         <div class="card-body p-2 small">
                                             <div class="text-truncate" title="{{ $ev->original_filename }}">{{ $ev->original_filename }}</div>
                                             <div class="text-muted">{{ number_format($ev->file_size / 1024, 1) }} KB</div>
-                                            <a href="{{ Storage::url($ev->file_path) }}" download class="btn btn-link btn-sm p-0 mt-1"><i class="bi bi-download me-1"></i>Download</a>
+                                            <a href="{{ $ev->url() }}" download class="btn btn-link btn-sm p-0 mt-1"><i class="bi bi-download me-1"></i>Download</a>
                                         </div>
                                     </div>
                                 </div>
@@ -164,9 +164,9 @@
                                         <div class="rg-docthumb-row mb-2">
                                             @foreach ($docsOfType as $doc)
                                                 <div class="rg-docthumb">
-                                                    <a href="{{ Storage::url($doc->file_path) }}" class="js-lightbox rg-docthumb-link" data-group="casedoc-{{ $incident->id }}-{{ $docType->value }}" data-caption="{{ $docType->label() }}">
+                                                    <a href="{{ $doc->url() }}" class="js-lightbox rg-docthumb-link" data-group="casedoc-{{ $incident->id }}-{{ $docType->value }}" data-caption="{{ $docType->label() }}">
                                                         @if (str_starts_with((string) $doc->mime_type, 'image/'))
-                                                            <img src="{{ Storage::url($doc->file_path) }}" alt="{{ $docType->label() }}" class="rg-docthumb-img" loading="lazy">
+                                                            <img src="{{ $doc->url() }}" alt="{{ $docType->label() }}" class="rg-docthumb-img" loading="lazy">
                                                         @else
                                                             <div class="rg-docthumb-img rg-docthumb-file"><i class="bi bi-file-earmark-pdf fs-4"></i></div>
                                                         @endif
@@ -468,6 +468,16 @@
                         </div>
                     @endif
 
+                    @if (! empty($incident->meta['needs_verification']))
+                        <div class="alert alert-info py-2 px-3 mb-2 small">
+                            <i class="bi bi-telephone-outbound me-1"></i>
+                            Call-back verification queue — submitted without GPS photo evidence.
+                            @if (! empty($incident->reporter_phone))
+                                Phone on file (encrypted). Contact the reporter to verify.
+                            @endif
+                        </div>
+                    @endif
+
                     @if ($incident->latitude && $incident->longitude)
                         @php $withinJurisdiction = $incident->meta['within_jurisdiction'] ?? null; @endphp
                         @if ($withinJurisdiction === false)
@@ -688,9 +698,9 @@
                                             <div class="row g-2 mb-3">
                                                 @foreach($assignmentEvidence as $ev)
                                                     <div class="col-4 col-sm-3">
-                                                        <a href="{{ Storage::url($ev->file_path) }}" class="js-lightbox" data-group="evidence-assignment-{{ $assignment->id }}" data-caption="{{ $ev->original_filename }}">
+                                                        <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-assignment-{{ $assignment->id }}" data-caption="{{ $ev->original_filename }}">
                                                             @if(str_starts_with($ev->mime_type, 'image/'))
-                                                                <img src="{{ Storage::url($ev->file_path) }}" class="img-fluid rounded border shadow-sm" style="aspect-ratio: 4/3; object-fit: cover;" alt="Evidence">
+                                                                <img src="{{ $ev->url() }}" class="img-fluid rounded border shadow-sm" style="aspect-ratio: 4/3; object-fit: cover;" alt="Evidence">
                                                             @else
                                                                 <div class="d-flex align-items-center justify-content-center bg-light text-secondary rounded border shadow-sm" style="aspect-ratio: 4/3;">
                                                                     <i class="bi bi-file-earmark fs-4"></i>

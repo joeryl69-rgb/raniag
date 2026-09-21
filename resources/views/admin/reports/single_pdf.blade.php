@@ -203,7 +203,7 @@
             @foreach($incident->evidence as $ev)
                 @if(str_starts_with($ev->mime_type, 'image/'))
                     <div class="evidence-item">
-                        <img src="{{ storage_path('app/public/'.$ev->file_path) }}" class="evidence-img" alt="Evidence Image">
+                        <img src="{{ \App\Support\PrivateIncidentFiles::absolutePath($ev->file_path) }}" class="evidence-img" alt="Evidence Image">
                         <div class="evidence-caption">
                             {{ $ev->original_filename }} ({{ $ev->is_gps_verified ? 'GPS Tagged & Verified' : 'Standard Upload' }})
                         </div>
@@ -241,7 +241,7 @@
             @foreach($docsToShow as $doc)
                 <div class="evidence-item" @if($isSingleDoc) style="width: 100%; margin-right: 0;" @endif>
                     @if(str_starts_with((string) $doc->mime_type, 'image/'))
-                        <img src="{{ storage_path('app/public/'.$doc->file_path) }}" class="evidence-img" alt="{{ $doc->document_type->label() }}" @if($isSingleDoc) style="max-height: 520px;" @endif>
+                        <img src="{{ \App\Support\PrivateIncidentFiles::absolutePath($doc->file_path) }}" class="evidence-img" alt="{{ $doc->document_type->label() }}" @if($isSingleDoc) style="max-height: 520px;" @endif>
                     @else
                         <div style="font-size: 9pt; padding: 5px; border: 1px dashed #ccc;">[Document Attached]: {{ $doc->original_filename }}</div>
                     @endif

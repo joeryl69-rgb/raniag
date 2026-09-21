@@ -12,6 +12,7 @@ use App\Models\Incident;
 use App\Models\SmsLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -90,6 +91,18 @@ class DashboardController extends Controller
     }
 
     public function api(Request $request): JsonResponse
+    {
+        $payload = Cache::remember('admin.dashboard.json', 25, function () {
+            return $this->buildDashboardPayload();
+        });
+
+        return response()->json($payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildDashboardPayload(): array
     {
         $statusCountsRaw = Incident::selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
@@ -185,14 +198,17 @@ class DashboardController extends Controller
             ];
         }
 
-        // 4. Average Resolution Hours
-        $avgResolutionHours = (int) Assignment::query()
-            ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
-            ->where('assignments.is_active', false)
-            ->whereNotNull('assignments.completed_at')
-            ->whereColumn('assignments.created_at', '>=', 'incidents.created_at')
-            ->selectRaw('ROUND(AVG(TIMESTAMPDIFF(HOUR, assignments.assigned_at, assignments.completed_at))) as avg_hours')
-            ->value('avg_hours') ?? 0;
+        // 4. Average Resolution Hours (reported_at → resolved_at on the incident)
+        $resolvedForSla = Incident::query()
+            ->whereNotNull('resolved_at')
+            ->whereNotNull('reported_at')
+            ->get(['reported_at', 'resolved_at']);
+
+        $avgResolutionHours = $resolvedForSla->isEmpty()
+            ? 0
+            : (int) round($resolvedForSla->avg(
+                fn (Incident $i) => $i->reported_at->diffInHours($i->resolved_at)
+            ));
 
         // 5. Agency Response Times
         $agencyResponseTimes = Assignment::query()
@@ -260,11 +276,14 @@ class DashboardController extends Controller
             : 100;
 
         $slaTargetHours = (int) config('raniag.sla_target_hours', 48);
-        $slaCompliance = $avgResolutionHours > 0
-            ? min(100, round(($slaTargetHours / $avgResolutionHours) * 100))
-            : null; // no completed cases yet — ring shows "no data" instead of a misleading 100%
+        $withinSlaCount = $resolvedForSla->filter(
+            fn (Incident $i) => $i->reported_at->diffInHours($i->resolved_at) <= $slaTargetHours
+        )->count();
+        $slaCompliance = $resolvedForSla->isNotEmpty()
+            ? (int) round(($withinSlaCount / $resolvedForSla->count()) * 100)
+            : null;
 
-        return response()->json([
+        return [
             'incident_status_breakdown' => $statusCounts,
             'total_incidents' => $totalIncidents,
             'active_agencies' => $agencies,
@@ -291,6 +310,6 @@ class DashboardController extends Controller
                 'out_of_jurisdiction_count' => $outOfJurisdictionCount,
                 'redundancy_hotspots' => $redundancyData,
             ],
-        ]);
+        ];
     }
 }

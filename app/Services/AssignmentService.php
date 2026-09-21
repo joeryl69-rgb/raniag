@@ -57,13 +57,15 @@ class AssignmentService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            $this->incidents->recordStatusChange(
-                incident: $incident,
-                toStatus: IncidentStatus::Assigned,
-                user: $assignedBy,
-                comment: "Assigned to {$agency->name}",
-                isPublic: true,
-            );
+            if ($this->incidents->canTransitionTo($incident, IncidentStatus::Assigned)) {
+                $this->incidents->recordStatusChange(
+                    incident: $incident,
+                    toStatus: IncidentStatus::Assigned,
+                    user: $assignedBy,
+                    comment: "Assigned to {$agency->name}",
+                    isPublic: true,
+                );
+            }
 
             $this->activityLogs->log(
                 description: "Incident assigned to {$agency->name}",
@@ -120,13 +122,15 @@ class AssignmentService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            $this->incidents->recordStatusChange(
-                incident: $incident,
-                toStatus: IncidentStatus::Assigned,
-                user: $assignedBy,
-                comment: "Assigned to {$personnel->display_title}",
-                isPublic: true,
-            );
+            if ($this->incidents->canTransitionTo($incident, IncidentStatus::Assigned)) {
+                $this->incidents->recordStatusChange(
+                    incident: $incident,
+                    toStatus: IncidentStatus::Assigned,
+                    user: $assignedBy,
+                    comment: "Assigned to {$personnel->display_title}",
+                    isPublic: true,
+                );
+            }
 
             $this->activityLogs->log(
                 description: "Incident assigned to {$personnel->display_title}",

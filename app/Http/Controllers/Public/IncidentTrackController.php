@@ -16,40 +16,43 @@ class IncidentTrackController extends Controller
         private readonly IncidentService $incidentService,
     ) {}
 
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request): View
     {
-        $trackingNumber = $request->query('tracking_number');
-
-        if ($trackingNumber) {
-            return $this->resolveTrackingView($trackingNumber);
-        }
-
-        return view('public.track.index');
+        // Prefill only — never auto-open a case from the query string (PIN required).
+        return view('public.track.index', [
+            'prefillTrackingNumber' => $request->query('tracking_number'),
+        ]);
     }
 
     public function show(TrackIncidentRequest $request): View|JsonResponse|RedirectResponse
     {
         return $this->resolveTrackingView(
             $request->validated('tracking_number'),
+            $request->validated('access_code'),
             $request->wantsJson(),
         );
     }
 
-    private function resolveTrackingView(string $trackingNumber, bool $asJson = false): View|JsonResponse|RedirectResponse
+    private function resolveTrackingView(string $trackingNumber, string $accessCode, bool $asJson = false): View|JsonResponse|RedirectResponse
     {
         $incident = $this->incidentService->findByTrackingNumber(
             strtoupper(trim($trackingNumber))
         );
 
-        if (! $incident) {
+        if (! $incident || ! $incident->matchesTrackingAccessCode($accessCode)) {
             if ($asJson) {
-                abort(404, 'No incident found for the provided tracking number.');
+                abort(404, 'No incident found for the provided tracking number and access code.');
             }
 
             return redirect()
                 ->route('public.track')
-                ->withInput(['tracking_number' => $trackingNumber])
-                ->withErrors(['tracking_number' => 'No incident found for that tracking number. Please check and try again.']);
+                ->withInput([
+                    'tracking_number' => $trackingNumber,
+                    'access_code' => $accessCode,
+                ])
+                ->withErrors([
+                    'tracking_number' => 'No matching report for that tracking number and access code. Check both and try again.',
+                ]);
         }
 
         if ($asJson) {

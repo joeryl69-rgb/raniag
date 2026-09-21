@@ -38,31 +38,43 @@ class ResolutionService
                 ->where('is_active', true)
                 ->exists();
 
-            $toStatus = $stillHasActiveAssignments
-                ? ($incident->status->value === IncidentStatus::Submitted->value
-                    ? IncidentStatus::Assigned
-                    : IncidentStatus::InProgress)
-                : IncidentStatus::Resolved;
+            if ($stillHasActiveAssignments) {
+                // Other agencies still working — advance Assigned → InProgress if needed;
+                // never force illegal transitions (e.g. Submitted → Assigned).
+                if ($this->incidents->canTransitionTo($incident, IncidentStatus::InProgress)) {
+                    $this->incidents->recordStatusChange(
+                        incident: $incident,
+                        toStatus: IncidentStatus::InProgress,
+                        user: $resolvedBy,
+                        comment: 'Resolution submitted; awaiting other agencies to complete.',
+                        isPublic: true,
+                    );
+                }
+            } else {
+                // Assigned cannot jump straight to Resolved in the state machine.
+                if ($this->incidents->canTransitionTo($incident, IncidentStatus::InProgress)) {
+                    $incident = $this->incidents->recordStatusChange(
+                        incident: $incident,
+                        toStatus: IncidentStatus::InProgress,
+                        user: $resolvedBy,
+                        comment: 'Resolution submitted; finalizing case.',
+                        isPublic: false,
+                    );
+                }
 
-            $commentPrefix = $stillHasActiveAssignments
-                ? 'Resolution submitted; awaiting other agencies to complete.'
-                : 'Resolution submitted: ';
-
-            $this->incidents->recordStatusChange(
-                incident: $incident,
-                toStatus: $toStatus,
-                user: $resolvedBy,
-                comment: $commentPrefix.($stillHasActiveAssignments ? '' : $data['summary']),
-                isPublic: true,
-            );
-
-            // IMPORTANT: Do not globally mark the incident resolved if this agency is submitting
-            // its own resolution but other agencies still have active assignments.
-            // The $toStatus computed above enforces this at the status/state-machine level.
+                if ($this->incidents->canTransitionTo($incident, IncidentStatus::Resolved)) {
+                    $this->incidents->recordStatusChange(
+                        incident: $incident,
+                        toStatus: IncidentStatus::Resolved,
+                        user: $resolvedBy,
+                        comment: 'Resolution submitted: '.$data['summary'],
+                        isPublic: true,
+                    );
+                }
+            }
 
             $this->activityLogs->log(
-
-                description: 'Resolution submitted by '.$resolvedBy->agency?->name ?? 'Agency',
+                description: 'Resolution submitted by '.($resolvedBy->agency?->name ?? 'Agency'),
                 user: $resolvedBy,
                 subject: $incident,
                 event: 'resolution.submitted',

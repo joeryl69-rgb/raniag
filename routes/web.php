@@ -56,6 +56,11 @@ Route::middleware(['auth', 'active', 'no-cache'])->group(function () {
         Route::put('/', [\App\Http\Controllers\AppearanceSettingController::class, 'update'])->name('update');
         Route::post('/reset', [\App\Http\Controllers\AppearanceSettingController::class, 'reset'])->name('reset');
     });
+
+    Route::get('/evidence/{evidence}', [\App\Http\Controllers\EvidenceFileController::class, 'show'])
+        ->name('evidence.show');
+    Route::get('/incident-documents/{document}', [\App\Http\Controllers\IncidentDocumentFileController::class, 'show'])
+        ->name('incident_documents.show');
 });
 
 // Diagnostic only — never exposed outside local development, since it

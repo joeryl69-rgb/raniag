@@ -164,10 +164,14 @@
         <div class="card raniag-card mb-4" data-rg-reveal>
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">4</span>
-                <span>Evidence <span class="text-danger">*</span></span>
+                <span>Evidence <span class="text-muted fw-normal small">(recommended)</span></span>
             </div>
             <div class="card-body p-4">
+                <p class="text-muted small mb-3">
+                    A GPS photo is strongly preferred for credibility. If you cannot capture one (camera denied, fleeing, low-end phone), you can still submit — staff will place the report in a call-back verification queue.
+                </p>
                 <input type="hidden" name="meta[gps_captures]" id="gps-capture-log" value="">
+                <input type="hidden" name="idempotency_key" id="idempotency_key" value="">
 
                 <div id="gps-camera-module" class="mb-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
@@ -402,5 +406,6 @@
     window.RANIAG_BARANGAY_BOUNDARIES = @json($barangayBoundaries);
 </script>
 <script src="{{ asset('js/public-report.js') }}?v={{ @filemtime(public_path('js/public-report.js')) }}"></script>
+<script src="{{ asset('js/report-outbox.js') }}?v={{ @filemtime(public_path('js/report-outbox.js')) }}"></script>
 <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
 @endpush

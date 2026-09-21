@@ -11,7 +11,7 @@
                 <span class="rg-eyebrow"><i class="bi bi-search"></i>Status lookup</span>
                 <h1 class="rg-page-title">Track Your Report</h1>
                 <p class="rg-page-sub mx-auto">
-                    Enter the tracking number you received when you submitted your incident report.
+                    Enter the tracking number and access code you received when you submitted your report.
                 </p>
             </div>
 
@@ -29,8 +29,8 @@
                                    class="form-control form-control-lg @error('tracking_number') is-invalid @enderror"
                                    id="tracking_number"
                                    name="tracking_number"
-                                   value="{{ old('tracking_number') }}"
-                                   placeholder="e.g. RAN-XXXXXX"
+                                   value="{{ old('tracking_number', $prefillTrackingNumber ?? '') }}"
+                                   placeholder="e.g. RAN-XXXX-XXXX"
                                    required
                                    autocomplete="off"
                                    spellcheck="false"
@@ -39,6 +39,27 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <div class="form-text">Case-insensitive. Include the dashes exactly as shown.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="access_code" class="form-label">Access Code</label>
+                            <input type="text"
+                                   class="form-control form-control-lg @error('access_code') is-invalid @enderror"
+                                   id="access_code"
+                                   name="access_code"
+                                   value="{{ old('access_code') }}"
+                                   placeholder="6-digit code from submission"
+                                   required
+                                   autocomplete="off"
+                                   inputmode="numeric"
+                                   maxlength="16"
+                                   spellcheck="false"
+                                   style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em;">
+                            @error('access_code')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">
+                                Use the code shown after you submitted. If you gave a phone number, the last 4 digits also work.
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 btn-lg">
                             <i class="bi bi-search me-2"></i>Look Up Report
@@ -53,7 +74,7 @@
             </div>
 
             <p class="text-center text-muted small mt-3 mb-0">
-                Lost your number? Contact {{ config('raniag.organization') }} for assistance, or
+                Lost your number or code? Contact {{ config('raniag.organization') }} for assistance, or
                 <a href="{{ route('public.report.create') }}" class="btn btn-link p-0 align-baseline">file a new report</a>.
             </p>
         </div>

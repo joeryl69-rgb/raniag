@@ -10,7 +10,9 @@ use App\Repositories\Contracts\IncidentRepositoryInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class IncidentService
 {
@@ -28,39 +30,37 @@ class IncidentService
      */
     public function submitAnonymousReport(array $data, array $evidenceFiles = []): Incident
     {
-        return DB::transaction(function () use ($data, $evidenceFiles) {
-            $payload = Arr::except($data, ['evidence']);
-            $meta = $payload['meta'] ?? [];
+        $payload = Arr::except($data, ['evidence']);
+        $meta = $payload['meta'] ?? [];
 
-            if (isset($meta['gps_captures']) && is_string($meta['gps_captures'])) {
-                $decoded = json_decode($meta['gps_captures'], true);
-                $meta['gps_captures'] = is_array($decoded) ? $decoded : [];
-            }
+        if (isset($meta['gps_captures']) && is_string($meta['gps_captures'])) {
+            $decoded = json_decode($meta['gps_captures'], true);
+            $meta['gps_captures'] = is_array($decoded) ? $decoded : [];
+        }
 
-            // Geofence check: flag whether the pinned coordinates fall inside
-            // Pamplona municipality limits. null = boundary file not
-            // configured yet / no coordinates given, so it's left out of
-            // meta entirely rather than recorded as a false "outside".
-            $lat = isset($payload['latitude']) ? (float) $payload['latitude'] : null;
-            $lng = isset($payload['longitude']) ? (float) $payload['longitude'] : null;
-            $withinJurisdiction = $this->geofence->isWithinPamplona($lat, $lng);
+        $lat = isset($payload['latitude']) ? (float) $payload['latitude'] : null;
+        $lng = isset($payload['longitude']) ? (float) $payload['longitude'] : null;
+        $withinJurisdiction = $this->geofence->isWithinPamplona($lat, $lng);
 
-            if ($withinJurisdiction !== null) {
-                $meta['within_jurisdiction'] = $withinJurisdiction;
-            }
+        if ($withinJurisdiction !== null) {
+            $meta['within_jurisdiction'] = $withinJurisdiction;
+        }
 
-            // Barangay is authoritative from server-side polygon resolution,
-            // not the client-submitted value (which could be stale, spoofed,
-            // or mismatched with the actual pinned coordinates). Fall back
-            // to the client value only if no boundary file covers the point,
-            // so hotspot analytics stay trustworthy.
-            $resolvedBarangay = $this->geofence->resolveBarangay($lat, $lng);
-            $payload['barangay'] = $resolvedBarangay ?? ($payload['barangay'] ?? null);
+        $resolvedBarangay = $this->geofence->resolveBarangay($lat, $lng);
+        $payload['barangay'] = $resolvedBarangay ?? ($payload['barangay'] ?? null);
 
+        $plainPin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $gpsCaptures = $meta['gps_captures'] ?? [];
+
+        // Keep the DB transaction short: create the case row only. Evidence
+        // watermarking / Nominatim reverse-geocode runs after commit so a
+        // multi-photo report cannot hold row locks for tens of seconds.
+        $incident = DB::transaction(function () use ($payload, $meta, $plainPin) {
             $incident = $this->incidents->create([
                 ...Arr::except($payload, ['meta']),
                 'meta' => $meta ?: null,
                 'tracking_number' => $this->trackingNumbers->generate(),
+                'tracking_pin' => Hash::make($plainPin),
                 'status' => IncidentStatus::Submitted,
                 'priority' => $payload['priority'] ?? IncidentPriority::Medium->value,
                 'reported_at' => $payload['reported_at'] ?? now(),
@@ -75,11 +75,6 @@ class IncidentService
                 'is_public' => true,
             ]);
 
-            if ($evidenceFiles !== []) {
-                $gpsCaptures = $meta['gps_captures'] ?? [];
-                $this->evidenceService->attachToIncident($incident, $evidenceFiles, $gpsCaptures);
-            }
-
             $this->activityLogs->log(
                 description: 'Public incident report submitted.',
                 subject: $incident,
@@ -91,14 +86,30 @@ class IncidentService
                 ],
             );
 
-            try {
-                $this->notifications->notifyAdminNewIncident($incident);
-            } catch (\Exception $e) {
-                Log::warning('SMS alert to admin failed: '.$e->getMessage());
-            }
-
-            return $incident->load(['incidentType', 'evidence']);
+            return $incident;
         });
+
+        if ($evidenceFiles !== []) {
+            $this->evidenceService->attachToIncident($incident, $evidenceFiles, $gpsCaptures);
+        } else {
+            $meta = $incident->meta ?? [];
+            $meta['needs_verification'] = true;
+            $meta['verification_reason'] = 'submitted_without_evidence';
+            $incident->forceFill(['meta' => $meta])->save();
+        }
+
+        try {
+            $this->notifications->notifyAdminNewIncident($incident);
+        } catch (\Exception $e) {
+            Log::warning('SMS alert to admin failed: '.$e->getMessage());
+        }
+
+        Cache::forget('admin.dashboard.json');
+
+        $incident->load(['incidentType', 'evidence']);
+        $incident->plainTrackingPin = $plainPin;
+
+        return $incident;
     }
 
     public function findByTrackingNumber(string $trackingNumber): ?Incident
@@ -116,6 +127,19 @@ class IncidentService
         return DB::transaction(function () use ($incident, $toStatus, $user, $comment, $isPublic) {
             $fromStatus = $incident->status;
 
+            if ($fromStatus === $toStatus) {
+                return $incident;
+            }
+
+            if (! $this->canTransitionTo($incident, $toStatus)) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Illegal status transition from %s to %s for incident #%d.',
+                    $fromStatus->value,
+                    $toStatus->value,
+                    $incident->id,
+                ));
+            }
+
             $incident->statusUpdates()->create([
                 'user_id' => $user?->id,
                 'from_status' => $fromStatus,
@@ -124,9 +148,20 @@ class IncidentService
                 'is_public' => $isPublic,
             ]);
 
-            $incident = $this->incidents->update($incident, [
-                'status' => $toStatus,
-            ]);
+            $attributes = ['status' => $toStatus];
+
+            if ($toStatus === IncidentStatus::Resolved) {
+                $attributes['resolved_at'] = now();
+            }
+
+            if ($toStatus === IncidentStatus::Closed) {
+                $attributes['closed_at'] = now();
+                if ($incident->resolved_at === null) {
+                    $attributes['resolved_at'] = now();
+                }
+            }
+
+            $incident = $this->incidents->update($incident, $attributes);
 
             $this->activityLogs->log(
                 description: sprintf('Incident status changed from %s to %s.', $fromStatus->value, $toStatus->value),
@@ -140,11 +175,6 @@ class IncidentService
                 ],
             );
 
-            // Only tell the original reporter about status changes meant to be
-            // public. Internal agency<->admin exchanges (e.g. a "pending_info"
-            // request/reply) are marked is_public=false specifically so they
-            // stay internal — notifying the reporter here regardless of that
-            // flag was leaking that internal comment text to them by SMS/email.
             if ($isPublic) {
                 try {
                     $this->notifications->notifyReporterStatusUpdate($incident, $comment ?: 'Status is now '.$toStatus->label());
@@ -152,6 +182,8 @@ class IncidentService
                     Log::warning('SMS alert to reporter failed: '.$e->getMessage());
                 }
             }
+
+            Cache::forget('admin.dashboard.json');
 
             return $incident;
         });

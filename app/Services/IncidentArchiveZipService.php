@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Incident;
-use Illuminate\Support\Facades\Storage;
+use App\Support\PrivateIncidentFiles;
 use ZipArchive;
 
 /**
@@ -95,11 +95,16 @@ class IncidentArchiveZipService
 
     protected function addFileToZip(ZipArchive $zip, ?string $path, string $folder, ?string $originalName): void
     {
-        if (! $path || ! Storage::disk('local')->exists($path)) {
+        if (! $path || ! PrivateIncidentFiles::exists($path)) {
+            return;
+        }
+
+        $contents = PrivateIncidentFiles::get($path);
+        if ($contents === null) {
             return;
         }
 
         $name = $originalName ?: basename($path);
-        $zip->addFromString($folder.$name, Storage::disk('local')->get($path));
+        $zip->addFromString($folder.$name, $contents);
     }
 }

@@ -16,8 +16,15 @@ class Incident extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $hidden = [
+        'tracking_pin',
+        'reporter_email',
+        'reporter_phone',
+    ];
+
     protected $fillable = [
         'tracking_number',
+        'tracking_pin',
         'incident_type_id',
         'agency_id',
         'status',
@@ -37,6 +44,12 @@ class Incident extends Model
         'closed_at',
         'meta',
     ];
+
+    /**
+     * Plaintext tracking PIN — set only at submission time for the success page / JSON response.
+     * Never persisted; the hashed value lives in tracking_pin.
+     */
+    public ?string $plainTrackingPin = null;
 
     protected function casts(): array
     {
@@ -173,5 +186,24 @@ class Incident extends Model
     public function activeAssignment(): HasMany
     {
         return $this->assignments()->where('is_active', true);
+    }
+
+    /**
+     * Public tracking gate: hashed PIN from submission, or last 4 digits of reporter phone.
+     */
+    public function matchesTrackingAccessCode(string $code): bool
+    {
+        $digits = preg_replace('/\D+/', '', $code) ?? '';
+
+        if ($this->tracking_pin && $digits !== '' && \Illuminate\Support\Facades\Hash::check($digits, $this->tracking_pin)) {
+            return true;
+        }
+
+        $phoneDigits = preg_replace('/\D+/', '', (string) $this->reporter_phone) ?? '';
+        if (strlen($phoneDigits) >= 4 && strlen($digits) === 4 && str_ends_with($phoneDigits, $digits)) {
+            return true;
+        }
+
+        return false;
     }
 }
