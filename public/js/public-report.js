@@ -509,7 +509,17 @@
         setWizardError('');
         wizardPanes.forEach((pane) => {
             const idx = Number(pane.getAttribute('data-wizard-step'));
-            pane.classList.toggle('d-none', idx !== wizardStep);
+            const active = idx === wizardStep;
+            pane.classList.toggle('d-none', !active);
+            pane.classList.toggle('is-active', active);
+            if (active) {
+                pane.style.removeProperty('display');
+                pane.querySelectorAll('.card').forEach((card) => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'none';
+                    card.style.visibility = 'visible';
+                });
+            }
         });
         if (wizardLabel) {
             wizardLabel.textContent = `Step ${wizardStep + 1} of ${wizardPanes.length} — ${wizardTitles[wizardStep] || ''}`;
@@ -529,10 +539,10 @@
             wizardNext.disabled = false;
         }
         if (wizardNextFooter) wizardNextFooter.classList.toggle('d-none', last);
+        const wizardSubmit = document.getElementById('wizard-submit');
+        if (wizardSubmit) wizardSubmit.classList.toggle('d-none', !last);
         const submitBtn = document.getElementById('submit-report');
-        if (submitBtn) {
-            submitBtn.classList.toggle('d-none', !last);
-        }
+        if (submitBtn) submitBtn.classList.toggle('d-none', !last);
         if (wizardStep === 1) {
             requestAnimationFrame(() => mapInstance?.invalidateSize());
         }

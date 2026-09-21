@@ -20,6 +20,9 @@
     }
     .raniag-map-overlay.d-none { display: none !important; }
     .raniag-map-overlay-text { font-weight: 600; color: var(--rg-ink); }
+    .report-wizard-pane.is-active,
+    .report-wizard-pane:not(.d-none) { display: block !important; }
+    .report-wizard-pane.is-active .card { opacity: 1 !important; transform: none !important; visibility: visible !important; }
 </style>
 @endpush
 
@@ -51,7 +54,7 @@
     <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
-        <div class="card raniag-card mb-3 p-3" id="report-wizard-nav" data-rg-reveal>
+        <div class="card raniag-card mb-3 p-3" id="report-wizard-nav">
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
                 <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
                 <div class="text-center flex-grow-1">
@@ -64,12 +67,13 @@
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
+                <button type="submit" class="btn btn-primary d-none" id="wizard-submit">Submit Report</button>
             </div>
             <div id="wizard-step-error" class="alert alert-warning py-2 px-3 mt-2 mb-0 d-none" role="alert"></div>
         </div>
 
-        <div class="report-wizard-pane" data-wizard-step="0">
-        <div class="card raniag-card mb-4" data-rg-reveal>
+        <div class="report-wizard-pane is-active" data-wizard-step="0">
+        <div class="card raniag-card mb-4">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">1</span>
                 <span>{{ __('Incident Type') }}</span>
@@ -115,7 +119,7 @@
             </div>
         </div>
 
-        <div class="card raniag-card mb-4" data-rg-reveal>
+        <div class="card raniag-card mb-4">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">1b</span>
                 <span>{{ __('Incident Details') }}</span>
@@ -158,7 +162,7 @@
 
         <div class="report-wizard-pane d-none" data-wizard-step="1">
         <!-- Location step (detect GPS or confirm QR barangay prefill) -->
-        <div class="card raniag-card mb-4" id="location-summary-card" data-rg-reveal>
+        <div class="card raniag-card mb-4" id="location-summary-card">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">2</span>
                 <span>{{ __('Location') }}</span>
@@ -221,7 +225,7 @@
         </div>{{-- wizard step 1 --}}
 
         <div class="report-wizard-pane d-none" data-wizard-step="2">
-        <div class="card raniag-card mb-4" data-rg-reveal>
+        <div class="card raniag-card mb-4">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">3</span>
                 <span>Evidence <span class="text-muted fw-normal small">(recommended)</span></span>
@@ -377,7 +381,7 @@
         </div>{{-- wizard step 2 --}}
 
         <div class="report-wizard-pane d-none" data-wizard-step="3">
-        <div class="card raniag-card mb-4" data-rg-reveal>
+        <div class="card raniag-card mb-4">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">4</span>
                 <span>{{ __('Reporter Information') }}</span>
@@ -412,7 +416,7 @@
             </div>
         </div>
 
-        <div class="card raniag-card p-3 p-lg-4" data-rg-reveal>
+        <div class="card raniag-card p-3 p-lg-4">
             <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center">
                 <p class="text-muted small mb-0" style="max-width: 46ch;">
                     <i class="bi bi-shield-lock me-1"></i>Your report is confidential and stored with a full audit trail.
