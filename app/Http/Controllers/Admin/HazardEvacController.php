@@ -9,34 +9,73 @@ use App\Models\HazardZone;
 use App\Models\HazardZoneType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class HazardEvacController extends Controller
 {
     public function index(): View
     {
+        $zones = Schema::hasTable('hazard_zones')
+            ? HazardZone::query()->with('type')->latest()->get()
+            : collect();
+
+        $centers = Schema::hasTable('evacuation_centers')
+            ? EvacuationCenter::query()->orderBy('name')->get()
+            : collect();
+
+        $zoneTypes = Schema::hasTable('hazard_zone_types')
+            ? HazardZoneType::query()->orderBy('name')->get()
+            : collect();
+
+        $evacuees = Schema::hasTable('evacuees')
+            ? Evacuee::query()->with('center')->latest()->limit(100)->get()
+            : collect();
+
         return view('admin.hazard.index', [
-            'zoneTypes' => HazardZoneType::query()->orderBy('name')->get(),
-            'zones' => HazardZone::query()->with('type')->latest()->get(),
-            'centers' => EvacuationCenter::query()->orderBy('name')->get(),
-            'evacuees' => Evacuee::query()->with('center')->latest()->limit(100)->get(),
+            'zoneTypes' => $zoneTypes,
+            'zones' => $zones,
+            'centers' => $centers,
+            'evacuees' => $evacuees,
             'map' => config('raniag.map'),
             'barangays' => config('raniag.barangays', []),
+            'mapZonesJson' => $zones->map(function (HazardZone $z) {
+                return [
+                    'id' => $z->id,
+                    'name' => $z->name,
+                    'geometry' => $z->geometry,
+                    'color' => $z->displayColor(),
+                ];
+            })->values(),
+            'mapCentersJson' => $centers->map(function (EvacuationCenter $c) {
+                return [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'lat' => (float) $c->latitude,
+                    'lng' => (float) $c->longitude,
+                ];
+            })->values(),
+            'publicHazardMapUrl' => route('public.hazard.map'),
         ]);
     }
 
     public function storeZone(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $rules = [
             'hazard_zone_type_id' => ['required', 'exists:hazard_zone_types,id'],
             'name' => ['required', 'string', 'max:120'],
             'barangay' => ['nullable', 'string', 'max:100'],
             'geometry_json' => ['required', 'string'],
-            'color' => ['nullable', 'string', 'max:16', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'advisory_note' => ['nullable', 'string', 'max:5000'],
             'advisory_url' => ['nullable', 'url', 'max:500'],
             'is_active' => ['sometimes', 'boolean'],
-        ]);
+        ];
+
+        if (Schema::hasColumn('hazard_zones', 'color')) {
+            $rules['color'] = ['nullable', 'string', 'max:16', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+        }
+
+        $data = $request->validate($rules);
 
         $geometry = json_decode($data['geometry_json'], true);
         if (! is_array($geometry) || empty($geometry['type'])) {
@@ -44,19 +83,30 @@ class HazardEvacController extends Controller
         }
 
         $type = HazardZoneType::query()->find($data['hazard_zone_type_id']);
-
-        HazardZone::create([
+        $payload = [
             'hazard_zone_type_id' => $data['hazard_zone_type_id'],
             'name' => $data['name'],
             'barangay' => $data['barangay'] ?? null,
             'geometry' => $geometry,
-            'color' => $data['color'] ?? $type?->color,
             'advisory_note' => $data['advisory_note'] ?? null,
             'advisory_url' => $data['advisory_url'] ?? null,
             'is_active' => $request->boolean('is_active', true),
-        ]);
+        ];
 
-        return back()->with('success', 'Hazard zone saved.');
+        if (Schema::hasColumn('hazard_zones', 'color')) {
+            $payload['color'] = $data['color'] ?? $type?->color;
+        }
+
+        HazardZone::create($payload);
+
+        return back()->with('success', 'Hazard zone saved. It appears on the public Hazard Map.');
+    }
+
+    public function destroyZone(HazardZone $zone): RedirectResponse
+    {
+        $zone->delete();
+
+        return back()->with('success', 'Hazard zone removed.');
     }
 
     public function storeCenter(Request $request): RedirectResponse
@@ -78,6 +128,13 @@ class HazardEvacController extends Controller
         ]);
 
         return back()->with('success', 'Evacuation center saved.');
+    }
+
+    public function destroyCenter(EvacuationCenter $center): RedirectResponse
+    {
+        $center->delete();
+
+        return back()->with('success', 'Evacuation center removed.');
     }
 
     public function storeEvacuee(Request $request): RedirectResponse

@@ -29,8 +29,15 @@ Route::prefix('admin')
 
         Route::get('/hazard', [HazardEvacController::class, 'index'])->name('hazard.index');
         Route::post('/hazard/zones', [HazardEvacController::class, 'storeZone'])->name('hazard.zones.store');
+        Route::delete('/hazard/zones/{zone}', [HazardEvacController::class, 'destroyZone'])->name('hazard.zones.destroy');
         Route::post('/hazard/centers', [HazardEvacController::class, 'storeCenter'])->name('hazard.centers.store');
+        Route::delete('/hazard/centers/{center}', [HazardEvacController::class, 'destroyCenter'])->name('hazard.centers.destroy');
         Route::post('/hazard/evacuees', [HazardEvacController::class, 'storeEvacuee'])->name('hazard.evacuees.store');
+
+        Route::get('/qr-posters', [QrPosterController::class, 'index'])->name('qr_posters.index');
+        Route::post('/qr-posters', [QrPosterController::class, 'store'])->name('qr_posters.store');
+        Route::put('/qr-posters/{qrPoster}', [QrPosterController::class, 'update'])->name('qr_posters.update');
+        Route::delete('/qr-posters/{qrPoster}', [QrPosterController::class, 'destroy'])->name('qr_posters.destroy');
         Route::get('/sms-logs', [DashboardController::class, 'smsLogs'])->name('sms-logs');
         Route::get('/audit-logs', [DashboardController::class, 'auditLogs'])->name('audit-logs');
 
@@ -57,8 +64,6 @@ Route::prefix('admin')
             Route::post('/{incidentType}/toggle', [IncidentTypeController::class, 'toggle'])->name('toggle');
             Route::delete('/{incidentType}', [IncidentTypeController::class, 'destroy'])->name('destroy');
         });
-
-        Route::get('/qr-posters', [QrPosterController::class, 'index'])->name('qr_posters.index');
 
         Route::prefix('incidents')->name('incidents.')->group(function () {
             Route::get('/', [IncidentController::class, 'index'])->name('index');

@@ -12,7 +12,13 @@
 @section('content')
 <div class="container-fluid py-3">
     <h1 class="h3 mb-1">Hazard zone mapping</h1>
-    <p class="text-muted mb-4">Draw hazard areas on the Pamplona map, pick a color, and place evacuation centers by clicking the map.</p>
+    <p class="text-muted mb-2">Draw hazard areas on the Pamplona map, pick a color, and place evacuation centers by clicking the map.</p>
+    <p class="mb-4">
+        <a href="{{ $publicHazardMapUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Open public Hazard Map
+        </a>
+        <span class="text-muted small ms-2">Active zones and open centers appear there for the public.</span>
+    </p>
 
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if ($errors->any())
@@ -77,13 +83,20 @@
                 <div class="card-header fw-semibold">Zones ({{ $zones->count() }})</div>
                 <ul class="list-group list-group-flush">
                     @forelse ($zones as $zone)
-                        <li class="list-group-item">
-                            <div class="fw-semibold">
-                                {{ $zone->name }}
-                                <span class="badge" style="background:{{ $zone->displayColor() }}">{{ $zone->type?->name }}</span>
+                        <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="fw-semibold">
+                                    {{ $zone->name }}
+                                    <span class="badge" style="background:{{ $zone->displayColor() }}">{{ $zone->type?->name }}</span>
+                                </div>
+                                <div class="small text-muted">{{ $zone->barangay }} · {{ $zone->is_active ? 'Active' : 'Off' }}</div>
+                                @if ($zone->advisory_note)<div class="small mt-1">{{ $zone->advisory_note }}</div>@endif
                             </div>
-                            <div class="small text-muted">{{ $zone->barangay }} · {{ $zone->is_active ? 'Active' : 'Off' }}</div>
-                            @if ($zone->advisory_note)<div class="small mt-1">{{ $zone->advisory_note }}</div>@endif
+                            <form method="POST" action="{{ route('admin.hazard.zones.destroy', $zone) }}" onsubmit="return confirm('Delete this hazard zone?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
                         </li>
                     @empty
                         <li class="list-group-item text-muted">No zones yet.</li>
@@ -157,12 +170,20 @@
             <div class="card">
                 <div class="card-header fw-semibold">Centers</div>
                 <ul class="list-group list-group-flush">
-                    @foreach ($centers as $c)
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span>{{ $c->name }} <span class="text-muted small">{{ $c->barangay }}</span></span>
-                            <span class="badge {{ $c->is_open ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $c->is_open ? 'Open' : 'Closed' }}</span>
+                    @forelse ($centers as $c)
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                            <span>{{ $c->name }} <span class="text-muted small">{{ $c->barangay }}</span>
+                                <span class="badge {{ $c->is_open ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $c->is_open ? 'Open' : 'Closed' }}</span>
+                            </span>
+                            <form method="POST" action="{{ route('admin.hazard.centers.destroy', $c) }}" onsubmit="return confirm('Delete this center?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
                         </li>
-                    @endforeach
+                    @empty
+                        <li class="list-group-item text-muted">No centers yet.</li>
+                    @endforelse
                 </ul>
             </div>
         </div>
@@ -174,17 +195,9 @@
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script>
 (function () {
-    const mapCfg = @json($map);
-    const existingZones = @json($zones->map(fn ($z) => [
-        'name' => $z->name,
-        'geometry' => $z->geometry,
-        'color' => $z->displayColor(),
-    ]));
-    const existingCenters = @json($centers->map(fn ($c) => [
-        'name' => $c->name,
-        'lat' => (float) $c->latitude,
-        'lng' => (float) $c->longitude,
-    ]));
+                const mapCfg = @json($map);
+    const existingZones = @json($mapZonesJson);
+    const existingCenters = @json($mapCentersJson);
 
     const typeSelect = document.getElementById('hazard_zone_type_id');
     const colorInput = document.getElementById('hazard_zone_color');
