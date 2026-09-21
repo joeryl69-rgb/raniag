@@ -85,4 +85,28 @@ class PrintableReportService
 
         return $documentRequest->fresh();
     }
+
+    /**
+     * Auto-generate a private after-action PDF when an incident reaches resolved.
+     */
+    public function generateAfterActionPdf(Incident $incident): ?string
+    {
+        $incident->load(['incidentType', 'agency', 'evidence', 'statusUpdates', 'resolutions', 'assignments.agency']);
+
+        $pdf = Pdf::loadView('admin.reports.single_pdf', [
+            'incident' => $incident,
+            'tracking_number' => $incident->tracking_number,
+            'generated_at' => now(),
+            'sections' => [
+                'incident_details', 'narrative', 'resolutions', 'status_timeline', 'evidence_photos',
+            ],
+        ]);
+
+        $path = 'after_action/'.$incident->tracking_number.'-'.now()->format('YmdHis').'.pdf';
+        Storage::disk('local')->put($path, $pdf->output());
+
+        $incident->forceFill(['after_action_pdf_path' => $path])->save();
+
+        return $path;
+    }
 }

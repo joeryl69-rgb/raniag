@@ -34,6 +34,10 @@
                             <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" value="1" @checked(old('is_active', $agency->is_active))>
                             <label class="form-check-label fw-semibold" for="is_active">Active Status</label>
                         </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="is_available" name="is_available" value="1" @checked(old('is_available', $agency->is_available ?? true))>
+                            <label class="form-check-label fw-semibold" for="is_available">Available for dispatch</label>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">

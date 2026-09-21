@@ -12,3 +12,4 @@ Artisan::command('inspire', function () {
 // Queue draining: separate cron with queue:work --stop-when-empty.
 Schedule::command('raniag:escalate-sla')->hourly();
 Schedule::command('raniag:purge-retained')->dailyAt('02:15');
+Schedule::command('raniag:monthly-summary')->monthlyOn(1, '03:00');

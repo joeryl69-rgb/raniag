@@ -100,6 +100,10 @@ class IncidentService
 
         $this->linkCorroboratingCluster($incident);
 
+        if ($lat !== null && $lng !== null) {
+            $this->flagHazardContainment($incident, $lat, $lng);
+        }
+
         try {
             $this->notifications->notifyAdminNewIncident($incident);
         } catch (\Exception $e) {
@@ -317,5 +321,35 @@ class IncidentService
             + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
 
         return 2 * $earth * asin(min(1, sqrt($a)));
+    }
+
+    private function flagHazardContainment(Incident $incident, float $lat, float $lng): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('hazard_zones')) {
+            return;
+        }
+
+        $hits = [];
+        foreach (\App\Models\HazardZone::query()->with('type')->where('is_active', true)->get() as $zone) {
+            if ($this->geofence->pointInGeometry($lng, $lat, $zone->geometry ?? [])) {
+                $hits[] = [
+                    'id' => $zone->id,
+                    'name' => $zone->name,
+                    'type' => $zone->type?->slug,
+                ];
+            }
+        }
+
+        if ($hits === []) {
+            return;
+        }
+
+        $meta = is_array($incident->meta) ? $incident->meta : [];
+        $meta['hazard_zones'] = $hits;
+        $updates = ['meta' => $meta];
+        if ($incident->priority === IncidentPriority::Low || $incident->priority === IncidentPriority::Medium) {
+            $updates['priority'] = IncidentPriority::High->value;
+        }
+        $incident->forceFill($updates)->save();
     }
 }

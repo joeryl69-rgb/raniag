@@ -68,12 +68,12 @@ Last updated: 2026-09-21 (post Phase 0a–1 access deploy)
 
 | Item | Status |
 |---|---|
-| Priority + SLA-risk dispatch queue + one-click assign | REMAINING |
-| Agency/personnel availability flags | REMAINING |
-| Barangay broadcast (push + SMS) | REMAINING |
-| After-action PDF auto-generation | REMAINING |
-| Drill / training mode flag | REMAINING |
-| Optional responder last-known position ping | REMAINING |
+| Priority + SLA-risk dispatch queue + one-click assign | DONE |
+| Agency/personnel availability flags | DONE |
+| Barangay broadcast (push + SMS) | DONE |
+| After-action PDF auto-generation | DONE |
+| Drill / training mode flag | DONE |
+| Optional responder last-known position ping | DONE |
 
 ---
 
@@ -81,12 +81,12 @@ Last updated: 2026-09-21 (post Phase 0a–1 access deploy)
 
 | Item | Status |
 |---|---|
-| Hazard zone + evacuation center schema/UI | REMAINING |
-| Geofence containment + auto priority flag | REMAINING |
-| Public hazard/evac map + nearest center | REMAINING |
-| Evacuee registry (vulnerable flags) | REMAINING |
+| Hazard zone + evacuation center schema/UI | DONE |
+| Geofence containment + auto priority flag | DONE |
+| Public hazard/evac map + nearest center | DONE |
+| Evacuee registry (vulnerable flags) | DONE |
 | PAGASA auto API | DEFERRED |
-| Manual advisory note on zones | REMAINING |
+| Manual advisory note on zones | DONE |
 
 ---
 
@@ -94,9 +94,9 @@ Last updated: 2026-09-21 (post Phase 0a–1 access deploy)
 
 | Item | Status |
 |---|---|
-| Reporter reply on `pending_info` (track session) | REMAINING |
-| “What to do now” per incident type | REMAINING |
-| Monthly MDRRMO summary PDF/XLSX | REMAINING |
+| Reporter reply on `pending_info` (track session) | DONE |
+| “What to do now” per incident type | DONE |
+| Monthly MDRRMO summary PDF/CSV | DONE |
 | Barangay relay accounts | CANCELLED |
 
 ---

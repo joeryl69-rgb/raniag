@@ -18,6 +18,16 @@
                 </a>
             </li>
             <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.dispatch.*') ? 'active' : '' }}" href="{{ route('admin.dispatch.index') }}">
+                    <i class="bi bi-lightning-charge"></i><span>Dispatch Queue</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.hazard.*') ? 'active' : '' }}" href="{{ route('admin.hazard.index') }}">
+                    <i class="bi bi-triangle"></i><span>Hazard &amp; Evac</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.incident_documents.*') ? 'active' : '' }}" href="{{ route('admin.incident_documents.index') }}">
                     <i class="bi bi-folder2-open"></i><span>Case Documents</span>
                 </a>

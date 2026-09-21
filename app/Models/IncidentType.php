@@ -23,6 +23,7 @@ class IncidentType extends Model
         'is_active',
         'sort_order',
         'resolution_checklist',
+        'public_guidance',
     ];
 
     protected function casts(): array

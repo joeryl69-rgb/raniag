@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\AgencyController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DispatchQueueController;
 use App\Http\Controllers\Admin\FeedbackController;
+use App\Http\Controllers\Admin\HazardEvacController;
 use App\Http\Controllers\Admin\IncidentController;
 use App\Http\Controllers\Admin\IncidentDocumentController;
 use App\Http\Controllers\Admin\IncidentTypeController;
@@ -24,6 +26,16 @@ Route::prefix('admin')
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
         Route::get('/dashboard/boundary.json', [DashboardController::class, 'boundary'])->name('dashboard.boundary');
         Route::get('/dashboard/barangays.json', [DashboardController::class, 'barangays'])->name('dashboard.barangays');
+        Route::get('/dispatch', [DispatchQueueController::class, 'index'])->name('dispatch.index');
+        Route::post('/dispatch/{incident}/assign', [DispatchQueueController::class, 'assign'])->name('dispatch.assign');
+        Route::post('/dispatch/{incident}/drill', [DispatchQueueController::class, 'toggleDrill'])->name('dispatch.drill');
+        Route::post('/dispatch/broadcast', [DispatchQueueController::class, 'broadcast'])->name('dispatch.broadcast');
+        Route::post('/availability', [\App\Http\Controllers\Shared\AvailabilityController::class, 'toggleSelf'])->name('availability.toggle');
+
+        Route::get('/hazard', [HazardEvacController::class, 'index'])->name('hazard.index');
+        Route::post('/hazard/zones', [HazardEvacController::class, 'storeZone'])->name('hazard.zones.store');
+        Route::post('/hazard/centers', [HazardEvacController::class, 'storeCenter'])->name('hazard.centers.store');
+        Route::post('/hazard/evacuees', [HazardEvacController::class, 'storeEvacuee'])->name('hazard.evacuees.store');
         Route::get('/sms-logs', [DashboardController::class, 'smsLogs'])->name('sms-logs');
         Route::get('/audit-logs', [DashboardController::class, 'auditLogs'])->name('audit-logs');
 

@@ -15,6 +15,7 @@ class ResolutionService
         private readonly IncidentService $incidents,
         private readonly ActivityLogService $activityLogs,
         private readonly NotificationService $notifications,
+        private readonly PrintableReportService $printableReports,
     ) {}
 
     public function submitResolution(
@@ -87,7 +88,17 @@ class ResolutionService
 
             $this->notifications->notifyAdminResolutionSubmitted($resolution);
 
-            return $resolution->fresh();
+            $fresh = $resolution->fresh();
+            $incident = $incident->fresh();
+            if ($incident && $incident->status === IncidentStatus::Resolved) {
+                try {
+                    $this->printableReports->generateAfterActionPdf($incident);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('After-action PDF failed: '.$e->getMessage());
+                }
+            }
+
+            return $fresh;
         });
     }
 

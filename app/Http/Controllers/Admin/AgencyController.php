@@ -129,14 +129,16 @@ class AgencyController extends Controller
             'phone' => ['nullable', 'string', 'max:32'],
             'address' => ['nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'is_available' => ['sometimes', 'boolean'],
             'officer_name' => ['required', 'string', 'max:255'],
             'officer_email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
             'officer_password' => ['nullable', 'string', 'min:8'],
         ]);
 
         $isActive = $request->has('is_active');
+        $isAvailable = $request->has('is_available');
 
-        DB::transaction(function () use ($agency, $user, $data, $isActive) {
+        DB::transaction(function () use ($agency, $user, $data, $isActive, $isAvailable) {
             $agency->update([
                 'name' => $data['name'],
                 'code' => strtoupper($data['code']),
@@ -145,6 +147,7 @@ class AgencyController extends Controller
                 'email' => $data['officer_email'],
                 'address' => $data['address'],
                 'is_active' => $isActive,
+                'is_available' => $isAvailable,
             ]);
 
             if ($user) {

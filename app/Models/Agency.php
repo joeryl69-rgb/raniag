@@ -19,12 +19,14 @@ class Agency extends Model
         'phone',
         'address',
         'is_active',
+        'is_available',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'is_available' => 'boolean',
         ];
     }
 

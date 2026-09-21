@@ -14,6 +14,9 @@ Route::name('public.')->group(function () {
 
     Route::post('/locale', [LocaleController::class, 'update'])->name('locale');
 
+    Route::get('/hazard-map', [\App\Http\Controllers\Public\HazardMapController::class, 'index'])->name('hazard.map');
+    Route::get('/hazard-map/nearest', [\App\Http\Controllers\Public\HazardMapController::class, 'nearestCenter'])->name('hazard.nearest');
+
     Route::get('/community-dashboard', [PublicDashboardController::class, 'index'])->name('dashboard');
     Route::get('/community-dashboard/data.json', [PublicDashboardController::class, 'data'])->name('dashboard.data');
 
@@ -42,6 +45,9 @@ Route::name('public.')->group(function () {
     Route::post('/track', [IncidentTrackController::class, 'show'])
         ->middleware('throttle:20,1')
         ->name('track.lookup');
+    Route::post('/track/{trackingNumber}/reply', [IncidentTrackController::class, 'reply'])
+        ->middleware('throttle:10,1')
+        ->name('track.reply');
     Route::get('/track/evidence/{evidence}', [\App\Http\Controllers\Public\TrackEvidenceController::class, 'show'])
         ->middleware('throttle:60,1')
         ->name('track.evidence');

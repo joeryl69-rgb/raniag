@@ -68,10 +68,73 @@ class IncidentTrackController extends Controller
 
         session()->put('track_verified.'.$incident->id, true);
 
-        $incident->loadMissing('evidence');
+        $incident->loadMissing(['evidence', 'incidentType']);
 
         return view('public.track.show', [
             'incident' => $incident,
+            'canReply' => $incident->status === \App\Enums\IncidentStatus::PendingInfo
+                && session()->get('track_verified.'.$incident->id) === true,
+            'nearestCenter' => $this->nearestOpenCenter($incident),
         ]);
+    }
+
+    public function reply(Request $request, string $trackingNumber): RedirectResponse
+    {
+        $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
+        abort_if(! $incident, 404);
+        abort_unless(session()->get('track_verified.'.$incident->id) === true, 403);
+        abort_unless($incident->status === \App\Enums\IncidentStatus::PendingInfo, 422);
+
+        $data = $request->validate([
+            'message' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $this->incidentService->recordStatusChange(
+            incident: $incident,
+            toStatus: \App\Enums\IncidentStatus::InProgress,
+            user: null,
+            comment: 'Reporter reply: '.$data['message'],
+            isPublic: true,
+        );
+
+        return redirect()
+            ->route('public.track')
+            ->with('success', 'Your reply was sent. Responders will continue from your update.');
+    }
+
+    private function nearestOpenCenter(\App\Models\Incident $incident): ?array
+    {
+        if ($incident->latitude === null || $incident->longitude === null) {
+            return null;
+        }
+        if (! \Illuminate\Support\Facades\Schema::hasTable('evacuation_centers')) {
+            return null;
+        }
+
+        $lat = (float) $incident->latitude;
+        $lng = (float) $incident->longitude;
+        $best = null;
+        $bestDist = PHP_FLOAT_MAX;
+        foreach (\App\Models\EvacuationCenter::query()->where('is_open', true)->get() as $center) {
+            $dLat = deg2rad((float) $center->latitude - $lat);
+            $dLng = deg2rad((float) $center->longitude - $lng);
+            $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat)) * cos(deg2rad((float) $center->latitude)) * sin($dLng / 2) ** 2;
+            $d = 2 * 6371000 * asin(min(1, sqrt($a)));
+            if ($d < $bestDist) {
+                $bestDist = $d;
+                $best = $center;
+            }
+        }
+
+        if (! $best) {
+            return null;
+        }
+
+        return [
+            'name' => $best->name,
+            'distance_m' => (int) round($bestDist),
+            'latitude' => $best->latitude,
+            'longitude' => $best->longitude,
+        ];
     }
 }

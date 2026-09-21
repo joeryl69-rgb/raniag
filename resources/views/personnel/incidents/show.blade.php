@@ -498,6 +498,27 @@
         </script>
         <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
         <script src="{{ asset('js/field-outbox.js') }}?v={{ @filemtime(public_path('js/field-outbox.js')) }}"></script>
+        <script>
+        (function () {
+            if (!navigator.geolocation) return;
+            const pingUrl = @json(route('personnel.location_ping'));
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+            setInterval(() => {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    fetch(pingUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrf,
+                            Accept: 'application/json',
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    }).catch(() => {});
+                }, () => {}, { maximumAge: 60000, timeout: 10000 });
+            }, 120000);
+        })();
+        </script>
         @if ($incident->latitude && $incident->longitude)
                         <style>
                 /* Pin styling now lives in the shared .raniag-marker-pin class

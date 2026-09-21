@@ -152,6 +152,30 @@ class NotificationService
         DispatchSmsJob::dispatch($smsLog->id)->afterCommit();
     }
 
+    /**
+     * Direct staff SMS (broadcasts etc.) without an incident row.
+     */
+    public function smsStaffDirect(User $user, string $message): void
+    {
+        if (! $user->phone) {
+            return;
+        }
+
+        $smsLog = SmsLog::create([
+            'incident_id' => null,
+            'user_id' => $user->id,
+            'recipient_phone' => $user->phone,
+            'message' => $message,
+            'direction' => 'outbound',
+            'status' => SmsLogStatus::Pending->value,
+            'provider' => config('services.sms.provider', env('SMS_PROVIDER', 'philsms')),
+            'sent_at' => null,
+            'failed_at' => null,
+        ]);
+
+        DispatchSmsJob::dispatch($smsLog->id)->afterCommit();
+    }
+
     public function notifyAgencyAssigned(Assignment $assignment): void
     {
         $incident = $assignment->incident;

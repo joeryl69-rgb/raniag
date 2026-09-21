@@ -30,6 +30,8 @@ Route::prefix('agency')
             Route::post('/{incident}/field-phase', [\App\Http\Controllers\Shared\ResponderFieldController::class, 'updateFieldPhase'])->name('field_phase');
             Route::post('/{incident}/sms-reporter', [\App\Http\Controllers\Shared\ResponderFieldController::class, 'smsReporter'])->name('sms_reporter');
         });
+        Route::post('/location-ping', [\App\Http\Controllers\Shared\AvailabilityController::class, 'pingLocation'])->name('location_ping');
+        Route::post('/availability', [\App\Http\Controllers\Shared\AvailabilityController::class, 'toggleSelf'])->name('availability.toggle');
 
         Route::post('/incidents/{incident}/resolution', [ResolutionController::class, 'store'])->name('incidents.resolution');
         Route::put('/incidents/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('incidents.resolution.update');

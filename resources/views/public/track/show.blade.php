@@ -26,12 +26,14 @@
             'received' => 'Good news — your report has been received and confirmed.',
             'assigned' => 'Your report has been assigned to a responding agency.',
             'in_progress' => 'A responding agency is currently working on your report.',
-            'pending_info' => 'We need a bit more information from you before we can continue. Please wait for our team to reach out.',
+            'pending_info' => 'We need a bit more information from you before we can continue. Please reply below if you can add details.',
             'resolved' => 'Your report has been resolved. Thank you for helping keep our community safe.',
             'closed' => 'This report has been resolved and officially closed.',
             'rejected' => 'This report could not be accepted. Please see the notes below for details.',
             'outside_aor' => 'This location falls outside Pamplona\'s area of responsibility. It has been referred to the appropriate agency or municipality; MDRRMO Pamplona will not be processing it further.',
         ];
+        $canReply = $canReply ?? false;
+        $nearestCenter = $nearestCenter ?? null;
 
         $steps = [
             'submitted' => ['label' => 'Submitted', 'icon' => 'bi-send'],
@@ -107,6 +109,34 @@
             @endif
         </div>
     </div>
+
+    @if ($incident->incidentType?->public_guidance)
+        <div class="card raniag-card mb-4">
+            <div class="card-header raniag-card-header py-3"><strong>What to do now</strong></div>
+            <div class="card-body">{{ $incident->incidentType->public_guidance }}</div>
+        </div>
+    @endif
+
+    @if ($nearestCenter)
+        <div class="alert alert-info mb-4">
+            Nearest open evacuation center: <strong>{{ $nearestCenter['name'] }}</strong>
+            (~{{ number_format($nearestCenter['distance_m']) }} m).
+            <a href="{{ route('public.hazard.map') }}">View hazard map</a>
+        </div>
+    @endif
+
+    @if ($canReply)
+        <div class="card raniag-card mb-4 border-warning">
+            <div class="card-header raniag-card-header py-3">Reply to responders</div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('public.track.reply', $incident->tracking_number) }}">
+                    @csrf
+                    <textarea name="message" class="form-control mb-2" rows="3" required maxlength="2000" placeholder="Add the information requested…"></textarea>
+                    <button type="submit" class="btn btn-primary">Send reply</button>
+                </form>
+            </div>
+        </div>
+    @endif
 
     <div class="row g-4" data-rg-stagger>
         <div class="col-lg-4">

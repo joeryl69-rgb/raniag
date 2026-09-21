@@ -39,10 +39,12 @@ class Incident extends Model
         'reporter_email',
         'reporter_phone',
         'is_anonymous',
+        'is_drill',
         'reported_at',
         'resolved_at',
         'closed_at',
         'meta',
+        'after_action_pdf_path',
     ];
 
     /**
@@ -57,6 +59,7 @@ class Incident extends Model
             'status' => IncidentStatus::class,
             'priority' => IncidentPriority::class,
             'is_anonymous' => 'boolean',
+            'is_drill' => 'boolean',
             'reported_at' => 'datetime',
             'resolved_at' => 'datetime',
             'closed_at' => 'datetime',

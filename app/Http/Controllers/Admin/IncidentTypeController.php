@@ -147,6 +147,7 @@ class IncidentTypeController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
             'default_priority' => ['required', 'string', Rule::in(array_keys(self::PRIORITY_CHOICES))],
             'resolution_checklist_text' => ['nullable', 'string', 'max:5000'],
+            'public_guidance' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $checklist = collect(preg_split('/\r\n|\r|\n/', (string) ($data['resolution_checklist_text'] ?? '')))

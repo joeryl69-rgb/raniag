@@ -635,6 +635,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('public.hazard.*') ? 'active' : '' }}"
+                           href="{{ route('public.hazard.map') }}">
+                            <i class="bi bi-map me-1 d-lg-none"></i>Hazard Map
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.dashboard') ? 'active' : '' }}"
                            href="{{ route('public.dashboard') }}">
                             <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>{{ __('Community Dashboard') }}

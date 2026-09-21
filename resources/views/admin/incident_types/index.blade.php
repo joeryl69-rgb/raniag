@@ -161,6 +161,10 @@
                         <textarea name="resolution_checklist_text" id="typeChecklist" class="form-control form-control-sm" rows="4" placeholder="One checklist item per line"></textarea>
                         <p class="form-text mb-0">Shown to responders when resolving. Leave blank for none.</p>
                     </div>
+                    <div class="mb-1">
+                        <label class="form-label small fw-semibold">Public “what to do now”</label>
+                        <textarea name="public_guidance" id="typeGuidance" class="form-control form-control-sm" rows="3" placeholder="Safety guidance shown on the tracking page"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -211,6 +215,7 @@
         document.getElementById('typeColor').value = '';
         document.getElementById('typeDefaultPriority').value = 'medium';
         document.getElementById('typeChecklist').value = '';
+        document.getElementById('typeGuidance').value = '';
         currentDefault = null;
         document.getElementById('iconResetBtn').classList.add('d-none');
         filterIcons();
@@ -236,6 +241,7 @@
         document.getElementById('typeChecklist').value = Array.isArray(type.resolution_checklist)
             ? type.resolution_checklist.join('\n')
             : '';
+        document.getElementById('typeGuidance').value = type.public_guidance || '';
 
         // Every type (seeded or custom, old or new) now has its own
         // default_icon/default_color captured at creation time, so the
