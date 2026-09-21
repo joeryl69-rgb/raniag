@@ -14,17 +14,16 @@
         @endif
     </div>
 
-    @if (session('success'))
-        <div class="alert alert-success no-print">{{ session('success') }}</div>
-    @endif
     @if ($errors->any())
         <div class="alert alert-danger no-print"><ul class="mb-0">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
 
     <div class="row g-4">
         <div class="col-lg-4 no-print">
-            <div class="card">
-                <div class="card-header fw-semibold">{{ $editing ? 'Edit poster' : 'Create poster' }}</div>
+            <div class="card raniag-card shadow-sm border-0">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">{{ $editing ? 'Edit poster' : 'Create poster' }}</h5>
+                </div>
                 <div class="card-body">
                     <form method="POST" action="{{ $editing ? route('admin.qr_posters.update', $editing) : route('admin.qr_posters.store') }}">
                         @csrf
@@ -67,8 +66,10 @@
         </div>
 
         <div class="col-lg-8">
-            <div class="card mb-4 no-print">
-                <div class="card-header fw-semibold">Saved posters ({{ $posters->count() }})</div>
+            <div class="card raniag-card shadow-sm border-0 mb-4 no-print">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">Saved posters ({{ $posters->count() }})</h5>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0 align-middle">
                         <thead>
@@ -112,7 +113,7 @@
             <div class="row g-4" id="qr-print-grid">
                 @forelse ($posters->where('is_active', true) as $poster)
                     <div class="col-sm-6 col-lg-4">
-                        <div class="card h-100 text-center p-3 qr-poster-card">
+                        <div class="card raniag-card h-100 text-center p-3 qr-poster-card">
                             <div class="fw-semibold mb-1">{{ $poster->title }}</div>
                             <div class="small text-muted mb-2">Brgy. {{ $poster->barangay }}</div>
                             <img src="{{ $poster->qrImageUrl() }}" alt="QR for {{ $poster->barangay }}" class="img-fluid mx-auto mb-2" width="180" height="180">

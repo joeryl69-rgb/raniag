@@ -51,15 +51,19 @@
     <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
-        <div class="card raniag-card mb-3 p-3 sticky-top" id="report-wizard-nav" data-rg-reveal style="top: 0; z-index: 1020; background: var(--bs-body-bg, #fff);">
+        <div class="card raniag-card mb-3 p-3" id="report-wizard-nav" data-rg-reveal>
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
-                <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
-                <div class="d-flex gap-1" id="wizard-dots" aria-hidden="true">
-                    <span class="badge rounded-pill text-bg-primary" data-dot="0">1</span>
-                    <span class="badge rounded-pill text-bg-secondary" data-dot="1">2</span>
-                    <span class="badge rounded-pill text-bg-secondary" data-dot="2">3</span>
-                    <span class="badge rounded-pill text-bg-secondary" data-dot="3">4</span>
+                <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
+                <div class="text-center flex-grow-1">
+                    <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
+                    <div class="d-flex gap-1 justify-content-center mt-1" id="wizard-dots">
+                        <button type="button" class="badge rounded-pill text-bg-primary border-0" data-dot="0">1</button>
+                        <button type="button" class="badge rounded-pill text-bg-secondary border-0" data-dot="1">2</button>
+                        <button type="button" class="badge rounded-pill text-bg-secondary border-0" data-dot="2">3</button>
+                        <button type="button" class="badge rounded-pill text-bg-secondary border-0" data-dot="3">4</button>
+                    </div>
                 </div>
+                <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
             </div>
             <div id="wizard-step-error" class="alert alert-warning py-2 px-3 mt-2 mb-0 d-none" role="alert"></div>
         </div>
@@ -420,12 +424,9 @@
         </div>
         </div>{{-- wizard step 3 --}}
 
-        <div class="d-flex flex-wrap gap-2 justify-content-between mb-4 sticky-bottom py-2" id="wizard-controls" style="background: var(--bs-body-bg, #fff); z-index: 1010;">
-            <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
-            <div class="d-flex gap-2">
-                <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>
-                <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
-            </div>
+        <div class="d-flex flex-wrap gap-2 justify-content-between mb-4" id="wizard-controls">
+            <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="button" class="btn btn-primary d-none" id="wizard-next-footer">Next</button>
         </div>
     </form>
 </div>

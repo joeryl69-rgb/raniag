@@ -20,15 +20,16 @@
         <span class="text-muted small ms-2">Active zones and open centers appear there for the public.</span>
     </p>
 
-    @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if ($errors->any())
         <div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
 
     <div class="row g-4">
         <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header fw-semibold">Add hazard zone</div>
+            <div class="card raniag-card shadow-sm border-0 mb-4">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">Add hazard zone</h5>
+                </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form">
                         @csrf
@@ -79,8 +80,10 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header fw-semibold">Zones ({{ $zones->count() }})</div>
+            <div class="card raniag-card shadow-sm border-0">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">Zones ({{ $zones->count() }})</h5>
+                </div>
                 <ul class="list-group list-group-flush">
                     @forelse ($zones as $zone)
                         <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
@@ -106,8 +109,10 @@
         </div>
 
         <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header fw-semibold">Add evacuation center</div>
+            <div class="card raniag-card shadow-sm border-0 mb-4">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">Add evacuation center</h5>
+                </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}">
                         @csrf
@@ -139,8 +144,10 @@
                 </div>
             </div>
 
-            <div class="card mb-4">
-                <div class="card-header fw-semibold">Register evacuee</div>
+            <div class="card raniag-card shadow-sm border-0 mb-4">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">Register evacuee</h5>
+                </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.hazard.evacuees.store') }}">
                         @csrf
@@ -167,8 +174,10 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header fw-semibold">Centers</div>
+            <div class="card raniag-card shadow-sm border-0">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">Centers</h5>
+                </div>
                 <ul class="list-group list-group-flush">
                     @forelse ($centers as $c)
                         <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
