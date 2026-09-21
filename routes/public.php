@@ -3,7 +3,6 @@
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\IncidentReportController;
 use App\Http\Controllers\Public\IncidentTrackController;
-use App\Http\Controllers\Public\LocaleController;
 use App\Http\Controllers\Public\PublicDashboardController;
 use App\Http\Controllers\Public\FeedbackController;
 use Illuminate\Support\Facades\Route;
@@ -11,8 +10,6 @@ use Illuminate\Support\Facades\Route;
 Route::name('public.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::view('/offline', 'public.offline')->name('offline');
-
-    Route::post('/locale', [LocaleController::class, 'update'])->name('locale');
 
     Route::get('/hazard-map', [\App\Http\Controllers\Public\HazardMapController::class, 'index'])->name('hazard.map');
     Route::get('/hazard-map/nearest', [\App\Http\Controllers\Public\HazardMapController::class, 'nearestCenter'])->name('hazard.nearest');

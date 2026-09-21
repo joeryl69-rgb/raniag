@@ -48,9 +48,7 @@ test('anonymous users can submit an incident report via web', function () {
     $incident = Incident::query()->first();
 
     expect($incident)->not->toBeNull();
-    expect($incident->tracking_pin)->not->toBeNull();
     $response->assertRedirect(route('public.report.success', $incident->tracking_number));
-    $response->assertSessionHas('tracking_pin');
 });
 
 test('anonymous users can submit an incident report via json', function () {
@@ -82,7 +80,7 @@ test('anonymous users can submit an incident report via json', function () {
 
     $response
         ->assertCreated()
-        ->assertJsonStructure(['tracking_number', 'access_code', 'incident']);
+        ->assertJsonStructure(['tracking_number', 'incident']);
 });
 
 test('users can track an incident by tracking number via web', function () {
@@ -99,7 +97,7 @@ test('users can track an incident by tracking number via web', function () {
         ],
     ]);
 
-    $submit = $this->post(route('public.report.store'), [
+    $this->post(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'description' => 'Trackable incident report with enough detail.',
         'barangay' => 'Santa Cruz',
@@ -111,11 +109,9 @@ test('users can track an incident by tracking number via web', function () {
     ]);
 
     $trackingNumber = Incident::query()->value('tracking_number');
-    $accessCode = $submit->getSession()->get('tracking_pin');
 
     $this->post(route('public.track.lookup'), [
         'tracking_number' => $trackingNumber,
-        'access_code' => $accessCode,
     ])
         ->assertOk()
         ->assertSee($trackingNumber, false)
@@ -147,43 +143,17 @@ test('users can track an incident by tracking number via json', function () {
     ]);
 
     $trackingNumber = $submit->json('tracking_number');
-    $accessCode = $submit->json('access_code');
 
     $this->postJson(route('public.track.lookup'), [
         'tracking_number' => $trackingNumber,
-        'access_code' => $accessCode,
     ])
         ->assertOk()
         ->assertJsonPath('tracking_number', $trackingNumber);
 });
 
-test('tracking rejects a wrong access code', function () {
-    Storage::fake('local');
-    $type = IncidentType::factory()->create();
-
-    $gpsLog = json_encode([
-        [
-            'filename' => 'gps-123.jpg',
-            'latitude' => 18.472,
-            'longitude' => 121.325,
-            'accuracy' => 12,
-            'captured_at' => now()->toIso8601String(),
-        ],
-    ]);
-
-    $submit = $this->postJson(route('public.report.store'), [
-        'incident_type_id' => $type->id,
-        'description' => 'Trackable incident report for access gate.',
-        'is_anonymous' => true,
-        'latitude' => '18.47200000',
-        'longitude' => '121.32500000',
-        'meta' => ['gps_captures' => $gpsLog],
-        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
-    ]);
-
+test('tracking rejects an unknown tracking number', function () {
     $this->post(route('public.track.lookup'), [
-        'tracking_number' => $submit->json('tracking_number'),
-        'access_code' => $submit->json('access_code') === '999999' ? '000000' : '999999',
+        'tracking_number' => 'RAN-NOPEXX',
     ])->assertRedirect(route('public.track'));
 });
 

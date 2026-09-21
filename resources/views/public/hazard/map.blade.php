@@ -28,8 +28,9 @@
 
     zones.forEach((z) => {
         try {
+            const color = z.color || z.type?.color || '#b45309';
             const layer = L.geoJSON(z.geometry, {
-                style: { color: z.type?.color || '#b45309', weight: 2, fillOpacity: 0.25 }
+                style: { color: color, weight: 2, fillOpacity: 0.25 }
             }).addTo(map);
             layer.bindPopup(`<strong>${z.name}</strong><br>${z.type?.name || ''}<br>${z.advisory_note || ''}`);
         } catch (e) {}

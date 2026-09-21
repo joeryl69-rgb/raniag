@@ -18,7 +18,16 @@ class HazardMapController extends Controller
     {
         return view('public.hazard.map', [
             'map' => config('raniag.map'),
-            'zones' => HazardZone::query()->with('type')->where('is_active', true)->get(),
+            'zones' => HazardZone::query()->with('type')->where('is_active', true)->get()->map(function (HazardZone $zone) {
+                return [
+                    'id' => $zone->id,
+                    'name' => $zone->name,
+                    'geometry' => $zone->geometry,
+                    'color' => $zone->displayColor(),
+                    'advisory_note' => $zone->advisory_note,
+                    'type' => $zone->type ? ['name' => $zone->type->name, 'color' => $zone->type->color] : null,
+                ];
+            })->values(),
             'centers' => EvacuationCenter::query()->where('is_open', true)->orderBy('name')->get(),
         ]);
     }

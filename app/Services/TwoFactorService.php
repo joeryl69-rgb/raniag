@@ -4,12 +4,18 @@ namespace App\Services;
 
 use App\Mail\LoginOtpMail;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
 
 class TwoFactorService
 {
+    public const TRUSTED_COOKIE = 'raniag_trusted_device';
+
     public function requiredFor(User $user): bool
     {
         if (! config('raniag.two_factor.enabled', true)) {
@@ -46,8 +52,61 @@ class TwoFactorService
         return true;
     }
 
+    public function hasTrustedDevice(Request $request, User $user): bool
+    {
+        $raw = $request->cookie(self::TRUSTED_COOKIE);
+        if (! is_string($raw) || $raw === '') {
+            return false;
+        }
+
+        $parts = explode('|', $raw, 2);
+        if (count($parts) !== 2) {
+            return false;
+        }
+
+        [$userId, $token] = $parts;
+        if ((int) $userId !== (int) $user->id || $token === '') {
+            return false;
+        }
+
+        $stored = Cache::get($this->trustedCacheKey((int) $user->id, $token));
+
+        return $stored === true || $stored === 1 || $stored === '1';
+    }
+
+    public function issueTrustedDeviceCookie(User $user): SymfonyCookie
+    {
+        $days = max(1, (int) config('raniag.two_factor.trusted_device_days', 30));
+        $token = Str::random(64);
+
+        Cache::put(
+            $this->trustedCacheKey((int) $user->id, $token),
+            true,
+            now()->addDays($days)
+        );
+
+        $value = $user->id.'|'.$token;
+
+        return Cookie::make(
+            self::TRUSTED_COOKIE,
+            $value,
+            $days * 24 * 60,
+            '/',
+            null,
+            config('session.secure'),
+            true,
+            false,
+            config('session.same_site', 'lax')
+        );
+    }
+
     private function cacheKey(int $userId): string
     {
         return "raniag.login_otp.{$userId}";
+    }
+
+    private function trustedCacheKey(int $userId, string $token): string
+    {
+        return 'raniag.trusted_device.'.$userId.'.'.hash('sha256', $token);
     }
 }

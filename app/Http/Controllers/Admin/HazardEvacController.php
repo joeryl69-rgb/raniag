@@ -32,6 +32,7 @@ class HazardEvacController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'barangay' => ['nullable', 'string', 'max:100'],
             'geometry_json' => ['required', 'string'],
+            'color' => ['nullable', 'string', 'max:16', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'advisory_note' => ['nullable', 'string', 'max:5000'],
             'advisory_url' => ['nullable', 'url', 'max:500'],
             'is_active' => ['sometimes', 'boolean'],
@@ -39,14 +40,17 @@ class HazardEvacController extends Controller
 
         $geometry = json_decode($data['geometry_json'], true);
         if (! is_array($geometry) || empty($geometry['type'])) {
-            return back()->withErrors(['geometry_json' => 'Geometry must be valid GeoJSON.']);
+            return back()->withErrors(['geometry_json' => 'Draw a polygon on the map before saving.'])->withInput();
         }
+
+        $type = HazardZoneType::query()->find($data['hazard_zone_type_id']);
 
         HazardZone::create([
             'hazard_zone_type_id' => $data['hazard_zone_type_id'],
             'name' => $data['name'],
             'barangay' => $data['barangay'] ?? null,
             'geometry' => $geometry,
+            'color' => $data['color'] ?? $type?->color,
             'advisory_note' => $data['advisory_note'] ?? null,
             'advisory_url' => $data['advisory_url'] ?? null,
             'is_active' => $request->boolean('is_active', true),

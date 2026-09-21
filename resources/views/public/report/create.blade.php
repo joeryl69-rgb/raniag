@@ -51,7 +51,7 @@
     <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
-        <div class="card raniag-card mb-3 p-3" id="report-wizard-nav" data-rg-reveal>
+        <div class="card raniag-card mb-3 p-3 sticky-top" id="report-wizard-nav" data-rg-reveal style="top: 0; z-index: 1020; background: var(--bs-body-bg, #fff);">
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
                 <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
                 <div class="d-flex gap-1" id="wizard-dots" aria-hidden="true">
@@ -61,6 +61,7 @@
                     <span class="badge rounded-pill text-bg-secondary" data-dot="3">4</span>
                 </div>
             </div>
+            <div id="wizard-step-error" class="alert alert-warning py-2 px-3 mt-2 mb-0 d-none" role="alert"></div>
         </div>
 
         <div class="report-wizard-pane" data-wizard-step="0">
@@ -127,9 +128,14 @@
                     <div class="col-12">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
                             <label for="description" class="form-label mb-0">Description <span class="text-danger">*</span></label>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="voice-to-text-btn" title="Dictate description">
-                                <i class="bi bi-mic"></i> Voice
-                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="voice-listening-indicator" class="d-none small text-danger fw-semibold">
+                                    <span class="spinner-grow spinner-grow-sm me-1" role="status" aria-hidden="true"></span>Listening
+                                </span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="voice-to-text-btn" title="Dictate description" aria-pressed="false">
+                                    <i class="bi bi-mic"></i> Voice
+                                </button>
+                            </div>
                         </div>
                         <textarea class="form-control @error('description') is-invalid @enderror" id="description"
                                   name="description" rows="5" required minlength="10" maxlength="5000"
@@ -139,7 +145,7 @@
                             <div class="form-text" id="description-guidance">Minimum 10 characters.</div>
                             <div class="form-text text-nowrap" id="description-counter" aria-live="polite">0 / 5000</div>
                         </div>
-                        <div class="form-text text-muted" id="voice-to-text-status"></div>
+                        <div class="form-text text-muted" id="voice-to-text-status" aria-live="polite">Idle — tap Voice to dictate into the description.</div>
                     </div>
                 </div>
             </div>
@@ -414,7 +420,7 @@
         </div>
         </div>{{-- wizard step 3 --}}
 
-        <div class="d-flex flex-wrap gap-2 justify-content-between mb-4" id="wizard-controls">
+        <div class="d-flex flex-wrap gap-2 justify-content-between mb-4 sticky-bottom py-2" id="wizard-controls" style="background: var(--bs-body-bg, #fff); z-index: 1010;">
             <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
             <div class="d-flex gap-2">
                 <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>

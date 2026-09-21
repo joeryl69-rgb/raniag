@@ -652,18 +652,6 @@
                             <i class="bi bi-headset me-1 d-lg-none"></i>{{ __('Support') }}
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <form method="POST" action="{{ route('public.locale') }}" class="d-inline">
-                            @csrf
-                            @if (app()->getLocale() === 'tl')
-                                <input type="hidden" name="locale" value="en">
-                                <button type="submit" class="nav-link border-0 bg-transparent">EN</button>
-                            @else
-                                <input type="hidden" name="locale" value="tl">
-                                <button type="submit" class="nav-link border-0 bg-transparent">Filipino</button>
-                            @endif
-                        </form>
-                    </li>
                     @auth
                         <li class="nav-item">
                             <a class="nav-link rg-btn-ghost" href="{{ route('dashboard') }}">

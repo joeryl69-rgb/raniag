@@ -25,6 +25,7 @@ class TwoFactorChallengeController extends Controller
     {
         $request->validate([
             'code' => ['required', 'string', 'size:6'],
+            'trust_device' => ['sometimes', 'boolean'],
         ]);
 
         $userId = $request->session()->get('pending_2fa_id');
@@ -49,6 +50,12 @@ class TwoFactorChallengeController extends Controller
         Auth::login($user, $remember);
         $request->session()->regenerate();
 
-        return redirect()->intended(route($user->homeRoute(), absolute: false));
+        $response = redirect()->intended(route($user->homeRoute(), absolute: false));
+
+        if ($request->boolean('trust_device')) {
+            $response->withCookie($twoFactor->issueTrustedDeviceCookie($user));
+        }
+
+        return $response;
     }
 }

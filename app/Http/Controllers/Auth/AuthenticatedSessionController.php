@@ -31,6 +31,12 @@ class AuthenticatedSessionController extends Controller
         $remember = $request->boolean('remember');
 
         if ($user && $twoFactor->requiredFor($user)) {
+            if ($twoFactor->hasTrustedDevice($request, $user)) {
+                $request->session()->regenerate();
+
+                return redirect()->intended(route($user->homeRoute(), absolute: false));
+            }
+
             $request->session()->put('pending_2fa_id', $user->id);
             $request->session()->put('pending_2fa_remember', $remember);
 

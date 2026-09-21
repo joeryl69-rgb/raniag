@@ -10,7 +10,6 @@ use App\Repositories\Contracts\IncidentRepositoryInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
@@ -49,18 +48,17 @@ class IncidentService
         $resolvedBarangay = $this->geofence->resolveBarangay($lat, $lng);
         $payload['barangay'] = $resolvedBarangay ?? ($payload['barangay'] ?? null);
 
-        $plainPin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $gpsCaptures = $meta['gps_captures'] ?? [];
 
         // Keep the DB transaction short: create the case row only. Evidence
         // watermarking / Nominatim reverse-geocode runs after commit so a
         // multi-photo report cannot hold row locks for tens of seconds.
-        $incident = DB::transaction(function () use ($payload, $meta, $plainPin) {
+        $incident = DB::transaction(function () use ($payload, $meta) {
             $incident = $this->incidents->create([
                 ...Arr::except($payload, ['meta']),
                 'meta' => $meta ?: null,
                 'tracking_number' => $this->trackingNumbers->generate(),
-                'tracking_pin' => Hash::make($plainPin),
+                'tracking_pin' => null,
                 'status' => IncidentStatus::Submitted,
                 'priority' => $payload['priority'] ?? IncidentPriority::Medium->value,
                 'reported_at' => $payload['reported_at'] ?? now(),
@@ -113,7 +111,6 @@ class IncidentService
         Cache::forget('admin.dashboard.json');
 
         $incident->load(['incidentType', 'evidence']);
-        $incident->plainTrackingPin = $plainPin;
 
         return $incident;
     }

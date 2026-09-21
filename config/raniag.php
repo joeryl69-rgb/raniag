@@ -22,6 +22,7 @@ return [
     'two_factor' => [
         'enabled' => (bool) env('RANIAG_TWO_FACTOR_ENABLED', true),
         'otp_ttl_minutes' => (int) env('RANIAG_TWO_FACTOR_OTP_TTL', 10),
+        'trusted_device_days' => (int) env('RANIAG_TWO_FACTOR_TRUSTED_DAYS', 30),
     ],
 
     // RA 10173-aligned retention: hard-delete soft-deleted rows, scrub PII on aged closed cases.

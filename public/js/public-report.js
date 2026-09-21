@@ -399,38 +399,43 @@
     }
 
     if (mapElement && leaflet) {
-        const defaultLat = parseFloat(latInput?.value) || mapConfig.default_lat;
-        const defaultLng = parseFloat(lngInput?.value) || mapConfig.default_lng;
+        try {
+            const defaultLat = parseFloat(latInput?.value) || mapConfig.default_lat;
+            const defaultLng = parseFloat(lngInput?.value) || mapConfig.default_lng;
 
-        mapInstance = leaflet.map('incident-map', { attributionControl: false }).setView([defaultLat, defaultLng], mapConfig.default_zoom || 13);
+            mapInstance = leaflet.map('incident-map', { attributionControl: false }).setView([defaultLat, defaultLng], mapConfig.default_zoom || 13);
 
-        leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors',
-        }).addTo(mapInstance);
-
-        if (boundaryGeometry) {
-            leaflet.geoJSON(boundaryGeometry, {
-                style: { color: '#0d6efd', weight: 2, fillOpacity: 0.05, dashArray: '4 4' },
-                interactive: false,
+            leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors',
             }).addTo(mapInstance);
+
+            if (boundaryGeometry) {
+                leaflet.geoJSON(boundaryGeometry, {
+                    style: { color: '#0d6efd', weight: 2, fillOpacity: 0.05, dashArray: '4 4' },
+                    interactive: false,
+                }).addTo(mapInstance);
+            }
+
+            // Map is display-only: no click-to-pin. Location must come from
+            // "Use Current Location" or the GPS camera, so the report always
+            // reflects the reporter's actual device GPS, not a manual guess.
+            mapInstance.dragging.disable();
+            mapInstance.scrollWheelZoom.disable();
+            mapInstance.doubleClickZoom.disable();
+            mapInstance.touchZoom.disable();
+            mapInstance.boxZoom.disable();
+            mapInstance.keyboard.disable();
+
+            if (latInput?.value && lngInput?.value) {
+                setMarker(parseFloat(latInput.value), parseFloat(lngInput.value), { pan: false });
+            }
+
+            setTimeout(() => mapInstance.invalidateSize(), 200);
+        } catch (error) {
+            console.error('RANIAG map init failed:', error);
+            mapInstance = null;
         }
-
-        // Map is display-only: no click-to-pin. Location must come from
-        // "Use Current Location" or the GPS camera, so the report always
-        // reflects the reporter's actual device GPS, not a manual guess.
-        mapInstance.dragging.disable();
-        mapInstance.scrollWheelZoom.disable();
-        mapInstance.doubleClickZoom.disable();
-        mapInstance.touchZoom.disable();
-        mapInstance.boxZoom.disable();
-        mapInstance.keyboard.disable();
-
-        if (latInput?.value && lngInput?.value) {
-            setMarker(parseFloat(latInput.value), parseFloat(lngInput.value), { pan: false });
-        }
-
-        setTimeout(() => mapInstance.invalidateSize(), 200);
     }
 
     window.RANIAG_LOCATION_API = { resolve: resolveLocation };
@@ -473,11 +478,28 @@
     const wizardNext = document.getElementById('wizard-next');
     const wizardLabel = document.getElementById('wizard-step-label');
     const wizardDots = document.querySelectorAll('#wizard-dots [data-dot]');
+    const wizardError = document.getElementById('wizard-step-error');
     const wizardTitles = ['Type', 'Location', 'Evidence', 'Contact'];
     let wizardStep = 0;
 
+    function setWizardError(message) {
+        if (!wizardError) {
+            if (message) alert(message);
+            return;
+        }
+        if (!message) {
+            wizardError.classList.add('d-none');
+            wizardError.textContent = '';
+            return;
+        }
+        wizardError.textContent = message;
+        wizardError.classList.remove('d-none');
+        wizardError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
     function showWizardStep(step) {
         wizardStep = Math.max(0, Math.min(wizardPanes.length - 1, step));
+        setWizardError('');
         wizardPanes.forEach((pane) => {
             const idx = Number(pane.getAttribute('data-wizard-step'));
             pane.classList.toggle('d-none', idx !== wizardStep);
@@ -487,83 +509,123 @@
         }
         wizardDots.forEach((dot) => {
             const idx = Number(dot.getAttribute('data-dot'));
-            dot.classList.toggle('text-bg-primary', idx === wizardStep);
-            dot.classList.toggle('text-bg-secondary', idx !== wizardStep);
+            const done = idx < wizardStep;
+            const active = idx === wizardStep;
+            dot.classList.toggle('text-bg-primary', active);
+            dot.classList.toggle('text-bg-success', done);
+            dot.classList.toggle('text-bg-secondary', !active && !done);
         });
         if (wizardBack) wizardBack.disabled = wizardStep === 0;
         if (wizardNext) wizardNext.classList.toggle('d-none', wizardStep === wizardPanes.length - 1);
+        const submitBtn = document.getElementById('submit-report');
+        if (submitBtn) {
+            submitBtn.classList.toggle('d-none', wizardStep !== wizardPanes.length - 1);
+        }
         if (wizardStep === 1) {
             requestAnimationFrame(() => mapInstance?.invalidateSize());
         }
+        document.getElementById('report-wizard-nav')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function validateWizardStep(step) {
         if (step === 0) {
             const typeChecked = form?.querySelector('input[name="incident_type_id"]:checked');
             if (!typeChecked) {
-                alert('Please select an incident type.');
+                setWizardError('Please select an incident type before continuing.');
                 return false;
             }
             if (descriptionInput && descriptionInput.value.trim().length < 10) {
-                alert('Please enter a description of at least 10 characters.');
+                setWizardError('Please enter a description of at least 10 characters.');
+                descriptionInput.focus();
                 return false;
             }
         }
         return true;
     }
 
-    wizardNext?.addEventListener('click', () => {
+    wizardNext?.addEventListener('click', (event) => {
+        event.preventDefault();
         if (!validateWizardStep(wizardStep)) return;
         showWizardStep(wizardStep + 1);
     });
-    wizardBack?.addEventListener('click', () => showWizardStep(wizardStep - 1));
+    wizardBack?.addEventListener('click', (event) => {
+        event.preventDefault();
+        showWizardStep(wizardStep - 1);
+    });
     if (wizardPanes.length) showWizardStep(0);
 
     // ---- Voice-to-text (Web Speech API) ----
     const voiceBtn = document.getElementById('voice-to-text-btn');
     const voiceStatus = document.getElementById('voice-to-text-status');
+    const voiceIndicator = document.getElementById('voice-listening-indicator');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (voiceBtn && SpeechRecognition && descriptionInput) {
         const recognition = new SpeechRecognition();
-        recognition.lang = document.documentElement.lang || 'en-PH';
+        recognition.lang = 'en-PH';
         recognition.interimResults = false;
         recognition.continuous = false;
         let listening = false;
 
+        function setListeningUi(active) {
+            listening = active;
+            voiceBtn.classList.toggle('btn-danger', active);
+            voiceBtn.classList.toggle('btn-outline-secondary', !active);
+            voiceBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            voiceIndicator?.classList.toggle('d-none', !active);
+            if (voiceStatus) {
+                voiceStatus.textContent = active
+                    ? 'Listening… speak now. Tap Voice again to stop.'
+                    : 'Idle — tap Voice to dictate into the description.';
+            }
+        }
+
         voiceBtn.addEventListener('click', () => {
             if (listening) {
-                recognition.stop();
+                try { recognition.stop(); } catch (e) { /* ignore */ }
+                setListeningUi(false);
                 return;
             }
             try {
                 recognition.start();
+                setListeningUi(true);
             } catch (e) {
-                if (voiceStatus) voiceStatus.textContent = 'Could not start voice input.';
+                setListeningUi(false);
+                if (voiceStatus) {
+                    voiceStatus.textContent = window.isSecureContext
+                        ? 'Could not start voice input. Allow microphone access and try again.'
+                        : 'Voice needs HTTPS (or localhost). Open this page over a secure connection.';
+                }
             }
         });
-        recognition.addEventListener('start', () => {
-            listening = true;
-            voiceBtn.classList.add('btn-danger');
-            voiceBtn.classList.remove('btn-outline-secondary');
-            if (voiceStatus) voiceStatus.textContent = 'Listening… speak now.';
-        });
-        recognition.addEventListener('end', () => {
-            listening = false;
-            voiceBtn.classList.remove('btn-danger');
-            voiceBtn.classList.add('btn-outline-secondary');
-            if (voiceStatus) voiceStatus.textContent = '';
-        });
+        recognition.addEventListener('start', () => setListeningUi(true));
+        recognition.addEventListener('end', () => setListeningUi(false));
         recognition.addEventListener('result', (event) => {
             const transcript = Array.from(event.results).map((r) => r[0].transcript).join(' ').trim();
             if (!transcript) return;
             descriptionInput.value = (descriptionInput.value ? `${descriptionInput.value.trim()} ` : '') + transcript;
             descriptionInput.dispatchEvent(new Event('input'));
+            if (voiceStatus) voiceStatus.textContent = 'Captured speech. Tap Voice to add more.';
         });
-        recognition.addEventListener('error', () => {
-            if (voiceStatus) voiceStatus.textContent = 'Voice input unavailable on this device/browser.';
+        recognition.addEventListener('error', (event) => {
+            setListeningUi(false);
+            const code = event?.error || '';
+            const messages = {
+                'not-allowed': 'Microphone permission denied. Allow mic access in the browser.',
+                'no-speech': 'No speech detected. Tap Voice and try again.',
+                'network': 'Network error during voice recognition. Check your connection.',
+                'audio-capture': 'No microphone found on this device.',
+                'aborted': '',
+            };
+            if (voiceStatus) {
+                voiceStatus.textContent = messages[code] || 'Voice input unavailable on this device/browser.';
+            }
         });
+        setListeningUi(false);
     } else if (voiceBtn) {
         voiceBtn.classList.add('d-none');
+        if (voiceStatus) {
+            voiceStatus.textContent = 'Voice dictation is not supported in this browser (try Chrome).';
+        }
     }
 
     // ---- Use current location ----

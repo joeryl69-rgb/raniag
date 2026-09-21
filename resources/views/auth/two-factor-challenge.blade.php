@@ -14,6 +14,12 @@
             <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="form-control @error('code') is-invalid @enderror" id="code" name="code" required autofocus autocomplete="one-time-code">
             @error('code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" value="1" id="trust_device" name="trust_device">
+            <label class="form-check-label" for="trust_device">
+                Trust this device for {{ (int) config('raniag.two_factor.trusted_device_days', 30) }} days
+            </label>
+        </div>
         <button type="submit" class="btn btn-primary w-100">Verify and continue</button>
         <div class="text-center mt-3">
             <a href="{{ route('login') }}">Back to sign in</a>

@@ -73,7 +73,6 @@ class IncidentReportController extends Controller
         if (is_string($idempotencyKey) && $idempotencyKey !== '') {
             Cache::put('report:idem:'.$idempotencyKey, [
                 'tracking_number' => $incident->tracking_number,
-                'access_code' => $incident->plainTrackingPin,
             ], now()->addDay());
         }
 
@@ -81,22 +80,20 @@ class IncidentReportController extends Controller
             return response()->json([
                 'message' => 'Incident report submitted successfully.',
                 'tracking_number' => $incident->tracking_number,
-                'access_code' => $incident->plainTrackingPin,
                 'incident' => $incident,
             ], 201);
         }
 
         return redirect()
             ->route('public.report.success', $incident->tracking_number)
-            ->with('success', 'Your incident report has been submitted successfully.')
-            ->with('tracking_pin', $incident->plainTrackingPin);
+            ->with('success', 'Your incident report has been submitted successfully.');
     }
 
     public function success(string $trackingNumber): View
     {
         return view('public.report.success', [
             'trackingNumber' => strtoupper($trackingNumber),
-            'trackingPin' => session('tracking_pin'),
+            'organization' => config('raniag.organization'),
         ]);
     }
 
@@ -106,14 +103,12 @@ class IncidentReportController extends Controller
             return response()->json([
                 'message' => 'Incident report already submitted.',
                 'tracking_number' => $cached['tracking_number'],
-                'access_code' => $cached['access_code'] ?? null,
                 'duplicate' => true,
             ], 200);
         }
 
         return redirect()
             ->route('public.report.success', $cached['tracking_number'])
-            ->with('success', 'Your incident report was already received.')
-            ->with('tracking_pin', $cached['access_code'] ?? null);
+            ->with('success', 'Your incident report was already received.');
     }
 }
