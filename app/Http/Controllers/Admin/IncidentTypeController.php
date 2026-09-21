@@ -138,7 +138,7 @@ class IncidentTypeController extends Controller
         // just the curated quick-pick grid). Color accepts any preset swatch OR a
         // custom hex value from the color-wheel input, so the admin isn't limited
         // to a fixed palette either.
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:100', 'unique:incident_types,name,'.($ignoreId ?? 'NULL').',id'],
             'description' => ['nullable', 'string', 'max:500'],
             'icon' => ['required', 'string', 'max:64', 'regex:/^bi-[a-z0-9\-]+$/'],
@@ -146,7 +146,18 @@ class IncidentTypeController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
             'default_priority' => ['required', 'string', Rule::in(array_keys(self::PRIORITY_CHOICES))],
+            'resolution_checklist_text' => ['nullable', 'string', 'max:5000'],
         ]);
+
+        $checklist = collect(preg_split('/\r\n|\r|\n/', (string) ($data['resolution_checklist_text'] ?? '')))
+            ->map(fn ($line) => trim($line))
+            ->filter()
+            ->values()
+            ->all();
+        unset($data['resolution_checklist_text']);
+        $data['resolution_checklist'] = $checklist !== [] ? $checklist : null;
+
+        return $data;
     }
 
     private function uniqueSlug(string $name, ?int $ignoreId = null): string

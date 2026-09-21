@@ -16,6 +16,8 @@ class SmsLog extends Model
         'user_id',
         'recipient_phone',
         'message',
+        'direction',
+        'thread_note',
         'status',
         'provider',
         'provider_message_id',

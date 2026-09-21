@@ -127,6 +127,31 @@ class NotificationService
         }
     }
 
+    /**
+     * Staff-initiated SMS to reporter with optional internal thread note (no inbound SMS).
+     */
+    public function smsReporterFromStaff(
+        Incident $incident,
+        string $message,
+        User $user,
+        ?string $threadNote = null,
+    ): void {
+        $smsLog = SmsLog::create([
+            'incident_id' => $incident->id,
+            'user_id' => $user->id,
+            'recipient_phone' => $incident->reporter_phone,
+            'message' => $message,
+            'direction' => 'outbound',
+            'thread_note' => $threadNote,
+            'status' => SmsLogStatus::Pending->value,
+            'provider' => config('services.sms.provider', env('SMS_PROVIDER', 'philsms')),
+            'sent_at' => null,
+            'failed_at' => null,
+        ]);
+
+        DispatchSmsJob::dispatch($smsLog->id)->afterCommit();
+    }
+
     public function notifyAgencyAssigned(Assignment $assignment): void
     {
         $incident = $assignment->incident;

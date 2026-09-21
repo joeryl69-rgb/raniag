@@ -202,6 +202,31 @@
                         @endphp
 
                         @if ($hasActiveAssignment)
+                            <x-responder-field-strip
+                                :incident="$incident"
+                                :assignment="$myAssignment"
+                                :phase-route="route('personnel.incidents.field_phase', $incident)"
+                                :sms-route="route('personnel.incidents.sms_reporter', $incident)"
+                            />
+
+                            @php $smsThread = $incident->smsLogs()->latest()->limit(20)->get(); @endphp
+                            @if ($smsThread->isNotEmpty())
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-2">SMS thread</h6>
+                                    <div class="small border rounded p-2" style="max-height:180px;overflow:auto;">
+                                        @foreach ($smsThread as $sms)
+                                            <div class="mb-2">
+                                                <div class="text-muted">{{ $sms->created_at?->format('M j, g:ia') }} · {{ $sms->status?->value ?? $sms->status }}</div>
+                                                <div>{{ $sms->message }}</div>
+                                                @if ($sms->thread_note)
+                                                    <div class="fst-italic text-muted">Note: {{ $sms->thread_note }}</div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
                             <!-- Actions: Update progress or Resolve -->
                             
                             <!-- Update Status Form -->
@@ -238,6 +263,19 @@
                                     <label for="summary" class="form-label">Resolution Summary <span class="text-danger">*</span></label>
                                     <textarea class="form-control" name="summary" id="summary" rows="3" required minlength="20" placeholder="Summarize the final resolution findings (min 20 chars)..."></textarea>
                                 </div>
+
+                                @php $checklist = $incident->incidentType?->resolution_checklist ?? []; @endphp
+                                @if (is_array($checklist) && count($checklist))
+                                    <div class="mb-3">
+                                        <div class="form-label">Resolution checklist</div>
+                                        @foreach ($checklist as $i => $item)
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="checklist_done[]" value="{{ $item }}" id="chk_{{ $i }}" required>
+                                                <label class="form-check-label" for="chk_{{ $i }}">{{ $item }}</label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
 
                                 <div class="mb-3">
                                     <label for="actions_taken" class="form-label">Actions Taken <span class="text-danger">*</span></label>
@@ -459,6 +497,7 @@
             ]);
         </script>
         <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
+        <script src="{{ asset('js/field-outbox.js') }}?v={{ @filemtime(public_path('js/field-outbox.js')) }}"></script>
         @if ($incident->latitude && $incident->longitude)
                         <style>
                 /* Pin styling now lives in the shared .raniag-marker-pin class

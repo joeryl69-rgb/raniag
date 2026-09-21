@@ -156,6 +156,11 @@
                         </select>
                         <p class="form-text mb-0">Priority a new public report under this type starts at. The agency/admin can still change an individual report's priority afterward — this only sets the starting point.</p>
                     </div>
+                    <div class="mb-1">
+                        <label class="form-label small fw-semibold">Resolution checklist</label>
+                        <textarea name="resolution_checklist_text" id="typeChecklist" class="form-control form-control-sm" rows="4" placeholder="One checklist item per line"></textarea>
+                        <p class="form-text mb-0">Shown to responders when resolving. Leave blank for none.</p>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -205,6 +210,7 @@
         document.getElementById('iconSearch').value = '';
         document.getElementById('typeColor').value = '';
         document.getElementById('typeDefaultPriority').value = 'medium';
+        document.getElementById('typeChecklist').value = '';
         currentDefault = null;
         document.getElementById('iconResetBtn').classList.add('d-none');
         filterIcons();
@@ -227,6 +233,9 @@
         selectIcon(type.icon);
         document.getElementById('typeColor').value = type.color;
         document.getElementById('typeDefaultPriority').value = type.default_priority || 'medium';
+        document.getElementById('typeChecklist').value = Array.isArray(type.resolution_checklist)
+            ? type.resolution_checklist.join('\n')
+            : '';
 
         // Every type (seeded or custom, old or new) now has its own
         // default_icon/default_color captured at creation time, so the

@@ -20,6 +20,8 @@ Route::prefix('personnel')
             Route::get('/{incident}', [IncidentController::class, 'show'])->name('show');
             Route::patch('/{incident}/status', [IncidentController::class, 'updateStatus'])->name('update_status');
             Route::post('/{incident}/accept', [IncidentController::class, 'acceptAssignment'])->name('accept');
+            Route::post('/{incident}/field-phase', [\App\Http\Controllers\Shared\ResponderFieldController::class, 'updateFieldPhase'])->name('field_phase');
+            Route::post('/{incident}/sms-reporter', [\App\Http\Controllers\Shared\ResponderFieldController::class, 'smsReporter'])->name('sms_reporter');
         });
 
         Route::post('/incidents/{incident}/print-requests', [DocumentRequestController::class, 'store'])

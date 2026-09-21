@@ -19,6 +19,7 @@ class Assignment extends Model
         'is_active',
         'acknowledged_at',
         'acknowledged_by',
+        'field_phase',
         'assigned_at',
         'completed_at',
     ];

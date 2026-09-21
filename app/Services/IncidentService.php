@@ -207,6 +207,7 @@ class IncidentService
             $assignment->update([
                 'acknowledged_at' => now(),
                 'acknowledged_by' => $user->id,
+                'field_phase' => 'accepted',
             ]);
 
             $this->activityLogs->log(

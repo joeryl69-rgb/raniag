@@ -56,11 +56,11 @@ Last updated: 2026-09-21 (post Phase 0a–1 access deploy)
 
 | Item | Status |
 |---|---|
-| Mobile-first status strip (accept → en route → on scene → resolved) | REMAINING |
-| Maps navigation deep-link | REMAINING |
-| Per-type resolution checklists | REMAINING |
-| Offline field updates | REMAINING |
-| Outbound SMS thread log (staff ↔ reporter) | REMAINING |
+| Mobile-first status strip (accept → en route → on scene → resolved) | DONE |
+| Maps navigation deep-link | DONE |
+| Per-type resolution checklists | DONE |
+| Offline field updates | DONE |
+| Outbound SMS thread log (staff ↔ reporter) | DONE |
 
 ---
 
