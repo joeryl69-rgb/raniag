@@ -24,6 +24,8 @@ prevents sticky-bottom from staying on screen, so reporters never saw Next.
 - Extra Next at the footer of the current pane
 - Submit sits in the step header on step 4 (Contact) so the last pane cannot render blank
 - Wizard panes drop data-rg-reveal (GSAP left hidden steps at opacity 0)
+- Fixed unclosed GPS lightbox modal that nested Contact inside Evidence (blank step 4)
+- Removed redundant bottom Cancel/Next row (header Back/Next/Submit only)
 - Step dots go back to completed steps
 - Enter in a one-line field advances the wizard instead of submitting
 - Hidden Submit until the last step (unchanged)

@@ -344,19 +344,20 @@
                             <div class="modal-header border-0">
                                 <button type="button" class="btn-close btn-close-white ms-auto" id="gps-lightbox-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                                               <div class="modal-body pt-0 text-center position-relative">
+                            <div class="modal-body pt-0 text-center position-relative">
                                 <div class="gps-review-frame" id="gps-lightbox-frame">
                                     <img id="gps-lightbox-image" class="img-fluid rounded" alt="Full-size evidence preview">
                                     <div class="gps-watermark-overlay" id="gps-lightbox-watermark">
-                                    <div class="gps-watermark-map">
-                                        <img id="gps-lightbox-map-img" alt="Map preview of the captured location">
-                                        <span class="gps-watermark-map-pin is-visible"></span>
-                                    </div>
-                                    <div class="gps-watermark-text">
-                                        <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
-                                        <div class="gps-watermark-line" id="gps-lightbox-coords">—</div>
-                                        <div class="gps-watermark-line" id="gps-lightbox-place">—</div>
-                                        <div class="gps-watermark-line" id="gps-lightbox-time">—</div>
+                                        <div class="gps-watermark-map">
+                                            <img id="gps-lightbox-map-img" alt="Map preview of the captured location">
+                                            <span class="gps-watermark-map-pin is-visible"></span>
+                                        </div>
+                                        <div class="gps-watermark-text">
+                                            <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                                            <div class="gps-watermark-line" id="gps-lightbox-coords">—</div>
+                                            <div class="gps-watermark-line" id="gps-lightbox-place">—</div>
+                                            <div class="gps-watermark-line" id="gps-lightbox-time">—</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -391,7 +392,7 @@
                     <input class="form-check-input" type="checkbox" role="switch" id="is_anonymous" name="is_anonymous"
                            value="1" @checked(old('is_anonymous', true))>
                     <label class="form-check-label fw-semibold" for="is_anonymous">Report anonymously</label>
-                    <div class="form-text mb-0">Leave this on to keep your identity out of the record.</div>
+                    <div class="form-text mb-0">Leave this on to keep your identity out of the record. You can still submit.</div>
                 </div>
                 <div class="row g-3 reporter-fields" id="reporter-fields">
                     <div class="col-md-4">
@@ -415,23 +416,7 @@
                 </div>
             </div>
         </div>
-
-        <div class="card raniag-card p-3 p-lg-4">
-            <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center">
-                <p class="text-muted small mb-0" style="max-width: 46ch;">
-                    <i class="bi bi-shield-lock me-1"></i>Your report is confidential and stored with a full audit trail.
-                </p>
-                <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-report">
-                    <i class="bi bi-send me-2"></i>Submit Report
-                </button>
-            </div>
-        </div>
         </div>{{-- wizard step 3 --}}
-
-        <div class="d-flex flex-wrap gap-2 justify-content-between mb-4" id="wizard-controls">
-            <a href="{{ route('public.home') }}" class="btn btn-outline-secondary">Cancel</a>
-            <button type="button" class="btn btn-primary d-none" id="wizard-next-footer">Next</button>
-        </div>
     </form>
 </div>
 @endsection

@@ -460,7 +460,7 @@
     };
 
     const form = document.getElementById('incident-report-form');
-    const submitButton = document.getElementById('submit-report');
+    const submitButton = document.getElementById('wizard-submit');
 
     if (form && submitButton) {
         form.addEventListener('submit', () => {
@@ -476,7 +476,6 @@
     const wizardPanes = Array.from(document.querySelectorAll('[data-wizard-step]'));
     const wizardBack = document.getElementById('wizard-back');
     const wizardNext = document.getElementById('wizard-next');
-    const wizardNextFooter = document.getElementById('wizard-next-footer');
     const wizardLabel = document.getElementById('wizard-step-label');
     const wizardDots = document.querySelectorAll('#wizard-dots [data-dot]');
     const wizardError = document.getElementById('wizard-step-error');
@@ -512,14 +511,6 @@
             const active = idx === wizardStep;
             pane.classList.toggle('d-none', !active);
             pane.classList.toggle('is-active', active);
-            if (active) {
-                pane.style.removeProperty('display');
-                pane.querySelectorAll('.card').forEach((card) => {
-                    card.style.opacity = '1';
-                    card.style.transform = 'none';
-                    card.style.visibility = 'visible';
-                });
-            }
         });
         if (wizardLabel) {
             wizardLabel.textContent = `Step ${wizardStep + 1} of ${wizardPanes.length} — ${wizardTitles[wizardStep] || ''}`;
@@ -538,11 +529,8 @@
             wizardNext.classList.toggle('d-none', last);
             wizardNext.disabled = false;
         }
-        if (wizardNextFooter) wizardNextFooter.classList.toggle('d-none', last);
         const wizardSubmit = document.getElementById('wizard-submit');
         if (wizardSubmit) wizardSubmit.classList.toggle('d-none', !last);
-        const submitBtn = document.getElementById('submit-report');
-        if (submitBtn) submitBtn.classList.toggle('d-none', !last);
         if (wizardStep === 1) {
             requestAnimationFrame(() => mapInstance?.invalidateSize());
         }
@@ -566,7 +554,6 @@
     }
 
     wizardNext?.addEventListener('click', goNext);
-    wizardNextFooter?.addEventListener('click', goNext);
     wizardBack?.addEventListener('click', (event) => {
         event.preventDefault();
         showWizardStep(wizardStep - 1);
