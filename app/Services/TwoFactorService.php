@@ -189,23 +189,89 @@ class TwoFactorService
     }
 
     /**
-     * "Quick login" recognition — greets a returning user by name on the
-     * bare /login page and pre-fills their email, the way most consumer
-     * sites do for a device that has signed in before. Set on every
-     * successful login regardless of role/2FA, and only ever cleared by
-     * the explicit "Not you?" action (never by logging out — that would
-     * defeat the point).
+     * "Quick login" recognition — a Facebook/Google-style account switcher
+     * on the bare /login page. Every account that has ever signed in
+     * successfully on this browser is listed (most-recent-first, no cap),
+     * so returning staff can tap their avatar instead of retyping an
+     * email. Purely cosmetic — name/email only, never used for
+     * authorization — and independent of the security-bearing
+     * trusted-device cookie above. Set on every successful login
+     * regardless of role/2FA, and only ever removed by the explicit
+     * per-account "remove" action (never by logging out — that would
+     * defeat the point of remembering the device).
+     *
+     * @return list<array{name: string, email: string}>
      */
-    public function issueRecognizedUserCookie(User $user): SymfonyCookie
+    public function recognizedUsers(Request $request): array
     {
-        $value = base64_encode(json_encode([
-            'name' => $user->name,
-            'email' => $user->email,
-        ]));
+        $raw = $request->cookie(self::RECOGNIZED_COOKIE);
+        if (! is_string($raw) || $raw === '') {
+            return [];
+        }
 
+        $decoded = json_decode((string) base64_decode($raw, true), true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $accounts = [];
+        foreach ($decoded as $entry) {
+            if (is_array($entry) && ! empty($entry['email']) && ! empty($entry['name'])) {
+                $accounts[] = ['name' => (string) $entry['name'], 'email' => (string) $entry['email']];
+            }
+        }
+
+        return $accounts;
+    }
+
+    /**
+     * Add/move a user to the front of the recognized-accounts list on this
+     * browser, de-duplicated by email.
+     */
+    public function issueRecognizedUserCookie(Request $request, User $user): SymfonyCookie
+    {
+        $accounts = $this->recognizedUsers($request);
+
+        $accounts = array_values(array_filter(
+            $accounts,
+            fn (array $account) => strcasecmp($account['email'], $user->email) !== 0
+        ));
+
+        array_unshift($accounts, ['name' => $user->name, 'email' => $user->email]);
+
+        return $this->makeRecognizedCookie($accounts);
+    }
+
+    /**
+     * Remove a single account from the recognized list (the "x" on its
+     * avatar), or clear the whole list when no email is given.
+     */
+    public function forgetRecognizedUser(Request $request, ?string $email = null): SymfonyCookie
+    {
+        if ($email === null) {
+            return Cookie::forget(self::RECOGNIZED_COOKIE);
+        }
+
+        $accounts = array_values(array_filter(
+            $this->recognizedUsers($request),
+            fn (array $account) => strcasecmp($account['email'], $email) !== 0
+        ));
+
+        if (empty($accounts)) {
+            return Cookie::forget(self::RECOGNIZED_COOKIE);
+        }
+
+        return $this->makeRecognizedCookie($accounts);
+    }
+
+    /**
+     * @param  list<array{name: string, email: string}>  $accounts
+     */
+    private function makeRecognizedCookie(array $accounts): SymfonyCookie
+    {
         return Cookie::make(
             self::RECOGNIZED_COOKIE,
-            $value,
+            base64_encode(json_encode($accounts)),
             self::RECOGNIZED_COOKIE_DAYS * 24 * 60,
             '/',
             null,
@@ -214,29 +280,6 @@ class TwoFactorService
             false,
             config('session.same_site', 'lax')
         );
-    }
-
-    public function forgetRecognizedUserCookie(): SymfonyCookie
-    {
-        return Cookie::forget(self::RECOGNIZED_COOKIE);
-    }
-
-    /**
-     * @return array{name: string, email: string}|null
-     */
-    public function recognizedUser(Request $request): ?array
-    {
-        $raw = $request->cookie(self::RECOGNIZED_COOKIE);
-        if (! is_string($raw) || $raw === '') {
-            return null;
-        }
-
-        $decoded = json_decode((string) base64_decode($raw, true), true);
-        if (! is_array($decoded) || empty($decoded['email']) || empty($decoded['name'])) {
-            return null;
-        }
-
-        return ['name' => (string) $decoded['name'], 'email' => (string) $decoded['email']];
     }
 
     private function cacheKey(int $userId): string

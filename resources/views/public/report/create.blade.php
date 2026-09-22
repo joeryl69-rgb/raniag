@@ -36,12 +36,6 @@
     #evidence-gate-modal .modal-header { border-bottom: none; padding-bottom: .5rem; }
     #evidence-gate-modal .modal-title { color: #7a4a10; font-size: 1.05rem; }
     #evidence-gate-modal .modal-body { color: var(--rg-ink); padding-top: 0; }
-    /* The scroll-progress bar sits at z-index 2100 (above Bootstrap's
-       default modal/backdrop z-index of 1055/1050), which let it poke
-       through the dim layer. Raise both above it so the backdrop always
-       reads as a full, uninterrupted dim behind the popup. */
-    .modal-backdrop.show { z-index: 2150; opacity: .65; }
-    #evidence-gate-modal { z-index: 2160; }
 </style>
 @endpush
 

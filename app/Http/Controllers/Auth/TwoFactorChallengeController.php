@@ -96,7 +96,7 @@ class TwoFactorChallengeController extends Controller
         $request->session()->regenerate();
 
         $response = redirect()->intended(route($user->homeRoute(), absolute: false))
-            ->withCookie($twoFactor->issueRecognizedUserCookie($user));
+            ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
 
         // Trust is automatic on every successful OTP verification — there is
         // no opt-in checkbox to miss. This is what made OTP feel "random":

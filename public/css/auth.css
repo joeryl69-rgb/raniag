@@ -88,21 +88,39 @@ body {
 .auth-footer a { color: #0b5ed7; text-decoration: none; font-weight: 600; }
 .auth-footer a:hover { text-decoration: underline; }
 
-/* "Quick login" recognition card — greets a returning user on a device
-   that has signed in before, matching the auth panel's brand blue. */
-.rg-quick-login {
+/* Multi-account "quick login" switcher — Facebook/Google-style list of
+   every account that has signed in on this device before. One tap on an
+   avatar row selects that account and jumps straight to the password
+   field; the small "x" removes just that one account. */
+.rg-account-switcher-title { font-size: .8rem; font-weight: 700; color: #5a6b75; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.rg-account-list { display: flex; flex-direction: column; gap: 8px; }
+.rg-account-item {
     display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; border-radius: 12px;
+    padding: 10px 12px; border-radius: 12px;
     background: #eaf2ff; border: 1px solid #cfe0fb;
+    cursor: pointer; text-align: left; width: 100%;
+    font: inherit; color: inherit;
 }
-.rg-quick-login-avatar {
+.rg-account-item:hover, .rg-account-item:focus-visible { background: #dcebff; outline: none; }
+.rg-account-avatar {
     flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
     background: #0b5ed7; color: #fff; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
 }
-.rg-quick-login-info { flex: 1 1 auto; min-width: 0; }
-.rg-quick-login-info .fw-semibold { color: #10203a; }
-.rg-quick-login-switch { flex: 0 0 auto; }
+.rg-account-avatar-add { background: #fff; color: #0b5ed7; border: 1px dashed #9db9e8; }
+.rg-account-info { flex: 1 1 auto; min-width: 0; }
+.rg-account-name { font-weight: 600; color: #10203a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rg-account-email { font-size: .82rem; color: #5a6b75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rg-account-remove-form { flex: 0 0 auto; margin: 0; }
+.rg-account-remove {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%; border: none;
+    background: transparent; color: #5a6b75; font-size: .8rem;
+    padding: 0;
+}
+.rg-account-remove:hover { background: rgba(11, 94, 215, .12); color: #0b5ed7; }
+.rg-account-add { background: #f4f7fb; border: 1px dashed #cbd7e6; }
+.rg-account-add:hover { background: #eaf1fa; }
 
 /* Responsive: stack panels on narrow portrait screens */
 @media (max-width: 860px) {

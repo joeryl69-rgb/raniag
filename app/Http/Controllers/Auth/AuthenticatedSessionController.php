@@ -18,7 +18,7 @@ class AuthenticatedSessionController extends Controller
     public function create(Request $request, TwoFactorService $twoFactor): View
     {
         return view('auth.login', [
-            'recognizedUser' => $twoFactor->recognizedUser($request),
+            'recognizedUsers' => $twoFactor->recognizedUsers($request),
         ]);
     }
 
@@ -36,7 +36,7 @@ class AuthenticatedSessionController extends Controller
                 $request->session()->regenerate();
 
                 return redirect()->intended(route($user->homeRoute(), absolute: false))
-                    ->withCookie($twoFactor->issueRecognizedUserCookie($user));
+                    ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
             }
 
             $request->session()->put('pending_2fa_id', $user->id);
@@ -53,17 +53,20 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         return redirect()->intended(route($user->homeRoute(), absolute: false))
-            ->withCookie($twoFactor->issueRecognizedUserCookie($user));
+            ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
     }
 
     /**
-     * Clear the "quick login" recognition cookie ("Not you?" on the login
-     * page). Deliberately separate from logout, which never touches it —
-     * recognition is meant to survive normal sign-out/sign-in cycles.
+     * Remove one remembered account ("x" on its avatar) or the whole list
+     * ("Add another account" / no email given) from the login page's
+     * account switcher. Deliberately separate from logout, which never
+     * touches this — recognition is meant to survive normal sign-out/
+     * sign-in cycles.
      */
-    public function forgetDevice(TwoFactorService $twoFactor): RedirectResponse
+    public function forgetDevice(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
-        return redirect()->route('login')->withCookie($twoFactor->forgetRecognizedUserCookie());
+        return redirect()->route('login')
+            ->withCookie($twoFactor->forgetRecognizedUser($request, $request->string('email')->toString() ?: null));
     }
 
     /**

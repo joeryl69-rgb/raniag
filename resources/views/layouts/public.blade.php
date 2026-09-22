@@ -73,7 +73,7 @@
         /* ---------- scroll progress ---------- */
         #rg-progress {
             position: fixed; top: 0; left: 0; height: 3px; width: 0%;
-            background: var(--rg-grad); z-index: 2100;
+            background: var(--rg-grad); z-index: 1045; /* above the sticky navbar (1040), below Bootstrap's modal backdrop/modal (1050/1055) so it never sits in front of a dimmed page */
             transition: width .08s linear;
         }
 

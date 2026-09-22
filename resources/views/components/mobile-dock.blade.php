@@ -131,6 +131,14 @@
         .mobile-dock { display: none !important; }
     }
 
+    /* Chrome's print layout emulates a narrow page width, which satisfies
+       the mobile-only `d-lg-none`/min-width:992px rules above and let this
+       dock render across the bottom of every printed page (e.g. QR
+       posters). It has no place in print output regardless of viewport. */
+    @media print {
+        .mobile-dock { display: none !important; }
+    }
+
     [data-theme="dark"] .mobile-dock {
         background: rgba(22, 33, 58, 0.92);
         border-color: rgba(255, 255, 255, 0.08);

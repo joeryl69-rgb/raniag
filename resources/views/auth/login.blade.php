@@ -17,27 +17,55 @@
             <div>Too many login attempts. Please try again in <strong><span id="lockout-countdown">{{ session('lockout_seconds') }}</span>s</strong>.</div>
         </div>
     @endif
-    @php($quickLogin = $recognizedUser && ! old('email'))
-    @if ($quickLogin)
-        <div class="rg-quick-login mb-3">
-            <div class="rg-quick-login-avatar">{{ Str::upper(Str::substr($recognizedUser['name'], 0, 1)) }}</div>
-            <div class="rg-quick-login-info">
-                <div class="fw-semibold">{{ $recognizedUser['name'] }}</div>
-                <div class="small text-muted">{{ $recognizedUser['email'] }}</div>
+    @php($recognizedUsers = $recognizedUsers ?? [])
+    @php($hasRecognized = count($recognizedUsers) > 0)
+    @php($matchedAccount = collect($recognizedUsers)->first(fn ($a) => strcasecmp($a['email'], (string) old('email')) === 0))
+    @php($showSwitcher = $hasRecognized && ! old('email'))
+    @php($lockEmail = (bool) $matchedAccount)
+
+    @if ($hasRecognized)
+        {{-- Facebook/Google-style account switcher: every account that has
+             signed in on this browser before, one tap to continue. --}}
+        <div class="rg-account-switcher mb-3 @if (! $showSwitcher) d-none @endif" id="account-switcher">
+            <div class="rg-account-switcher-title">Choose an account</div>
+            <div class="rg-account-list">
+                @foreach ($recognizedUsers as $account)
+                    <div class="rg-account-item" data-email="{{ $account['email'] }}" role="button" tabindex="0">
+                        <div class="rg-account-avatar">{{ Str::upper(Str::substr($account['name'], 0, 1)) }}</div>
+                        <div class="rg-account-info">
+                            <div class="rg-account-name">{{ $account['name'] }}</div>
+                            <div class="rg-account-email">{{ $account['email'] }}</div>
+                        </div>
+                        <form method="POST" action="{{ route('login.forget-device') }}" class="rg-account-remove-form">
+                            @csrf
+                            <input type="hidden" name="email" value="{{ $account['email'] }}">
+                            <button type="submit" class="rg-account-remove" title="Remove {{ $account['name'] }}" aria-label="Remove {{ $account['name'] }}">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </form>
+                    </div>
+                @endforeach
+                <button type="button" class="rg-account-item rg-account-add" id="rg-add-account">
+                    <div class="rg-account-avatar rg-account-avatar-add"><i class="bi bi-plus-lg"></i></div>
+                    <div class="rg-account-info">
+                        <div class="rg-account-name">Add another account</div>
+                    </div>
+                </button>
             </div>
-            <form method="POST" action="{{ route('login.forget-device') }}" class="rg-quick-login-switch">
-                @csrf
-                <button type="submit" class="btn btn-link btn-sm p-0">Not you?</button>
-            </form>
         </div>
     @endif
-    <form id="login-form" method="POST" action="{{ route('login') }}">
+    <form id="login-form" method="POST" action="{{ route('login') }}" class="@if ($showSwitcher) d-none @endif">
         @csrf
-        <div class="mb-3 @if ($quickLogin) d-none @endif" id="email-field-group">
+        @if ($hasRecognized)
+            <button type="button" class="btn btn-link btn-sm p-0 mb-3" id="rg-switch-account">
+                <i class="bi bi-arrow-left"></i> Choose a different account
+            </button>
+        @endif
+        <div class="mb-3 @if ($lockEmail) d-none @endif" id="email-field-group">
             <label for="email" class="form-label">Email Address</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-envelope-at"></i></span>
-                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $recognizedUser['email'] ?? '') }}" placeholder="name@example.com" required @if (! $quickLogin) autofocus @endif autocomplete="username">
+                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $matchedAccount['email'] ?? '') }}" placeholder="name@example.com" required @if (! $lockEmail) autofocus @endif autocomplete="username">
             </div>
             @error('email')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
@@ -45,7 +73,7 @@
             <label for="password" class="form-label">Password</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" placeholder="Password" required @if ($quickLogin) autofocus @endif autocomplete="current-password">
+                <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" placeholder="Password" required @if ($lockEmail) autofocus @endif autocomplete="current-password">
                 <button class="btn btn-outline-secondary" type="button" id="toggle-password">Show password</button>
             </div>
             @error('password')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
@@ -70,6 +98,41 @@
             const spinner = document.getElementById('login-spinner');
             const passwordInput = document.getElementById('password');
             const toggleButton = document.getElementById('toggle-password');
+            const emailInput = document.getElementById('email');
+            const emailGroup = document.getElementById('email-field-group');
+            const switcher = document.getElementById('account-switcher');
+            const switchAccountButton = document.getElementById('rg-switch-account');
+            const addAccountButton = document.getElementById('rg-add-account');
+
+            function chooseAccount(email) {
+                if (emailInput) emailInput.value = email || '';
+                if (emailGroup) emailGroup.classList.toggle('d-none', !!email);
+                switcher?.classList.add('d-none');
+                form?.classList.remove('d-none');
+                (email ? passwordInput : emailInput)?.focus();
+            }
+
+            switcher?.querySelectorAll('.rg-account-item[data-email]').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    chooseAccount(item.dataset.email);
+                });
+                item.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        chooseAccount(item.dataset.email);
+                    }
+                });
+                item.querySelector('.rg-account-remove-form')?.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            });
+            addAccountButton?.addEventListener('click', function () {
+                chooseAccount('');
+            });
+            switchAccountButton?.addEventListener('click', function () {
+                form?.classList.add('d-none');
+                switcher?.classList.remove('d-none');
+            });
             if (toggleButton && passwordInput) {
                 toggleButton.addEventListener('click', function () {
                     const showing = passwordInput.type === 'text';

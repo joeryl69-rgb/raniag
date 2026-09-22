@@ -8,7 +8,7 @@
             <p class="text-muted mb-0">Create, edit, and delete barangay QR posters. Scanning opens the public report form with that barangay prefilled.</p>
         </div>
         @if ($posters->where('is_active', true)->isNotEmpty())
-            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+            <button type="button" class="btn btn-outline-secondary no-print" onclick="window.print()">
                 <i class="bi bi-printer me-1"></i>Print active posters
             </button>
         @endif
@@ -18,98 +18,123 @@
         <div class="alert alert-danger no-print"><ul class="mb-0">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
 
-    <div class="row g-4">
-        <div class="col-lg-4 no-print">
-            <div class="card raniag-card shadow-sm border-0">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">{{ $editing ? 'Edit poster' : 'Create poster' }}</h5>
+    {{-- One task at a time instead of the create form, the posters table,
+         and the full-size branded preview grid all competing on one
+         screen — same reasoning as the Hazard mapping page's tab rework. --}}
+    <ul class="nav nav-tabs mb-3 no-print" id="qr-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-manage-btn" data-bs-toggle="tab" data-bs-target="#tab-manage" type="button" role="tab">
+                <i class="bi bi-qr-code me-1"></i>Manage posters
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-previews-btn" data-bs-toggle="tab" data-bs-target="#tab-previews" type="button" role="tab">
+                <i class="bi bi-image me-1"></i>Poster previews &amp; print
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        {{-- ================= MANAGE POSTERS ================= --}}
+        <div class="tab-pane fade show active" id="tab-manage" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card raniag-card shadow-sm border-0">
+                        <div class="card-header raniag-card-header bg-white py-3">
+                            <h5 class="mb-0 fw-bold">{{ $editing ? 'Edit poster' : 'Create poster' }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ $editing ? route('admin.qr_posters.update', $editing) : route('admin.qr_posters.store') }}">
+                                @csrf
+                                @if ($editing)
+                                    @method('PUT')
+                                @endif
+                                <div class="mb-3">
+                                    <label class="form-label" for="title">Title</label>
+                                    <input type="text" name="title" id="title" class="form-control" required maxlength="120"
+                                           value="{{ old('title', $editing?->title) }}" placeholder="e.g. Tabba barangay hall">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="barangay">Barangay</label>
+                                    <select name="barangay" id="barangay" class="form-select" required>
+                                        <option value="">Select barangay…</option>
+                                        @foreach ($barangays as $barangay)
+                                            <option value="{{ $barangay }}" @selected(old('barangay', $editing?->barangay) === $barangay)>{{ $barangay }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="form-text">Only barangays without a poster yet are listed — one poster per barangay.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="notes">Notes <span class="text-muted">(optional)</span></label>
+                                    <input type="text" name="notes" id="notes" class="form-control" maxlength="255"
+                                           value="{{ old('notes', $editing?->notes) }}" placeholder="Placement / print notes">
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active"
+                                           @checked(old('is_active', $editing?->is_active ?? true))>
+                                    <label class="form-check-label" for="is_active">Active (include when printing)</label>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary">{{ $editing ? 'Update poster' : 'Create poster' }}</button>
+                                    @if ($editing)
+                                        <a href="{{ route('admin.qr_posters.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                                    @endif
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ $editing ? route('admin.qr_posters.update', $editing) : route('admin.qr_posters.store') }}">
-                        @csrf
-                        @if ($editing)
-                            @method('PUT')
-                        @endif
-                        <div class="mb-3">
-                            <label class="form-label" for="title">Title</label>
-                            <input type="text" name="title" id="title" class="form-control" required maxlength="120"
-                                   value="{{ old('title', $editing?->title) }}" placeholder="e.g. Tabba barangay hall">
+
+                <div class="col-lg-8">
+                    <div class="card raniag-card shadow-sm border-0">
+                        <div class="card-header raniag-card-header bg-white py-3">
+                            <h5 class="mb-0 fw-bold">Saved posters ({{ $posters->count() }})</h5>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="barangay">Barangay</label>
-                            <select name="barangay" id="barangay" class="form-select" required>
-                                <option value="">Select barangay…</option>
-                                @foreach ($barangays as $barangay)
-                                    <option value="{{ $barangay }}" @selected(old('barangay', $editing?->barangay) === $barangay)>{{ $barangay }}</option>
-                                @endforeach
-                            </select>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Barangay</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($posters as $poster)
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">{{ $poster->title }}</div>
+                                                @if ($poster->notes)<div class="small text-muted">{{ $poster->notes }}</div>@endif
+                                            </td>
+                                            <td>{{ $poster->barangay }}</td>
+                                            <td>
+                                                <span class="badge {{ $poster->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">
+                                                    {{ $poster->is_active ? 'Active' : 'Inactive' }}
+                                                </span>
+                                            </td>
+                                            <td class="text-end text-nowrap">
+                                                <a href="{{ route('admin.qr_posters.index', ['edit' => $poster->id]) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                <form method="POST" action="{{ route('admin.qr_posters.destroy', $poster) }}" class="d-inline" onsubmit="return confirm('Delete this QR poster?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="4" class="text-muted">No posters yet. Create one on the left.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="notes">Notes <span class="text-muted">(optional)</span></label>
-                            <input type="text" name="notes" id="notes" class="form-control" maxlength="255"
-                                   value="{{ old('notes', $editing?->notes) }}" placeholder="Placement / print notes">
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active"
-                                   @checked(old('is_active', $editing?->is_active ?? true))>
-                            <label class="form-check-label" for="is_active">Active (include when printing)</label>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="submit" class="btn btn-primary">{{ $editing ? 'Update poster' : 'Create poster' }}</button>
-                            @if ($editing)
-                                <a href="{{ route('admin.qr_posters.index') }}" class="btn btn-outline-secondary">Cancel</a>
-                            @endif
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-8">
-            <div class="card raniag-card shadow-sm border-0 mb-4 no-print">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">Saved posters ({{ $posters->count() }})</h5>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-sm mb-0 align-middle">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Barangay</th>
-                                <th>Status</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($posters as $poster)
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">{{ $poster->title }}</div>
-                                        @if ($poster->notes)<div class="small text-muted">{{ $poster->notes }}</div>@endif
-                                    </td>
-                                    <td>{{ $poster->barangay }}</td>
-                                    <td>
-                                        <span class="badge {{ $poster->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">
-                                            {{ $poster->is_active ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end text-nowrap">
-                                        <a href="{{ route('admin.qr_posters.index', ['edit' => $poster->id]) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                        <form method="POST" action="{{ route('admin.qr_posters.destroy', $poster) }}" class="d-inline" onsubmit="return confirm('Delete this QR poster?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="4" class="text-muted">No posters yet. Create one on the left.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
+        {{-- ================= POSTER PREVIEWS & PRINT ================= --}}
+        <div class="tab-pane fade" id="tab-previews" role="tabpanel">
             <div class="card raniag-card shadow-sm border-0" id="qr-preview-panel">
                 <div class="card-header raniag-card-header bg-white py-3 no-print">
                     <h5 class="mb-0 fw-bold">Poster previews</h5>
@@ -162,6 +187,8 @@
 
 @push('styles')
 <style>
+#qr-tabs .nav-link { font-weight: 600; }
+#qr-tabs .nav-link.active { color: #1a365d; }
 .raniag-poster {
     border: 1px solid var(--rg-line, #dee2e6);
     border-radius: 14px;
@@ -194,7 +221,12 @@
 .raniag-poster-actions { padding: 0 20px 18px; text-align: center; }
 
 @media print {
-    .sidebar, .navbar, .btn, .nav-section-label, .no-print { display: none !important; }
+    .sidebar, .navbar, .btn, .nav-section-label, .nav-tabs, .no-print { display: none !important; }
+    /* Printing must show the posters regardless of which tab is active
+       on screen — force the previews pane visible and the manage pane
+       hidden, overriding Bootstrap's tab-pane display toggling. */
+    #tab-manage { display: none !important; }
+    #tab-previews { display: block !important; opacity: 1 !important; }
     #qr-preview-panel { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
     #qr-preview-panel .card-body { padding: 0 !important; }
     #qr-print-grid { display: block !important; }
