@@ -104,6 +104,12 @@
 
     function hasClientEvidence() {
         if ((evidenceFileInput?.files?.length || 0) > 0) return true;
+        // GPS camera keeps captures in memory; prefer that over a stale
+        // hidden field when deciding whether contact info is required.
+        if (typeof window.RANIAG_GPS_API?.evidenceCount === 'function'
+            && window.RANIAG_GPS_API.evidenceCount() > 0) {
+            return true;
+        }
         if (captureLogInput?.value) {
             try {
                 const parsed = JSON.parse(captureLogInput.value);
@@ -528,12 +534,121 @@
     const form = document.getElementById('incident-report-form');
     const submitButton = document.getElementById('wizard-submit');
 
+    function resetSubmitButton() {
+        if (!submitButton) return;
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Submit Report';
+        window.hideLoadingOverlay?.();
+    }
+
+    function showSubmitErrors(payload) {
+        const messages = [];
+        if (payload?.errors && typeof payload.errors === 'object') {
+            Object.values(payload.errors).forEach((list) => {
+                (Array.isArray(list) ? list : [list]).forEach((msg) => {
+                    if (msg) messages.push(String(msg));
+                });
+            });
+        } else if (payload?.message) {
+            messages.push(String(payload.message));
+        }
+        if (!messages.length) {
+            messages.push('Please check the form and try again.');
+        }
+
+        let banner = document.getElementById('report-submit-errors');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'report-submit-errors';
+            banner.className = 'alert alert-danger';
+            banner.setAttribute('role', 'alert');
+            form?.prepend(banner);
+        }
+        banner.innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Please correct the following:</strong><ul class="mb-0 mt-2">${
+            messages.map((msg) => {
+                const safe = String(msg)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                return `<li>${safe}</li>`;
+            }).join('')
+        }</ul>`;
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Highlight contact fields when those are the problem, without a
+        // full page reload that would wipe GPS camera FileList evidence.
+        ['reporter_name', 'reporter_phone', 'reporter_email'].forEach((name) => {
+            const input = document.getElementById(name);
+            if (!input) return;
+            const failed = !!(payload?.errors && payload.errors[name]);
+            input.classList.toggle('is-invalid', failed);
+        });
+        applyEvidenceGate();
+        if (wizardPanes.length) showWizardStep(3);
+    }
+
     if (form && submitButton) {
-        form.addEventListener('submit', () => {
+        // Submit via fetch so a validation error (e.g. missing name) does
+        // NOT full-page redirect. Browser redirects discard FileList, which
+        // made a successful GPS capture look like "no photo attached".
+        form.addEventListener('submit', async (event) => {
+            if (!navigator.onLine) {
+                // Offline outbox handler (capture phase) owns this path.
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
-            if (typeof window.showLoadingOverlay === 'function') {
-                window.showLoadingOverlay('Submitting your report, please wait...');
+            window.showLoadingOverlay?.('Submitting your report, please wait...');
+            document.getElementById('report-submit-errors')?.remove();
+
+            const keyInput = document.getElementById('idempotency_key');
+            if (keyInput && !keyInput.value) {
+                keyInput.value = (crypto.randomUUID && crypto.randomUUID())
+                    || (`idem-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+            }
+
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    },
+                    credentials: 'same-origin',
+                });
+
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok || res.status === 201) {
+                    const tracking = data.tracking_number;
+                    if (tracking) {
+                        window.location.href = `/report/${encodeURIComponent(tracking)}/success`;
+                        return;
+                    }
+                }
+
+                if (res.status === 422) {
+                    showSubmitErrors(data);
+                    resetSubmitButton();
+                    return;
+                }
+
+                showSubmitErrors({
+                    message: data.message || `Submit failed (${res.status}). Please try again.`,
+                });
+                resetSubmitButton();
+            } catch (err) {
+                console.error(err);
+                showSubmitErrors({
+                    message: 'Network error while submitting. Check your connection and try again.',
+                });
+                resetSubmitButton();
             }
         });
     }

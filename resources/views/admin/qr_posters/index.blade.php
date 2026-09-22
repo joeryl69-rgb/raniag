@@ -223,45 +223,119 @@
 @media print {
     @page {
         size: A4 portrait;
-        margin: 0;
+        margin: 12mm;
     }
 
-    html, body {
+    /* visibility:hidden leaves chrome in the layout flow and pushes the
+       poster onto page 2 (blank first sheet). Hide non-print UI with
+       display:none instead, and only leave the poster grid in flow. */
+    .sidebar,
+    #sidebar-wrapper,
+    .navbar,
+    .topbar,
+    .btn,
+    .nav-section-label,
+    .nav-tabs,
+    .no-print,
+    .mobile-dock,
+    #global-loading-overlay {
+        display: none !important;
+    }
+
+    #tab-manage {
+        display: none !important;
+    }
+
+    #tab-previews {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    body {
         margin: 0 !important;
         padding: 0 !important;
         background: #fff !important;
     }
 
-    body * {
-        visibility: hidden !important;
+    #wrapper,
+    #page-content-wrapper,
+    .container-fluid,
+    .tab-content,
+    #qr-preview-panel,
+    #qr-preview-panel .card-body {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        width: 100% !important;
+        max-width: none !important;
     }
 
-    #tab-previews,
-    #tab-previews * {
-        visibility: visible !important;
+    #qr-preview-panel {
+        border-radius: 0 !important;
     }
 
-    .sidebar, .navbar, .btn, .nav-section-label, .nav-tabs, .no-print { display: none !important; }
-    /* Printing must show the posters regardless of which tab is active
-       on screen — force the previews pane visible and the manage pane
-       hidden, overriding Bootstrap's tab-pane display toggling. */
-    #tab-manage { display: none !important; }
-    #tab-previews { display: block !important; opacity: 1 !important; }
-    #qr-preview-panel { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
-    #qr-preview-panel .card-body { padding: 0 !important; }
-    #qr-print-grid { display: block !important; }
-    #qr-print-grid > div { width: 100%; page-break-after: always; break-after: page; display: flex; align-items: center; justify-content: center; min-height: 90vh; }
-    #qr-print-grid > div:last-child { page-break-after: auto; break-after: auto; }
-    .raniag-poster { border: none; width: 100%; max-width: 640px; }
-    .raniag-poster-body { padding: 60px 40px; }
-    .raniag-poster-qr { width: 320px; height: 320px; margin: 0 auto; }
-    .raniag-poster-barangay { font-size: 2rem; }
+    #qr-print-grid {
+        display: block !important;
+    }
+
+    #qr-print-grid > div {
+        width: 100% !important;
+        max-width: none !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    #qr-print-grid > div:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    .raniag-poster {
+        border: 1px solid #1a365d;
+        border-radius: 0;
+        width: 100%;
+        max-width: 170mm;
+        height: auto !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .raniag-poster-body {
+        padding: 28px 24px;
+    }
+
+    .raniag-poster-qr {
+        width: 280px;
+        height: 280px;
+        margin: 0 auto;
+    }
+
+    .raniag-poster-qr canvas,
+    .raniag-poster-qr img {
+        width: 280px !important;
+        height: 280px !important;
+    }
+
+    .raniag-poster-barangay {
+        font-size: 1.75rem;
+    }
 }
 </style>
 @endpush
 
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous"></script>
-<script src="{{ asset('js/qr-poster.js') }}"></script>
+<script src="{{ asset('js/qr-poster.js') }}?v={{ @filemtime(public_path('js/qr-poster.js')) }}"></script>
 @endpush
 @endsection

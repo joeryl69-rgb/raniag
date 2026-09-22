@@ -1020,4 +1020,13 @@
 
     refreshManualFiles();
     updateEvidenceBadge();
+
+    window.RANIAG_GPS_API = {
+        evidenceCount() {
+            return captures.length + manualFiles.length;
+        },
+        hasEvidence() {
+            return this.evidenceCount() > 0;
+        },
+    };
 })();

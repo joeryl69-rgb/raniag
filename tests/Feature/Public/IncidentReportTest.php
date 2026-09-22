@@ -129,6 +129,37 @@ test('anonymous users can submit an incident report via json', function () {
         ->assertJsonStructure(['tracking_number', 'incident']);
 });
 
+test('json validation keeps evidence and only asks for name when photo is present', function () {
+    Storage::fake('local');
+    $type = IncidentType::factory()->create();
+
+    $response = $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'GPS-captured evidence should satisfy the contact gate.',
+        'barangay' => 'Santa Cruz',
+        'is_anonymous' => false,
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => [
+            'gps_captures' => json_encode([
+                [
+                    'filename' => 'gps-456.jpg',
+                    'latitude' => 18.472,
+                    'longitude' => 121.325,
+                    'accuracy' => 8,
+                    'captured_at' => now()->toIso8601String(),
+                ],
+            ]),
+        ],
+        'evidence' => [UploadedFile::fake()->image('gps-456.jpg')],
+    ]);
+
+    $response
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['reporter_name'])
+        ->assertJsonMissingValidationErrors(['reporter_email', 'reporter_phone']);
+});
+
 test('users can track an incident by tracking number via web', function () {
     Storage::fake('local');
     $type = IncidentType::factory()->create();
