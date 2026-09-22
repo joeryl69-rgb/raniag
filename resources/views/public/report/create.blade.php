@@ -388,11 +388,19 @@
                 <span>{{ __('Reporter Information') }}</span>
             </div>
             <div class="card-body p-4">
+                <div class="alert alert-warning d-none d-flex gap-2 align-items-start" id="evidence-gate-notice" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                    <div>
+                        <strong>No photo or GPS capture attached.</strong>
+                        Anonymous reporting isn't available without evidence — please leave a phone number or
+                        email so MDRRMO can confirm and follow up on this report.
+                    </div>
+                </div>
                 <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" role="switch" id="is_anonymous" name="is_anonymous"
-                           value="1" @checked(old('is_anonymous', true))>
+                           value="1" @checked(old('is_anonymous', false))>
                     <label class="form-check-label fw-semibold" for="is_anonymous">Report anonymously</label>
-                    <div class="form-text mb-0">Leave this on to keep your identity out of the record. You can still submit.</div>
+                    <div class="form-text mb-0" id="is_anonymous-help">Turn this on to keep your identity out of the record. You can still submit.</div>
                 </div>
                 <div class="row g-3 reporter-fields" id="reporter-fields">
                     <div class="col-md-4">
@@ -402,21 +410,45 @@
                         @error('reporter_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
-                        <label for="reporter_phone" class="form-label">Phone</label>
+                        <label for="reporter_phone" class="form-label">Phone <span class="text-danger d-none" id="reporter_phone-required">*</span></label>
                         <input type="text" class="form-control @error('reporter_phone') is-invalid @enderror"
                                id="reporter_phone" name="reporter_phone" value="{{ old('reporter_phone') }}">
                         @error('reporter_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
-                        <label for="reporter_email" class="form-label">Email</label>
+                        <label for="reporter_email" class="form-label">Email <span class="text-danger d-none" id="reporter_email-required">*</span></label>
                         <input type="email" class="form-control @error('reporter_email') is-invalid @enderror"
                                id="reporter_email" name="reporter_email" value="{{ old('reporter_email') }}">
                         @error('reporter_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="form-text mb-0" id="reporter-contact-help">At least one of phone or email is needed when no photo/GPS capture is attached.</div>
                     </div>
                 </div>
             </div>
         </div>
         </div>{{-- wizard step 3 --}}
+
+        <!-- Shown once when a reporter moves on from Evidence with nothing attached -->
+        <div class="modal fade" id="evidence-gate-modal" tabindex="-1" aria-hidden="true" aria-labelledby="evidence-gate-modal-label">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="evidence-gate-modal-label">
+                            <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>No evidence attached
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">
+                            You haven't taken a GPS photo or uploaded a file, so this report can't be sent anonymously.
+                            On the next step, please leave a phone number or email so MDRRMO can verify and follow up.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
 </div>
 @endsection

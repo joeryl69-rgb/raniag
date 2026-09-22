@@ -157,4 +157,13 @@ class HazardEvacController extends Controller
 
         return back()->with('success', 'Evacuee registered.');
     }
+
+    public function checkOutEvacuee(Evacuee $evacuee): RedirectResponse
+    {
+        if (! $evacuee->checked_out_at) {
+            $evacuee->update(['checked_out_at' => now()]);
+        }
+
+        return back()->with('success', 'Evacuee checked out.');
+    }
 }

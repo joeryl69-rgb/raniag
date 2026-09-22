@@ -112,13 +112,35 @@
 
             <div class="row g-4" id="qr-print-grid">
                 @forelse ($posters->where('is_active', true) as $poster)
-                    <div class="col-sm-6 col-lg-4">
-                        <div class="card raniag-card h-100 text-center p-3 qr-poster-card">
-                            <div class="fw-semibold mb-1">{{ $poster->title }}</div>
-                            <div class="small text-muted mb-2">Brgy. {{ $poster->barangay }}</div>
-                            <img src="{{ $poster->qrImageUrl() }}" alt="QR for {{ $poster->barangay }}" class="img-fluid mx-auto mb-2" width="180" height="180">
-                            <div class="small text-muted">Scan to report an incident</div>
-                            <div class="small text-break mt-2">{{ $poster->reportUrl() }}</div>
+                    <div class="col-lg-6">
+                        <div class="raniag-poster">
+                            <div class="raniag-poster-header">
+                                <img src="{{ asset('images/letterhead/mdrrmo-logo.png') }}" alt="MDRRMO Pamplona" class="raniag-poster-logo">
+                                <div class="raniag-poster-heading">
+                                    <div class="raniag-poster-eyebrow">Republic of the Philippines &middot; Province of Cagayan &middot; Municipality of Pamplona</div>
+                                    <div class="raniag-poster-title">MDRRMO Pamplona &mdash; RANIAG Incident Reporting</div>
+                                </div>
+                                <img src="{{ asset('images/letterhead/bayan-logo.png') }}" alt="Bayan ng Pamplona" class="raniag-poster-logo">
+                            </div>
+                            <div class="raniag-poster-body">
+                                <div class="raniag-poster-barangay">Brgy. {{ $poster->barangay }}</div>
+                                <div class="raniag-poster-qr-wrap">
+                                    <div class="raniag-poster-qr" data-qr-target data-qr-url="{{ $poster->reportUrl() }}" data-qr-title="{{ $poster->title }}">
+                                        <div class="raniag-poster-qr-loading">Generating QR&hellip;</div>
+                                    </div>
+                                </div>
+                                <div class="raniag-poster-scan">SCAN TO REPORT AN INCIDENT</div>
+                                @if ($poster->notes)
+                                    <div class="raniag-poster-notes">{{ $poster->notes }}</div>
+                                @endif
+                                <div class="raniag-poster-url">{{ $poster->reportUrl() }}</div>
+                            </div>
+                            <div class="raniag-poster-actions no-print">
+                                <button type="button" class="btn btn-sm btn-outline-primary raniag-poster-download"
+                                        data-filename="qr-poster-{{ Str::slug($poster->barangay) }}.png">
+                                    <i class="bi bi-download me-1"></i>Download PNG
+                                </button>
+                            </div>
                         </div>
                     </div>
                 @empty
@@ -133,10 +155,53 @@
 
 @push('styles')
 <style>
+.raniag-poster {
+    border: 1px solid var(--rg-line, #dee2e6);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.raniag-poster-header {
+    background: #1a365d;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+}
+.raniag-poster-logo { width: 44px; height: 44px; object-fit: contain; background: #fff; border-radius: 50%; padding: 3px; flex: 0 0 auto; }
+.raniag-poster-heading { flex: 1 1 auto; text-align: center; }
+.raniag-poster-eyebrow { font-size: .65rem; text-transform: uppercase; letter-spacing: .04em; opacity: .85; }
+.raniag-poster-title { font-size: .95rem; font-weight: 700; margin-top: 2px; }
+.raniag-poster-body { padding: 28px 20px; text-align: center; flex: 1 1 auto; }
+.raniag-poster-barangay { font-size: 1.4rem; font-weight: 800; color: #1a365d; margin-bottom: 14px; }
+.raniag-poster-qr-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+.raniag-poster-qr { width: 240px; height: 240px; display: flex; align-items: center; justify-content: center; }
+.raniag-poster-qr-loading { font-size: .75rem; color: #999; }
+.raniag-poster-qr canvas, .raniag-poster-qr img { border-radius: 8px; }
+.raniag-poster-scan { font-weight: 700; letter-spacing: .05em; font-size: .85rem; color: #1a365d; }
+.raniag-poster-notes { font-size: .8rem; color: #666; margin-top: 8px; }
+.raniag-poster-url { font-size: .7rem; color: #999; word-break: break-all; margin-top: 10px; }
+.raniag-poster-actions { padding: 0 20px 18px; text-align: center; }
+
 @media print {
     .sidebar, .navbar, .btn, .nav-section-label, .no-print { display: none !important; }
-    .qr-poster-card { break-inside: avoid; border: 1px solid #ccc; }
+    #qr-print-grid { display: block !important; }
+    #qr-print-grid > div { width: 100%; page-break-after: always; break-after: page; display: flex; align-items: center; justify-content: center; min-height: 90vh; }
+    #qr-print-grid > div:last-child { page-break-after: auto; break-after: auto; }
+    .raniag-poster { border: none; width: 100%; max-width: 640px; }
+    .raniag-poster-body { padding: 60px 40px; }
+    .raniag-poster-qr { width: 320px; height: 320px; margin: 0 auto; }
+    .raniag-poster-barangay { font-size: 2rem; }
 }
 </style>
+@endpush
+
+@push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous"></script>
+<script src="{{ asset('js/qr-poster.js') }}"></script>
 @endpush
 @endsection

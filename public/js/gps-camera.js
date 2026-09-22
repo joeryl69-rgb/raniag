@@ -303,6 +303,9 @@
                 captured_at: item.captured_at,
             }))
         );
+        // Lets the report wizard re-check its "no evidence → contact info
+        // required" gate without polling the capture array itself.
+        window.dispatchEvent(new CustomEvent('raniag:evidence-changed'));
     }
 
     function totalEvidenceCount() {

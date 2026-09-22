@@ -33,6 +33,7 @@ Route::prefix('admin')
         Route::post('/hazard/centers', [HazardEvacController::class, 'storeCenter'])->name('hazard.centers.store');
         Route::delete('/hazard/centers/{center}', [HazardEvacController::class, 'destroyCenter'])->name('hazard.centers.destroy');
         Route::post('/hazard/evacuees', [HazardEvacController::class, 'storeEvacuee'])->name('hazard.evacuees.store');
+        Route::patch('/hazard/evacuees/{evacuee}/check-out', [HazardEvacController::class, 'checkOutEvacuee'])->name('hazard.evacuees.checkout');
 
         Route::get('/qr-posters', [QrPosterController::class, 'index'])->name('qr_posters.index');
         Route::post('/qr-posters', [QrPosterController::class, 'store'])->name('qr_posters.store');

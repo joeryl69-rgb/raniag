@@ -25,7 +25,6 @@ class TwoFactorChallengeController extends Controller
     {
         $request->validate([
             'code' => ['required', 'string', 'size:6'],
-            'trust_device' => ['sometimes', 'boolean'],
         ]);
 
         $userId = $request->session()->get('pending_2fa_id');
@@ -52,7 +51,13 @@ class TwoFactorChallengeController extends Controller
 
         $response = redirect()->intended(route($user->homeRoute(), absolute: false));
 
-        if ($request->boolean('trust_device')) {
+        // Trust is automatic on every successful OTP verification — there is
+        // no opt-in checkbox to miss. This is what made OTP feel "random":
+        // an unchecked-by-default box meant most logins never got trusted,
+        // so the code was asked for over and over regardless of logout.
+        // Ops can still force OTP every time (kiosk/shared devices) via
+        // raniag.two_factor.trusted_device_days = 0.
+        if ($twoFactor->trustedDeviceEnabled()) {
             $response->withCookie($twoFactor->issueTrustedDeviceCookie($user));
         }
 

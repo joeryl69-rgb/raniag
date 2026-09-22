@@ -24,9 +24,4 @@ class QrPoster extends Model
     {
         return route('public.report.create', ['barangay' => $this->barangay], absolute: true);
     }
-
-    public function qrImageUrl(int $size = 220): string
-    {
-        return 'https://api.qrserver.com/v1/create-qr-code/?size='.$size.'x'.$size.'&data='.urlencode($this->reportUrl());
-    }
 }

@@ -74,6 +74,16 @@ class TwoFactorService
         return $stored === true || $stored === 1 || $stored === '1';
     }
 
+    /**
+     * Whether trusted-device cookies should be issued at all. Ops can force
+     * OTP on every login (e.g. shared/kiosk devices) by setting the trusted
+     * days config to 0.
+     */
+    public function trustedDeviceEnabled(): bool
+    {
+        return (int) config('raniag.two_factor.trusted_device_days', 30) > 0;
+    }
+
     public function issueTrustedDeviceCookie(User $user): SymfonyCookie
     {
         $days = max(1, (int) config('raniag.two_factor.trusted_device_days', 30));

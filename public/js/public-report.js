@@ -73,6 +73,54 @@
         syncReporterFields();
     }
 
+    // ---- Evidence gate: no photo + no GPS capture → contact info required ----
+    // Mirrors the server-side rule in StoreIncidentReportRequest so reporters
+    // see a friendly heads-up instead of a validation error after submit.
+    const evidenceFileInput = document.getElementById('evidence');
+    const captureLogInput = document.getElementById('gps-capture-log');
+    const evidenceGateNotice = document.getElementById('evidence-gate-notice');
+    const contactHelp = document.getElementById('reporter-contact-help');
+    const phoneRequiredMark = document.getElementById('reporter_phone-required');
+    const emailRequiredMark = document.getElementById('reporter_email-required');
+    let evidenceGateModalShown = false;
+
+    function hasClientEvidence() {
+        if ((evidenceFileInput?.files?.length || 0) > 0) return true;
+        if (captureLogInput?.value) {
+            try {
+                const parsed = JSON.parse(captureLogInput.value);
+                if (Array.isArray(parsed) && parsed.length > 0) return true;
+            } catch (e) { /* treat as no evidence */ }
+        }
+        return false;
+    }
+
+    function applyEvidenceGate() {
+        const evidenced = hasClientEvidence();
+
+        if (anonymousToggle) {
+            anonymousToggle.disabled = !evidenced;
+            if (!evidenced && anonymousToggle.checked) {
+                anonymousToggle.checked = false;
+                syncReporterFields();
+            }
+        }
+
+        evidenceGateNotice?.classList.toggle('d-none', evidenced);
+        contactHelp?.classList.toggle('d-none', evidenced);
+        phoneRequiredMark?.classList.toggle('d-none', evidenced);
+        emailRequiredMark?.classList.toggle('d-none', evidenced);
+
+        const phoneInput = document.getElementById('reporter_phone');
+        const emailInput = document.getElementById('reporter_email');
+        [phoneInput, emailInput].forEach((input) => {
+            if (input) input.required = !evidenced;
+        });
+    }
+
+    evidenceFileInput?.addEventListener('change', applyEvidenceGate);
+    window.addEventListener('raniag:evidence-changed', applyEvidenceGate);
+
     const latInput = document.getElementById('latitude');
     const lngInput = document.getElementById('longitude');
     const mapElement = document.getElementById('incident-map');
@@ -500,6 +548,18 @@
     function goNext(event) {
         event?.preventDefault();
         if (!validateWizardStep(wizardStep)) return;
+
+        // Leaving Evidence (step 2) for Contact (step 3) with nothing attached:
+        // warn once with a popup, then let the Contact step's own gate
+        // (disabled anonymous toggle, required phone/email) take over.
+        if (wizardStep === 2 && !evidenceGateModalShown && !hasClientEvidence()) {
+            evidenceGateModalShown = true;
+            const modalEl = document.getElementById('evidence-gate-modal');
+            if (modalEl && window.bootstrap?.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+        }
+
         showWizardStep(wizardStep + 1);
     }
 
@@ -533,6 +593,9 @@
         if (wizardSubmit) wizardSubmit.classList.toggle('d-none', !last);
         if (wizardStep === 1) {
             requestAnimationFrame(() => mapInstance?.invalidateSize());
+        }
+        if (wizardStep === 3) {
+            applyEvidenceGate();
         }
         document.getElementById('report-wizard-nav')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -573,7 +636,24 @@
             goNext(event);
         }
     });
-    if (wizardPanes.length) showWizardStep(0);
+    if (wizardPanes.length) {
+        // After a server-side validation redirect (e.g. missing contact info
+        // because no evidence was attached), land the reporter on the step
+        // that actually has the error instead of back at step 1.
+        const stepFields = {
+            0: ['incident_type_id', 'description'],
+            1: ['latitude', 'longitude', 'location_address'],
+            2: ['evidence'],
+            3: ['reporter_name', 'reporter_phone', 'reporter_email'],
+        };
+        const erroredStep = Object.keys(stepFields).find((step) =>
+            stepFields[step].some((name) => form?.querySelector(`.is-invalid[name="${name}"], .is-invalid[name="${name}[]"]`))
+        );
+        showWizardStep(erroredStep !== undefined ? Number(erroredStep) : 0);
+        if (erroredStep !== undefined) {
+            applyEvidenceGate();
+        }
+    }
 
     // ---- Voice-to-text (Web Speech API) ----
     const voiceBtn = document.getElementById('voice-to-text-btn');
