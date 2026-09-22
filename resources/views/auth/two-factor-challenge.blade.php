@@ -1,4 +1,4 @@
-<x-auth-split eyebrow="RANIAG PORTAL" title="Verify it's you" subtitle="We emailed a 6-digit code to your account. Enter it below to finish signing in.">
+<x-auth-split eyebrow="RANIAG PORTAL" title="Two Factor Authentication" subtitle="We emailed a 6-digit code to your account. Enter it below to finish signing in.">
     @if (session('status'))
         <div class="auth-alert auth-alert--info"><i class="bi bi-info-circle-fill"></i><div>{{ session('status') }}</div></div>
     @endif
@@ -13,19 +13,25 @@
     <form method="POST" action="{{ route('two-factor.store') }}">
         @csrf
         <div class="mb-3">
-            <label for="code" class="form-label">Verification code</label>
+            <label for="code" class="form-label">Authentication code</label>
             <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="form-control @error('code') is-invalid @enderror" id="code" name="code" required autofocus autocomplete="one-time-code">
             @error('code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
         @php($trustedDays = (int) config('raniag.two_factor.trusted_device_days', -1))
         @if ($trustedDays !== 0)
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="remember_device" name="remember_device" value="1" checked>
+                <label class="form-check-label fw-semibold" for="remember_device">
+                    Remember this device
+                </label>
+            </div>
             <div class="auth-alert auth-alert--info">
                 <i class="bi bi-shield-check"></i>
                 <div>
                     @if ($trustedDays < 0)
-                        This device will be remembered after you verify, so you won't be asked for a code again on it unless you sign out or it's revoked.
+                        This browser will be remembered for this account after verification, so you won't be asked for a code again unless you sign out or the device is revoked.
                     @else
-                        This device will be remembered for {{ $trustedDays }} {{ Str::plural('day', $trustedDays) }} after you verify, so you won't be asked for a code again until then.
+                        This browser will be remembered for {{ $trustedDays }} {{ Str::plural('day', $trustedDays) }} after verification, so you won't be asked for a code again until then.
                     @endif
                 </div>
             </div>

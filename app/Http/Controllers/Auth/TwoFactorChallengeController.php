@@ -98,13 +98,14 @@ class TwoFactorChallengeController extends Controller
         $response = redirect()->intended(route($user->homeRoute(), absolute: false))
             ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
 
-        // Trust is automatic on every successful OTP verification — there is
-        // no opt-in checkbox to miss. This is what made OTP feel "random":
-        // an unchecked-by-default box meant most logins never got trusted,
-        // so the code was asked for over and over regardless of logout.
-        // Ops can still force OTP every time (kiosk/shared devices) via
-        // raniag.two_factor.trusted_device_days = 0.
-        if ($twoFactor->trustedDeviceEnabled()) {
+        $rememberDevice = $request->boolean('remember_device', true);
+
+        // Trust is explicit on the challenge screen, and it is stored per user so
+        // the same browser can remember multiple accounts (admin + non-admin)
+        // without clobbering the other one. This matches the Facebook/Google
+        // account-switcher pattern, while still allowing kiosk/shared devices to
+        // force OTP on every login with trusted_device_days = 0.
+        if ($rememberDevice && $twoFactor->trustedDeviceEnabled()) {
             $response->withCookie($twoFactor->issueTrustedDeviceCookie($user));
         }
 

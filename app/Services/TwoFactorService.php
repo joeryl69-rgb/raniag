@@ -115,19 +115,42 @@ class TwoFactorService
             return false;
         }
 
-        $parts = explode('|', $raw, 2);
-        if (count($parts) !== 2) {
-            return false;
+        $entries = json_decode($raw, true);
+        if (! is_array($entries)) {
+            // Back-compat with the original single-user cookie format: user_id|token.
+            $parts = explode('|', $raw, 2);
+            if (count($parts) !== 2) {
+                return false;
+            }
+
+            [$userId, $token] = $parts;
+            if ((int) $userId !== (int) $user->id || $token === '') {
+                return false;
+            }
+
+            $stored = Cache::get($this->trustedCacheKey((int) $user->id, $token));
+
+            return $stored === true || $stored === 1 || $stored === '1';
         }
 
-        [$userId, $token] = $parts;
-        if ((int) $userId !== (int) $user->id || $token === '') {
-            return false;
+        foreach ($entries as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $entryUserId = (int) ($entry['user_id'] ?? 0);
+            $token = (string) ($entry['token'] ?? '');
+            if ($entryUserId !== (int) $user->id || $token === '') {
+                continue;
+            }
+
+            $stored = Cache::get($this->trustedCacheKey($entryUserId, $token));
+            if ($stored === true || $stored === 1 || $stored === '1') {
+                return true;
+            }
         }
 
-        $stored = Cache::get($this->trustedCacheKey((int) $user->id, $token));
-
-        return $stored === true || $stored === 1 || $stored === '1';
+        return false;
     }
 
     // Sentinel: trusted_device_days = -1 means trust never expires (until
@@ -173,11 +196,30 @@ class TwoFactorService
             now()->addDays($days)
         );
 
-        $value = $user->id.'|'.$token;
+        $entries = [];
+        $cookieValue = Cookie::get(self::TRUSTED_COOKIE);
+        if (is_string($cookieValue) && $cookieValue !== '') {
+            $decoded = json_decode($cookieValue, true);
+            if (is_array($decoded)) {
+                $entries = $decoded;
+            } else {
+                $legacy = explode('|', $cookieValue, 2);
+                if (count($legacy) === 2) {
+                    $entries = [[ 'user_id' => (int) $legacy[0], 'token' => (string) $legacy[1] ]];
+                }
+            }
+        }
+
+        $entries = array_values(array_filter(
+            $entries,
+            fn (array $entry) => (int) ($entry['user_id'] ?? 0) !== (int) $user->id
+        ));
+
+        $entries[] = ['user_id' => (int) $user->id, 'token' => $token];
 
         return Cookie::make(
             self::TRUSTED_COOKIE,
-            $value,
+            json_encode($entries, JSON_THROW_ON_ERROR),
             $days * 24 * 60,
             '/',
             null,
@@ -262,6 +304,40 @@ class TwoFactorService
         }
 
         return $this->makeRecognizedCookie($accounts);
+    }
+
+    public function forgetTrustedDevice(Request $request, User $user): SymfonyCookie
+    {
+        $raw = $request->cookie(self::TRUSTED_COOKIE);
+        if (! is_string($raw) || $raw === '') {
+            return Cookie::forget(self::TRUSTED_COOKIE);
+        }
+
+        $entries = json_decode($raw, true);
+        if (! is_array($entries)) {
+            return Cookie::forget(self::TRUSTED_COOKIE);
+        }
+
+        $filtered = array_values(array_filter(
+            $entries,
+            fn (array $entry) => (int) ($entry['user_id'] ?? 0) !== (int) $user->id
+        ));
+
+        if (empty($filtered)) {
+            return Cookie::forget(self::TRUSTED_COOKIE);
+        }
+
+        return Cookie::make(
+            self::TRUSTED_COOKIE,
+            json_encode($filtered, JSON_THROW_ON_ERROR),
+            self::PERMANENT_TTL_DAYS * 24 * 60,
+            '/',
+            null,
+            config('session.secure'),
+            true,
+            false,
+            config('session.same_site', 'lax')
+        );
     }
 
     /**

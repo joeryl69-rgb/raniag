@@ -2,8 +2,24 @@
 
 use App\Models\Incident;
 use App\Models\IncidentType;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+
+test('two factor challenge page uses the authentication wording', function () {
+    $user = User::factory()->create([
+        'email' => 'ops@example.com',
+        'password' => bcrypt('secret123'),
+        'role' => 'administrator',
+    ]);
+
+    session(['pending_2fa_id' => $user->id]);
+
+    $this->get(route('two-factor.challenge'))
+        ->assertOk()
+        ->assertSee('Two Factor Authentication', false)
+        ->assertDontSee('Verify it\'s you', false);
+});
 
 test('public home page is accessible', function () {
     $this->get(route('public.home'))

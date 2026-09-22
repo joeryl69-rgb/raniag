@@ -557,13 +557,19 @@
         if (!validateWizardStep(wizardStep)) return;
 
         // Leaving Evidence (step 2) for Contact (step 3) with nothing attached:
-        // warn once with a popup, then let the Contact step's own gate
-        // (disabled anonymous toggle, required phone/email) take over.
+        // warn once with a popup, then stop on this step until the reporter
+        // dismisses the alert. This prevents the modal from appearing and the
+        // wizard from still advancing underneath it, leaving the page stuck.
         if (wizardStep === 2 && !evidenceGateModalShown && !hasClientEvidence()) {
             evidenceGateModalShown = true;
             const modalEl = document.getElementById('evidence-gate-modal');
             if (modalEl && window.bootstrap?.Modal) {
-                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    showWizardStep(wizardStep + 1);
+                }, { once: true });
+                return;
             }
         }
 

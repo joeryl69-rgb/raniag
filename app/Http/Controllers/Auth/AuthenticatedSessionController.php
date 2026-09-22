@@ -72,13 +72,19 @@ class AuthenticatedSessionController extends Controller
     /**
      * Destroy an authenticated session.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
+        $user = Auth::guard('web')->user();
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();
+
+        if ($user) {
+            return redirect('/')->withCookie($twoFactor->forgetTrustedDevice($request, $user));
+        }
 
         return redirect('/');
     }

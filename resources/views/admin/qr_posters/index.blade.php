@@ -221,6 +221,26 @@
 .raniag-poster-actions { padding: 0 20px 18px; text-align: center; }
 
 @media print {
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    body * {
+        visibility: hidden !important;
+    }
+
+    #tab-previews,
+    #tab-previews * {
+        visibility: visible !important;
+    }
+
     .sidebar, .navbar, .btn, .nav-section-label, .nav-tabs, .no-print { display: none !important; }
     /* Printing must show the posters regardless of which tab is active
        on screen — force the previews pane visible and the manage pane
