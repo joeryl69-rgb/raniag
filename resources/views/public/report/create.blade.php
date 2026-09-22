@@ -23,6 +23,25 @@
     .report-wizard-pane.is-active,
     .report-wizard-pane:not(.d-none) { display: block !important; }
     .report-wizard-pane.is-active .card { opacity: 1 !important; transform: none !important; visibility: visible !important; }
+
+    /* Evidence-gate popup — same alert-warning accent language used across
+       the app (border-left accent, --rg-radius corners) instead of a
+       generic Bootstrap modal, with a guaranteed full-page dim behind it. */
+    #evidence-gate-modal .modal-content {
+        border: none;
+        border-left: 4px solid #d9852b;
+        border-radius: var(--rg-radius);
+        box-shadow: var(--rg-shadow-lg, 0 24px 48px -20px rgba(0,0,0,.45));
+    }
+    #evidence-gate-modal .modal-header { border-bottom: none; padding-bottom: .5rem; }
+    #evidence-gate-modal .modal-title { color: #7a4a10; font-size: 1.05rem; }
+    #evidence-gate-modal .modal-body { color: var(--rg-ink); padding-top: 0; }
+    /* The scroll-progress bar sits at z-index 2100 (above Bootstrap's
+       default modal/backdrop z-index of 1055/1050), which let it poke
+       through the dim layer. Raise both above it so the backdrop always
+       reads as a full, uninterrupted dim behind the popup. */
+    .modal-backdrop.show { z-index: 2150; opacity: .65; }
+    #evidence-gate-modal { z-index: 2160; }
 </style>
 @endpush
 
@@ -191,7 +210,8 @@
                         <label for="barangay" class="form-label">Barangay</label>
                         <input class="form-control @error('barangay') is-invalid @enderror" list="barangay-list"
                                id="barangay" name="barangay" value="{{ old('barangay', $prefillBarangay) }}"
-                               placeholder="{{ $prefillBarangay ? 'Prefill from QR — confirm or change' : 'Auto-filled from GPS' }}">
+                               placeholder="{{ $prefillBarangay ? 'Prefill from QR' : 'Auto-filled from GPS' }}"
+                               readonly aria-readonly="true">
                         <datalist id="barangay-list">
                             @foreach ($barangays as $barangay)
                                 <option value="{{ $barangay }}">
@@ -433,7 +453,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="evidence-gate-modal-label">
-                            <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>No evidence attached
+                            <i class="bi bi-exclamation-triangle-fill" style="color:#d9852b;"></i>No evidence attached
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>

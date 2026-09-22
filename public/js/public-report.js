@@ -4,6 +4,13 @@
     // global `L` name. The map must keep using the real Leaflet namespace.
     const leaflet = window.L;
 
+    // Every fresh render of this page (first visit, or the server
+    // redirecting back with validation errors after a submit) must start
+    // with the loading overlay hidden. The overlay is only ever shown by
+    // the submit handler below, right before a real network request goes
+    // out — never on page boot.
+    window.hideLoadingOverlay?.();
+
     const typeCards = document.querySelectorAll('.raniag-type-card');
     typeCards.forEach((card) => {
         card.addEventListener('click', () => {

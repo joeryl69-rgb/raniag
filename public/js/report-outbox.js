@@ -161,10 +161,16 @@
                 console.error(e);
                 alert('Could not save the report offline. Please try again when you have a signal.');
             } finally {
-                const submitButton = document.getElementById('submit-report');
+                // The submit-showLoadingOverlay handler in public-report.js
+                // runs before this (registered first), so the overlay is
+                // already visible by the time we get here — this is the
+                // path that used to leave reporters stuck on the loading
+                // screen with no real network request ever going out.
+                window.hideLoadingOverlay?.();
+                const submitButton = document.getElementById('wizard-submit');
                 if (submitButton) {
                     submitButton.disabled = false;
-                    submitButton.innerHTML = '<i class="bi bi-send me-2"></i>Submit Report';
+                    submitButton.innerHTML = 'Submit Report';
                 }
             }
         }, true);

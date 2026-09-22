@@ -17,13 +17,27 @@
             <div>Too many login attempts. Please try again in <strong><span id="lockout-countdown">{{ session('lockout_seconds') }}</span>s</strong>.</div>
         </div>
     @endif
+    @php($quickLogin = $recognizedUser && ! old('email'))
+    @if ($quickLogin)
+        <div class="rg-quick-login mb-3">
+            <div class="rg-quick-login-avatar">{{ Str::upper(Str::substr($recognizedUser['name'], 0, 1)) }}</div>
+            <div class="rg-quick-login-info">
+                <div class="fw-semibold">{{ $recognizedUser['name'] }}</div>
+                <div class="small text-muted">{{ $recognizedUser['email'] }}</div>
+            </div>
+            <form method="POST" action="{{ route('login.forget-device') }}" class="rg-quick-login-switch">
+                @csrf
+                <button type="submit" class="btn btn-link btn-sm p-0">Not you?</button>
+            </form>
+        </div>
+    @endif
     <form id="login-form" method="POST" action="{{ route('login') }}">
         @csrf
-        <div class="mb-3">
+        <div class="mb-3 @if ($quickLogin) d-none @endif" id="email-field-group">
             <label for="email" class="form-label">Email Address</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-envelope-at"></i></span>
-                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}" placeholder="name@example.com" required autofocus autocomplete="username">
+                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $recognizedUser['email'] ?? '') }}" placeholder="name@example.com" required @if (! $quickLogin) autofocus @endif autocomplete="username">
             </div>
             @error('email')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
@@ -31,16 +45,12 @@
             <label for="password" class="form-label">Password</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" placeholder="Password" required autocomplete="current-password">
+                <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" placeholder="Password" required @if ($quickLogin) autofocus @endif autocomplete="current-password">
                 <button class="btn btn-outline-secondary" type="button" id="toggle-password">Show password</button>
             </div>
             @error('password')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="remember" id="remember_me">
-                <label class="form-check-label small" for="remember_me">Remember me</label>
-            </div>
+        <div class="d-flex align-items-center justify-content-end mb-4">
             @if (Route::has('password.request'))
                 <a href="{{ route('password.request') }}" class="small fw-semibold text-decoration-none" style="color:#0b5ed7;">Forgot password?</a>
             @endif

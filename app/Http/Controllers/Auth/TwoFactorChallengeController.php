@@ -12,13 +12,48 @@ use Illuminate\View\View;
 
 class TwoFactorChallengeController extends Controller
 {
-    public function create(Request $request): View|RedirectResponse
+    public function create(Request $request, TwoFactorService $twoFactor): View|RedirectResponse
     {
-        if (! $request->session()->has('pending_2fa_id')) {
+        $userId = $request->session()->get('pending_2fa_id');
+        if (! $userId) {
             return redirect()->route('login');
         }
 
-        return view('auth.two-factor-challenge');
+        $user = User::query()->find($userId);
+
+        return view('auth.two-factor-challenge', [
+            'resendAvailableInSeconds' => $user ? $twoFactor->resendAvailableInSeconds($user) : 0,
+        ]);
+    }
+
+    /**
+     * Re-send a fresh OTP to the same pending login, throttled so mashing
+     * the button can't be used to spam the reporter's inbox. Also gives a
+     * genuine dead end (expired code, nothing arrived) a way out besides
+     * going all the way back to re-enter the password.
+     */
+    public function resend(Request $request, TwoFactorService $twoFactor): RedirectResponse
+    {
+        $userId = $request->session()->get('pending_2fa_id');
+        if (! $userId) {
+            return redirect()->route('login');
+        }
+
+        $user = User::query()->find($userId);
+        if (! $user || ! $user->is_active) {
+            $request->session()->forget('pending_2fa_id');
+
+            return redirect()->route('login')->withErrors(['email' => 'Session expired. Please sign in again.']);
+        }
+
+        $wait = $twoFactor->resendAvailableInSeconds($user);
+        if ($wait > 0) {
+            return back()->withErrors(['code' => "Please wait {$wait}s before requesting another code."]);
+        }
+
+        $twoFactor->sendLoginOtp($user);
+
+        return back()->with('status', 'A new verification code has been sent.');
     }
 
     public function store(Request $request, TwoFactorService $twoFactor): RedirectResponse
@@ -34,22 +69,34 @@ class TwoFactorChallengeController extends Controller
 
         $user = User::query()->find($userId);
         if (! $user || ! $user->is_active) {
-            $request->session()->forget(['pending_2fa_id', 'pending_2fa_remember']);
+            $request->session()->forget('pending_2fa_id');
 
             return redirect()->route('login')->withErrors(['email' => 'Session expired. Please sign in again.']);
         }
 
         if (! $twoFactor->verify($user, $request->string('code')->toString())) {
+            // Cap the number of guesses against the 6-digit code (1M
+            // combinations) instead of allowing unlimited attempts within
+            // the OTP's TTL.
+            if ($twoFactor->recordFailedAttempt($user)) {
+                $request->session()->forget('pending_2fa_id');
+
+                return redirect()->route('login')->withErrors([
+                    'email' => 'Too many incorrect codes. Please sign in again.',
+                ]);
+            }
+
             return back()->withErrors(['code' => 'Invalid or expired verification code.']);
         }
 
-        $remember = (bool) $request->session()->pull('pending_2fa_remember', false);
+        $twoFactor->clearAttempts($user);
         $request->session()->forget('pending_2fa_id');
 
-        Auth::login($user, $remember);
+        Auth::login($user);
         $request->session()->regenerate();
 
-        $response = redirect()->intended(route($user->homeRoute(), absolute: false));
+        $response = redirect()->intended(route($user->homeRoute(), absolute: false))
+            ->withCookie($twoFactor->issueRecognizedUserCookie($user));
 
         // Trust is automatic on every successful OTP verification — there is
         // no opt-in checkbox to miss. This is what made OTP feel "random":

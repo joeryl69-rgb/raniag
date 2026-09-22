@@ -15,9 +15,11 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(Request $request, TwoFactorService $twoFactor): View
     {
-        return view('auth.login');
+        return view('auth.login', [
+            'recognizedUser' => $twoFactor->recognizedUser($request),
+        ]);
     }
 
     /**
@@ -28,17 +30,16 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $user = Auth::user();
-        $remember = $request->boolean('remember');
 
         if ($user && $twoFactor->requiredFor($user)) {
             if ($twoFactor->hasTrustedDevice($request, $user)) {
                 $request->session()->regenerate();
 
-                return redirect()->intended(route($user->homeRoute(), absolute: false));
+                return redirect()->intended(route($user->homeRoute(), absolute: false))
+                    ->withCookie($twoFactor->issueRecognizedUserCookie($user));
             }
 
             $request->session()->put('pending_2fa_id', $user->id);
-            $request->session()->put('pending_2fa_remember', $remember);
 
             Auth::guard('web')->logout();
             $request->session()->regenerate();
@@ -51,7 +52,18 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route($user->homeRoute(), absolute: false));
+        return redirect()->intended(route($user->homeRoute(), absolute: false))
+            ->withCookie($twoFactor->issueRecognizedUserCookie($user));
+    }
+
+    /**
+     * Clear the "quick login" recognition cookie ("Not you?" on the login
+     * page). Deliberately separate from logout, which never touches it —
+     * recognition is meant to survive normal sign-out/sign-in cycles.
+     */
+    public function forgetDevice(TwoFactorService $twoFactor): RedirectResponse
+    {
+        return redirect()->route('login')->withCookie($twoFactor->forgetRecognizedUserCookie());
     }
 
     /**

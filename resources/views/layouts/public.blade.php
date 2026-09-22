@@ -782,6 +782,19 @@
         document.body.style.top = '';
         window.scrollTo(0, rgLockedScrollY);
     }
+    window.showLoadingOverlay = showLoadingOverlay;
+    window.hideLoadingOverlay = hideLoadingOverlay;
+
+    // A page can be restored from the browser's back/forward cache with
+    // whatever overlay state it had at the moment of navigating away (e.g.
+    // a form that showed the overlay right before submitting). Without
+    // this, going Back after a submit can leave the overlay stuck forever
+    // with no way to interact with the page again.
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            hideLoadingOverlay();
+        }
+    });
 
     // Reveal helper for content that renders AFTER the initial GSAP/
     // ScrollTrigger setup below (e.g. dashboard KPIs injected once an

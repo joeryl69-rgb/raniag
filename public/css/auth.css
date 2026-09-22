@@ -88,6 +88,22 @@ body {
 .auth-footer a { color: #0b5ed7; text-decoration: none; font-weight: 600; }
 .auth-footer a:hover { text-decoration: underline; }
 
+/* "Quick login" recognition card — greets a returning user on a device
+   that has signed in before, matching the auth panel's brand blue. */
+.rg-quick-login {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 12px;
+    background: #eaf2ff; border: 1px solid #cfe0fb;
+}
+.rg-quick-login-avatar {
+    flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+    background: #0b5ed7; color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.rg-quick-login-info { flex: 1 1 auto; min-width: 0; }
+.rg-quick-login-info .fw-semibold { color: #10203a; }
+.rg-quick-login-switch { flex: 0 0 auto; }
+
 /* Responsive: stack panels on narrow portrait screens */
 @media (max-width: 860px) {
     .auth-shell { grid-template-columns: 1fr; }

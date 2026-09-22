@@ -21,11 +21,18 @@ Route::middleware(['guest', 'no-cache'])->group(function () {
     Route::post('login', [AuthenticatedSessionController::class, 'store'])
         ->withoutMiddleware([ValidateCsrfToken::class]);
 
+    Route::post('login/forget-device', [AuthenticatedSessionController::class, 'forgetDevice'])
+        ->name('login.forget-device');
+
     Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
         ->name('two-factor.challenge');
 
     Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
         ->name('two-factor.store')
+        ->withoutMiddleware([ValidateCsrfToken::class]);
+
+    Route::post('two-factor-challenge/resend', [TwoFactorChallengeController::class, 'resend'])
+        ->name('two-factor.resend')
         ->withoutMiddleware([ValidateCsrfToken::class]);
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])

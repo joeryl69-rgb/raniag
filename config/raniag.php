@@ -22,7 +22,11 @@ return [
     'two_factor' => [
         'enabled' => (bool) env('RANIAG_TWO_FACTOR_ENABLED', true),
         'otp_ttl_minutes' => (int) env('RANIAG_TWO_FACTOR_OTP_TTL', 10),
-        'trusted_device_days' => (int) env('RANIAG_TWO_FACTOR_TRUSTED_DAYS', 30),
+        // -1 = trust never expires until sign-out/revoke (default). 0 =
+        // disable trust entirely, forcing OTP every login (kiosk/shared
+        // devices). Any positive N = bounded days, for ops who want a
+        // finite override instead of permanent trust.
+        'trusted_device_days' => (int) env('RANIAG_TWO_FACTOR_TRUSTED_DAYS', -1),
     ],
 
     // RA 10173-aligned retention: hard-delete soft-deleted rows, scrub PII on aged closed cases.

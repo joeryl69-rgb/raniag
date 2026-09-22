@@ -110,44 +110,51 @@
                 </div>
             </div>
 
-            <div class="row g-4" id="qr-print-grid">
-                @forelse ($posters->where('is_active', true) as $poster)
-                    <div class="col-lg-6">
-                        <div class="raniag-poster">
-                            <div class="raniag-poster-header">
-                                <img src="{{ asset('images/letterhead/mdrrmo-logo.png') }}" alt="MDRRMO Pamplona" class="raniag-poster-logo">
-                                <div class="raniag-poster-heading">
-                                    <div class="raniag-poster-eyebrow">Republic of the Philippines &middot; Province of Cagayan &middot; Municipality of Pamplona</div>
-                                    <div class="raniag-poster-title">MDRRMO Pamplona &mdash; RANIAG Incident Reporting</div>
-                                </div>
-                                <img src="{{ asset('images/letterhead/bayan-logo.png') }}" alt="Bayan ng Pamplona" class="raniag-poster-logo">
-                            </div>
-                            <div class="raniag-poster-body">
-                                <div class="raniag-poster-barangay">Brgy. {{ $poster->barangay }}</div>
-                                <div class="raniag-poster-qr-wrap">
-                                    <div class="raniag-poster-qr" data-qr-target data-qr-url="{{ $poster->reportUrl() }}" data-qr-title="{{ $poster->title }}">
-                                        <div class="raniag-poster-qr-loading">Generating QR&hellip;</div>
+            <div class="card raniag-card shadow-sm border-0" id="qr-preview-panel">
+                <div class="card-header raniag-card-header bg-white py-3 no-print">
+                    <h5 class="mb-0 fw-bold">Poster previews</h5>
+                    <p class="text-muted small mb-0 mt-1">Branded, print-ready QR posters for each active barangay below.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4" id="qr-print-grid">
+                        @forelse ($posters->where('is_active', true) as $poster)
+                            <div class="col-lg-6">
+                                <div class="raniag-poster" data-barangay="Brgy. {{ $poster->barangay }}" data-notes="{{ $poster->notes }}">
+                                    <div class="raniag-poster-header">
+                                        <img src="{{ asset('images/letterhead/mdrrmo-logo.png') }}" alt="MDRRMO Pamplona" class="raniag-poster-logo">
+                                        <div class="raniag-poster-heading">
+                                            <div class="raniag-poster-eyebrow">Republic of the Philippines &middot; Province of Cagayan &middot; Municipality of Pamplona</div>
+                                            <div class="raniag-poster-title">MDRRMO Pamplona &mdash; RANIAG Incident Reporting</div>
+                                        </div>
+                                        <img src="{{ asset('images/letterhead/bayan-logo.png') }}" alt="Bayan ng Pamplona" class="raniag-poster-logo">
+                                    </div>
+                                    <div class="raniag-poster-body">
+                                        <div class="raniag-poster-barangay">Brgy. {{ $poster->barangay }}</div>
+                                        <div class="raniag-poster-qr-wrap">
+                                            <div class="raniag-poster-qr" data-qr-target data-qr-url="{{ $poster->reportUrl() }}" data-qr-title="{{ $poster->title }}">
+                                                <div class="raniag-poster-qr-loading">Generating QR&hellip;</div>
+                                            </div>
+                                        </div>
+                                        <div class="raniag-poster-scan">SCAN TO REPORT AN INCIDENT</div>
+                                        @if ($poster->notes)
+                                            <div class="raniag-poster-notes">{{ $poster->notes }}</div>
+                                        @endif
+                                    </div>
+                                    <div class="raniag-poster-actions no-print">
+                                        <button type="button" class="btn btn-sm btn-outline-primary raniag-poster-download"
+                                                data-filename="qr-poster-{{ Str::slug($poster->barangay) }}.png">
+                                            <i class="bi bi-download me-1"></i>Download PNG
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="raniag-poster-scan">SCAN TO REPORT AN INCIDENT</div>
-                                @if ($poster->notes)
-                                    <div class="raniag-poster-notes">{{ $poster->notes }}</div>
-                                @endif
-                                <div class="raniag-poster-url">{{ $poster->reportUrl() }}</div>
                             </div>
-                            <div class="raniag-poster-actions no-print">
-                                <button type="button" class="btn btn-sm btn-outline-primary raniag-poster-download"
-                                        data-filename="qr-poster-{{ Str::slug($poster->barangay) }}.png">
-                                    <i class="bi bi-download me-1"></i>Download PNG
-                                </button>
+                        @empty
+                            <div class="col-12">
+                                <div class="alert alert-light border no-print mb-0">Create an active poster to preview and print QR codes here.</div>
                             </div>
-                        </div>
+                        @endforelse
                     </div>
-                @empty
-                    <div class="col-12">
-                        <div class="alert alert-light border no-print mb-0">Create an active poster to preview and print QR codes here.</div>
-                    </div>
-                @endforelse
+                </div>
             </div>
         </div>
     </div>
@@ -184,11 +191,12 @@
 .raniag-poster-qr canvas, .raniag-poster-qr img { border-radius: 8px; }
 .raniag-poster-scan { font-weight: 700; letter-spacing: .05em; font-size: .85rem; color: #1a365d; }
 .raniag-poster-notes { font-size: .8rem; color: #666; margin-top: 8px; }
-.raniag-poster-url { font-size: .7rem; color: #999; word-break: break-all; margin-top: 10px; }
 .raniag-poster-actions { padding: 0 20px 18px; text-align: center; }
 
 @media print {
     .sidebar, .navbar, .btn, .nav-section-label, .no-print { display: none !important; }
+    #qr-preview-panel { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+    #qr-preview-panel .card-body { padding: 0 !important; }
     #qr-print-grid { display: block !important; }
     #qr-print-grid > div { width: 100%; page-break-after: always; break-after: page; display: flex; align-items: center; justify-content: center; min-height: 90vh; }
     #qr-print-grid > div:last-child { page-break-after: auto; break-after: auto; }
