@@ -4,6 +4,7 @@ use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 test('two factor challenge page uses the authentication wording', function () {
@@ -19,6 +20,35 @@ test('two factor challenge page uses the authentication wording', function () {
         ->assertOk()
         ->assertSee('Two Factor Authentication', false)
         ->assertDontSee('Verify it\'s you', false);
+});
+
+test('trusted device survives logout and skips otp on next login', function () {
+    Mail::fake();
+
+    $user = User::factory()->administrator()->create([
+        'password' => bcrypt('secret123'),
+    ]);
+
+    $twoFactor = app(\App\Services\TwoFactorService::class);
+    $cookie = $twoFactor->issueTrustedDeviceCookie($user);
+
+    $this->withCookie($cookie->getName(), $cookie->getValue())
+        ->actingAs($user)
+        ->post('/logout')
+        ->assertRedirect('/');
+
+    $this->assertGuest();
+
+    // Cookie must still be present after logout (Facebook-style remember device).
+    $this->withCookie($cookie->getName(), $cookie->getValue())
+        ->post('/login', [
+            'email' => $user->email,
+            'password' => 'secret123',
+        ])
+        ->assertRedirect(route('admin.dashboard', absolute: false));
+
+    $this->assertAuthenticatedAs($user);
+    Mail::assertNothingSent();
 });
 
 test('public home page is accessible', function () {

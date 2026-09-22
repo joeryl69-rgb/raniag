@@ -49,6 +49,17 @@
     const useBtn = document.getElementById('gps-camera-use');
     const lightboxModalEl = document.getElementById('gps-lightbox-modal');
     const lightboxImgEl = document.getElementById('gps-lightbox-image');
+
+    // Always re-parent onto <body> before Bootstrap Modal show(). Backdrop
+    // is appended to body; leaving the dialog inside .rg-shell (or similar
+    // stacking contexts) puts the dim layer above the controls so nothing
+    // is clickable — the stuck "Camera Off / Got it" failure mode.
+    [cameraModalEl, lightboxModalEl].forEach((el) => {
+        if (el && el.parentElement !== document.body) {
+            document.body.appendChild(el);
+        }
+    });
+
     // Lazily resolved (not cached at parse time) so a late-loading/blocked
     // Bootstrap bundle doesn't permanently lock this into the inline fallback.
     function getModal(el) {

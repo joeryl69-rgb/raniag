@@ -128,9 +128,22 @@ class TwoFactorService
                 return false;
             }
 
-            $stored = Cache::get($this->trustedCacheKey((int) $user->id, $token));
+            $cacheKey = $this->trustedCacheKey((int) $user->id, $token);
+            $stored = Cache::get($cacheKey);
+            if ($stored === true || $stored === 1 || $stored === '1') {
+                return true;
+            }
 
-            return $stored === true || $stored === 1 || $stored === '1';
+            if ($stored === null) {
+                $days = $this->isPermanentTrust()
+                    ? self::PERMANENT_TTL_DAYS
+                    : max(1, (int) config('raniag.two_factor.trusted_device_days', self::PERMANENT_DAYS));
+                Cache::put($cacheKey, true, now()->addDays($days));
+
+                return true;
+            }
+
+            return false;
         }
 
         foreach ($entries as $entry) {
@@ -144,8 +157,22 @@ class TwoFactorService
                 continue;
             }
 
-            $stored = Cache::get($this->trustedCacheKey($entryUserId, $token));
+            $cacheKey = $this->trustedCacheKey($entryUserId, $token);
+            $stored = Cache::get($cacheKey);
             if ($stored === true || $stored === 1 || $stored === '1') {
+                return true;
+            }
+
+            // Deploy runs `optimize:clear`, which wipes the cache store. The
+            // httpOnly encrypted cookie is still the source of truth for
+            // "this browser was trusted" — re-hydrate the cache entry so
+            // the next request stays fast without forcing another OTP.
+            if ($stored === null && $token !== '') {
+                $days = $this->isPermanentTrust()
+                    ? self::PERMANENT_TTL_DAYS
+                    : max(1, (int) config('raniag.two_factor.trusted_device_days', self::PERMANENT_DAYS));
+                Cache::put($cacheKey, true, now()->addDays($days));
+
                 return true;
             }
         }
@@ -154,10 +181,10 @@ class TwoFactorService
     }
 
     // Sentinel: trusted_device_days = -1 means trust never expires (until
-    // the user signs out or an admin revokes it). 0 keeps its original
-    // meaning of "force OTP every login" for kiosk/shared devices. Any
-    // positive N keeps the original bounded-days behavior for ops who want
-    // a finite override instead of permanent trust.
+    // explicitly revoked). Signing out does not clear it. 0 keeps its
+    // original meaning of "force OTP every login" for kiosk/shared devices.
+    // Any positive N keeps the original bounded-days behavior for ops who
+    // want a finite override instead of permanent trust.
     private const PERMANENT_DAYS = -1;
 
     // ~20 years — effectively permanent without needing "no expiry" special

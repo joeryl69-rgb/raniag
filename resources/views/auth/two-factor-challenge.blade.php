@@ -29,9 +29,9 @@
                 <i class="bi bi-shield-check"></i>
                 <div>
                     @if ($trustedDays < 0)
-                        This browser will be remembered for this account after verification, so you won't be asked for a code again unless you sign out or the device is revoked.
+                        This browser will be remembered for this account after verification, so you won't be asked for a code again when you sign back in — even after logout — unless the device is revoked.
                     @else
-                        This browser will be remembered for {{ $trustedDays }} {{ Str::plural('day', $trustedDays) }} after verification, so you won't be asked for a code again until then.
+                        This browser will be remembered for {{ $trustedDays }} {{ Str::plural('day', $trustedDays) }} after verification, so you won't be asked for a code again when you sign back in until then.
                     @endif
                 </div>
             </div>

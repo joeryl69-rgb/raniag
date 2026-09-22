@@ -22,10 +22,10 @@ return [
     'two_factor' => [
         'enabled' => (bool) env('RANIAG_TWO_FACTOR_ENABLED', true),
         'otp_ttl_minutes' => (int) env('RANIAG_TWO_FACTOR_OTP_TTL', 10),
-        // -1 = trust never expires until sign-out/revoke (default). 0 =
-        // disable trust entirely, forcing OTP every login (kiosk/shared
-        // devices). Any positive N = bounded days, for ops who want a
-        // finite override instead of permanent trust.
+        // -1 = trust never expires until explicitly revoked (default).
+        // Signing out does NOT clear it — returning to this browser still
+        // skips OTP. 0 = disable trust entirely, forcing OTP every login
+        // (kiosk/shared devices). Any positive N = bounded days.
         'trusted_device_days' => (int) env('RANIAG_TWO_FACTOR_TRUSTED_DAYS', -1),
     ],
 

@@ -11,6 +11,17 @@
     // out — never on page boot.
     window.hideLoadingOverlay?.();
 
+    // Bootstrap appends backdrops to <body>, but these modals live inside
+    // `.rg-shell` (overflow:clip + child z-index:1). That traps the dialog
+    // under the backdrop so "Got it" / camera controls look clickable but
+    // never receive hits — move them to <body> before any show().
+    ['evidence-gate-modal', 'gps-camera-modal', 'gps-lightbox-modal'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== document.body) {
+            document.body.appendChild(el);
+        }
+    });
+
     const typeCards = document.querySelectorAll('.raniag-type-card');
     typeCards.forEach((card) => {
         card.addEventListener('click', () => {
