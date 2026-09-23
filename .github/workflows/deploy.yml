@@ -31,8 +31,6 @@ jobs:
           protocol: tcp
           timeout: 60s
           command_timeout: 30m
-          max_attempts: 3
-          backoff: 8s
           script_stop: true
           script: |
             set -e
