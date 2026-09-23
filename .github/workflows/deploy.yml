@@ -49,23 +49,28 @@ jobs:
           command_timeout: 30m
           script_stop: true
           script: |
-            set -e
+            set -euxo pipefail
             echo "==> deploy start $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "==> php $(php -v | head -n 1)"
+            echo "==> composer $(composer --version | head -n 1)"
             git config --global --add safe.directory '*'
             REPO_DIR="$HOME/raniag"
             mkdir -p "$REPO_DIR"
             if [ ! -d "$REPO_DIR/.git" ]; then
               echo "==> repo missing, cloning"
+              rm -rf "$REPO_DIR"
               git clone https://github.com/joeryl69-rgb/raniag.git "$REPO_DIR"
             fi
             cd "$REPO_DIR"
+            echo "==> repo path: $(pwd)"
+            ls -la
             git remote set-url origin https://github.com/joeryl69-rgb/raniag.git || true
             echo "==> git fetch/reset"
             git fetch origin main
             git checkout main
             git reset --hard origin/main
             echo "==> composer"
-            composer install --no-dev --optimize-autoloader --no-interaction
+            composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
             echo "==> artisan"
             php artisan optimize:clear
             php artisan migrate --force
