@@ -84,11 +84,11 @@
             tipMode = mode || tipMode;
             if (!joTip) return;
             const tips = {
-                centers: 'Viewing evacuation centers. Tap one for details, or use YOU to see the nearest open center.',
+                centers: 'Viewing evacuation centers. Tap one for details, or use my current location to see the nearest open center.',
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
-                you: 'Tracking your location. Toggle Evacuation to see centers near you.',
-                both: 'Toggle layers to focus the map. Tap YOU to track where you are.',
-                denied: 'Location is blocked. Enable GPS in the browser to use YOU.',
+                you: 'Showing your current location. Toggle Evacuation to see centers near you.',
+                both: 'Toggle layers to focus the map. Use my current location to show where you are.',
+                denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
             };
             joTip.textContent = tips[tipMode] || tips.both;
         }
@@ -317,7 +317,7 @@
                     weight: 2,
                     fillColor: '#0b5ed7',
                     fillOpacity: 1,
-                }).bindPopup('You').addTo(youGroup);
+                }).bindPopup('My location').addTo(youGroup);
             }
         }
 
@@ -358,7 +358,7 @@
                     const denied = err?.code === 1;
                     setGeoStatus(
                         denied
-                            ? 'Location permission denied. Enable GPS to use YOU.'
+                            ? 'Location permission denied. Enable GPS to use my current location.'
                             : 'Could not get your location. Try again.',
                         true
                     );

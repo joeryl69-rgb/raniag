@@ -290,7 +290,7 @@
             initReportCoachUi();
         } else if (page === 'hazard') {
             offerSiteTour();
-            pageTip('hazard', 'map', 'Toggle Hazard, Evacuation, or YOU to focus the map. Tap an evacuation center or the nearest box to view it.');
+            pageTip('hazard', 'map', 'Toggle Hazard, Evacuation, or My location to focus the map. Tap an evacuation center or the nearest box to view it.');
         } else if (page === 'track') {
             offerSiteTour();
             pageTip('track', 'clipboard', 'Enter your tracking number here to see status updates.');

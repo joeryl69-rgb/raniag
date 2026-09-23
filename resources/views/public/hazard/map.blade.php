@@ -23,9 +23,9 @@
     <div class="rg-hazard-shell" data-rg-reveal>
         <div class="rg-hazard-stage">
             <div id="hazard-map" data-lenis-prevent></div>
-            <button type="button" class="rg-hazard-locate" id="hazard-locate-you" title="Go to my location" aria-label="Go to my location">
+            <button type="button" class="rg-hazard-locate" id="hazard-locate-you" title="Use my current location" aria-label="Use my current location">
                 <i class="bi bi-crosshair" aria-hidden="true"></i>
-                <span>YOU</span>
+                <span>My location</span>
             </button>
         </div>
 
@@ -34,7 +34,7 @@
                 <img src="/images/guide/jo-map.svg" alt="JO" width="48" height="60" class="flex-shrink-0" id="hazard-jo-avatar">
                 <div>
                     <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
-                    <div class="small text-muted" id="hazard-jo-tip">Toggle layers to focus the map. Tap YOU to track where you are.</div>
+                    <div class="small text-muted" id="hazard-jo-tip">Toggle layers to focus the map. Use my current location to show where you are.</div>
                 </div>
             </div>
 
@@ -46,7 +46,7 @@
                 <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
 
                 <input type="checkbox" class="btn-check" id="layer-you" checked autocomplete="off">
-                <label class="btn btn-sm rg-hazard-chip" for="layer-you">YOU</label>
+                <label class="btn btn-sm rg-hazard-chip" for="layer-you">My location</label>
             </div>
 
             <p class="small text-muted d-none mb-2" id="hazard-geo-status" role="status"></p>
@@ -54,7 +54,7 @@
             <div class="rg-hazard-legend mb-3">
                 <span><i class="rg-hazard-swatch" style="background:#b45309"></i> Hazard zone</span>
                 <span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%"></i> Evac center</span>
-                <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> You</span>
+                <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> My location</span>
             </div>
 
             <div id="nearest-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small d-none mb-2"></div>
