@@ -52,7 +52,7 @@ jobs:
             set -euxo pipefail
             echo "==> deploy start $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "==> php $(php -v | head -n 1)"
-            echo "==> composer $(composer --version | head -n 1)"
+            echo "==> composer $(composer --version 2>/dev/null | head -n 1)"
             git config --global --add safe.directory '*'
             REPO_DIR="$HOME/raniag"
             mkdir -p "$REPO_DIR"
@@ -63,14 +63,14 @@ jobs:
             fi
             cd "$REPO_DIR"
             echo "==> repo path: $(pwd)"
-            ls -la
             git remote set-url origin https://github.com/joeryl69-rgb/raniag.git || true
             echo "==> git fetch/reset"
             git fetch origin main
             git checkout main
             git reset --hard origin/main
-            echo "==> composer"
-            composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+            mkdir -p public/build
+            echo "==> composer (no scripts: Hostinger CLI blocks proc_open)"
+            composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist --no-scripts
             echo "==> artisan"
             php artisan optimize:clear
             php artisan migrate --force
@@ -80,6 +80,18 @@ jobs:
             php artisan route:cache
             php artisan view:cache
             echo "==> deploy done $(date -u +%Y-%m-%dT%H:%M:%SZ) at $(git rev-parse --short HEAD)"
+
+      - name: Upload frontend build to Hostinger
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          username: ${{ secrets.HOSTINGER_SSH_USER }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          source: "public/build/*"
+          target: raniag/public/build
+          strip_components: 2
+          overwrite: true
 
       - name: Finish deployment
         uses: bobheadxi/deployments@v1
