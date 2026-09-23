@@ -51,6 +51,10 @@ return [
         'default_lat' => (float) env('RANIAG_MAP_LAT', 18.4720),
         'default_lng' => (float) env('RANIAG_MAP_LNG', 121.3250),
         'default_zoom' => (int) env('RANIAG_MAP_ZOOM', 13),
+        // Public Mapbox token (pk.*) for hazard-map tiles + Directions. Leave empty to use OSM.
+        'mapbox_token' => env('MAPBOX_ACCESS_TOKEN', ''),
+        'mapbox_style' => env('MAPBOX_STYLE', 'mapbox/streets-v12'),
+        'directions_profile' => env('MAPBOX_DIRECTIONS_PROFILE', 'walking'),
     ],
 
     // Fallback address components used to complete the full address

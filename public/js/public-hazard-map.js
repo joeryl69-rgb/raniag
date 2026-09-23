@@ -1,5 +1,5 @@
 /**
- * Public live hazard map — Leaflet layers, live YOU tracking, view focus on toggles.
+ * Public live hazard map — Leaflet layers, Mapbox tiles/route, live location tracking.
  */
 (function () {
     const REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -31,14 +31,30 @@
             [cfg.map.default_lat, cfg.map.default_lng],
             cfg.map.default_zoom || 13
         );
-        leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OSM',
-        }).addTo(map);
+
+        const mapboxToken = (cfg.map.mapbox_token || '').trim();
+        const mapboxStyle = (cfg.map.mapbox_style || 'mapbox/streets-v12').replace(/^mapbox:\/\//, '');
+        if (mapboxToken) {
+            leaflet.tileLayer(
+                `https://api.mapbox.com/styles/v1/${mapboxStyle}/tiles/{z}/{x}/{y}?access_token=${encodeURIComponent(mapboxToken)}`,
+                {
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    maxZoom: 22,
+                    attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+                }
+            ).addTo(map);
+        } else {
+            leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OSM',
+            }).addTo(map);
+        }
 
         const zoneGroup = leaflet.layerGroup().addTo(map);
         const centerGroup = leaflet.layerGroup().addTo(map);
         const youGroup = leaflet.layerGroup().addTo(map);
+        const routeGroup = leaflet.layerGroup().addTo(map);
 
         const zoneLayers = new Map();
         const centerLayers = new Map();
@@ -50,6 +66,9 @@
         let nearestData = null;
         let tipMode = 'both';
         let didInitialYouFit = false;
+        let routeLayer = null;
+        let routeProfile = (cfg.map.directions_profile === 'driving' ? 'driving' : 'walking');
+        let routeFetchSeq = 0;
 
         const chkZones = document.getElementById('layer-zones');
         const chkCenters = document.getElementById('layer-centers');
@@ -59,6 +78,17 @@
         const joTip = document.getElementById('hazard-jo-tip');
         const zoneSection = document.getElementById('zone-section');
         const centerSection = document.getElementById('center-section');
+        const routeBox = document.getElementById('route-box');
+        const routeSummary = document.getElementById('route-summary');
+        const routeStatus = document.getElementById('route-status');
+        const routeWalk = document.getElementById('route-walk');
+        const routeDrive = document.getElementById('route-drive');
+
+        if (routeProfile === 'driving' && routeDrive) {
+            routeDrive.checked = true;
+        } else if (routeWalk) {
+            routeWalk.checked = true;
+        }
 
         function setUpdatedLabel() {
             const el = document.getElementById('hazard-updated');
@@ -87,7 +117,8 @@
                 centers: 'Viewing evacuation centers. Tap one for details, or use my current location to see the nearest open center.',
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
                 you: 'Showing your current location. Toggle Evacuation to see centers near you.',
-                both: 'Toggle layers to focus the map. Use my current location to show where you are.',
+                both: 'Toggle layers to focus the map. Use my current location for a route to the nearest open center.',
+                route: 'Route drawn to the nearest open evacuation center. Switch Walk or Drive if needed.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
             };
             joTip.textContent = tips[tipMode] || tips.both;
@@ -142,7 +173,100 @@
                 }
             }
             if (on.you && youMarker) layers.push(youMarker);
+            if (routeLayer) layers.push(routeLayer);
             return layers;
+        }
+
+        function formatDistance(meters) {
+            if (meters == null || Number.isNaN(meters)) return '';
+            if (meters < 1000) return `${Math.round(meters)} m`;
+            return `${(meters / 1000).toFixed(meters >= 10000 ? 0 : 1)} km`;
+        }
+
+        function formatDuration(seconds) {
+            if (seconds == null || Number.isNaN(seconds)) return '';
+            const mins = Math.max(1, Math.round(seconds / 60));
+            if (mins < 60) return `${mins} min`;
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return m ? `${h} hr ${m} min` : `${h} hr`;
+        }
+
+        function setRouteStatus(msg, isError) {
+            if (!routeStatus) return;
+            if (!msg) {
+                routeStatus.classList.add('d-none');
+                routeStatus.textContent = '';
+                return;
+            }
+            routeStatus.textContent = msg;
+            routeStatus.classList.toggle('text-danger', !!isError);
+            routeStatus.classList.toggle('text-muted', !isError);
+            routeStatus.classList.remove('d-none');
+        }
+
+        function clearRoute() {
+            routeGroup.clearLayers();
+            routeLayer = null;
+        }
+
+        function showRouteBox(visible) {
+            if (!routeBox) return;
+            routeBox.classList.toggle('d-none', !visible);
+        }
+
+        async function fetchRoute() {
+            const nc = nearestData?.nearest_center;
+            if (!mapboxToken || !youLatLng || !nc) {
+                clearRoute();
+                if (routeSummary) {
+                    routeSummary.textContent = mapboxToken
+                        ? 'Enable my current location to see a path.'
+                        : 'Mapbox token not configured — route unavailable.';
+                }
+                showRouteBox(!!mapboxToken);
+                setRouteStatus('');
+                return;
+            }
+
+            showRouteBox(true);
+            if (routeSummary) routeSummary.textContent = 'Getting route…';
+            setRouteStatus('');
+            const seq = ++routeFetchSeq;
+            const from = `${youLatLng.lng},${youLatLng.lat}`;
+            const to = `${Number(nc.longitude)},${Number(nc.latitude)}`;
+            const url = `https://api.mapbox.com/directions/v5/mapbox/${routeProfile}/${from};${to}?geometries=geojson&overview=full&access_token=${encodeURIComponent(mapboxToken)}`;
+
+            try {
+                const res = await fetch(url);
+                if (seq !== routeFetchSeq) return;
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const route = data.routes && data.routes[0];
+                if (!route?.geometry) throw new Error('No route');
+
+                clearRoute();
+                routeLayer = leaflet.geoJSON(route.geometry, {
+                    style: {
+                        color: '#0b5ed7',
+                        weight: 5,
+                        opacity: 0.85,
+                    },
+                }).addTo(routeGroup);
+
+                const label = routeProfile === 'driving' ? 'drive' : 'walk';
+                if (routeSummary) {
+                    routeSummary.textContent = `${formatDistance(route.distance)} · ~${formatDuration(route.duration)} ${label} to ${nc.name}`;
+                }
+                updateJoTip('route');
+            } catch (e) {
+                if (seq !== routeFetchSeq) return;
+                clearRoute();
+                if (routeSummary) {
+                    routeSummary.textContent = `Nearest: ${nc.name} (~${formatDistance(nc.distance_m)} straight-line).`;
+                }
+                setRouteStatus('Could not load Mapbox route. Try again or switch Walk/Drive.', true);
+            }
         }
 
         function fitActiveView({ animate } = {}) {
@@ -159,7 +283,20 @@
                 return;
             }
 
-            // Prefer you + nearest center when focusing evacuation
+            // Prefer you + route + nearest center when focusing evacuation / my location
+            if ((mode === 'centers' || mode === 'you' || mode === 'both') && routeLayer) {
+                try {
+                    const layersWithRoute = [...layers];
+                    if (!layersWithRoute.includes(routeLayer)) layersWithRoute.push(routeLayer);
+                    const group = leaflet.featureGroup(layersWithRoute);
+                    map.fitBounds(group.getBounds().pad(0.18), {
+                        animate: !REDUCE && animate !== false,
+                        maxZoom: 16,
+                    });
+                    return;
+                } catch (e) { /* fall through */ }
+            }
+
             if (mode === 'centers' && youLatLng && nearestData?.nearest_center) {
                 const nc = nearestData.nearest_center;
                 const bounds = leaflet.latLngBounds([
@@ -290,6 +427,7 @@
                 if (!res.ok) return;
                 nearestData = await res.json();
                 renderNearest();
+                await fetchRoute();
             } catch (e) { /* offline */ }
         }
 
@@ -502,6 +640,16 @@
         chkZones?.addEventListener('change', (e) => onLayerToggle('zones', e.target.checked));
         chkCenters?.addEventListener('change', (e) => onLayerToggle('centers', e.target.checked));
         chkYou?.addEventListener('change', (e) => onLayerToggle('you', e.target.checked));
+
+        [routeWalk, routeDrive].forEach((el) => {
+            el?.addEventListener('change', () => {
+                if (!el.checked) return;
+                routeProfile = el.value === 'driving' ? 'driving' : 'walking';
+                fetchRoute().then(() => fitActiveView({ animate: true }));
+            });
+        });
+
+        showRouteBox(!!mapboxToken);
 
         locateBtn?.addEventListener('click', () => {
             if (chkYou && !chkYou.checked) {

@@ -58,6 +58,21 @@
             </div>
 
             <div id="nearest-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small d-none mb-2"></div>
+
+            <div id="route-box" class="rg-hazard-route border rounded-3 py-2 px-3 small d-none mb-2">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <div class="fw-semibold">Route to nearest center</div>
+                    <div class="rg-hazard-chips" role="group" aria-label="Route mode">
+                        <input type="radio" class="btn-check" name="route-profile" id="route-walk" value="walking" checked autocomplete="off">
+                        <label class="btn btn-sm rg-hazard-chip" for="route-walk">Walk</label>
+                        <input type="radio" class="btn-check" name="route-profile" id="route-drive" value="driving" autocomplete="off">
+                        <label class="btn btn-sm rg-hazard-chip" for="route-drive">Drive</label>
+                    </div>
+                </div>
+                <p class="mb-1 text-muted" id="route-summary">Enable my current location to see a path.</p>
+                <p class="mb-0 small text-danger d-none" id="route-status" role="status"></p>
+            </div>
+
             <div id="containing-zones-box" class="alert alert-warning border py-2 px-3 small d-none mb-3"></div>
 
             <div id="zone-section">
