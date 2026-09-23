@@ -13,6 +13,7 @@ Route::name('public.')->group(function () {
 
     Route::get('/hazard-map', [\App\Http\Controllers\Public\HazardMapController::class, 'index'])->name('hazard.map');
     Route::get('/hazard-map/nearest', [\App\Http\Controllers\Public\HazardMapController::class, 'nearestCenter'])->name('hazard.nearest');
+    Route::get('/hazard-map/snapshot', [\App\Http\Controllers\Public\HazardMapController::class, 'snapshot'])->name('hazard.snapshot');
 
     Route::get('/community-dashboard', [PublicDashboardController::class, 'index'])->name('dashboard');
     Route::get('/community-dashboard/data.json', [PublicDashboardController::class, 'data'])->name('dashboard.data');

@@ -12,6 +12,7 @@
                 <h1 class="rg-page-title">Track Your Report</h1>
                 <p class="rg-page-sub mx-auto">
                     Enter the tracking number you received when you submitted your report.
+                    JO can also show you what the other menus are for — use Ask JO again in the footer anytime.
                 </p>
             </div>
 

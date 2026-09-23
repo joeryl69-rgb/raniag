@@ -18,18 +18,45 @@ class HazardMapController extends Controller
     {
         return view('public.hazard.map', [
             'map' => config('raniag.map'),
-            'zones' => HazardZone::query()->with('type')->where('is_active', true)->get()->map(function (HazardZone $zone) {
-                return [
-                    'id' => $zone->id,
-                    'name' => $zone->name,
-                    'geometry' => $zone->geometry,
-                    'color' => $zone->displayColor(),
-                    'advisory_note' => $zone->advisory_note,
-                    'type' => $zone->type ? ['name' => $zone->type->name, 'color' => $zone->type->color] : null,
-                ];
-            })->values(),
-            'centers' => EvacuationCenter::query()->where('is_open', true)->orderBy('name')->get(),
+            'zones' => $this->zonesPayload(),
+            'centers' => $this->centersPayload(),
+            'snapshotUrl' => route('public.hazard.snapshot'),
+            'nearestUrl' => route('public.hazard.nearest'),
         ]);
+    }
+
+    public function snapshot(): JsonResponse
+    {
+        return response()->json([
+            'zones' => $this->zonesPayload(),
+            'centers' => $this->centersPayload(),
+            'updated_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function zonesPayload()
+    {
+        return HazardZone::query()->with('type')->where('is_active', true)->get()->map(function (HazardZone $zone) {
+            return [
+                'id' => $zone->id,
+                'name' => $zone->name,
+                'geometry' => $zone->geometry,
+                'color' => $zone->displayColor(),
+                'advisory_note' => $zone->advisory_note,
+                'type' => $zone->type ? ['name' => $zone->type->name, 'color' => $zone->type->color] : null,
+            ];
+        })->values();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, EvacuationCenter>
+     */
+    private function centersPayload()
+    {
+        return EvacuationCenter::query()->where('is_open', true)->orderBy('name')->get();
     }
 
     public function nearestCenter(Request $request): JsonResponse

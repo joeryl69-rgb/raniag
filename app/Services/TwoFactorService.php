@@ -108,6 +108,17 @@ class TwoFactorService
         Cache::forget($this->attemptsCacheKey($user->id));
     }
 
+    /**
+     * Drop any in-flight OTP / attempt / resend state for a user (e.g. when
+     * they remove the account from quick login or abandon the challenge).
+     */
+    public function clearLoginChallenge(User $user): void
+    {
+        Cache::forget($this->cacheKey($user->id));
+        Cache::forget($this->attemptsCacheKey($user->id));
+        Cache::forget($this->resendCooldownKey($user->id));
+    }
+
     public function hasTrustedDevice(Request $request, User $user): bool
     {
         $raw = $request->cookie(self::TRUSTED_COOKIE);
@@ -342,7 +353,28 @@ class TwoFactorService
 
         $entries = json_decode($raw, true);
         if (! is_array($entries)) {
+            // Legacy single-user format: drop the whole cookie if it matches.
+            $parts = explode('|', $raw, 2);
+            if (count($parts) === 2 && (int) $parts[0] === (int) $user->id) {
+                Cache::forget($this->trustedCacheKey((int) $user->id, (string) $parts[1]));
+
+                return Cookie::forget(self::TRUSTED_COOKIE);
+            }
+
             return Cookie::forget(self::TRUSTED_COOKIE);
+        }
+
+        foreach ($entries as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+            if ((int) ($entry['user_id'] ?? 0) !== (int) $user->id) {
+                continue;
+            }
+            $token = (string) ($entry['token'] ?? '');
+            if ($token !== '') {
+                Cache::forget($this->trustedCacheKey((int) $user->id, $token));
+            }
         }
 
         $filtered = array_values(array_filter(
@@ -365,6 +397,37 @@ class TwoFactorService
             false,
             config('session.same_site', 'lax')
         );
+    }
+
+    /**
+     * Wipe every trusted-device entry on this browser (used when clearing
+     * the whole quick-login account list).
+     */
+    public function forgetAllTrustedDevices(Request $request): SymfonyCookie
+    {
+        $raw = $request->cookie(self::TRUSTED_COOKIE);
+        if (is_string($raw) && $raw !== '') {
+            $entries = json_decode($raw, true);
+            if (is_array($entries)) {
+                foreach ($entries as $entry) {
+                    if (! is_array($entry)) {
+                        continue;
+                    }
+                    $userId = (int) ($entry['user_id'] ?? 0);
+                    $token = (string) ($entry['token'] ?? '');
+                    if ($userId > 0 && $token !== '') {
+                        Cache::forget($this->trustedCacheKey($userId, $token));
+                    }
+                }
+            } else {
+                $parts = explode('|', $raw, 2);
+                if (count($parts) === 2) {
+                    Cache::forget($this->trustedCacheKey((int) $parts[0], (string) $parts[1]));
+                }
+            }
+        }
+
+        return Cookie::forget(self::TRUSTED_COOKIE);
     }
 
     /**

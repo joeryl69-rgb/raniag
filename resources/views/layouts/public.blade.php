@@ -588,7 +588,16 @@
 
     </style>
 </head>
-<body class="raniag-public d-flex flex-column min-vh-100">
+<body class="raniag-public d-flex flex-column min-vh-100" @php
+    $joPage = match (true) {
+        request()->routeIs('public.report.*') => 'report',
+        request()->routeIs('public.hazard.*') => 'hazard',
+        request()->routeIs('public.track*') => 'track',
+        request()->routeIs('public.support') => 'support',
+        request()->routeIs('public.dashboard') => 'dashboard',
+        default => 'home',
+    };
+@endphp data-jo-page="{{ $joPage }}">
     <div id="rg-progress"></div>
 
     <a href="#rg-main" class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-light btn-sm">Skip to content</a>
@@ -624,30 +633,35 @@
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.home') ? 'active' : '' }}"
+                           data-rg-tour="home"
                            href="{{ route('public.home') }}">
                             <i class="bi bi-house-door me-1 d-lg-none"></i>{{ __('Home') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.track*') ? 'active' : '' }}"
+                           data-rg-tour="track"
                            href="{{ route('public.track') }}">
                             <i class="bi bi-search me-1 d-lg-none"></i>{{ __('Track Report') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.hazard.*') ? 'active' : '' }}"
+                           data-rg-tour="hazard"
                            href="{{ route('public.hazard.map') }}">
                             <i class="bi bi-map me-1 d-lg-none"></i>Hazard Map
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.dashboard') ? 'active' : '' }}"
+                           data-rg-tour="dashboard"
                            href="{{ route('public.dashboard') }}">
                             <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>{{ __('Community Dashboard') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.support') ? 'active' : '' }}"
+                           data-rg-tour="support"
                            href="{{ route('public.support') }}">
                             <i class="bi bi-headset me-1 d-lg-none"></i>{{ __('Support') }}
                         </a>
@@ -667,6 +681,7 @@
                     @endauth
                     <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
                         <a class="nav-link rg-btn-report {{ request()->routeIs('public.report.*') ? 'active' : '' }}"
+                           data-rg-tour="report"
                            href="{{ route('public.report.create') }}">
                             <i class="bi bi-megaphone-fill me-1"></i>{{ __('Report an Incident') }}
                         </a>
@@ -734,6 +749,7 @@
                         @else
                             <li><a href="{{ route('login') }}">Staff login</a></li>
                         @endauth
+                        <li><a href="#" id="jo-replay-tour">Ask JO again</a></li>
                         <li><span class="text-white-50"><i class="bi bi-shield-lock me-1"></i>Confidential submissions</span></li>
                     </ul>
                 </div>
@@ -1134,6 +1150,7 @@
     @unless(request()->routeIs('public.support'))
         <x-help-fab :href="route('public.support')" />
     @endunless
+    <script src="{{ asset('js/public-guide.js') }}"></script>
     @stack('scripts')
 </body>
 </html>

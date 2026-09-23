@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container">
-    <div class="rg-support-hero text-center mb-4" data-rg-reveal>
-        <span class="rg-support-hero__badge"><i class="bi bi-bar-chart-line me-1"></i>TRANSPARENCY</span>
-        <h1 class="rg-support-hero__title mb-2">Community Situational Dashboard</h1>
-        <p class="rg-support-hero__sub mb-0" style="max-width:640px; margin:0 auto;">
+    <div class="rg-page-head text-center mb-4" data-rg-reveal>
+        <span class="rg-eyebrow"><i class="bi bi-bar-chart-line"></i>Transparency</span>
+        <h1 class="rg-page-title">Community Situational Dashboard</h1>
+        <p class="rg-page-sub mx-auto mb-0" style="max-width:640px;">
             Aggregated, anonymized incident statistics for {{ config('raniag.organization') }}. No personal information, exact addresses, or reporter details are shown here — only counts and trends to keep the community informed.
         </p>
     </div>

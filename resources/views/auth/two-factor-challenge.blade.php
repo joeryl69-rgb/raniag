@@ -42,9 +42,10 @@
         @csrf
         <button type="submit" class="btn btn-link p-0 small" id="resend-otp-button">Didn't get a code? Resend</button>
     </form>
-    <div class="text-center mt-3">
-        <a href="{{ route('login') }}">Back to sign in</a>
-    </div>
+    <form method="POST" action="{{ route('two-factor.cancel') }}" class="text-center mt-3">
+        @csrf
+        <button type="submit" class="btn btn-link p-0">Back to sign in</button>
+    </form>
     <x-slot name="scripts">
         <script>
         document.addEventListener('DOMContentLoaded', function () {

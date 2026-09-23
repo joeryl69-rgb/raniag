@@ -25,13 +25,22 @@
             <div class="col-lg-5" data-rg-hero-card>
                 <div class="card raniag-card rg-card-hover border-0">
                     <div class="card-body p-4">
-                        <h2 class="h5 fw-bold mb-3">{{ __('How it works') }}</h2>
-                        <ol class="mb-0 ps-3">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <img src="/images/guide/jo-greeting.svg" alt="JO" width="48" height="60">
+                            <div>
+                                <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
+                                <h2 class="h5 fw-bold mb-0">{{ __('How it works') }}</h2>
+                            </div>
+                        </div>
+                        <ol class="mb-3 ps-3">
                             <li class="mb-2">{{ __('Submit your incident report (anonymous or with contact details).') }}</li>
                             <li class="mb-2">{{ __('Receive a unique tracking number instantly.') }}</li>
                             <li class="mb-2">{{ config('raniag.organization') }} staff review and assign your report to the proper responder.</li>
                             <li>{{ __('Track status updates anytime using your tracking number.') }}</li>
                         </ol>
+                        <button type="button" class="btn btn-primary btn-sm" id="jo-start-tour-home">
+                            <i class="bi bi-compass me-1"></i>Start guided tour
+                        </button>
                     </div>
                 </div>
             </div>

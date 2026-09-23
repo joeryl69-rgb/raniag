@@ -35,6 +35,10 @@ Route::middleware(['guest', 'no-cache'])->group(function () {
         ->name('two-factor.resend')
         ->withoutMiddleware([ValidateCsrfToken::class]);
 
+    Route::post('two-factor-challenge/cancel', [TwoFactorChallengeController::class, 'cancel'])
+        ->name('two-factor.cancel')
+        ->withoutMiddleware([ValidateCsrfToken::class]);
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 

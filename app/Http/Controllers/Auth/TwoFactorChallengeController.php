@@ -27,6 +27,16 @@ class TwoFactorChallengeController extends Controller
     }
 
     /**
+     * Abandon the pending OTP challenge and return to the password form.
+     */
+    public function cancel(Request $request): RedirectResponse
+    {
+        $request->session()->forget('pending_2fa_id');
+
+        return redirect()->route('login');
+    }
+
+    /**
      * Re-send a fresh OTP to the same pending login, throttled so mashing
      * the button can't be used to spam the reporter's inbox. Also gives a
      * genuine dead end (expired code, nothing arrived) a way out besides

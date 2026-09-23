@@ -3,59 +3,83 @@
 @section('title', 'Hazard & Evacuation Map')
 
 @push('styles')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style>#hazard-map { height: 70vh; border-radius: 12px; }</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 @endpush
 
 @section('content')
-<div class="container py-4">
-    <h1 class="h3 mb-2">Hazard &amp; evacuation map</h1>
-    <p class="text-muted mb-3">Active hazard zones and open evacuation centers in Pamplona.</p>
-    <div id="hazard-map" class="mb-3"></div>
-    <div id="nearest-box" class="alert alert-light border d-none"></div>
+<div class="container">
+    <div class="rg-page-head d-flex flex-wrap justify-content-between align-items-start gap-3" data-rg-reveal>
+        <div>
+            <span class="rg-eyebrow"><i class="bi bi-broadcast-pin"></i> Live situational awareness</span>
+            <h1 class="rg-page-title">Hazard &amp; evacuation map</h1>
+            <p class="rg-page-sub mb-0">Active hazard zones and open evacuation centers in Pamplona.</p>
+        </div>
+        <div class="text-md-end">
+            <span class="rg-live-pill">Live</span>
+            <div class="small text-muted mt-1" id="hazard-updated">Updated just now</div>
+        </div>
+    </div>
+
+    <div class="rg-hazard-shell" data-rg-reveal>
+        <div class="rg-hazard-stage">
+            <div id="hazard-map" data-lenis-prevent></div>
+        </div>
+
+        <aside class="rg-hazard-panel">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <img src="/images/guide/jo-map.svg" alt="JO" width="48" height="60" class="flex-shrink-0">
+                <div>
+                    <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
+                    <div class="small text-muted">Toggle layers and tap a zone for details.</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="layer-zones" checked>
+                    <label class="form-check-label" for="layer-zones">Hazard zones</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="layer-centers" checked>
+                    <label class="form-check-label" for="layer-centers">Evacuation centers</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="layer-you" checked>
+                    <label class="form-check-label" for="layer-you">My location</label>
+                </div>
+            </div>
+
+            <div class="rg-hazard-legend mb-3">
+                <span><i class="rg-hazard-swatch" style="background:#b45309"></i> Hazard zone</span>
+                <span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%"></i> Evac center</span>
+                <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> You</span>
+            </div>
+
+            <div id="nearest-box" class="alert alert-light border py-2 px-3 small d-none mb-3"></div>
+
+            <h2 class="h6 fw-bold">Active zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
+            <div id="zone-list" class="d-grid gap-1 mb-3"></div>
+
+            <h2 class="h6 fw-bold">Open centers <span class="text-muted fw-normal" id="center-count"></span></h2>
+            <div id="center-list" class="d-grid gap-1"></div>
+        </aside>
+    </div>
 </div>
 @endsection
 
 @push('scripts')
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{{ asset('js/public-hazard-map.js') }}"></script>
 <script>
-(function () {
-    const mapCfg = @json($map);
-    const zones = @json($zones);
-    const centers = @json($centers);
-    const map = L.map('hazard-map').setView([mapCfg.default_lat, mapCfg.default_lng], mapCfg.default_zoom || 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OSM' }).addTo(map);
-
-    zones.forEach((z) => {
-        try {
-            const color = z.color || z.type?.color || '#b45309';
-            const layer = L.geoJSON(z.geometry, {
-                style: { color: color, weight: 2, fillOpacity: 0.25 }
-            }).addTo(map);
-            layer.bindPopup(`<strong>${z.name}</strong><br>${z.type?.name || ''}<br>${z.advisory_note || ''}`);
-        } catch (e) {}
-    });
-
-    centers.forEach((c) => {
-        L.marker([Number(c.latitude), Number(c.longitude)]).addTo(map)
-            .bindPopup(`<strong>${c.name}</strong><br>Open evacuation center`);
-    });
-
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            const lat = pos.coords.latitude, lng = pos.coords.longitude;
-            L.circleMarker([lat, lng], { radius: 6, color: '#0b5ed7' }).addTo(map).bindPopup('You').openPopup();
-            try {
-                const res = await fetch(`{{ route('public.hazard.nearest') }}?lat=${lat}&lng=${lng}`);
-                const data = await res.json();
-                const box = document.getElementById('nearest-box');
-                if (box && data.nearest_center) {
-                    box.classList.remove('d-none');
-                    box.innerHTML = `Nearest open center: <strong>${data.nearest_center.name}</strong> (~${data.nearest_center.distance_m} m)`;
-                }
-            } catch (e) {}
-        });
-    }
-})();
+window.RANIAG_HAZARD = {
+    map: @json($map),
+    zones: @json($zones),
+    centers: @json($centers),
+    snapshotUrl: @json($snapshotUrl),
+    nearestUrl: @json($nearestUrl),
+};
+document.addEventListener('DOMContentLoaded', function () {
+    window.RANIAG_HazardMap?.init(window.RANIAG_HAZARD);
+});
 </script>
 @endpush

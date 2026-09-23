@@ -51,6 +51,7 @@
             Provide accurate details to help {{ config('raniag.organization') }} respond faster.
             Four short steps — you'll get a tracking number the moment you submit.
         </p>
+        <button type="button" class="btn btn-link btn-sm px-0 d-none" id="jo-need-help">Need help? Ask JO</button>
     </div>
 
     @if ($errors->any())
@@ -64,6 +65,15 @@
         </div>
     @endif
 
+    <div class="jo-report-layout">
+        <aside class="jo-report-coach jo-report-coach-desktop" id="jo-report-coach" aria-label="JO report guide">
+            <img class="jo-report-coach-avatar" src="/images/guide/jo-greeting.svg" alt="JO" width="140" height="175">
+            <div class="small fw-bold text-uppercase mb-1" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
+            <p class="jo-report-coach-text">Pick the incident type that fits best, then describe what happened.</p>
+            <button type="button" class="btn btn-outline-secondary btn-sm w-100" data-jo-dismiss>Don't show guide again</button>
+        </aside>
+
+        <div class="jo-report-main min-w-0">
     <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
@@ -186,7 +196,7 @@
                     <i class="bi bi-crosshair me-1"></i>Use current location
                 </button>
                 <div class="position-relative mb-2">
-                    <div id="incident-map"></div>
+                    <div id="incident-map" data-lenis-prevent></div>
                     <div id="map-locating-overlay" class="raniag-map-overlay d-none">
                         <div class="spinner-border" role="status" style="color: var(--rg-brand);"></div>
                         <div class="raniag-map-overlay-text">Pinpointing your location…</div>
@@ -464,6 +474,12 @@
             </div>
         </div>
     </form>
+        <div class="jo-report-coach-mobile" id="jo-report-coach-mobile" aria-hidden="true">
+            <img src="/images/guide/jo-greeting.svg" alt="" width="48" height="60" class="jo-mobile-avatar">
+            <p class="jo-report-coach-text small mb-0 flex-grow-1 jo-mobile-text">Pick the incident type that fits best, then describe what happened.</p>
+        </div>
+        </div>{{-- jo-report-main --}}
+    </div>{{-- jo-report-layout --}}
 </div>
 @endsection
 

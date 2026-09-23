@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use App\Services\TwoFactorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class AuthenticatedSessionController extends Controller
 
         if ($user && $twoFactor->requiredFor($user)) {
             if ($twoFactor->hasTrustedDevice($request, $user)) {
+                $request->session()->forget('pending_2fa_id');
                 $request->session()->regenerate();
 
                 return redirect()->intended(route($user->homeRoute(), absolute: false))
@@ -62,11 +64,34 @@ class AuthenticatedSessionController extends Controller
      * account switcher. Deliberately separate from logout, which never
      * touches this — recognition is meant to survive normal sign-out/
      * sign-in cycles.
+     *
+     * Removing an account also revokes that account's trusted-device skip
+     * and any in-flight OTP challenge for that user, so re-entering
+     * credentials correctly requires 2FA again.
      */
     public function forgetDevice(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
-        return redirect()->route('login')
-            ->withCookie($twoFactor->forgetRecognizedUser($request, $request->string('email')->toString() ?: null));
+        $email = $request->string('email')->toString() ?: null;
+
+        $response = redirect()->route('login')
+            ->withCookie($twoFactor->forgetRecognizedUser($request, $email));
+
+        if ($email !== null) {
+            $user = User::query()->where('email', $email)->first();
+            if ($user) {
+                $response->withCookie($twoFactor->forgetTrustedDevice($request, $user));
+                $twoFactor->clearLoginChallenge($user);
+
+                if ((int) $request->session()->get('pending_2fa_id') === (int) $user->id) {
+                    $request->session()->forget('pending_2fa_id');
+                }
+            }
+        } else {
+            $request->session()->forget('pending_2fa_id');
+            $response->withCookie($twoFactor->forgetAllTrustedDevices($request));
+        }
+
+        return $response;
     }
 
     /**

@@ -628,6 +628,7 @@
                 if (res.ok || res.status === 201) {
                     const tracking = data.tracking_number;
                     if (tracking) {
+                        window.RANIAG_JO?.dismissReportCoach();
                         window.location.href = `/report/${encodeURIComponent(tracking)}/success`;
                         return;
                     }
@@ -671,11 +672,13 @@
         if (!message) {
             wizardError.classList.add('d-none');
             wizardError.textContent = '';
+            window.RANIAG_JO?.syncReportCoach(wizardStep);
             return;
         }
         wizardError.textContent = message;
         wizardError.classList.remove('d-none');
         wizardError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        window.RANIAG_JO?.syncReportCoach(wizardStep, { pose: 'alert', text: message });
     }
 
     function goNext(event) {
@@ -736,6 +739,7 @@
         if (wizardStep === 3) {
             applyEvidenceGate();
         }
+        window.RANIAG_JO?.syncReportCoach(wizardStep);
         document.getElementById('report-wizard-nav')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
