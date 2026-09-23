@@ -13,13 +13,35 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: .5rem;
-        background: rgba(255, 255, 255, 0.85);
+        gap: .65rem;
+        background: rgba(255, 255, 255, 0.88);
         backdrop-filter: blur(2px);
         border-radius: 14px;
+        padding: 1rem;
     }
     .raniag-map-overlay.d-none { display: none !important; }
-    .raniag-map-overlay-text { font-weight: 600; color: var(--rg-ink); }
+    .raniag-map-overlay-text { font-weight: 600; color: var(--rg-ink); font-size: .92rem; }
+    .raniag-map-overlay .rg-progress {
+        width: min(180px, 70%);
+        height: 4px;
+        border-radius: 999px;
+        background: #e8eef5;
+        overflow: hidden;
+    }
+    .raniag-map-overlay .rg-progress-bar {
+        height: 100%;
+        width: 40%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--rg-brand, #0b5ed7), #3d8bfd);
+        animation: rg-map-progress-slide 1.1s ease-in-out infinite;
+    }
+    @keyframes rg-map-progress-slide {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(280%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .raniag-map-overlay .rg-progress-bar { animation: none; width: 100%; opacity: .85; }
+    }
     .report-wizard-pane.is-active,
     .report-wizard-pane:not(.d-none) { display: block !important; }
     .report-wizard-pane.is-active .card { opacity: 1 !important; transform: none !important; visibility: visible !important; }
@@ -65,30 +87,51 @@
         </div>
     @endif
 
-    <div class="jo-report-layout">
-        <aside class="jo-report-coach jo-report-coach-desktop" id="jo-report-coach" aria-label="JO report guide">
-            <img class="jo-report-coach-avatar" src="/images/guide/jo-greeting.svg" alt="JO" width="140" height="175">
-            <div class="small fw-bold text-uppercase mb-1" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
-            <p class="jo-report-coach-text">Pick the incident type that fits best, then describe what happened.</p>
-            <button type="button" class="btn btn-outline-secondary btn-sm w-100" data-jo-dismiss>Don't show guide again</button>
-        </aside>
-
-        <div class="jo-report-main min-w-0">
     <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
         @csrf
 
-        <div class="card raniag-card mb-3 p-3" id="report-wizard-nav">
-            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
-                <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
-                <div class="text-center flex-grow-1">
-                    <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
-                    <div class="d-flex gap-1 justify-content-center mt-1" id="wizard-dots">
-                        <button type="button" class="badge rounded-pill text-bg-primary border-0" data-dot="0">1</button>
-                        <button type="button" class="badge rounded-pill text-bg-secondary border-0" data-dot="1">2</button>
-                        <button type="button" class="badge rounded-pill text-bg-secondary border-0" data-dot="2">3</button>
-                        <button type="button" class="badge rounded-pill text-bg-secondary border-0" data-dot="3">4</button>
+        <div class="rg-stepper mb-3" id="report-wizard-nav" data-rg-reveal>
+            <div class="rg-stepper-head">
+                <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
+                <div class="rg-stepper-jo" id="jo-report-coach" aria-label="JO report guide">
+                    <img class="rg-stepper-jo-avatar jo-report-coach-avatar" src="/images/guide/jo-greeting.svg" alt="JO" width="56" height="70">
+                    <div class="rg-stepper-jo-body min-w-0">
+                        <div class="rg-stepper-jo-name">JO</div>
+                        <p class="rg-stepper-jo-text jo-report-coach-text mb-0">Pick the incident type that fits best, then describe what happened.</p>
+                        <button type="button" class="btn btn-link btn-sm px-0 mt-1" data-jo-dismiss>Don't show guide again</button>
                     </div>
                 </div>
+            </div>
+
+            <ol class="rg-stepper-rail" id="wizard-dots" aria-label="Report steps">
+                <li class="rg-stepper-item is-current">
+                    <button type="button" class="rg-stepper-btn" data-dot="0" aria-current="step">
+                        <span class="rg-stepper-node">1</span>
+                        <span class="rg-stepper-label">Type</span>
+                    </button>
+                </li>
+                <li class="rg-stepper-item">
+                    <button type="button" class="rg-stepper-btn" data-dot="1">
+                        <span class="rg-stepper-node">2</span>
+                        <span class="rg-stepper-label">Location</span>
+                    </button>
+                </li>
+                <li class="rg-stepper-item">
+                    <button type="button" class="rg-stepper-btn" data-dot="2">
+                        <span class="rg-stepper-node">3</span>
+                        <span class="rg-stepper-label">Evidence</span>
+                    </button>
+                </li>
+                <li class="rg-stepper-item">
+                    <button type="button" class="rg-stepper-btn" data-dot="3">
+                        <span class="rg-stepper-node">4</span>
+                        <span class="rg-stepper-label">Contact</span>
+                    </button>
+                </li>
+            </ol>
+
+            <div class="rg-stepper-actions">
+                <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
                 <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
                 <button type="submit" class="btn btn-primary d-none" id="wizard-submit">Submit Report</button>
             </div>
@@ -198,7 +241,7 @@
                 <div class="position-relative mb-2">
                     <div id="incident-map" data-lenis-prevent></div>
                     <div id="map-locating-overlay" class="raniag-map-overlay d-none">
-                        <div class="spinner-border" role="status" style="color: var(--rg-brand);"></div>
+                        <div class="rg-progress" aria-hidden="true"><div class="rg-progress-bar"></div></div>
                         <div class="raniag-map-overlay-text">Pinpointing your location…</div>
                     </div>
                 </div>
@@ -474,12 +517,6 @@
             </div>
         </div>
     </form>
-        <div class="jo-report-coach-mobile" id="jo-report-coach-mobile" aria-hidden="true">
-            <img src="/images/guide/jo-greeting.svg" alt="" width="48" height="60" class="jo-mobile-avatar">
-            <p class="jo-report-coach-text small mb-0 flex-grow-1 jo-mobile-text">Pick the incident type that fits best, then describe what happened.</p>
-        </div>
-        </div>{{-- jo-report-main --}}
-    </div>{{-- jo-report-layout --}}
 </div>
 @endsection
 

@@ -23,31 +23,33 @@
     <div class="rg-hazard-shell" data-rg-reveal>
         <div class="rg-hazard-stage">
             <div id="hazard-map" data-lenis-prevent></div>
+            <button type="button" class="rg-hazard-locate" id="hazard-locate-you" title="Go to my location" aria-label="Go to my location">
+                <i class="bi bi-crosshair" aria-hidden="true"></i>
+                <span>YOU</span>
+            </button>
         </div>
 
         <aside class="rg-hazard-panel">
             <div class="d-flex align-items-center gap-2 mb-3">
-                <img src="/images/guide/jo-map.svg" alt="JO" width="48" height="60" class="flex-shrink-0">
+                <img src="/images/guide/jo-map.svg" alt="JO" width="48" height="60" class="flex-shrink-0" id="hazard-jo-avatar">
                 <div>
                     <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
-                    <div class="small text-muted">Toggle layers and tap a zone for details.</div>
+                    <div class="small text-muted" id="hazard-jo-tip">Toggle layers to focus the map. Tap YOU to track where you are.</div>
                 </div>
             </div>
 
-            <div class="mb-3">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="layer-zones" checked>
-                    <label class="form-check-label" for="layer-zones">Hazard zones</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="layer-centers" checked>
-                    <label class="form-check-label" for="layer-centers">Evacuation centers</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="layer-you" checked>
-                    <label class="form-check-label" for="layer-you">My location</label>
-                </div>
+            <div class="rg-hazard-chips mb-3" role="group" aria-label="Map layers">
+                <input type="checkbox" class="btn-check" id="layer-zones" checked autocomplete="off">
+                <label class="btn btn-sm rg-hazard-chip" for="layer-zones">Hazard zones</label>
+
+                <input type="checkbox" class="btn-check" id="layer-centers" checked autocomplete="off">
+                <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
+
+                <input type="checkbox" class="btn-check" id="layer-you" checked autocomplete="off">
+                <label class="btn btn-sm rg-hazard-chip" for="layer-you">YOU</label>
             </div>
+
+            <p class="small text-muted d-none mb-2" id="hazard-geo-status" role="status"></p>
 
             <div class="rg-hazard-legend mb-3">
                 <span><i class="rg-hazard-swatch" style="background:#b45309"></i> Hazard zone</span>
@@ -55,13 +57,18 @@
                 <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> You</span>
             </div>
 
-            <div id="nearest-box" class="alert alert-light border py-2 px-3 small d-none mb-3"></div>
+            <div id="nearest-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small d-none mb-2"></div>
+            <div id="containing-zones-box" class="alert alert-warning border py-2 px-3 small d-none mb-3"></div>
 
-            <h2 class="h6 fw-bold">Active zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
-            <div id="zone-list" class="d-grid gap-1 mb-3"></div>
+            <div id="zone-section">
+                <h2 class="h6 fw-bold">Active zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
+                <div id="zone-list" class="d-grid gap-1 mb-3"></div>
+            </div>
 
-            <h2 class="h6 fw-bold">Open centers <span class="text-muted fw-normal" id="center-count"></span></h2>
-            <div id="center-list" class="d-grid gap-1"></div>
+            <div id="center-section">
+                <h2 class="h6 fw-bold">Open centers <span class="text-muted fw-normal" id="center-count"></span></h2>
+                <div id="center-list" class="d-grid gap-1"></div>
+            </div>
         </aside>
     </div>
 </div>
@@ -69,7 +76,7 @@
 
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="{{ asset('js/public-hazard-map.js') }}"></script>
+<script src="{{ asset('js/public-hazard-map.js') }}?v={{ @filemtime(public_path('js/public-hazard-map.js')) }}"></script>
 <script>
 window.RANIAG_HAZARD = {
     map: @json($map),

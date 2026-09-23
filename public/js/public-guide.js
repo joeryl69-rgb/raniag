@@ -222,19 +222,13 @@
         const text = opts?.text || line.text;
         const src = poseUrl(pose);
 
-        const img = panel?.querySelector('.jo-report-coach-avatar');
-        const txt = panel?.querySelector('.jo-report-coach-text');
+        const img = panel?.querySelector('.jo-report-coach-avatar, .rg-stepper-jo-avatar');
+        const txt = panel?.querySelector('.jo-report-coach-text, .rg-stepper-jo-text');
         if (img) img.src = src;
         if (txt) txt.textContent = text;
 
-        const mobile = document.getElementById('jo-report-coach-mobile');
-        if (mobile) {
-            mobile.classList.toggle('d-none', !show);
-            const mImg = mobile.querySelector('.jo-mobile-avatar');
-            const mTxt = mobile.querySelector('.jo-mobile-text');
-            if (mImg) mImg.src = src;
-            if (mTxt) mTxt.textContent = text;
-        }
+        const dismiss = panel?.querySelector('[data-jo-dismiss]');
+        if (dismiss) dismiss.classList.toggle('d-none', !show);
     }
 
     function initReportCoachUi() {
@@ -296,7 +290,7 @@
             initReportCoachUi();
         } else if (page === 'hazard') {
             offerSiteTour();
-            pageTip('hazard', 'map', 'Toggle layers in the panel. Active hazard zones pulse so you can spot them quickly.');
+            pageTip('hazard', 'map', 'Toggle Hazard, Evacuation, or YOU to focus the map. Tap an evacuation center or the nearest box to view it.');
         } else if (page === 'track') {
             offerSiteTour();
             pageTip('track', 'clipboard', 'Enter your tracking number here to see status updates.');

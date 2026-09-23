@@ -202,7 +202,7 @@
         /* ---------- loading overlay ---------- */
         #global-loading-overlay {
             position: fixed; inset: 0; z-index: 2000;
-            background: rgba(11, 18, 32, .72);
+            background: rgba(11, 18, 32, .68);
             backdrop-filter: blur(4px);
             display: flex; align-items: center; justify-content: center; padding: 1rem;
             transition: opacity .2s ease;
@@ -210,34 +210,44 @@
         #global-loading-overlay.d-none { display: none !important; }
         body.rg-scroll-locked { overflow: hidden; position: fixed; left: 0; right: 0; width: 100%; }
         #global-loading-overlay .rg-loader {
-            background: rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 18px; padding: 1.75rem 2.25rem; text-align: center;
+            background: #fff;
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            text-align: center;
+            min-width: min(280px, 86vw);
+            box-shadow: 0 24px 48px -20px rgba(0,0,0,.45);
         }
-        #global-loading-overlay .loading-text { margin-top: 1rem; color: #f8fafc; font-weight: 600; letter-spacing: .01em; }
-        #global-loading-overlay .rg-mark {
-            width: 56px; height: 56px; margin: 0 auto; position: relative;
+        #global-loading-overlay .loading-text {
+            margin-top: .85rem;
+            color: #16203a;
+            font-weight: 600;
+            font-size: .95rem;
+            letter-spacing: .01em;
         }
-        #global-loading-overlay .rg-mark img {
-            width: 100%; height: 100%; border-radius: 14px;
-            animation: rg-pulse 1.15s ease-in-out infinite;
+        #global-loading-overlay .rg-progress {
+            height: 4px;
+            border-radius: 999px;
+            background: #e8eef5;
+            overflow: hidden;
         }
-        #global-loading-overlay .rg-mark::after {
-            content: ""; position: absolute; inset: -8px; border-radius: 18px;
-            border: 2px solid var(--rg-brand-soft); opacity: 0;
-            animation: rg-ring 1.15s ease-out infinite;
+        #global-loading-overlay .rg-progress-bar {
+            height: 100%;
+            width: 40%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--rg-brand, #0b5ed7), #3d8bfd);
+            animation: rg-progress-slide 1.1s ease-in-out infinite;
         }
-        @keyframes rg-pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(.9); }
-        }
-        @keyframes rg-ring {
-            0% { transform: scale(.85); opacity: .6; }
-            100% { transform: scale(1.35); opacity: 0; }
+        @keyframes rg-progress-slide {
+            0% { transform: translateX(-120%); }
+            100% { transform: translateX(280%); }
         }
         @media (prefers-reduced-motion: reduce) {
-            #global-loading-overlay .rg-mark img,
-            #global-loading-overlay .rg-mark::after { animation: none; }
+            #global-loading-overlay .rg-progress-bar {
+                animation: none;
+                width: 100%;
+                opacity: .85;
+            }
         }
 
         /* Icons: bootstrap-icons.min.css uses font-display:block (FOIT).
@@ -767,7 +777,7 @@
     {{-- ================= loading overlay ================= --}}
     <div id="global-loading-overlay" class="d-none" role="status" aria-live="polite">
         <div class="rg-loader">
-            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/raniag-master.svg" alt=""></div>
+            <div class="rg-progress" aria-hidden="true"><div class="rg-progress-bar"></div></div>
             <div class="loading-text">Processing, please wait...</div>
         </div>
     </div>

@@ -7,10 +7,13 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card raniag-card text-center p-4 p-lg-5" data-rg-reveal>
-                <img src="/images/guide/jo-resolved.svg" alt="JO" width="120" height="150" class="mx-auto mb-2" data-rg-pop>
+                <div class="rg-success-jo mx-auto mb-3" data-rg-pop>
+                    <img src="/images/guide/jo-resolved.svg" alt="JO" width="96" height="120">
+                    <div class="rg-stepper-jo-name mt-1">JO</div>
+                </div>
                 <h1 class="h3 fw-bold mb-2">Report Submitted Successfully</h1>
                 <p class="text-muted mb-4">
-                    JO here — your incident has been received by {{ config('raniag.organization') }}.
+                    Your incident has been received by {{ config('raniag.organization') }}.
                     Save your tracking number to check status updates.
                 </p>
 

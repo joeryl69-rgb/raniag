@@ -602,7 +602,7 @@
 
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
-            window.showLoadingOverlay?.('Submitting your report, please wait...');
+            window.showLoadingOverlay?.('Submitting your report…');
             document.getElementById('report-submit-errors')?.remove();
 
             const keyInput = document.getElementById('idempotency_key');
@@ -705,6 +705,20 @@
         showWizardStep(wizardStep + 1);
     }
 
+    function syncStepperRail() {
+        document.querySelectorAll('#wizard-dots .rg-stepper-item').forEach((item, idx) => {
+            const done = idx < wizardStep;
+            const active = idx === wizardStep;
+            item.classList.toggle('is-done', done);
+            item.classList.toggle('is-current', active);
+            const btn = item.querySelector('[data-dot]');
+            if (btn) {
+                if (active) btn.setAttribute('aria-current', 'step');
+                else btn.removeAttribute('aria-current');
+            }
+        });
+    }
+
     function showWizardStep(step) {
         wizardStep = Math.max(0, Math.min(wizardPanes.length - 1, step));
         setWizardError('');
@@ -717,14 +731,7 @@
         if (wizardLabel) {
             wizardLabel.textContent = `Step ${wizardStep + 1} of ${wizardPanes.length} — ${wizardTitles[wizardStep] || ''}`;
         }
-        wizardDots.forEach((dot) => {
-            const idx = Number(dot.getAttribute('data-dot'));
-            const done = idx < wizardStep;
-            const active = idx === wizardStep;
-            dot.classList.toggle('text-bg-primary', active);
-            dot.classList.toggle('text-bg-success', done);
-            dot.classList.toggle('text-bg-secondary', !active && !done);
-        });
+        syncStepperRail();
         const last = wizardStep === wizardPanes.length - 1;
         if (wizardBack) wizardBack.disabled = wizardStep === 0;
         if (wizardNext) {
