@@ -69,6 +69,10 @@
         let routeLayer = null;
         let routeProfile = (cfg.map.directions_profile === 'driving' ? 'driving' : 'walking');
         let routeFetchSeq = 0;
+        let lastRouteAt = 0;
+        let lastRouteLatLng = null;
+        const ROUTE_MIN_MOVE_M = 25;
+        const ROUTE_MIN_INTERVAL_MS = 12000;
 
         const chkZones = document.getElementById('layer-zones');
         const chkCenters = document.getElementById('layer-centers');
@@ -116,9 +120,10 @@
             const tips = {
                 centers: 'Viewing evacuation centers. Tap one for details, or use my current location to see the nearest open center.',
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
-                you: 'Showing your current location. Toggle Evacuation to see centers near you.',
-                both: 'Toggle layers to focus the map. Use my current location for a route to the nearest open center.',
-                route: 'Route drawn to the nearest open evacuation center. Switch Walk or Drive if needed.',
+                you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
+                both: 'Turn on My location for a live route to the nearest open center. Toggle off anytime to stop tracking.',
+                route: 'Live route to the nearest open center. It updates as you move.',
+                off: 'My location is off. Turn it on to track yourself and show the route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
             };
             joTip.textContent = tips[tipMode] || tips.both;
@@ -205,9 +210,67 @@
             routeStatus.classList.remove('d-none');
         }
 
-        function clearRoute() {
+        function clearRouteLineOnly() {
             routeGroup.clearLayers();
             routeLayer = null;
+        }
+
+        function clearRoute() {
+            clearRouteLineOnly();
+            lastRouteLatLng = null;
+            lastRouteAt = 0;
+        }
+
+        function haversineMeters(a, b) {
+            if (!a || !b) return Infinity;
+            const R = 6371000;
+            const dLat = (b.lat - a.lat) * Math.PI / 180;
+            const dLng = (b.lng - a.lng) * Math.PI / 180;
+            const lat1 = a.lat * Math.PI / 180;
+            const lat2 = b.lat * Math.PI / 180;
+            const h = Math.sin(dLat / 2) ** 2
+                + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+            return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+        }
+
+        function shouldRefreshRoute(force) {
+            if (force) return true;
+            if (!youLatLng) return false;
+            if (!lastRouteLatLng || !lastRouteAt) return true;
+            if (Date.now() - lastRouteAt >= ROUTE_MIN_INTERVAL_MS) return true;
+            return haversineMeters(lastRouteLatLng, youLatLng) >= ROUTE_MIN_MOVE_M;
+        }
+
+        function setLocationEnabled(enabled) {
+            if (chkYou) chkYou.checked = !!enabled;
+            if (enabled) {
+                map.addLayer(youGroup);
+                if (!map.hasLayer(routeGroup)) map.addLayer(routeGroup);
+                showRouteBox(!!mapboxToken);
+                if (routeSummary) routeSummary.textContent = 'Locating you…';
+                setRouteStatus('');
+                setGeoStatus('Locating you…');
+                updateJoTip('you');
+                startWatch();
+            } else {
+                stopWatch();
+                map.removeLayer(youGroup);
+                clearRoute();
+                youMarker = null;
+                youAccuracy = null;
+                youLatLng = null;
+                nearestData = null;
+                didInitialYouFit = false;
+                youGroup.clearLayers();
+                document.getElementById('nearest-box')?.classList.add('d-none');
+                document.getElementById('containing-zones-box')?.classList.add('d-none');
+                if (routeSummary) routeSummary.textContent = 'Turn on My location to see a live path.';
+                setRouteStatus('');
+                setGeoStatus('');
+                showRouteBox(!!mapboxToken);
+                updateJoTip('off');
+            }
+            fitActiveView({ animate: true });
         }
 
         function showRouteBox(visible) {
@@ -215,13 +278,20 @@
             routeBox.classList.toggle('d-none', !visible);
         }
 
-        async function fetchRoute() {
+        async function fetchRoute({ force } = {}) {
+            if (!layersOn().you) {
+                clearRoute();
+                if (routeSummary) routeSummary.textContent = 'Turn on My location to see a live path.';
+                setRouteStatus('');
+                return;
+            }
+
             const nc = nearestData?.nearest_center;
             if (!mapboxToken || !youLatLng || !nc) {
                 clearRoute();
                 if (routeSummary) {
                     routeSummary.textContent = mapboxToken
-                        ? 'Enable my current location to see a path.'
+                        ? (youLatLng ? 'Looking for the nearest open center…' : 'Turn on My location to see a live path.')
                         : 'Mapbox token not configured — route unavailable.';
                 }
                 showRouteBox(!!mapboxToken);
@@ -229,8 +299,12 @@
                 return;
             }
 
+            if (!shouldRefreshRoute(force)) return;
+
             showRouteBox(true);
-            if (routeSummary) routeSummary.textContent = 'Getting route…';
+            if (force || !routeLayer) {
+                if (routeSummary) routeSummary.textContent = 'Getting route…';
+            }
             setRouteStatus('');
             const seq = ++routeFetchSeq;
             const from = `${youLatLng.lng},${youLatLng.lat}`;
@@ -239,13 +313,13 @@
 
             try {
                 const res = await fetch(url);
-                if (seq !== routeFetchSeq) return;
+                if (seq !== routeFetchSeq || !layersOn().you) return;
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 const route = data.routes && data.routes[0];
                 if (!route?.geometry) throw new Error('No route');
 
-                clearRoute();
+                clearRouteLineOnly();
                 routeLayer = leaflet.geoJSON(route.geometry, {
                     style: {
                         color: '#0b5ed7',
@@ -253,19 +327,22 @@
                         opacity: 0.85,
                     },
                 }).addTo(routeGroup);
+                lastRouteAt = Date.now();
+                lastRouteLatLng = leaflet.latLng(youLatLng.lat, youLatLng.lng);
 
                 const label = routeProfile === 'driving' ? 'drive' : 'walk';
                 if (routeSummary) {
-                    routeSummary.textContent = `${formatDistance(route.distance)} · ~${formatDuration(route.duration)} ${label} to ${nc.name}`;
+                    routeSummary.textContent = `${formatDistance(route.distance)} · ~${formatDuration(route.duration)} ${label} to ${nc.name} (updates as you move)`;
                 }
                 updateJoTip('route');
             } catch (e) {
-                if (seq !== routeFetchSeq) return;
-                clearRoute();
-                if (routeSummary) {
-                    routeSummary.textContent = `Nearest: ${nc.name} (~${formatDistance(nc.distance_m)} straight-line).`;
+                if (seq !== routeFetchSeq || !layersOn().you) return;
+                if (!routeLayer) {
+                    if (routeSummary) {
+                        routeSummary.textContent = `Nearest: ${nc.name} (~${formatDistance(nc.distance_m)} straight-line).`;
+                    }
+                    setRouteStatus('Could not load Mapbox route. Try again or switch Walk/Drive.', true);
                 }
-                setRouteStatus('Could not load Mapbox route. Try again or switch Walk/Drive.', true);
             }
         }
 
@@ -427,7 +504,7 @@
                 if (!res.ok) return;
                 nearestData = await res.json();
                 renderNearest();
-                await fetchRoute();
+                await fetchRoute({ force: true });
             } catch (e) { /* offline */ }
         }
 
@@ -477,6 +554,7 @@
             setGeoStatus('Locating you…');
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
+                    if (!layersOn().you) return;
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     const acc = pos.coords.accuracy || 40;
@@ -622,19 +700,14 @@
             if (which === 'zones') {
                 if (checked) map.addLayer(zoneGroup);
                 else map.removeLayer(zoneGroup);
+                fitActiveView({ animate: true });
             } else if (which === 'centers') {
                 if (checked) map.addLayer(centerGroup);
                 else map.removeLayer(centerGroup);
+                fitActiveView({ animate: true });
             } else if (which === 'you') {
-                if (checked) {
-                    map.addLayer(youGroup);
-                    startWatch();
-                } else {
-                    map.removeLayer(youGroup);
-                    stopWatch();
-                }
+                setLocationEnabled(checked);
             }
-            fitActiveView({ animate: true });
         }
 
         chkZones?.addEventListener('change', (e) => onLayerToggle('zones', e.target.checked));
@@ -645,30 +718,36 @@
             el?.addEventListener('change', () => {
                 if (!el.checked) return;
                 routeProfile = el.value === 'driving' ? 'driving' : 'walking';
-                fetchRoute().then(() => fitActiveView({ animate: true }));
+                if (!layersOn().you) {
+                    if (routeSummary) routeSummary.textContent = 'Turn on My location to see a live path.';
+                    return;
+                }
+                fetchRoute({ force: true }).then(() => fitActiveView({ animate: true }));
             });
         });
 
         showRouteBox(!!mapboxToken);
+        updateJoTip(chkYou?.checked ? 'both' : 'off');
 
         locateBtn?.addEventListener('click', () => {
-            if (chkYou && !chkYou.checked) {
-                chkYou.checked = true;
-                map.addLayer(youGroup);
+            if (!chkYou?.checked) {
+                setLocationEnabled(true);
+                return;
             }
-            startWatch();
             if (youLatLng) {
                 goToLatLng(youLatLng, 16, true);
                 youMarker?.openPopup();
+                fetchRoute({ force: true }).then(() => fitActiveView({ animate: true }));
                 updateJoTip('you');
             } else {
                 setGeoStatus('Locating you…');
+                startWatch();
             }
         });
 
-        // Start tracking if YOU is on by default
-        if (!chkYou || chkYou.checked) {
-            startWatch();
+        // My location starts off — user enables it for live tracking + route
+        if (chkYou?.checked) {
+            setLocationEnabled(true);
         }
 
         function invalidate() {
@@ -686,7 +765,7 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 applyData(data.zones || [], data.centers || [], { fit: false });
-                if (youLatLng) {
+                if (layersOn().you && youLatLng) {
                     fetchNearest(youLatLng.lat, youLatLng.lng);
                 }
             } catch (e) { /* ignore */ }
@@ -696,7 +775,7 @@
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 stopWatch();
-            } else if (!chkYou || chkYou.checked) {
+            } else if (chkYou?.checked) {
                 startWatch();
             }
         });

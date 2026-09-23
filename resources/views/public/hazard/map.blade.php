@@ -34,7 +34,7 @@
                 <img src="/images/guide/jo-map.svg" alt="JO" width="48" height="60" class="flex-shrink-0" id="hazard-jo-avatar">
                 <div>
                     <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
-                    <div class="small text-muted" id="hazard-jo-tip">Toggle layers to focus the map. Use my current location to show where you are.</div>
+                    <div class="small text-muted" id="hazard-jo-tip">Turn on My location to track yourself and show a live route to the nearest open center.</div>
                 </div>
             </div>
 
@@ -45,7 +45,7 @@
                 <input type="checkbox" class="btn-check" id="layer-centers" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
 
-                <input type="checkbox" class="btn-check" id="layer-you" checked autocomplete="off">
+                <input type="checkbox" class="btn-check" id="layer-you" autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-you">My location</label>
             </div>
 
@@ -69,7 +69,7 @@
                         <label class="btn btn-sm rg-hazard-chip" for="route-drive">Drive</label>
                     </div>
                 </div>
-                <p class="mb-1 text-muted" id="route-summary">Enable my current location to see a path.</p>
+                <p class="mb-1 text-muted" id="route-summary">Turn on My location to see a live path.</p>
                 <p class="mb-0 small text-danger d-none" id="route-status" role="status"></p>
             </div>
 
