@@ -21,6 +21,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: production
 
+      - name: Set up Node and build frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install frontend deps and build assets
+        run: |
+          npm ci --no-fund --no-audit
+          npm run build
+
       - name: SSH and deploy
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -35,16 +46,21 @@ jobs:
           script: |
             set -e
             echo "==> deploy start $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            export PATH=/opt/alt/alt-nodejs24/root/usr/bin:$PATH
-            cd ~/raniag
+            git config --global --add safe.directory '*'
+            REPO_DIR="$HOME/raniag"
+            mkdir -p "$REPO_DIR"
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              echo "==> repo missing, cloning"
+              git clone https://github.com/joeryl69-rgb/raniag.git "$REPO_DIR"
+            fi
+            cd "$REPO_DIR"
+            git remote set-url origin https://github.com/joeryl69-rgb/raniag.git || true
             echo "==> git fetch/reset"
             git fetch origin main
+            git checkout main
             git reset --hard origin/main
             echo "==> composer"
             composer install --no-dev --optimize-autoloader --no-interaction
-            echo "==> npm"
-            npm install --no-fund --no-audit
-            npm run build
             echo "==> artisan"
             php artisan optimize:clear
             php artisan migrate --force
