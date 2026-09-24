@@ -110,6 +110,16 @@ test('agency and assigned personnel both retain case access when multiple agency
         ->toBeTrue()
         ->and(Gate::forUser($personnel)->allows('view', $incident->fresh()))
         ->toBeTrue();
+
+    $this->actingAs($personnel)
+        ->get(route('personnel.incidents.index'))
+        ->assertOk()
+        ->assertSee('RAN-ASN-0004');
+
+    $this->actingAs($personnel)
+        ->get(route('personnel.incidents.show', $incident->id))
+        ->assertOk()
+        ->assertSee('RAN-ASN-0004');
 });
 
 test('acknowledging assignment moves assigned incident to in_progress', function () {

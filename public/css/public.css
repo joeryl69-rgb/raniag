@@ -364,7 +364,7 @@ body.raniag-public {
 
 /* ============================================================
    Public tracking progress bar — horizontal stepper with a
-   filled connecting line. Was previously unstyled markup.
+   filled connecting line. Colors live only in this file.
    ============================================================ */
 .raniag-progress-tracker {
     position: relative;

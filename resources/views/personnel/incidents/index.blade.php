@@ -83,8 +83,8 @@
                                             @endif
                                         </td>
                                         <td class="py-3">
-                                            <span class="badge rounded-pill text-white px-2 py-1 shadow-sm" style="background-color: {{ $inc->incidentType->color ?? '#6c757d' }}">
-                                                {{ $inc->incidentType->name }}
+                                            <span class="badge rounded-pill text-white px-2 py-1 shadow-sm" style="background-color: {{ $inc->incidentType?->color ?? '#6c757d' }}">
+                                                {{ $inc->incidentType?->name ?? 'Incident' }}
                                             </span>
                                         </td>
                                         <td class="py-3">

@@ -523,15 +523,7 @@
 
     @push('scripts')
         <script>
-            window.RANIAG_GPS = @json($gpsConfig ?? [
-                'max_captures' => config('raniag.gps_camera.max_captures'),
-                'jpeg_quality' => config('raniag.gps_camera.jpeg_quality'),
-                'geolocation' => [
-                    'enableHighAccuracy' => config('raniag.geolocation.enable_high_accuracy'),
-                    'timeout' => config('raniag.geolocation.timeout_ms'),
-                    'maximumAge' => config('raniag.geolocation.maximum_age_ms'),
-                ],
-            ]);
+            window.RANIAG_GPS = @json($gpsConfig);
         </script>
         <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
         <script src="{{ asset('js/field-outbox.js') }}?v={{ @filemtime(public_path('js/field-outbox.js')) }}"></script>
