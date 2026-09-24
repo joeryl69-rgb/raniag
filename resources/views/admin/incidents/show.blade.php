@@ -73,7 +73,7 @@
     <div class="row g-4">
         <!-- Details Column -->
         <div class="col-lg-8">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>Incident Details</h5>
@@ -121,7 +121,7 @@
             </div>
 
             <!-- Evidence Section -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-images me-2 text-primary"></i>Attachments / Evidence</h5>
                 </div>
@@ -168,7 +168,7 @@
             </div>
 
             <!-- Case Documents Repository -->
-            <div class="card raniag-card shadow-sm border-0 mb-4" id="case-documents">
+            <div class="card raniag-card rg-app-card mb-4" id="case-documents">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-folder2-open me-2 text-primary"></i>Case Documents Repository</h5>
                     <div class="text-muted small mt-1">Attach a photo (or file) of each paper form for this incident. These are kept on file and can be included in printable copies requested by agencies.</div>
@@ -450,7 +450,7 @@
             @endpush
 
             <!-- Timeline Section -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Activity & Status Timeline</h5>
                 </div>
@@ -482,7 +482,7 @@
         <!-- Sidebar / Actions Column -->
         <div class="col-lg-4">
             <!-- Location Map -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt me-2 text-primary"></i>Incident Location</h5>
                 </div>
@@ -531,7 +531,7 @@
             </div>
 
             <!-- Reporter Profile -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-person-badge me-2 text-primary"></i>Reporter Details</h5>
                 </div>
@@ -560,8 +560,8 @@
             </div>
 
             <!-- Admin Actions -->
-            <div class="card raniag-card shadow-sm border-primary border-0 mb-4">
-                <div class="card-header bg-primary text-white py-3 rounded-top">
+            <div class="card rg-console-card mb-4">
+                <div class="card-header">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-lightning-charge me-2"></i>Action Dispatcher</h5>
                 </div>
                 <div class="card-body">
@@ -757,6 +757,10 @@
                                                             <div class="mb-3">
                                                                 <label class="form-label">Resolution Summary <span class="text-danger">*</span></label>
                                                                 <textarea class="form-control" name="summary" rows="4" required minlength="20">{{ old('summary', $assignmentResolution->summary) }}</textarea>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Actions Taken <span class="text-danger">*</span></label>
+                                                                <textarea class="form-control" name="actions_taken" rows="4" required minlength="20">{{ old('actions_taken', $assignmentResolution->actions_taken) }}</textarea>
                                                             </div>
                                                             <div class="alert alert-warning small mb-0">
                                                                 <i class="bi bi-exclamation-triangle me-1"></i>

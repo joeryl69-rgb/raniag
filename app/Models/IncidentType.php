@@ -22,7 +22,6 @@ class IncidentType extends Model
         'default_priority',
         'is_active',
         'sort_order',
-        'resolution_checklist',
         'public_guidance',
     ];
 
@@ -32,7 +31,6 @@ class IncidentType extends Model
             'is_active' => 'boolean',
             'sort_order' => 'integer',
             'default_priority' => IncidentPriority::class,
-            'resolution_checklist' => 'array',
         ];
     }
 

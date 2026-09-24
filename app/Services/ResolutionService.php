@@ -28,7 +28,7 @@ class ResolutionService
                 'incident_id' => $incident->id,
                 'resolved_by' => $resolvedBy->id,
                 'summary' => $data['summary'],
-                'actions_taken' => $data['actions_taken'] ?? null,
+                'actions_taken' => $data['actions_taken'],
                 'resolved_at' => now(),
             ]);
 

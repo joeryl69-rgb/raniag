@@ -90,7 +90,7 @@
     </div>
 
     {{-- Map-first: live scene + responding units --}}
-    <div class="card shadow-sm border-0 mb-3 agency-detail-card overflow-hidden">
+    <div class="card rg-app-card mb-3 overflow-hidden">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap">
             <h5 class="mb-0 fw-bold"><i class="bi bi-broadcast-pin text-primary me-2"></i>Live Response Map</h5>
             <span class="font-monospace text-muted small">#{{ $incident->tracking_number }}</span>
@@ -121,18 +121,20 @@
     <div class="row g-4">
         <!-- Case Action Control — primary actions under the map -->
         <div class="col-lg-5 order-1">
-            <div class="card shadow-sm border-0 agency-detail-card">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-play-circle text-primary me-2"></i>Case Action Control</h5>
+            <div class="card rg-console-card">
+                <div class="card-header">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-broadcast me-2"></i>Case Action Control</h5>
                 </div>
                 <div class="card-body">
                     @if ($needsAcceptance)
                         <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
                             <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation.</p>
-                            <button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
-                                <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
-                            </button>
+                            <div class="rg-sticky-cta">
+                                <button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                                    <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
+                                </button>
+                            </div>
                         </div>
                         <x-confirm-action-modal
                             id="acceptAcknowledgeModal"
@@ -192,18 +194,10 @@
                                     <textarea class="form-control" name="summary" id="summary" rows="3" required minlength="20" placeholder="Summarize the final resolution findings (min 20 chars)..."></textarea>
                                 </div>
 
-                                @php $checklist = $incident->incidentType?->resolution_checklist ?? []; @endphp
-                                @if (is_array($checklist) && count($checklist))
-                                    <div class="mb-3">
-                                        <div class="form-label">Resolution checklist</div>
-                                        @foreach ($checklist as $i => $item)
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="checklist_done[]" value="{{ $item }}" id="agency_chk_{{ $i }}" required>
-                                                <label class="form-check-label" for="agency_chk_{{ $i }}">{{ $item }}</label>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
+                                <div class="mb-3">
+                                    <label for="actions_taken" class="form-label">Actions Taken <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" name="actions_taken" id="actions_taken" rows="3" required minlength="20" placeholder="Detail the physical or technical actions taken (min 20 chars)..."></textarea>
+                                </div>
 
                                 <div class="mb-3">
                                     <x-gps-camera />
@@ -212,7 +206,9 @@
                                     <div class="form-text">Use the GPS Camera above for a geotagged, watermarked photo, or attach files directly here.</div>
                                 </div>
 
-                                <button type="button" class="btn btn-success w-100" id="resolutionReviewBtn"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
+                                <div class="rg-sticky-cta">
+                                    <button type="button" class="btn btn-success w-100" id="resolutionReviewBtn"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
+                                </div>
                             </form>
 
                             {{-- Review-before-submit: shows exactly what's about to be sent so the
@@ -230,6 +226,10 @@
                                             <div class="mb-3">
                                                 <div class="text-muted small fw-semibold">Resolution Summary</div>
                                                 <p class="mb-0" id="reviewSummary" style="white-space: pre-wrap;"></p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <div class="text-muted small fw-semibold">Actions Taken</div>
+                                                <p class="mb-0" id="reviewActionsTaken" style="white-space: pre-wrap;"></p>
                                             </div>
                                             <div class="mb-0">
                                                 <div class="text-muted small fw-semibold">Evidence Attached</div>
@@ -291,6 +291,7 @@
                                         if (!form.reportValidity()) return;
 
                                         document.getElementById('reviewSummary').textContent = document.getElementById('summary').value.trim();
+                                        document.getElementById('reviewActionsTaken').textContent = document.getElementById('actions_taken').value.trim();
                                         const fileCount = document.getElementById('evidence').files.length;
                                         document.getElementById('reviewEvidenceCount').textContent = fileCount > 0
                                             ? `${fileCount} file${fileCount === 1 ? '' : 's'} attached`
@@ -345,6 +346,11 @@
                                                     <div class="mb-3">
                                                         <label for="edit_summary" class="form-label">Resolution Summary <span class="text-danger">*</span></label>
                                                         <textarea class="form-control" name="summary" id="edit_summary" rows="3" required minlength="20">{{ old('summary', $agencyResolution->summary) }}</textarea>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label for="edit_actions_taken" class="form-label">Actions Taken <span class="text-danger">*</span></label>
+                                                        <textarea class="form-control" name="actions_taken" id="edit_actions_taken" rows="3" required minlength="20">{{ old('actions_taken', $agencyResolution->actions_taken) }}</textarea>
                                                     </div>
 
                                                     <div class="mb-3">
@@ -436,7 +442,7 @@
 
         <!-- Case file details — secondary column -->
         <div class="col-lg-7 order-2">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-folder-fill text-primary me-2"></i>Case Details</h5>
@@ -480,7 +486,7 @@
                 </div>
             </div>
 
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-images text-primary me-2"></i>Attached Evidence</h5>
                     <button class="btn btn-sm btn-outline-secondary d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#agencyEvidenceCollapse" aria-expanded="false">
@@ -526,7 +532,7 @@
                 </div>
             </div>
 
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Investigation Updates Log</h5>
                     <button class="btn btn-sm btn-outline-secondary d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#agencyTimelineCollapse" aria-expanded="false">

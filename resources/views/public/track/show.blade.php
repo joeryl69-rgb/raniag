@@ -61,7 +61,7 @@
 
     <div data-live-refresh data-live-refresh-target="#rg-track-status" data-live-refresh-interval="8000">
     <div id="rg-track-status">
-    <div class="card raniag-card mb-4">
+    <div class="card raniag-card rg-app-card mb-4">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
             <span class="raniag-step-badge"><i class="bi bi-signpost-2"></i></span>
             <span>Progress</span>
@@ -115,7 +115,7 @@
     </div>
 
     @if ($incident->incidentType?->public_guidance)
-        <div class="card raniag-card mb-4">
+        <div class="card raniag-card rg-app-card mb-4">
             <div class="card-header raniag-card-header py-3"><strong>What to do now</strong></div>
             <div class="card-body">{{ $incident->incidentType->public_guidance }}</div>
         </div>
@@ -130,7 +130,7 @@
     @endif
 
     @if ($incident->latitude && $incident->longitude)
-        <div class="card raniag-card mb-4 overflow-hidden">
+        <div class="card raniag-card rg-app-card mb-4 overflow-hidden">
             <div class="card-header raniag-card-header py-3 d-flex justify-content-between align-items-center gap-2">
                 <strong><i class="bi bi-broadcast-pin text-primary me-1"></i>Live response map</strong>
                 <span class="small text-muted" id="track-units-status">Loading responders…</span>
@@ -175,22 +175,25 @@
                     };
                 @endphp
                 <div class="track-agency-row">
-                    <div>
-                        <div class="agency-name">
-                            {{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}
-                        </div>
-                        <div class="agency-meta">
-                            @if ($assignment->acknowledged_at)
-                                Accepted {{ $assignment->acknowledged_at->diffForHumans() }}
-                            @elseif ($assignment->assigned_at)
-                                Assigned {{ $assignment->assigned_at->diffForHumans() }}
-                            @else
-                                Assigned to this report
-                            @endif
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="track-agency-avatar track-phase-badge {{ $phaseClass }}"><i class="bi {{ $phaseIcon }}"></i></span>
+                        <div>
+                            <div class="agency-name">
+                                {{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}
+                            </div>
+                            <div class="agency-meta">
+                                @if ($assignment->acknowledged_at)
+                                    Accepted {{ $assignment->acknowledged_at->diffForHumans() }}
+                                @elseif ($assignment->assigned_at)
+                                    Assigned {{ $assignment->assigned_at->diffForHumans() }}
+                                @else
+                                    Assigned to this report
+                                @endif
+                            </div>
                         </div>
                     </div>
                     <span class="track-phase-badge {{ $phaseClass }}">
-                        <i class="bi {{ $phaseIcon }}"></i>{{ $phaseText }}
+                        {{ $phaseText }}
                     </span>
                 </div>
             @endforeach
@@ -198,7 +201,7 @@
     @endif
 
     @if ($canReply)
-        <div class="card raniag-card mb-4 border-warning">
+        <div class="card raniag-card rg-app-card mb-4 border-warning">
             <div class="card-header raniag-card-header py-3">Reply to responders</div>
             <div class="card-body">
                 <form method="POST" action="{{ route('public.track.reply', $incident->tracking_number) }}">
@@ -212,7 +215,7 @@
 
     <div class="row g-4" data-rg-stagger>
         <div class="col-lg-4">
-            <div class="card raniag-card mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                     <span class="raniag-step-badge"><i class="bi bi-info-lg"></i></span>
                     <span>Incident Details</span>
@@ -245,7 +248,7 @@
         </div>
 
         <div class="col-lg-8">
-            <div class="card raniag-card mb-4">
+            <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                     <span class="raniag-step-badge"><i class="bi bi-card-text"></i></span>
                     <span>Description</span>
@@ -265,7 +268,7 @@
                 $reporterEvidence = $incident->evidence->whereNull('uploaded_by');
             @endphp
             @if ($reporterEvidence->isNotEmpty())
-                <div class="card raniag-card">
+                <div class="card raniag-card rg-app-card">
                     <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                         <span class="raniag-step-badge"><i class="bi bi-image"></i></span>
                         <span>Evidence ({{ $reporterEvidence->count() }})</span>
@@ -321,7 +324,7 @@
         </div>
     </div>
 
-    <div class="card raniag-card mt-4">
+    <div class="card raniag-card rg-app-card mt-4">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
             <span class="raniag-step-badge"><i class="bi bi-list-ul"></i></span>
             <span>Full History</span>

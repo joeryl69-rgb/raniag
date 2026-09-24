@@ -2014,3 +2014,206 @@ body.raniag-public {
 .track-phase-badge.is-accepted { background: #eff6ff; color: #1d4ed8; }
 .track-phase-badge.is-en_route { background: #e0f2fe; color: #0369a1; }
 .track-phase-badge.is-on_scene { background: #ecfdf5; color: #047857; }
+.track-agency-avatar {
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .95rem;
+    flex: 0 0 auto;
+    padding: 0;
+}
+
+/* =====================================================================
+   Round 33 — response console design system
+   Applies across Case Action Control (agency/personnel), the staff
+   incident case-file pages, and the responder field-status widget so
+   the field UI reads as a live app console instead of a stack of
+   identical stock Bootstrap buttons.
+   ===================================================================== */
+
+/* ---- Field status console (responder-field-strip component) ---- */
+.rg-field-console {
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    padding: 1rem 1.1rem 1.1rem;
+    box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.35);
+}
+.rg-field-console-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-bottom: .85rem;
+}
+.rg-field-console-eyebrow {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+.rg-field-nav-link {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--raniag-primary);
+    text-decoration: none;
+}
+.rg-field-nav-link:hover { text-decoration: underline; }
+
+.rg-phase-stepper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: .25rem .25rem .75rem;
+}
+.rg-phase-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .35rem;
+    flex: 0 0 auto;
+    width: 4.5rem;
+}
+.rg-phase-dot {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #94a3b8;
+    transition: all .2s ease;
+}
+.rg-phase-step.is-done .rg-phase-dot {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+.rg-phase-step.is-current .rg-phase-dot {
+    background: var(--raniag-primary);
+    border-color: var(--raniag-primary);
+    color: #fff;
+    box-shadow: 0 0 0 5px var(--raniag-primary-light);
+}
+.rg-phase-label {
+    font-size: .72rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-align: center;
+}
+.rg-phase-step.is-done .rg-phase-label,
+.rg-phase-step.is-current .rg-phase-label { color: #0f172a; }
+.rg-phase-connector {
+    flex: 1 1 auto;
+    height: 2px;
+    background: #e2e8f0;
+    margin-top: 1.15rem;
+    min-width: 1rem;
+}
+.rg-phase-connector.is-done { background: #16a34a; }
+
+.rg-field-actions {
+    display: flex;
+    align-items: stretch;
+    gap: .5rem;
+}
+.rg-field-cta { font-weight: 700; }
+.rg-field-sms-toggle { flex: 0 0 auto; }
+.rg-field-done-hint {
+    display: flex;
+    align-items: center;
+    font-size: .84rem;
+    color: #475569;
+    background: #f0fdf4;
+    border: 1px dashed #bbf7d0;
+    border-radius: .6rem;
+    padding: .55rem .75rem;
+}
+.rg-field-sms-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem; padding: .75rem; }
+
+/* ---- Case Action Control console shell (agency/personnel/admin case file) ---- */
+.rg-console-card {
+    border-radius: 1.1rem;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: 0 16px 32px -24px rgba(15, 23, 42, 0.45);
+    overflow: hidden;
+}
+.rg-console-card .card-header {
+    background: linear-gradient(90deg, #0b5ed7 0%, #0846a6 100%);
+    color: #fff;
+    border-bottom: 0;
+    padding: 1rem 1.15rem;
+}
+.rg-console-card .card-header h5,
+.rg-console-card .card-header i { color: #fff !important; }
+.rg-console-card .card-header .font-monospace { color: rgba(255,255,255,.75) !important; }
+.rg-console-card .card-body { padding: 1.1rem; }
+
+/* Sticky bottom action bar — primary CTA always reachable on mobile
+   instead of scrolled away below a long case-detail column. */
+.rg-mobile-stickybar {
+    display: none;
+}
+@media (max-width: 767.98px) {
+    .rg-mobile-stickybar {
+        display: flex;
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+        gap: .5rem;
+        padding: .6rem .75rem calc(.6rem + env(safe-area-inset-bottom));
+        background: rgba(255,255,255,.97);
+        backdrop-filter: blur(6px);
+        border-top: 1px solid #e2e8f0;
+        box-shadow: 0 -8px 20px -16px rgba(15,23,42,.4);
+        margin: 0 -1.1rem -1.1rem;
+    }
+    .rg-mobile-stickybar .btn { flex: 1 1 auto; }
+}
+
+/* ---- Generic elevated "app" card look for case-file + dashboard chrome ---- */
+.rg-app-card {
+    border-radius: 1.1rem !important;
+    border: 1px solid #e7ecf3 !important;
+    box-shadow: 0 14px 30px -26px rgba(15, 23, 42, 0.5) !important;
+}
+.rg-app-card .card-header {
+    border-bottom: 1px solid #eef2f7 !important;
+    background: #fff !important;
+}
+.rg-status-hero {
+    border-radius: 1.1rem;
+    padding: 1rem 1.15rem;
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+    border: 1px solid #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-bottom: 1rem;
+}
+.rg-status-hero .rg-status-hero-title { font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #1d4ed8; }
+.rg-status-hero .rg-status-hero-value { font-size: 1.15rem; font-weight: 800; color: #0f172a; }
+
+/* Floats a primary CTA to the bottom of the viewport on phones so it's
+   always one thumb-reach away instead of scrolled off below a long
+   case-file column — no button duplication needed. */
+@media (max-width: 767.98px) {
+    .rg-sticky-cta {
+        position: sticky;
+        bottom: .65rem;
+        z-index: 15;
+        padding-top: .35rem;
+        background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.9) 35%, #fff 100%);
+    }
+    .rg-sticky-cta .btn { box-shadow: 0 10px 24px -10px rgba(11,94,215,.55); }
+}

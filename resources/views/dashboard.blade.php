@@ -42,8 +42,22 @@
                 border: 1px solid var(--raniag-border);
                 border-radius: 1rem;
                 background: #fff;
-                box-shadow: var(--raniag-card-shadow);
+                box-shadow: 0 14px 30px -22px rgba(15, 23, 42, 0.45);
+                transition: box-shadow .18s ease, transform .18s ease;
             }
+            .map-card .map-toolbar {
+                background: linear-gradient(90deg, #0b5ed7 0%, #0846a6 100%);
+                border-bottom: 0;
+                border-radius: 1rem 1rem 0 0;
+            }
+            .map-card .map-toolbar h5,
+            .map-card .map-toolbar .live-pulse,
+            .map-card .map-toolbar i.bi-geo-alt-fill { color: #fff !important; }
+            .map-card .map-toolbar .map-mode-switch { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.25); }
+            .map-card .map-toolbar .map-mode-switch button { color: rgba(255,255,255,.85); }
+            .map-card .map-toolbar .map-mode-switch button.active { background: #fff; color: var(--raniag-primary); }
+            .map-card .map-toolbar .btn-outline-secondary { color: #fff; border-color: rgba(255,255,255,.4); }
+            .map-card .map-toolbar .btn-outline-secondary:hover { background: rgba(255,255,255,.15); color: #fff; }
 
             /* ---- KPI Cards ---- */
             .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
@@ -61,7 +75,7 @@
                 border-left: 3px solid transparent;
                 transition: border-color .15s ease, background .15s ease;
             }
-            .kpi-card:hover { background: #fafbfc; color: inherit; }
+            .kpi-card:hover { background: #fafbfc; color: inherit; transform: translateY(-2px); box-shadow: 0 16px 28px -20px rgba(15,23,42,.5); }
             .kpi-card.tone-primary { border-left-color: var(--raniag-primary); }
             .kpi-card.tone-warning { border-left-color: #b45309; }
             .kpi-card.tone-success { border-left-color: var(--raniag-success); }
@@ -741,17 +755,30 @@
                 const stored = parseInt(localStorage.getItem(SEEN_KEY) || '0', 10) || 0;
                 const latestId = parseInt(latest.id, 10);
 
-                // First successful poll only seeds the baseline so a page refresh
-                // doesn't re-alert for an already-known case.
+                // A page freshly opened right after a report came in should still
+                // surface it — only suppress the alert on first load when the
+                // latest known case is NOT recent (i.e. it's stale/already-seen
+                // history), otherwise a dispatcher opening the dashboard right
+                // after dispatch would silently miss the very incident they need
+                // to see first.
+                const reportedAt = latest.reported_at ? Date.parse(latest.reported_at) : NaN;
+                const ageMs = Number.isNaN(reportedAt) ? Infinity : (Date.now() - reportedAt);
+                const isFresh = ageMs <= 2 * 60 * 1000; // within the last 2 minutes
+
                 if (!alertPrimed) {
                     alertPrimed = true;
                     if (!stored || latestId > stored) {
-                        localStorage.setItem(SEEN_KEY, String(latestId));
+                        if (!isFresh) {
+                            localStorage.setItem(SEEN_KEY, String(latestId));
+                            return;
+                        }
+                        // fresh + unseen on first load: fall through and show it.
+                    } else {
+                        return;
                     }
+                } else if (latestId <= stored) {
                     return;
                 }
-
-                if (latestId <= stored) return;
 
                 localStorage.setItem(SEEN_KEY, String(latestId));
 

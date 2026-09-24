@@ -39,6 +39,8 @@ jobs:
 
       - name: SSH and deploy
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
@@ -48,6 +50,7 @@ jobs:
           timeout: 60s
           command_timeout: 30m
           script_stop: true
+          envs: MAPBOX_ACCESS_TOKEN
           script: |
             set -euxo pipefail
             echo "==> deploy start $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -71,6 +74,14 @@ jobs:
             mkdir -p public/build
             echo "==> composer (no scripts: Hostinger CLI blocks proc_open)"
             composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist --no-scripts
+            echo "==> sync MAPBOX_ACCESS_TOKEN into production .env (idempotent, keeps everything else untouched)"
+            if [ -n "${MAPBOX_ACCESS_TOKEN:-}" ] && [ -f .env ]; then
+              if grep -q '^MAPBOX_ACCESS_TOKEN=' .env; then
+                sed -i "s#^MAPBOX_ACCESS_TOKEN=.*#MAPBOX_ACCESS_TOKEN=${MAPBOX_ACCESS_TOKEN}#" .env
+              else
+                printf '\nMAPBOX_ACCESS_TOKEN=%s\n' "${MAPBOX_ACCESS_TOKEN}" >> .env
+              fi
+            fi
             echo "==> artisan"
             php artisan optimize:clear
             php artisan migrate --force
