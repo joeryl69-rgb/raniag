@@ -9,7 +9,7 @@
     const NAV_TOUR = [
         { sel: '[data-rg-tour="home"]', pose: 'greeting', text: 'Home is where you start — overview, announcements, and how reporting works.' },
         { sel: '[data-rg-tour="track"]', pose: 'clipboard', text: 'Track Report — check status anytime with your tracking or reference code.' },
-        { sel: '[data-rg-tour="hazard"]', pose: 'map', text: 'Hazard Map — live hazard zones and open evacuation centers in Pamplona.' },
+        { sel: '[data-rg-tour="hazard"]', pose: 'map', text: 'Live Map — hazard zones, evacuation centers, and barangay risk awareness in Pamplona.' },
         { sel: '[data-rg-tour="dashboard"]', pose: 'clipboard', text: 'Community Dashboard — a public picture of reports and situational updates.' },
         { sel: '[data-rg-tour="support"]', pose: 'phone', text: 'Support — contact MDRRMO for help. Use Report an Incident to file a new case.' },
         { sel: '[data-rg-tour="report"]', pose: 'alert', text: 'Report an Incident — file a new report. I can walk you through it the first time.' },

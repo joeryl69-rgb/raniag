@@ -43,6 +43,9 @@ Route::name('public.')->group(function () {
     Route::post('/track', [IncidentTrackController::class, 'show'])
         ->middleware('throttle:20,1')
         ->name('track.lookup');
+    Route::get('/track/{trackingNumber}/units', [IncidentTrackController::class, 'liveUnits'])
+        ->middleware('throttle:60,1')
+        ->name('track.units');
     Route::post('/track/{trackingNumber}/reply', [IncidentTrackController::class, 'reply'])
         ->middleware('throttle:10,1')
         ->name('track.reply');

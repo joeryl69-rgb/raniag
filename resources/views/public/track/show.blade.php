@@ -2,6 +2,10 @@
 
 @section('title', 'Report Status')
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+@endpush
+
 @section('content')
 <div class="container">
 
@@ -121,7 +125,22 @@
         <div class="alert alert-info mb-4">
             Nearest open evacuation center: <strong>{{ $nearestCenter['name'] }}</strong>
             (~{{ number_format($nearestCenter['distance_m']) }} m).
-            <a href="{{ route('public.hazard.map') }}">View hazard map</a>
+            <a href="{{ route('public.hazard.map') }}">View live map</a>
+        </div>
+    @endif
+
+    @if ($incident->latitude && $incident->longitude)
+        <div class="card raniag-card mb-4">
+            <div class="card-header raniag-card-header py-3 d-flex justify-content-between align-items-center gap-2">
+                <strong>Live response map</strong>
+                <span class="small text-muted" id="track-units-status">Loading responders…</span>
+            </div>
+            <div class="card-body p-0">
+                <div id="track-live-map" style="height:280px;width:100%;" data-lenis-prevent></div>
+            </div>
+            <div class="card-footer bg-white small text-muted">
+                Approaching units appear after responders share location while en route. Exact report address stays on this private tracking page only.
+            </div>
         </div>
     @endif
 
@@ -302,3 +321,24 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+@if ($incident->latitude && $incident->longitude)
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
+<script src="{{ asset('js/public-track-map.js') }}?v={{ @filemtime(public_path('js/public-track-map.js')) }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.RANIAG_TrackMap?.init({
+        el: 'track-live-map',
+        lat: {{ (float) $incident->latitude }},
+        lng: {{ (float) $incident->longitude }},
+        map: @json($map ?? config('raniag.map')),
+        unitsUrl: @json($unitsUrl ?? null),
+        statusEl: 'track-units-status',
+        pollMs: 12000,
+    });
+});
+</script>
+@endif
+@endpush

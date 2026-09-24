@@ -902,26 +902,44 @@
             </style>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
             <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
+            <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
+            <script src="{{ asset('js/raniag-dispatch-map.js') }}?v={{ @filemtime(public_path('js/raniag-dispatch-map.js')) }}"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
                     const lat = {{ $incident->latitude }};
                     const lng = {{ $incident->longitude }};
-                    const map = L.map('show-incident-map').setView([lat, lng], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 19,
-                        attribution: '&copy; OpenStreetMap contributors'
-                    }).addTo(map);
+                    const mapConfig = @json(config('raniag.map'));
                     const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
-                    // Centralized icon+color resolution (see public/js/incident-map-icons.js)
-                    // keeps this pin visually identical to every other incident map in the system.
-                    const pinIcon = window.RaniagIcons.buildDivIcon({
+                    const hazardZones = @json($incident->meta['hazard_zones'] ?? []);
+
+                    const statusBox = document.createElement('div');
+                    statusBox.id = 'dispatch-units-status';
+                    statusBox.className = 'small text-muted mb-2';
+                    statusBox.textContent = 'Loading live units…';
+                    const mapEl = document.getElementById('show-incident-map');
+                    if (mapEl?.parentNode) mapEl.parentNode.insertBefore(statusBox, mapEl);
+
+                    if (Array.isArray(hazardZones) && hazardZones.length) {
+                        const hz = document.createElement('div');
+                        hz.className = 'alert alert-warning py-2 px-3 small mb-2';
+                        hz.innerHTML = '<strong>Inside hazard zone:</strong> ' +
+                            hazardZones.map(z => (z.name || 'Zone') + (z.type ? ' (' + z.type + ')' : '')).join(', ');
+                        statusBox.parentNode.insertBefore(hz, statusBox);
+                    }
+
+                    window.RANIAG_DispatchMap?.init({
+                        el: 'show-incident-map',
+                        lat,
+                        lng,
+                        map: mapConfig,
                         icon: @json($incident->incidentType->icon ?? null),
                         color: @json($incident->incidentType->color ?? null),
                         outsideJurisdiction: withinJurisdiction === false,
+                        scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
+                        unitsUrl: @json(route('admin.incidents.live_units', $incident)),
+                        statusEl: 'dispatch-units-status',
+                        pollMs: 15000,
                     });
-                    L.marker([lat, lng], { icon: pinIcon }).addTo(map)
-                        .bindPopup(withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location')
-                        .openPopup();
                 });
             </script>
         @endif

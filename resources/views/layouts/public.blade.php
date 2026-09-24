@@ -659,7 +659,7 @@
                         <a class="nav-link {{ request()->routeIs('public.hazard.*') ? 'active' : '' }}"
                            data-rg-tour="hazard"
                            href="{{ route('public.hazard.map') }}">
-                            <i class="bi bi-map me-1 d-lg-none"></i>Hazard Map
+                            <i class="bi bi-map me-1 d-lg-none"></i>Live Map
                         </a>
                     </li>
                     <li class="nav-item">

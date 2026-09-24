@@ -536,26 +536,39 @@
             </style>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
             <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
+            <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
+            <script src="{{ asset('js/raniag-dispatch-map.js') }}?v={{ @filemtime(public_path('js/raniag-dispatch-map.js')) }}"></script>
+            <script src="{{ asset('js/raniag-location-ping.js') }}?v={{ @filemtime(public_path('js/raniag-location-ping.js')) }}"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
                     const lat = {{ $incident->latitude }};
                     const lng = {{ $incident->longitude }};
-                    const map = L.map('agency-incident-map').setView([lat, lng], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 19,
-                        attribution: '&copy; OpenStreetMap contributors'
-                    }).addTo(map);
                     const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
-                    // Centralized icon+color resolution (see public/js/incident-map-icons.js)
-                    // keeps this pin visually identical to every other incident map in the system.
-                    const pinIcon = window.RaniagIcons.buildDivIcon({
+
+                    window.RANIAG_DispatchMap?.init({
+                        el: 'agency-incident-map',
+                        lat,
+                        lng,
+                        map: @json(config('raniag.map')),
                         icon: @json($incident->incidentType->icon ?? null),
                         color: @json($incident->incidentType->color ?? null),
                         outsideJurisdiction: withinJurisdiction === false,
+                        scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
+                        unitsUrl: @json(route('agency.incidents.live_units', $incident)),
+                        pollMs: 15000,
                     });
-                    L.marker([lat, lng], { icon: pinIcon }).addTo(map)
-                        .bindPopup(withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location')
-                        .openPopup();
+
+                    @php
+                        $__agencyPhase = isset($myAssignment) ? ($myAssignment->field_phase ?? null) : null;
+                    @endphp
+                    window.RANIAG_LocationPing?.start({
+                        url: @json(route('agency.location_ping')),
+                        phase: @json($__agencyPhase),
+                        getPhase() {
+                            const active = document.querySelector('#field-phase-strip .btn-primary');
+                            return active ? (active.closest('form')?.querySelector('[name="field_phase"]')?.value || '') : @json($__agencyPhase);
+                        },
+                    });
                 });
             </script>
         @endif

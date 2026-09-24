@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Hazard & Evacuation Map')
+@section('title', 'Live Map — Hazards & Risk')
 
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -11,8 +11,11 @@
     <div class="rg-page-head d-flex flex-wrap justify-content-between align-items-start gap-3" data-rg-reveal>
         <div>
             <span class="rg-eyebrow"><i class="bi bi-broadcast-pin"></i> Live situational awareness</span>
-            <h1 class="rg-page-title">Hazard &amp; evacuation map</h1>
-            <p class="rg-page-sub mb-0">Active hazard zones and open evacuation centers in Pamplona.</p>
+            <h1 class="rg-page-title">Hazard &amp; risk map</h1>
+            <p class="rg-page-sub mb-0">
+                Active hazard zones, open evacuation centers, and community risk awareness across Pamplona
+                (barangay pressure only — individual reports stay private).
+            </p>
         </div>
         <div class="text-md-end">
             <span class="rg-live-pill">Live</span>
@@ -34,7 +37,7 @@
                 <img src="/images/guide/jo-map.svg" alt="JO" width="48" height="60" class="flex-shrink-0" id="hazard-jo-avatar">
                 <div>
                     <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
-                    <div class="small text-muted" id="hazard-jo-tip">Turn on My location to track yourself and show a live route to the nearest open center.</div>
+                    <div class="small text-muted" id="hazard-jo-tip">Turn on My location for a live route to the nearest open center. Risk awareness shows where open reports are concentrated by barangay.</div>
                 </div>
             </div>
 
@@ -45,6 +48,9 @@
                 <input type="checkbox" class="btn-check" id="layer-centers" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
 
+                <input type="checkbox" class="btn-check" id="layer-risk" checked autocomplete="off">
+                <label class="btn btn-sm rg-hazard-chip" for="layer-risk">Risk awareness</label>
+
                 <input type="checkbox" class="btn-check" id="layer-you" autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-you">My location</label>
             </div>
@@ -54,7 +60,14 @@
             <div class="rg-hazard-legend mb-3">
                 <span><i class="rg-hazard-swatch" style="background:#b45309"></i> Hazard zone</span>
                 <span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%"></i> Evac center</span>
+                <span><i class="rg-hazard-swatch" style="background:#f97316"></i> Risk (open reports)</span>
                 <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> My location</span>
+            </div>
+
+            <div id="risk-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small mb-2">
+                <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Community risk awareness</div>
+                <div id="risk-summary" class="fw-semibold">Loading…</div>
+                <div id="risk-list" class="mt-1 text-muted" style="font-size:.78rem"></div>
             </div>
 
             <div id="nearest-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small d-none mb-2"></div>
@@ -91,12 +104,14 @@
 
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
 <script src="{{ asset('js/public-hazard-map.js') }}?v={{ @filemtime(public_path('js/public-hazard-map.js')) }}"></script>
 <script>
 window.RANIAG_HAZARD = {
     map: @json($map),
     zones: @json($zones),
     centers: @json($centers),
+    risk: @json($risk),
     snapshotUrl: @json($snapshotUrl),
     nearestUrl: @json($nearestUrl),
 };

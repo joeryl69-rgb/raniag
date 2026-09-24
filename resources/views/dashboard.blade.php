@@ -484,6 +484,7 @@
 
     @push('scripts')
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
         <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
         <script>
@@ -494,10 +495,11 @@
             const BOUNDARY_URL = "{{ route($routePrefix . '.dashboard.boundary') }}";
             const BARANGAYS_URL = "{{ route($routePrefix . '.dashboard.barangays') }}";
             const INCIDENT_URL_BASE = "{{ route($routePrefix . '.incidents.show', ['incident' => '__ID__']) }}".replace('/__ID__', '');
-            const CENTER = [12.5661, 121.3306]; // Pamplona, Camarines Norte fallback view
+            const CENTER = [{{ config('raniag.map.default_lat') }}, {{ config('raniag.map.default_lng') }}];
+            const MAP_CONFIG = @json(config('raniag.map'));
             const REFRESH_MS = 30000;
 
-            let map, streetLayer, satLayer, boundaryLayer, barangayLayer, markerLayer, jurisdictionBounds;
+            let map, streetLayer, satLayer, boundaryLayer, barangayLayer, markerLayer, hazardLayer, evacLayer, jurisdictionBounds;
             let charts = {};
             let currentPoints = [];
 
@@ -580,11 +582,18 @@
 
                 map = L.map(el, { zoomControl: false }).setView(CENTER, 13);
 
-                streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '' }).addTo(map);
+                if (window.RANIAG_Mapbox) {
+                    const basemap = window.RANIAG_Mapbox.addBasemap(map, MAP_CONFIG);
+                    streetLayer = basemap.layer;
+                } else {
+                    streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '' }).addTo(map);
+                }
                 satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '' });
 
                 markerLayer = L.layerGroup().addTo(map);
                 barangayLayer = L.layerGroup();
+                hazardLayer = L.layerGroup().addTo(map);
+                evacLayer = L.layerGroup().addTo(map);
 
                 fetch(BOUNDARY_URL)
                     .then(r => r.ok ? r.json() : null)
@@ -747,6 +756,32 @@
                 handle.addTo(markerLayer);
             }
 
+            function plotHazardLayers(data) {
+                if (!hazardLayer || !evacLayer) return;
+                hazardLayer.clearLayers();
+                evacLayer.clearLayers();
+
+                (data.hazard_zones || []).forEach(function (z) {
+                    if (!z.geometry) return;
+                    const color = z.color || (z.type && z.type.color) || '#b45309';
+                    L.geoJSON(z.geometry, {
+                        style: { color, weight: 2, fillColor: color, fillOpacity: 0.18 },
+                    }).bindPopup('<strong>' + escapeHtml(z.name || 'Hazard') + '</strong>').addTo(hazardLayer);
+                });
+
+                (data.evac_centers || []).forEach(function (c) {
+                    const lat = parseFloat(c.latitude), lng = parseFloat(c.longitude);
+                    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+                    L.circleMarker([lat, lng], {
+                        radius: 6,
+                        color: '#fff',
+                        weight: 2,
+                        fillColor: '#0b5ed7',
+                        fillOpacity: 1,
+                    }).bindPopup('<strong>' + escapeHtml(c.name || 'Evac center') + '</strong>').addTo(evacLayer);
+                });
+            }
+
             function plotPoints(points) {
                 if (!map) return;
                 currentPoints = points;
@@ -800,6 +835,7 @@
                 setText('kpi-avg-resolution', `Avg. resolution ${analytics.avg_resolution_hours ?? 0}h`);
 
                 plotPoints(data.recent_incidents || []);
+                plotHazardLayers(data);
 
                 const sms = data.sms_stats || {};
                 setText('sms-sent', sms.sent ?? 0);

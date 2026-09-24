@@ -25,6 +25,7 @@ Route::prefix('agency')
         Route::prefix('incidents')->name('incidents.')->group(function () {
             Route::get('/', [IncidentController::class, 'index'])->name('index');
             Route::get('/{incident}', [IncidentController::class, 'show'])->name('show');
+            Route::get('/{incident}/live-units', \App\Http\Controllers\Shared\LiveUnitsController::class)->name('live_units');
             Route::patch('/{incident}/status', [IncidentController::class, 'updateStatus'])->name('update_status');
             Route::post('/{incident}/accept', [IncidentController::class, 'acceptAssignment'])->name('accept');
             Route::post('/{incident}/field-phase', [\App\Http\Controllers\Shared\ResponderFieldController::class, 'updateFieldPhase'])->name('field_phase');

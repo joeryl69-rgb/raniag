@@ -48,7 +48,7 @@ Last updated: 2026-09-21 (post Phase 0a–1 access deploy)
 | Filipino locale toggle (`lang/tl.json`) | DONE |
 | Inbound SMS reporting | DEFERRED (PhilSMS outbound-only) |
 | Ilocano / Itawis packs | DEFERRED (needs translators) |
-| Live unit GPS on tracking page | DEFERRED (needs Phase 2/3 telemetry) |
+| Live unit GPS on tracking page | DONE (Round 30 — Mapbox route + session-gated units) |
 
 ---
 

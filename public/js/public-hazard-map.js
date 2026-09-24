@@ -1,8 +1,9 @@
 /**
- * Public live hazard map — Leaflet layers, Mapbox tiles/route, live location tracking.
+ * Public live hazard + risk awareness map — Leaflet layers, Mapbox tiles/route, live location.
  */
 (function () {
     const REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const Mapbox = window.RANIAG_Mapbox || null;
 
     function esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, (c) => ({
@@ -32,25 +33,17 @@
             cfg.map.default_zoom || 13
         );
 
-        const mapboxToken = (cfg.map.mapbox_token || '').trim();
-        const mapboxStyle = (cfg.map.mapbox_style || 'mapbox/streets-v12').replace(/^mapbox:\/\//, '');
-        if (mapboxToken) {
-            leaflet.tileLayer(
-                `https://api.mapbox.com/styles/v1/${mapboxStyle}/tiles/{z}/{x}/{y}?access_token=${encodeURIComponent(mapboxToken)}`,
-                {
-                    tileSize: 512,
-                    zoomOffset: -1,
-                    maxZoom: 22,
-                    attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-                }
-            ).addTo(map);
-        } else {
+        const basemap = Mapbox ? Mapbox.addBasemap(map, cfg.map) : null;
+        const mapboxToken = basemap?.token || String(cfg.map.mapbox_token || '').trim();
+
+        if (!basemap) {
             leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; OSM',
             }).addTo(map);
         }
 
+        const riskGroup = leaflet.layerGroup().addTo(map);
         const zoneGroup = leaflet.layerGroup().addTo(map);
         const centerGroup = leaflet.layerGroup().addTo(map);
         const youGroup = leaflet.layerGroup().addTo(map);
@@ -58,6 +51,7 @@
 
         const zoneLayers = new Map();
         const centerLayers = new Map();
+        let riskLayer = null;
         let lastUpdated = Date.now();
         let youMarker = null;
         let youAccuracy = null;
@@ -76,6 +70,7 @@
 
         const chkZones = document.getElementById('layer-zones');
         const chkCenters = document.getElementById('layer-centers');
+        const chkRisk = document.getElementById('layer-risk');
         const chkYou = document.getElementById('layer-you');
         const locateBtn = document.getElementById('hazard-locate-you');
         const geoStatus = document.getElementById('hazard-geo-status');
@@ -87,6 +82,8 @@
         const routeStatus = document.getElementById('route-status');
         const routeWalk = document.getElementById('route-walk');
         const routeDrive = document.getElementById('route-drive');
+        const riskSummary = document.getElementById('risk-summary');
+        const riskList = document.getElementById('risk-list');
 
         if (routeProfile === 'driving' && routeDrive) {
             routeDrive.checked = true;
@@ -120,8 +117,9 @@
             const tips = {
                 centers: 'Viewing evacuation centers. Tap one for details, or use my current location to see the nearest open center.',
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
+                risk: 'Risk awareness highlights barangays with open community reports — no exact addresses are shown.',
                 you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
-                both: 'Turn on My location for a live route to the nearest open center. Toggle off anytime to stop tracking.',
+                both: 'Toggle layers for zones, centers, and risk. Turn on My location for a live route to the nearest open center.',
                 route: 'Live route to the nearest open center. It updates as you move.',
                 off: 'My location is off. Turn it on to track yourself and show the route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
@@ -133,6 +131,7 @@
             return {
                 zones: !chkZones || chkZones.checked,
                 centers: !chkCenters || chkCenters.checked,
+                risk: !chkRisk || chkRisk.checked,
                 you: !chkYou || chkYou.checked,
             };
         }
@@ -145,15 +144,17 @@
 
         function focusMode() {
             const on = layersOn();
-            if (on.zones && !on.centers) return 'zones';
-            if (on.centers && !on.zones) return 'centers';
-            if (on.you && !on.zones && !on.centers) return 'you';
+            if (on.zones && !on.centers && !on.risk) return 'zones';
+            if (on.centers && !on.zones && !on.risk) return 'centers';
+            if (on.risk && !on.zones && !on.centers) return 'risk';
+            if (on.you && !on.zones && !on.centers && !on.risk) return 'you';
             return 'both';
         }
 
         function collectBoundsLayers() {
             const on = layersOn();
             const layers = [];
+            if (on.risk && riskLayer) layers.push(riskLayer);
             if (on.zones) {
                 const containing = nearestData?.hazard_zones || [];
                 if (containing.length) {
@@ -162,7 +163,8 @@
                         if (layer) layers.push(layer);
                     });
                 }
-                if (!layers.length) {
+                const zoneOnly = layers.filter((l) => l !== riskLayer);
+                if (!zoneOnly.length) {
                     zoneLayers.forEach((layer) => layers.push(layer));
                 }
             }
@@ -183,18 +185,16 @@
         }
 
         function formatDistance(meters) {
+            if (Mapbox) return Mapbox.formatDistance(meters);
             if (meters == null || Number.isNaN(meters)) return '';
             if (meters < 1000) return `${Math.round(meters)} m`;
-            return `${(meters / 1000).toFixed(meters >= 10000 ? 0 : 1)} km`;
+            return `${(meters / 1000).toFixed(1)} km`;
         }
 
         function formatDuration(seconds) {
+            if (Mapbox) return Mapbox.formatDuration(seconds);
             if (seconds == null || Number.isNaN(seconds)) return '';
-            const mins = Math.max(1, Math.round(seconds / 60));
-            if (mins < 60) return `${mins} min`;
-            const h = Math.floor(mins / 60);
-            const m = mins % 60;
-            return m ? `${h} hr ${m} min` : `${h} hr`;
+            return `${Math.max(1, Math.round(seconds / 60))} min`;
         }
 
         function setRouteStatus(msg, isError) {
@@ -222,12 +222,13 @@
         }
 
         function haversineMeters(a, b) {
+            if (Mapbox) return Mapbox.haversineMeters(a, b);
             if (!a || !b) return Infinity;
             const R = 6371000;
-            const dLat = (b.lat - a.lat) * Math.PI / 180;
-            const dLng = (b.lng - a.lng) * Math.PI / 180;
-            const lat1 = a.lat * Math.PI / 180;
-            const lat2 = b.lat * Math.PI / 180;
+            const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+            const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+            const lat1 = (a.lat * Math.PI) / 180;
+            const lat2 = (b.lat * Math.PI) / 180;
             const h = Math.sin(dLat / 2) ** 2
                 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
             return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
@@ -302,37 +303,31 @@
             if (!shouldRefreshRoute(force)) return;
 
             showRouteBox(true);
-            if (force || !routeLayer) {
-                if (routeSummary) routeSummary.textContent = 'Getting route…';
+            if ((force || !routeLayer) && routeSummary) {
+                routeSummary.textContent = 'Getting route…';
             }
             setRouteStatus('');
             const seq = ++routeFetchSeq;
-            const from = `${youLatLng.lng},${youLatLng.lat}`;
-            const to = `${Number(nc.longitude)},${Number(nc.latitude)}`;
-            const url = `https://api.mapbox.com/directions/v5/mapbox/${routeProfile}/${from};${to}?geometries=geojson&overview=full&access_token=${encodeURIComponent(mapboxToken)}`;
 
             try {
-                const res = await fetch(url);
+                if (!Mapbox?.fetchDirections) throw new Error('No Mapbox helper');
+                const result = await Mapbox.fetchDirections({
+                    token: mapboxToken,
+                    from: youLatLng,
+                    to: { lat: Number(nc.latitude), lng: Number(nc.longitude) },
+                    profile: routeProfile,
+                    routeGroup,
+                });
                 if (seq !== routeFetchSeq || !layersOn().you) return;
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                const route = data.routes && data.routes[0];
-                if (!route?.geometry) throw new Error('No route');
+                if (!result?.layer) throw new Error('No route');
 
-                clearRouteLineOnly();
-                routeLayer = leaflet.geoJSON(route.geometry, {
-                    style: {
-                        color: '#0b5ed7',
-                        weight: 5,
-                        opacity: 0.85,
-                    },
-                }).addTo(routeGroup);
+                routeLayer = result.layer;
                 lastRouteAt = Date.now();
                 lastRouteLatLng = leaflet.latLng(youLatLng.lat, youLatLng.lng);
 
                 const label = routeProfile === 'driving' ? 'drive' : 'walk';
                 if (routeSummary) {
-                    routeSummary.textContent = `${formatDistance(route.distance)} · ~${formatDuration(route.duration)} ${label} to ${nc.name} (updates as you move)`;
+                    routeSummary.textContent = `${formatDistance(result.distance)} · ~${formatDuration(result.duration)} ${label} to ${nc.name} (updates as you move)`;
                 }
                 updateJoTip('route');
             } catch (e) {
@@ -354,34 +349,15 @@
             syncListVisibility();
 
             if (!layers.length) {
-                if (on.you && youLatLng) {
-                    goToLatLng(youLatLng, 15, animate !== false);
-                }
+                if (on.you && youLatLng) goToLatLng(youLatLng, 15, animate !== false);
                 return;
             }
 
-            // Prefer you + route + nearest center when focusing evacuation / my location
             if ((mode === 'centers' || mode === 'you' || mode === 'both') && routeLayer) {
                 try {
                     const layersWithRoute = [...layers];
                     if (!layersWithRoute.includes(routeLayer)) layersWithRoute.push(routeLayer);
-                    const group = leaflet.featureGroup(layersWithRoute);
-                    map.fitBounds(group.getBounds().pad(0.18), {
-                        animate: !REDUCE && animate !== false,
-                        maxZoom: 16,
-                    });
-                    return;
-                } catch (e) { /* fall through */ }
-            }
-
-            if (mode === 'centers' && youLatLng && nearestData?.nearest_center) {
-                const nc = nearestData.nearest_center;
-                const bounds = leaflet.latLngBounds([
-                    youLatLng,
-                    [Number(nc.latitude), Number(nc.longitude)],
-                ]);
-                try {
-                    map.fitBounds(bounds.pad(0.35), {
+                    map.fitBounds(leaflet.featureGroup(layersWithRoute).getBounds().pad(0.18), {
                         animate: !REDUCE && animate !== false,
                         maxZoom: 16,
                     });
@@ -390,8 +366,7 @@
             }
 
             try {
-                const group = leaflet.featureGroup(layers);
-                map.fitBounds(group.getBounds().pad(0.14), {
+                map.fitBounds(leaflet.featureGroup(layers).getBounds().pad(0.14), {
                     animate: !REDUCE && animate !== false,
                     maxZoom: 17,
                 });
@@ -401,11 +376,8 @@
         function goToLatLng(latlng, zoom, animate) {
             if (!latlng) return;
             const z = zoom || Math.max(map.getZoom(), 15);
-            if (REDUCE || animate === false) {
-                map.setView(latlng, z);
-            } else {
-                map.flyTo(latlng, z, { duration: 0.65 });
-            }
+            if (REDUCE || animate === false) map.setView(latlng, z);
+            else map.flyTo(latlng, z, { duration: 0.65 });
         }
 
         function highlightCenter(id) {
@@ -420,12 +392,64 @@
             });
         }
 
-        function flyToCenter(id, { openPopup } = {}) {
+        function flyToCenter(id) {
             const layer = centerLayers.get(Number(id));
             if (!layer) return;
             highlightCenter(id);
             goToLatLng(layer.getLatLng(), Math.max(map.getZoom(), 15), true);
-            if (openPopup !== false) layer.openPopup();
+            layer.openPopup();
+        }
+
+        function renderRisk(risk) {
+            const data = risk || { barangays: [], total_open: 0, geometries: null };
+            const hot = (data.barangays || [])
+                .filter((b) => (b.open_count || 0) > 0)
+                .sort((a, b) => b.open_count - a.open_count);
+
+            if (riskSummary) {
+                riskSummary.textContent = data.total_open > 0
+                    ? `${data.total_open} open report${data.total_open === 1 ? '' : 's'} across ${hot.length} barangay${hot.length === 1 ? '' : 's'}`
+                    : 'No open community reports right now — stay aware and keep reporting hazards.';
+            }
+            if (riskList) {
+                riskList.innerHTML = hot.length
+                    ? hot.slice(0, 6).map((b) =>
+                        `<div><strong>${esc(b.name)}</strong> · ${esc(b.open_count)} open</div>`
+                    ).join('')
+                    : '<div>All mapped barangays are calm.</div>';
+            }
+
+            riskGroup.clearLayers();
+            riskLayer = null;
+            if (!data.geometries?.features?.length) return;
+
+            const fill = Mapbox?.riskFillColor || ((n) => (n > 0 ? '#f97316' : '#94a3b8'));
+            const opac = Mapbox?.riskFillOpacity || ((n) => (n > 0 ? 0.35 : 0.06));
+
+            riskLayer = leaflet.geoJSON(data.geometries, {
+                style: (feature) => {
+                    const n = feature?.properties?.open_count || 0;
+                    return {
+                        color: fill(n),
+                        weight: n > 0 ? 1.5 : 0.8,
+                        fillColor: fill(n),
+                        fillOpacity: opac(n),
+                        opacity: 0.85,
+                    };
+                },
+                onEachFeature: (feature, layer) => {
+                    const name = feature.properties?.name || 'Barangay';
+                    const n = feature.properties?.open_count || 0;
+                    layer.bindPopup(
+                        `<strong>${esc(name)}</strong><br>` +
+                        (n > 0
+                            ? `${n} open community report${n === 1 ? '' : 's'} (locations stay private)`
+                            : 'No open reports in this barangay')
+                    );
+                },
+            }).addTo(riskGroup);
+
+            if (chkRisk && !chkRisk.checked) map.removeLayer(riskGroup);
         }
 
         function renderNearest() {
@@ -436,7 +460,6 @@
             if (!nearestData?.nearest_center) {
                 box.classList.add('d-none');
                 box.innerHTML = '';
-                box.onclick = null;
             } else {
                 const nc = nearestData.nearest_center;
                 box.classList.remove('d-none');
@@ -557,8 +580,7 @@
                     if (!layersOn().you) return;
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
-                    const acc = pos.coords.accuracy || 40;
-                    upsertYou(lat, lng, acc);
+                    upsertYou(lat, lng, pos.coords.accuracy || 40);
                     setGeoStatus('');
                     fetchNearest(lat, lng).finally(() => {
                         if (!didInitialYouFit && layersOn().you && youLatLng) {
@@ -566,9 +588,7 @@
                             fitActiveView({ animate: true });
                         }
                     });
-                    if (layersOn().you && !map.hasLayer(youGroup)) {
-                        map.addLayer(youGroup);
-                    }
+                    if (layersOn().you && !map.hasLayer(youGroup)) map.addLayer(youGroup);
                 },
                 (err) => {
                     const denied = err?.code === 1;
@@ -597,86 +617,64 @@
                     ? zones.map((z) => `
                         <button type="button" class="rg-hazard-list-item text-start w-100 bg-transparent" data-zone-id="${z.id}">
                             <strong class="d-block small">${esc(z.name)}</strong>
-                            <span class="text-muted" style="font-size:.78rem">${esc(z.type?.name || 'Hazard')}</span>
+                            <span class="text-muted" style="font-size:.72rem">${esc(z.type?.name || 'Hazard')}</span>
                         </button>`).join('')
-                    : '<p class="small text-muted mb-0">No active hazard zones.</p>';
+                    : '<div class="small text-muted">No active zones.</div>';
             }
+
             if (cList) {
                 cList.innerHTML = centers.length
                     ? centers.map((c) => `
                         <button type="button" class="rg-hazard-list-item text-start w-100 bg-transparent" data-center-id="${c.id}">
                             <strong class="d-block small">${esc(c.name)}</strong>
-                            <span class="text-muted" style="font-size:.78rem">Open evacuation center</span>
+                            <span class="text-muted" style="font-size:.72rem">${c.capacity != null ? `Capacity ${esc(c.capacity)}` : 'Open'}</span>
                         </button>`).join('')
-                    : '<p class="small text-muted mb-0">No open centers right now.</p>';
+                    : '<div class="small text-muted">No open centers.</div>';
             }
-            syncListVisibility();
         }
 
-        function syncZones(zones) {
-            const ids = new Set(zones.map((z) => z.id));
-            zoneLayers.forEach((layer, id) => {
-                if (!ids.has(id)) {
-                    zoneGroup.removeLayer(layer);
-                    zoneLayers.delete(id);
-                }
-            });
-
-            zones.forEach((z) => {
-                try {
-                    const color = z.color || z.type?.color || '#b45309';
-                    if (zoneLayers.has(z.id)) {
-                        const existing = zoneLayers.get(z.id);
-                        existing.setStyle({ color, fillColor: color });
-                        return;
-                    }
-                    const layer = leaflet.geoJSON(z.geometry, {
-                        style: {
-                            color,
-                            fillColor: color,
-                            weight: 2,
-                            fillOpacity: REDUCE ? 0.28 : 0.25,
-                            dashArray: '6 4',
-                            className: REDUCE ? '' : 'rg-hazard-poly',
-                        },
-                    });
-                    layer.bindPopup(`<strong>${esc(z.name)}</strong><br>${esc(z.type?.name || '')}<br>${esc(z.advisory_note || '')}`);
-                    layer.on('mouseover click', () => highlightZone(z.id));
-                    layer.addTo(zoneGroup);
-                    zoneLayers.set(z.id, layer);
-                } catch (e) { /* bad geometry */ }
+        function renderZones(zones) {
+            zoneGroup.clearLayers();
+            zoneLayers.clear();
+            (zones || []).forEach((z) => {
+                if (!z.geometry) return;
+                const color = z.color || z.type?.color || '#b45309';
+                const layer = leaflet.geoJSON(z.geometry, {
+                    style: {
+                        color,
+                        weight: 2,
+                        fillColor: color,
+                        fillOpacity: 0.22,
+                        className: REDUCE ? '' : 'rg-hazard-zone-pulse',
+                    },
+                });
+                const note = z.advisory_note ? `<div class="small mt-1">${esc(z.advisory_note)}</div>` : '';
+                layer.bindPopup(`<strong>${esc(z.name)}</strong>${z.type?.name ? `<br><span class="text-muted">${esc(z.type.name)}</span>` : ''}${note}`);
+                layer.addTo(zoneGroup);
+                zoneLayers.set(Number(z.id), layer);
             });
         }
 
-        function syncCenters(centers) {
-            const ids = new Set(centers.map((c) => c.id));
-            centerLayers.forEach((layer, id) => {
-                if (!ids.has(id)) {
-                    centerGroup.removeLayer(layer);
-                    centerLayers.delete(id);
-                }
-            });
-            centers.forEach((c) => {
-                if (centerLayers.has(c.id)) return;
-                const marker = leaflet.marker([Number(c.latitude), Number(c.longitude)], { icon: evacIcon() })
-                    .bindPopup(`<strong>${esc(c.name)}</strong><br>Open evacuation center`);
-                marker.on('click', () => highlightCenter(c.id));
+        function renderCenters(centers) {
+            centerGroup.clearLayers();
+            centerLayers.clear();
+            (centers || []).forEach((c) => {
+                const marker = leaflet.marker([Number(c.latitude), Number(c.longitude)], { icon: evacIcon() });
+                const cap = c.capacity != null ? `<div class="small text-muted">Capacity: ${esc(c.capacity)}</div>` : '';
+                marker.bindPopup(`<strong>${esc(c.name)}</strong><div class="small">Open evacuation center</div>${cap}`);
                 marker.addTo(centerGroup);
-                centerLayers.set(c.id, marker);
+                centerLayers.set(Number(c.id), marker);
             });
         }
 
-        function applyData(zones, centers, { fit } = {}) {
-            syncZones(zones);
-            syncCenters(centers);
-            renderLists(zones, centers);
+        function applySnapshot(data) {
+            renderZones(data.zones || []);
+            renderCenters(data.centers || []);
+            renderRisk(data.risk || cfg.risk);
+            renderLists(data.zones || [], data.centers || []);
             lastUpdated = Date.now();
             setUpdatedLabel();
-            if (fit) fitActiveView({ animate: false });
         }
-
-        applyData(cfg.zones || [], cfg.centers || [], { fit: true });
-        updateJoTip('both');
 
         document.getElementById('zone-list')?.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-zone-id]');
@@ -705,6 +703,11 @@
                 if (checked) map.addLayer(centerGroup);
                 else map.removeLayer(centerGroup);
                 fitActiveView({ animate: true });
+            } else if (which === 'risk') {
+                if (checked) map.addLayer(riskGroup);
+                else map.removeLayer(riskGroup);
+                if (checked) updateJoTip('risk');
+                fitActiveView({ animate: true });
             } else if (which === 'you') {
                 setLocationEnabled(checked);
             }
@@ -712,6 +715,7 @@
 
         chkZones?.addEventListener('change', (e) => onLayerToggle('zones', e.target.checked));
         chkCenters?.addEventListener('change', (e) => onLayerToggle('centers', e.target.checked));
+        chkRisk?.addEventListener('change', (e) => onLayerToggle('risk', e.target.checked));
         chkYou?.addEventListener('change', (e) => onLayerToggle('you', e.target.checked));
 
         [routeWalk, routeDrive].forEach((el) => {
@@ -745,41 +749,29 @@
             }
         });
 
-        // My location starts off — user enables it for live tracking + route
-        if (chkYou?.checked) {
-            setLocationEnabled(true);
-        }
+        if (chkYou?.checked) setLocationEnabled(true);
 
-        function invalidate() {
-            map.invalidateSize();
-        }
-        setTimeout(invalidate, 200);
-        window.addEventListener('resize', invalidate);
-
+        setTimeout(() => map.invalidateSize(), 200);
+        window.addEventListener('resize', () => map.invalidateSize());
         setInterval(setUpdatedLabel, 1000);
 
+        applySnapshot({
+            zones: cfg.zones || [],
+            centers: cfg.centers || [],
+            risk: cfg.risk || null,
+        });
+        fitActiveView({ animate: false });
+
         async function softRefresh() {
-            if (document.visibilityState === 'hidden') return;
+            if (!cfg.snapshotUrl) return;
             try {
                 const res = await fetch(cfg.snapshotUrl, { headers: { Accept: 'application/json' } });
                 if (!res.ok) return;
-                const data = await res.json();
-                applyData(data.zones || [], data.centers || [], { fit: false });
-                if (layersOn().you && youLatLng) {
-                    fetchNearest(youLatLng.lat, youLatLng.lng);
-                }
-            } catch (e) { /* ignore */ }
+                applySnapshot(await res.json());
+            } catch (e) { /* offline */ }
         }
-        setInterval(softRefresh, 60000);
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                stopWatch();
-            } else if (chkYou?.checked) {
-                startWatch();
-            }
-        });
-        window.addEventListener('pagehide', stopWatch);
+        setInterval(softRefresh, 60000);
     }
 
     window.RANIAG_HazardMap = { init };

@@ -22,7 +22,7 @@
             <p class="text-muted mb-0">Draw hazard areas, manage evacuation centers, and track who has checked in.</p>
         </div>
         <a href="{{ $publicHazardMapUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-box-arrow-up-right me-1"></i>Open public Hazard Map
+            <i class="bi bi-box-arrow-up-right me-1"></i>Open public Live Map
         </a>
     </div>
 
@@ -349,6 +349,7 @@
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
 <script>
 (function () {
     const mapCfg = @json($map);
@@ -385,10 +386,14 @@
     }
 
     const drawMap = L.map('hazard-draw-map').setView([mapCfg.default_lat, mapCfg.default_lng], mapCfg.default_zoom || 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OSM'
-    }).addTo(drawMap);
+    if (window.RANIAG_Mapbox) {
+        window.RANIAG_Mapbox.addBasemap(drawMap, mapCfg);
+    } else {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OSM'
+        }).addTo(drawMap);
+    }
 
     existingZones.forEach((z) => {
         try {
@@ -452,10 +457,14 @@
         parseFloat(latInput?.value) || mapCfg.default_lat,
         parseFloat(lngInput?.value) || mapCfg.default_lng
     ], mapCfg.default_zoom || 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OSM'
-    }).addTo(centerMap);
+    if (window.RANIAG_Mapbox) {
+        window.RANIAG_Mapbox.addBasemap(centerMap, mapCfg);
+    } else {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OSM'
+        }).addTo(centerMap);
+    }
 
     existingCenters.forEach((c) => {
         L.marker([c.lat, c.lng]).addTo(centerMap).bindTooltip(c.name);

@@ -108,6 +108,12 @@ class IncidentService
             Log::warning('SMS alert to admin failed: '.$e->getMessage());
         }
 
+        try {
+            $this->notifications->notifyReporterReportReceived($incident);
+        } catch (\Exception $e) {
+            Log::warning('Reporter receipt notification failed: '.$e->getMessage());
+        }
+
         Cache::forget('admin.dashboard.json');
 
         $incident->load(['incidentType', 'evidence']);

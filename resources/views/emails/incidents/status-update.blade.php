@@ -8,5 +8,14 @@
 <p style="margin:6px 0 0; color:#334155; font-size:13.5px; line-height:1.6;">{{ $updateMessage }}</p>
 </td></tr>
 </table>
-<p style="margin:0; color:#475569; font-size:14px; line-height:1.6;">You can use your tracking number on the RANIAG tracking page to view the latest public status.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+<tr><td style="border-radius:10px; background:#0b5ed7;">
+<a href="{{ $trackUrl }}" style="display:inline-block; padding:14px 22px; color:#ffffff; font-size:14px; font-weight:700; text-decoration:none;">
+View live status
+</a>
+</td></tr>
+</table>
+<p style="margin:0; color:#94a3b8; font-size:12.5px; line-height:1.6;">
+Or open: <span style="word-break:break-all; color:#64748b;">{{ $trackUrl }}</span>
+</p>
 </x-mail-shell>

@@ -10,6 +10,7 @@ use App\Models\Agency;
 use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\SmsLog;
+use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -18,9 +19,15 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly SituationalMapService $situational,
+    ) {}
+
     public function index(Request $request): View
     {
-        return view('dashboard');
+        return view('dashboard', [
+            'mapConfig' => config('raniag.map'),
+        ]);
     }
 
     /**
@@ -124,30 +131,7 @@ class DashboardController extends Controller
         // rather than linger just because it was "recent". No arbitrary
         // limit either: a live map should show every open case, not just
         // the last 10 reported (which could hide older still-open ones).
-        $recentIncidents = Incident::with(['incidentType', 'agency'])
-            ->whereIn('status', [
-                IncidentStatus::Submitted->value,
-                IncidentStatus::Received->value,
-                IncidentStatus::Assigned->value,
-                IncidentStatus::InProgress->value,
-                IncidentStatus::PendingInfo->value,
-            ])
-            ->orderByDesc('reported_at')
-            ->get()
-            ->map(function (Incident $inc) {
-                return [
-                    'id' => $inc->id,
-                    'tracking_number' => $inc->tracking_number,
-                    'incidentType' => $inc->incidentType,
-                    'incident_type' => $inc->incidentType,
-                    'priority' => $inc->priority instanceof \BackedEnum ? $inc->priority->value : $inc->priority,
-                    'status' => $inc->status instanceof \BackedEnum ? $inc->status->value : (string) $inc->status,
-                    'reported_at' => $inc->reported_at?->toDateTimeString(),
-                    'latitude' => $inc->latitude,
-                    'longitude' => $inc->longitude,
-                    'agency' => $inc->agency,
-                ];
-            });
+        $recentIncidents = $this->situational->openIncidentsPayload();
 
         $activeAssignments = Assignment::query()
             ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
@@ -283,7 +267,7 @@ class DashboardController extends Controller
             ? (int) round(($withinSlaCount / $resolvedForSla->count()) * 100)
             : null;
 
-        return [
+        return array_merge([
             'incident_status_breakdown' => $statusCounts,
             'total_incidents' => $totalIncidents,
             'active_agencies' => $agencies,
@@ -310,6 +294,6 @@ class DashboardController extends Controller
                 'out_of_jurisdiction_count' => $outOfJurisdictionCount,
                 'redundancy_hotspots' => $redundancyData,
             ],
-        ];
+        ], $this->situational->staffSituationalLayers());
     }
 }

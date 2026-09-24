@@ -498,26 +498,18 @@
         </script>
         <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
         <script src="{{ asset('js/field-outbox.js') }}?v={{ @filemtime(public_path('js/field-outbox.js')) }}"></script>
+        <script src="{{ asset('js/raniag-location-ping.js') }}?v={{ @filemtime(public_path('js/raniag-location-ping.js')) }}"></script>
         <script>
-        (function () {
-            if (!navigator.geolocation) return;
-            const pingUrl = @json(route('personnel.location_ping'));
-            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-            setInterval(() => {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                    fetch(pingUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrf,
-                            Accept: 'application/json',
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                    }).catch(() => {});
-                }, () => {}, { maximumAge: 60000, timeout: 10000 });
-            }, 120000);
-        })();
+        document.addEventListener('DOMContentLoaded', function () {
+            window.RANIAG_LocationPing?.start({
+                url: @json(route('personnel.location_ping')),
+                phase: @json(optional($myAssignment ?? null)->field_phase),
+                getPhase() {
+                    const active = document.querySelector('#field-phase-strip .btn-primary');
+                    return active ? (active.closest('form')?.querySelector('[name="field_phase"]')?.value || '') : '';
+                },
+            });
+        });
         </script>
         @if ($incident->latitude && $incident->longitude)
                         <style>
@@ -526,26 +518,23 @@
             </style>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
             <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
+            <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
+            <script src="{{ asset('js/raniag-dispatch-map.js') }}?v={{ @filemtime(public_path('js/raniag-dispatch-map.js')) }}"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
-                    const lat = {{ $incident->latitude }};
-                    const lng = {{ $incident->longitude }};
-                    const map = L.map('personnel-incident-map').setView([lat, lng], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 19,
-                        attribution: '&copy; OpenStreetMap contributors'
-                    }).addTo(map);
                     const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
-                    // Centralized icon+color resolution (see public/js/incident-map-icons.js)
-                    // keeps this pin visually identical to every other incident map in the system.
-                    const pinIcon = window.RaniagIcons.buildDivIcon({
+                    window.RANIAG_DispatchMap?.init({
+                        el: 'personnel-incident-map',
+                        lat: {{ $incident->latitude }},
+                        lng: {{ $incident->longitude }},
+                        map: @json(config('raniag.map')),
                         icon: @json($incident->incidentType->icon ?? null),
                         color: @json($incident->incidentType->color ?? null),
                         outsideJurisdiction: withinJurisdiction === false,
+                        scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
+                        unitsUrl: @json(route('personnel.incidents.live_units', $incident)),
+                        pollMs: 15000,
                     });
-                    L.marker([lat, lng], { icon: pinIcon }).addTo(map)
-                        .bindPopup(withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location')
-                        .openPopup();
                 });
             </script>
         @endif

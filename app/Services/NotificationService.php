@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\SmsLogStatus;
 use App\Enums\UserRole;
 use App\Jobs\DispatchSmsJob;
+use App\Mail\IncidentReportReceivedMail;
 use App\Mail\IncidentStatusUpdateMail;
 use App\Models\Assignment;
 use App\Models\DocumentRequest;
@@ -103,10 +104,12 @@ class NotificationService
 
     public function notifyReporterStatusUpdate(Incident $incident, string $updateMessage): void
     {
+        $trackUrl = $this->trackingUrl($incident);
+
         if (! $incident->is_anonymous && $incident->reporter_email) {
             try {
                 Mail::to($incident->reporter_email)->send(
-                    new IncidentStatusUpdateMail($incident->fresh(['incidentType']), $updateMessage)
+                    new IncidentStatusUpdateMail($incident->fresh(['incidentType']), $updateMessage, $trackUrl)
                 );
             } catch (\Throwable $e) {
                 Log::error('Incident status email failed.', [
@@ -118,13 +121,54 @@ class NotificationService
         }
 
         if (! $incident->is_anonymous && $incident->reporter_phone) {
-            $message = "RANIAG UPDATE: Your incident report (Tracking #: {$incident->tracking_number}) has a status update: {$updateMessage} You may check full details anytime using your tracking number on the RANIAG public tracking page.";
+            $message = "RANIAG UPDATE: {$incident->tracking_number} — {$updateMessage} Track: {$trackUrl}";
             $this->sendSms(
                 recipientPhone: $incident->reporter_phone,
                 message: $message,
                 incident: $incident,
             );
         }
+    }
+
+    /**
+     * Confirm receipt to the reporter right after submit (email and/or SMS)
+     * when they shared contact details instead of staying anonymous.
+     */
+    public function notifyReporterReportReceived(Incident $incident): void
+    {
+        if ($incident->is_anonymous) {
+            return;
+        }
+
+        $trackUrl = $this->trackingUrl($incident);
+
+        if ($incident->reporter_email) {
+            try {
+                Mail::to($incident->reporter_email)->send(
+                    new IncidentReportReceivedMail($incident->fresh(['incidentType']), $trackUrl)
+                );
+            } catch (\Throwable $e) {
+                Log::error('Incident received email failed.', [
+                    'incident_id' => $incident->id,
+                    'recipient' => $incident->reporter_email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($incident->reporter_phone) {
+            $message = "RANIAG: We received your report {$incident->tracking_number}. Track anytime (no typing needed): {$trackUrl}";
+            $this->sendSms(
+                recipientPhone: $incident->reporter_phone,
+                message: $message,
+                incident: $incident,
+            );
+        }
+    }
+
+    public function trackingUrl(Incident $incident): string
+    {
+        return route('public.track', ['tracking_number' => $incident->tracking_number]);
     }
 
     /**

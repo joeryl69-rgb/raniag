@@ -6,20 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\EvacuationCenter;
 use App\Models\HazardZone;
 use App\Services\GeofenceService;
+use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class HazardMapController extends Controller
 {
-    public function __construct(private readonly GeofenceService $geofence) {}
+    public function __construct(
+        private readonly GeofenceService $geofence,
+        private readonly SituationalMapService $situational,
+    ) {}
 
     public function index(): View
     {
+        $snapshot = $this->situational->publicSnapshot();
+
         return view('public.hazard.map', [
             'map' => config('raniag.map'),
-            'zones' => $this->zonesPayload(),
-            'centers' => $this->centersPayload(),
+            'zones' => $snapshot['zones'],
+            'centers' => $snapshot['centers'],
+            'risk' => $snapshot['risk'],
             'snapshotUrl' => route('public.hazard.snapshot'),
             'nearestUrl' => route('public.hazard.nearest'),
         ]);
@@ -27,36 +34,7 @@ class HazardMapController extends Controller
 
     public function snapshot(): JsonResponse
     {
-        return response()->json([
-            'zones' => $this->zonesPayload(),
-            'centers' => $this->centersPayload(),
-            'updated_at' => now()->toIso8601String(),
-        ]);
-    }
-
-    /**
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
-     */
-    private function zonesPayload()
-    {
-        return HazardZone::query()->with('type')->where('is_active', true)->get()->map(function (HazardZone $zone) {
-            return [
-                'id' => $zone->id,
-                'name' => $zone->name,
-                'geometry' => $zone->geometry,
-                'color' => $zone->displayColor(),
-                'advisory_note' => $zone->advisory_note,
-                'type' => $zone->type ? ['name' => $zone->type->name, 'color' => $zone->type->color] : null,
-            ];
-        })->values();
-    }
-
-    /**
-     * @return \Illuminate\Support\Collection<int, EvacuationCenter>
-     */
-    private function centersPayload()
-    {
-        return EvacuationCenter::query()->where('is_open', true)->orderBy('name')->get();
+        return response()->json($this->situational->publicSnapshot());
     }
 
     public function nearestCenter(Request $request): JsonResponse

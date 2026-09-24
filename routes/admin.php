@@ -69,6 +69,7 @@ Route::prefix('admin')
         Route::prefix('incidents')->name('incidents.')->group(function () {
             Route::get('/', [IncidentController::class, 'index'])->name('index');
             Route::get('/{incident}', [IncidentController::class, 'show'])->name('show');
+            Route::get('/{incident}/live-units', \App\Http\Controllers\Shared\LiveUnitsController::class)->name('live_units');
             Route::post('/{incident}/validate', [IncidentController::class, 'validate'])->name('validate');
             Route::post('/{incident}/reply', [IncidentController::class, 'reply'])->name('reply');
             Route::get('/{incident}/assignments', [IncidentController::class, 'assignments'])->name('assignments');

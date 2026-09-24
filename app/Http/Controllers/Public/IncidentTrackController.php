@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\TrackIncidentRequest;
 use App\Services\IncidentService;
+use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class IncidentTrackController extends Controller
 {
     public function __construct(
         private readonly IncidentService $incidentService,
+        private readonly SituationalMapService $situational,
     ) {}
 
     public function index(Request $request): View
@@ -29,6 +31,22 @@ class IncidentTrackController extends Controller
             $request->validated('tracking_number'),
             $request->wantsJson(),
         );
+    }
+
+    public function liveUnits(string $trackingNumber): JsonResponse
+    {
+        $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
+        abort_if(! $incident, 404);
+        abort_unless(session()->get('track_verified.'.$incident->id) === true, 403);
+
+        return response()->json([
+            'units' => $this->situational->liveUnitsForIncident($incident, forPublic: true),
+            'scene' => [
+                'latitude' => $incident->latitude !== null ? (float) $incident->latitude : null,
+                'longitude' => $incident->longitude !== null ? (float) $incident->longitude : null,
+            ],
+            'updated_at' => now()->toIso8601String(),
+        ]);
     }
 
     private function resolveTrackingView(string $trackingNumber, bool $asJson = false): View|JsonResponse|RedirectResponse
@@ -65,13 +83,16 @@ class IncidentTrackController extends Controller
 
         session()->put('track_verified.'.$incident->id, true);
 
-        $incident->loadMissing(['evidence', 'incidentType']);
+        $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency']);
 
         return view('public.track.show', [
             'incident' => $incident,
             'canReply' => $incident->status === \App\Enums\IncidentStatus::PendingInfo
                 && session()->get('track_verified.'.$incident->id) === true,
             'nearestCenter' => $this->nearestOpenCenter($incident),
+            'map' => config('raniag.map'),
+            'unitsUrl' => route('public.track.units', $incident->tracking_number),
+            'liveUnits' => $this->situational->liveUnitsForIncident($incident, forPublic: true),
         ]);
     }
 
