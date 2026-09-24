@@ -567,6 +567,7 @@
                         outsideJurisdiction: withinJurisdiction === false,
                         scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
                         unitsUrl: @json(route('personnel.incidents.live_units', $incident)),
+                        selfLabel: @json(auth()->user()->agency?->name ?? auth()->user()->name ?? 'You'),
                         statusEl: 'personnel-units-status',
                         pollMs: 15000,
                     });

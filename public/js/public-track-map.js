@@ -112,15 +112,29 @@
         }
 
         async function refresh() {
-            if (!cfg.unitsUrl) return;
+            if (!cfg.unitsUrl) {
+                if (statusEl) statusEl.textContent = 'Responder feed is not configured.';
+                return;
+            }
             try {
-                const res = await fetch(cfg.unitsUrl, { headers: { Accept: 'application/json' } });
-                if (!res.ok) return;
+                const res = await fetch(cfg.unitsUrl, {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) {
+                    if (statusEl) statusEl.textContent = `Could not load responders (${res.status}).`;
+                    return;
+                }
                 const data = await res.json();
                 await paint(data.units || []);
-            } catch (e) { /* */ }
+            } catch (e) {
+                if (statusEl) statusEl.textContent = 'Could not load responders.';
+            }
         }
 
+        if (Array.isArray(cfg.units) && cfg.units.length) {
+            await paint(cfg.units);
+        }
         await refresh();
         setInterval(refresh, cfg.pollMs || 12000);
         // Invalidate after layout settles so aspect-ratio containers paint correctly.

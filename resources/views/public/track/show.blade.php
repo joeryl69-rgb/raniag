@@ -59,7 +59,6 @@
         $isOutsideAor = $statusValue === 'outside_aor';
     @endphp
 
-    <div data-live-refresh data-live-refresh-target="#rg-track-status" data-live-refresh-interval="8000">
     <div id="rg-track-status">
     <div class="card raniag-card rg-app-card mb-4">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
@@ -351,7 +350,6 @@
         </div>
     </div>
     </div>
-    </div>
 </div>
 @endsection
 
@@ -368,6 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
         lng: {{ (float) $incident->longitude }},
         map: @json($map ?? config('raniag.map')),
         unitsUrl: @json($unitsUrl ?? null),
+        units: @json($liveUnits ?? []),
         statusEl: 'track-units-status',
         pollMs: 12000,
     });

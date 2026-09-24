@@ -72,7 +72,10 @@
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
                     setStatus('Live location is on. The case map and public tracking page update as you move.', 'live');
-                    post(pos.coords.latitude, pos.coords.longitude);
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    document.dispatchEvent(new CustomEvent('raniag:gps', { detail: { lat, lng } }));
+                    post(lat, lng);
                 },
                 (err) => {
                     const denied = err && err.code === 1;

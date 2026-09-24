@@ -198,18 +198,24 @@ class SituationalMapService
         foreach ($assignments as $assignment) {
             $users = collect();
 
-            if ($assignment->assigned_to) {
-                if ($assignment->assignee) {
-                    $users->push($assignment->assignee);
-                }
-            } elseif ($assignment->agency_id) {
-                $users = User::query()
-                    ->where('agency_id', $assignment->agency_id)
-                    ->where('is_active', true)
-                    ->whereNotNull('last_lat')
-                    ->whereNotNull('last_lng')
-                    ->where('last_location_at', '>=', $cutoff)
-                    ->get();
+            // Agency dispatch used to look up GPS only when assigned_to was
+            // empty. A case assigned to the agency account (or to one
+            // personnel) still has to show whoever in that agency is
+            // actually sharing location — usually the person who tapped
+            // En route on their phone.
+            if ($assignment->assignee) {
+                $users->push($assignment->assignee);
+            }
+            if ($assignment->agency_id) {
+                $users = $users->merge(
+                    User::query()
+                        ->where('agency_id', $assignment->agency_id)
+                        ->where('is_active', true)
+                        ->whereNotNull('last_lat')
+                        ->whereNotNull('last_lng')
+                        ->where('last_location_at', '>=', $cutoff)
+                        ->get()
+                )->unique('id');
             }
 
             foreach ($users as $user) {

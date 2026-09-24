@@ -33,11 +33,21 @@ class IncidentTrackController extends Controller
         );
     }
 
-    public function liveUnits(string $trackingNumber): JsonResponse
+    public static function trackUnitsToken(\App\Models\Incident $incident): string
+    {
+        return hash_hmac('sha256', $incident->id.'|'.$incident->tracking_number, (string) config('app.key'));
+    }
+
+    public function liveUnits(Request $request, string $trackingNumber): JsonResponse
     {
         $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
         abort_if(! $incident, 404);
-        abort_unless(session()->get('track_verified.'.$incident->id) === true, 403);
+
+        $provided = (string) $request->query('t', '');
+        $expected = self::trackUnitsToken($incident);
+        $tokenOk = $provided !== '' && hash_equals($expected, $provided);
+        $sessionOk = session()->get('track_verified.'.$incident->id) === true;
+        abort_unless($tokenOk || $sessionOk, 403);
 
         return response()->json([
             'units' => $this->situational->liveUnitsForIncident($incident, forPublic: true),
@@ -91,7 +101,10 @@ class IncidentTrackController extends Controller
                 && session()->get('track_verified.'.$incident->id) === true,
             'nearestCenter' => $this->nearestOpenCenter($incident),
             'map' => config('raniag.map'),
-            'unitsUrl' => route('public.track.units', $incident->tracking_number),
+            'unitsUrl' => route('public.track.units', [
+                'trackingNumber' => $incident->tracking_number,
+                't' => self::trackUnitsToken($incident),
+            ]),
             'liveUnits' => $this->situational->liveUnitsForIncident($incident, forPublic: true),
         ]);
     }

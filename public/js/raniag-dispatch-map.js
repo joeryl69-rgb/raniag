@@ -56,6 +56,7 @@
         const statusEl = cfg.statusEl
             ? (typeof cfg.statusEl === 'string' ? document.getElementById(cfg.statusEl) : cfg.statusEl)
             : null;
+        let localFix = null;
 
         async function drawUnits(units) {
             unitGroup.clearLayers();
@@ -125,12 +126,34 @@
                 return;
             }
             try {
-                const res = await fetch(cfg.unitsUrl, { headers: { Accept: 'application/json' } });
-                if (!res.ok) return;
+                const res = await fetch(cfg.unitsUrl, {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) {
+                    if (statusEl && !unitGroup.getLayers().length) {
+                        statusEl.textContent = `Responder feed failed (${res.status}). Refresh this page.`;
+                    }
+                    return;
+                }
                 const data = await res.json();
-                await drawUnits(data.units || []);
+                const units = data.units || [];
+                await drawUnits(units.length ? units : (localFix ? [localFix] : []));
             } catch (e) { /* offline */ }
         }
+
+        document.addEventListener('raniag:gps', (event) => {
+            const lat = Number(event.detail?.lat);
+            const lng = Number(event.detail?.lng);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+            localFix = {
+                label: cfg.selfLabel || 'You',
+                field_phase: 'en_route',
+                latitude: lat,
+                longitude: lng,
+            };
+            drawUnits([localFix]);
+        });
 
         await refresh();
         if (cfg.unitsUrl) setInterval(refresh, cfg.pollMs || 15000);
