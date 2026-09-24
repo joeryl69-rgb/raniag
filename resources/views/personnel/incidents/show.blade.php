@@ -105,8 +105,8 @@
                         <div class="col-sm-6">
                             <div class="p-3 bg-light rounded-3">
                                 <div class="text-muted small">Incident Category</div>
-                                <span class="badge rounded-pill mt-1 text-white" style="background-color: {{ $incident->incidentType->color ?? '#6c757d' }}">
-                                    {{ $incident->incidentType->name }}
+                                <span class="badge rounded-pill mt-1 text-white" style="background-color: {{ $incident->incidentType?->color ?? '#6c757d' }}">
+                                    {{ $incident->incidentType?->name ?? 'Incident' }}
                                 </span>
                             </div>
                         </div>
@@ -119,13 +119,13 @@
                         <div class="col-sm-6">
                             <div class="p-3 bg-light rounded-3">
                                 <div class="text-muted small">Assigned Priority</div>
-                                <span class="badge bg-secondary text-capitalize mt-1">{{ $incident->priority->label() ?? $incident->priority }}</span>
+                                <span class="badge bg-secondary text-capitalize mt-1">{{ $incident->priority?->label() ?? '—' }}</span>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="p-3 bg-light rounded-3">
                                 <div class="text-muted small">Reported At</div>
-                                <strong class="text-dark d-block mt-1">{{ $incident->reported_at->format('M d, Y h:i A') }}</strong>
+                                <strong class="text-dark d-block mt-1">{{ $incident->reported_at?->format('M d, Y h:i A') ?? '—' }}</strong>
                             </div>
                         </div>
                     </div>
@@ -216,9 +216,15 @@
                 <div class="card-body">
                     @php
                         $userId = auth()->id();
+                        $agencyId = auth()->user()?->agency_id;
                         $myAssignment = \App\Models\Assignment::where('incident_id', $incident->id)
-                            ->where('assigned_to', $userId)
                             ->where('is_active', true)
+                            ->where(function ($q) use ($userId, $agencyId) {
+                                $q->where('assigned_to', $userId);
+                                if ($agencyId) {
+                                    $q->orWhere('agency_id', $agencyId);
+                                }
+                            })
                             ->latest('created_at')
                             ->first();
                         $needsAcceptance = $myAssignment && ! $myAssignment->isAcknowledged()
@@ -227,9 +233,9 @@
                     @if ($needsAcceptance)
                         <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
-                            <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation.</p>
+                            <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation. Location is not required to accept.</p>
                             <div class="rg-sticky-cta">
-                                <button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
                                     <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
                                 </button>
                             </div>
@@ -538,7 +544,9 @@
         document.addEventListener('DOMContentLoaded', function () {
             window.RANIAG_LocationPing?.start({
                 url: @json(route('personnel.location_ping')),
+                phaseUrl: @json(route('personnel.incidents.field_phase', $incident)),
                 phase: @json(optional($myAssignment ?? null)->field_phase),
+                scene: { lat: {{ $incident->latitude ?: 'null' }}, lng: {{ $incident->longitude ?: 'null' }} },
                 getPhase() {
                     return document.getElementById('field-phase-strip')?.dataset?.fieldPhase || @json(optional($myAssignment ?? null)->field_phase);
                 },
@@ -562,14 +570,13 @@
                         lat: {{ $incident->latitude }},
                         lng: {{ $incident->longitude }},
                         map: @json(config('raniag.map')),
-                        icon: @json($incident->incidentType->icon ?? null),
-                        color: @json($incident->incidentType->color ?? null),
+                        icon: @json($incident->incidentType?->icon),
+                        color: @json($incident->incidentType?->color),
                         outsideJurisdiction: withinJurisdiction === false,
                         scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
                         unitsUrl: @json(route('personnel.incidents.live_units', $incident)),
                         selfLabel: @json(auth()->user()->agency?->name ?? auth()->user()->name ?? 'You'),
                         statusEl: 'personnel-units-status',
-                        locate: true,
                         pollMs: 5000,
                     });
                 });

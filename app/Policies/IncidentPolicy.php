@@ -25,10 +25,15 @@ class IncidentPolicy
                 ->exists();
         }
 
-        // Personnel users can view if they are assigned to this incident
+        // Personnel can open a case assigned to them, or to their agency.
         if ($user->isPersonnel()) {
             return $incident->currentAssignments()
-                ->where('assigned_to', $user->id)
+                ->where(function ($q) use ($user) {
+                    $q->where('assigned_to', $user->id);
+                    if ($user->agency_id) {
+                        $q->orWhere('agency_id', $user->agency_id);
+                    }
+                })
                 ->exists();
         }
 
@@ -50,8 +55,13 @@ class IncidentPolicy
 
         if ($user->isPersonnel()) {
             return $incident->currentAssignments()
-                ->where('assigned_to', $user->id)
                 ->where('is_active', true)
+                ->where(function ($q) use ($user) {
+                    $q->where('assigned_to', $user->id);
+                    if ($user->agency_id) {
+                        $q->orWhere('agency_id', $user->agency_id);
+                    }
+                })
                 ->exists();
         }
 
@@ -72,7 +82,12 @@ class IncidentPolicy
 
         if ($user->isPersonnel()) {
             return $incident->currentAssignments()
-                ->where('assigned_to', $user->id)
+                ->where(function ($q) use ($user) {
+                    $q->where('assigned_to', $user->id);
+                    if ($user->agency_id) {
+                        $q->orWhere('agency_id', $user->agency_id);
+                    }
+                })
                 ->exists();
         }
 
@@ -94,8 +109,13 @@ class IncidentPolicy
 
         if ($user->isPersonnel()) {
             return $incident->currentAssignments()
-                ->where('assigned_to', $user->id)
                 ->where('is_active', true)
+                ->where(function ($q) use ($user) {
+                    $q->where('assigned_to', $user->id);
+                    if ($user->agency_id) {
+                        $q->orWhere('agency_id', $user->agency_id);
+                    }
+                })
                 ->exists();
         }
 

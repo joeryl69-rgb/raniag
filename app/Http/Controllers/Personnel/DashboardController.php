@@ -54,6 +54,7 @@ class DashboardController extends Controller
     public function api(Request $request): JsonResponse
     {
         $personnelId = $request->user()?->id;
+        $agencyId = $request->user()?->agency_id;
         abort_if(! $personnelId, 403, 'No personnel account is associated with this login.');
 
         $statusCounts = [
@@ -64,16 +65,24 @@ class DashboardController extends Controller
 
         $assignedIncidents = Assignment::query()
             ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
-            ->where('assignments.assigned_to', $personnelId)
+            ->where(function ($w) use ($personnelId, $agencyId) {
+                $w->where('assignments.assigned_to', $personnelId);
+                if ($agencyId) {
+                    $w->orWhere('assignments.agency_id', $agencyId);
+                }
+            })
             ->where('assignments.is_active', true)
-            ->whereColumn('assignments.created_at', '>=', 'incidents.created_at')
             ->count();
 
         $statusRows = Assignment::query()
-            ->where('assignments.assigned_to', $personnelId)
+            ->where(function ($w) use ($personnelId, $agencyId) {
+                $w->where('assignments.assigned_to', $personnelId);
+                if ($agencyId) {
+                    $w->orWhere('assignments.agency_id', $agencyId);
+                }
+            })
             ->where('assignments.is_active', true)
             ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
-            ->whereColumn('assignments.created_at', '>=', 'incidents.created_at')
             ->selectRaw('incidents.status, COUNT(*) as count')
             ->groupBy('incidents.status')
             ->get();
@@ -84,10 +93,14 @@ class DashboardController extends Controller
         }
 
         $pendingResolutions = Assignment::query()
-            ->where('assignments.assigned_to', $personnelId)
+            ->where(function ($w) use ($personnelId, $agencyId) {
+                $w->where('assignments.assigned_to', $personnelId);
+                if ($agencyId) {
+                    $w->orWhere('assignments.agency_id', $agencyId);
+                }
+            })
             ->where('assignments.is_active', true)
             ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
-            ->whereColumn('assignments.created_at', '>=', 'incidents.created_at')
             ->whereIn('incidents.status', [
                 IncidentStatus::InProgress->value,
                 IncidentStatus::PendingInfo->value,
@@ -96,11 +109,14 @@ class DashboardController extends Controller
 
         $recentUpdates = StatusUpdate::query()
             ->where('is_public', true)
-            ->whereHas('incident', function ($query) use ($personnelId) {
-                $query->whereHas('assignments', function ($a) use ($personnelId) {
-                    $a->where('assigned_to', $personnelId)
-                        ->where('is_active', true)
-                        ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+            ->whereHas('incident', function ($query) use ($personnelId, $agencyId) {
+                $query->whereHas('assignments', function ($a) use ($personnelId, $agencyId) {
+                    $a->where(function ($w) use ($personnelId, $agencyId) {
+                        $w->where('assigned_to', $personnelId);
+                        if ($agencyId) {
+                            $w->orWhere('agency_id', $agencyId);
+                        }
+                    })->where('is_active', true);
                 });
             })
             ->orderByDesc('created_at')
@@ -113,20 +129,26 @@ class DashboardController extends Controller
                 SmsLogStatus::Sent->value,
                 SmsLogStatus::Pending->value,
             ])
-            ->whereHas('incident', function ($query) use ($personnelId) {
-                $query->whereHas('assignments', function ($a) use ($personnelId) {
-                    $a->where('assigned_to', $personnelId)
-                        ->where('is_active', true)
-                        ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+            ->whereHas('incident', function ($query) use ($personnelId, $agencyId) {
+                $query->whereHas('assignments', function ($a) use ($personnelId, $agencyId) {
+                    $a->where(function ($w) use ($personnelId, $agencyId) {
+                        $w->where('assigned_to', $personnelId);
+                        if ($agencyId) {
+                            $w->orWhere('agency_id', $agencyId);
+                        }
+                    })->where('is_active', true);
                 });
             })
             ->count();
 
         $activeDispatches = Incident::query()
-            ->whereHas('assignments', function ($q) use ($personnelId) {
-                $q->where('assigned_to', $personnelId)
-                    ->where('is_active', true)
-                    ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+            ->whereHas('assignments', function ($q) use ($personnelId, $agencyId) {
+                $q->where(function ($w) use ($personnelId, $agencyId) {
+                    $w->where('assigned_to', $personnelId);
+                    if ($agencyId) {
+                        $w->orWhere('agency_id', $agencyId);
+                    }
+                })->where('is_active', true);
             })
             ->whereIn('status', [
                 IncidentStatus::Assigned->value,

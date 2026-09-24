@@ -14,7 +14,7 @@
         const name = esc(label || 'Responder');
         return L.divIcon({
             className: 'rg-unit-marker',
-            html: `<div class="rg-unit-pin"><i class="bi bi-truck"></i></div><div class="rg-unit-label">${name}</div>`,
+            html: `<div class="rg-unit-pin"><i class="bi bi-person-fill"></i></div><div class="rg-unit-label">${name}</div>`,
             iconSize: [160, 58],
             iconAnchor: [80, 22],
         });
@@ -50,6 +50,7 @@
         const markerByKey = new Map();
         let fitted = false;
         let lastRouteAt = 0;
+        let lastRoute = null;
         const token = String(cfg.map?.mapbox_token || '').trim();
         const statusEl = document.getElementById(cfg.statusEl || 'track-units-status');
 
@@ -95,29 +96,44 @@
             if (!plotted) return;
 
             const primary = list.find((u) => !Number.isNaN(Number(u.latitude)) && !Number.isNaN(Number(u.longitude))) || list[0];
-            const refreshRoute = !lastRouteAt || (Date.now() - lastRouteAt) > 12000;
-            if (token && Mapbox && primary && refreshRoute) {
+            const from = { lat: Number(primary.latitude), lng: Number(primary.longitude) };
+            const to = { lat: cfg.lat, lng: cfg.lng };
+            const refreshRoute = !lastRouteAt || (Date.now() - lastRouteAt) > 8000;
+            if (token && Mapbox && refreshRoute) {
                 lastRouteAt = Date.now();
                 try {
                     const result = await Mapbox.fetchDirections({
                         token,
-                        from: { lat: Number(primary.latitude), lng: Number(primary.longitude) },
-                        to: { lat: cfg.lat, lng: cfg.lng },
+                        from,
+                        to,
                         profile: 'driving',
                         routeGroup,
+                        color: '#16a34a',
                     });
-                    if (result && statusEl) {
-                        statusEl.textContent =
-                            `${esc(primary.label)} · ${Mapbox.formatDistance(result.distance)} · ~${Mapbox.formatDuration(result.duration)} away`;
-                    } else if (statusEl) {
-                        statusEl.textContent = `${esc(primary.label)} is on the map · route unavailable`;
-                    }
+                    if (result) lastRoute = result;
                 } catch (e) {
-                    if (statusEl) statusEl.textContent = `${esc(primary.label)} is on the map · route unavailable`;
+                    if (!lastRoute && Mapbox.showFallbackRoute) {
+                        lastRoute = Mapbox.showFallbackRoute({ from, to, routeGroup, color: '#16a34a' });
+                    }
                 }
-            } else if (statusEl && primary && !(token && Mapbox)) {
+            } else if (Mapbox?.showFallbackRoute && (!lastRoute || lastRoute.fallback)) {
+                lastRoute = Mapbox.showFallbackRoute({ from, to, routeGroup, color: '#16a34a' });
+            }
+            if (statusEl && lastRoute) {
+                const kind = lastRoute.fallback ? 'straight-line' : 'drive';
+                statusEl.textContent =
+                    `${esc(primary.label)} · ${Mapbox.formatDistance(lastRoute.distance)} · ~${Mapbox.formatDuration(lastRoute.duration)} ${kind}`;
+            } else if (statusEl) {
                 statusEl.textContent = `${esc(primary.label)} is on the map`;
             }
+            document.querySelectorAll('[data-unit-name]').forEach((row) => {
+                const eta = row.querySelector('.agency-eta');
+                if (!eta) return;
+                if (lastRoute && row.getAttribute('data-unit-name') === String(primary.label || '')) {
+                    const kind = lastRoute.fallback ? 'straight-line' : 'drive';
+                    eta.textContent = `${Mapbox.formatDistance(lastRoute.distance)} · ~${Mapbox.formatDuration(lastRoute.duration)} ${kind}`;
+                }
+            });
 
             if (!fitted) {
                 fitted = true;

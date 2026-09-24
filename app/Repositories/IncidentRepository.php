@@ -42,7 +42,6 @@ class IncidentRepository implements IncidentRepositoryInterface
 
             // Prevent old records from previous incident IDs from leaking into current incident views.
             $assignments = $incident->assignments()
-                ->where('created_at', '>=', $incident->created_at)
                 ->orderBy('created_at')
                 ->get();
             $incident->setRelation('assignments', $assignments);
@@ -98,8 +97,7 @@ class IncidentRepository implements IncidentRepositoryInterface
         $query = Incident::query()
             ->with(['incidentType', 'agency'])
             ->whereHas('assignments', function ($q) use ($agencyId) {
-                $q->where('assignments.agency_id', $agencyId)
-                    ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+                $q->where('assignments.agency_id', $agencyId);
             });
 
         // Resolved incidents move to the Document Request workflow and no
@@ -141,9 +139,14 @@ class IncidentRepository implements IncidentRepositoryInterface
         // Dispatches are based on assignments (one-to-many), not on incidents.assigned_to.
         $query = Incident::query()
             ->with(['incidentType', 'agency'])
-            ->whereHas('assignments', function ($q) use ($personnelId) {
-                $q->where('assignments.assigned_to', $personnelId)
-                    ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+            ->whereHas('assignments', function ($q) use ($personnelId, $filters) {
+                $agencyId = $filters['viewer_agency_id'] ?? null;
+                $q->where(function ($w) use ($personnelId, $agencyId) {
+                    $w->where('assignments.assigned_to', $personnelId);
+                    if ($agencyId) {
+                        $w->orWhere('assignments.agency_id', $agencyId);
+                    }
+                });
             });
 
         // Resolved incidents move to the Document Request workflow and no

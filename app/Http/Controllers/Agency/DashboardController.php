@@ -68,7 +68,6 @@ class DashboardController extends Controller
             ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
             ->where('assignments.agency_id', $agencyId)
             ->where('assignments.is_active', true)
-            ->whereColumn('assignments.created_at', '>=', 'incidents.created_at')
             ->count();
 
         // KPI counts derived from active assignments + incident workflow status
@@ -76,7 +75,6 @@ class DashboardController extends Controller
             ->where('assignments.agency_id', $agencyId)
             ->where('assignments.is_active', true)
             ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
-            ->whereColumn('assignments.created_at', '>=', 'incidents.created_at')
             ->selectRaw('incidents.status, COUNT(*) as count')
             ->groupBy('incidents.status')
             ->get();
@@ -90,7 +88,6 @@ class DashboardController extends Controller
             ->where('assignments.agency_id', $agencyId)
             ->where('assignments.is_active', true)
             ->join('incidents', 'incidents.id', '=', 'assignments.incident_id')
-            ->whereColumn('assignments.created_at', '>=', 'incidents.created_at')
             ->whereIn('incidents.status', [
                 IncidentStatus::InProgress->value,
                 IncidentStatus::PendingInfo->value,
@@ -106,8 +103,7 @@ class DashboardController extends Controller
             ->whereHas('incident', function ($query) use ($agencyId) {
                 $query->whereHas('assignments', function ($a) use ($agencyId) {
                     $a->where('assignments.agency_id', $agencyId)
-                        ->where('assignments.is_active', true)
-                        ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+                        ->where('assignments.is_active', true);
                 });
             })
             ->orderByDesc('created_at')
@@ -124,8 +120,7 @@ class DashboardController extends Controller
             ->whereHas('incident', function ($query) use ($agencyId) {
                 $query->whereHas('assignments', function ($a) use ($agencyId) {
                     $a->where('assignments.agency_id', $agencyId)
-                        ->where('assignments.is_active', true)
-                        ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+                        ->where('assignments.is_active', true);
                 });
             })
             ->count();
@@ -135,8 +130,7 @@ class DashboardController extends Controller
         $activeDispatches = Incident::query()
             ->whereHas('assignments', function ($q) use ($agencyId) {
                 $q->where('assignments.agency_id', $agencyId)
-                    ->where('assignments.is_active', true)
-                    ->whereColumn('assignments.created_at', '>=', 'incidents.created_at');
+                    ->where('assignments.is_active', true);
             })
             ->whereIn('status', [
                 IncidentStatus::Assigned->value,

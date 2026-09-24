@@ -14,9 +14,11 @@
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content
             || opts.csrf
             || '';
+        global.RANIAG_LocationPingUrl = opts.url;
         let watchId = null;
         let stopped = false;
         let lastPost = 0;
+        let arrivalSent = false;
 
         function currentPhase() {
             const fromDom = document.getElementById('field-phase-strip')?.dataset?.fieldPhase || '';
@@ -58,6 +60,35 @@
             });
         }
 
+        function maybeArrive(lat, lng) {
+            if (arrivalSent || currentPhase() !== 'en_route' || !opts.phaseUrl || !opts.scene) return;
+            const sceneLat = Number(opts.scene.lat);
+            const sceneLng = Number(opts.scene.lng);
+            if (Number.isNaN(sceneLat) || Number.isNaN(sceneLng)) return;
+            const meters = global.RANIAG_Mapbox?.haversineMeters
+                ? global.RANIAG_Mapbox.haversineMeters({ lat, lng }, { lat: sceneLat, lng: sceneLng })
+                : Infinity;
+            if (meters > 180) return;
+            arrivalSent = true;
+            setStatus('You are at the incident. Marking on scene…', 'live');
+            fetch(opts.phaseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ field_phase: 'on_scene' }),
+                credentials: 'same-origin',
+            }).then((res) => {
+                if (res.ok) window.location.reload();
+                else arrivalSent = false;
+            }).catch(() => {
+                arrivalSent = false;
+            });
+        }
+
         function begin() {
             if (stopped) return;
             if (watchId != null) {
@@ -76,6 +107,7 @@
                     const lng = pos.coords.longitude;
                     document.dispatchEvent(new CustomEvent('raniag:gps', { detail: { lat, lng } }));
                     post(lat, lng);
+                    maybeArrive(lat, lng);
                 },
                 (err) => {
                     const denied = err && err.code === 1;
@@ -106,13 +138,52 @@
         return api;
     }
 
-    // Must be called from a click/tap. Browsers often ignore GPS that
-    // starts on its own; this is the "turn on my location" gesture.
     function enableFromGesture() {
         if (active) active.begin();
     }
 
     let active = null;
+
+    // Mark En route is the location gesture. Ask for GPS in the click,
+    // save one fix, then let the form post the phase.
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!form || !form.classList || !form.classList.contains('field-phase-form')) return;
+        const phase = form.querySelector('[name="field_phase"]')?.value;
+        if (phase !== 'en_route' || form.dataset.gpsReady === '1') return;
+        if (!navigator.geolocation) return;
+        event.preventDefault();
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const pingUrl = global.RANIAG_LocationPingUrl || '';
+                const done = () => {
+                    form.dataset.gpsReady = '1';
+                    form.submit();
+                };
+                if (!pingUrl) {
+                    done();
+                    return;
+                }
+                fetch(pingUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    credentials: 'same-origin',
+                }).finally(done);
+            },
+            () => {
+                form.dataset.gpsReady = '1';
+                form.submit();
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    });
 
     global.RANIAG_LocationPing = { start, enableFromGesture };
 })(window);

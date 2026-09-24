@@ -91,11 +91,18 @@ class ResponderFieldController extends Controller
         return Assignment::query()
             ->where('incident_id', $incident->id)
             ->where('is_active', true)
-            ->when(
-                $user->isPersonnel(),
-                fn ($q) => $q->where('assigned_to', $user->id),
-                fn ($q) => $q->where('agency_id', $user->agency_id),
-            )
+            ->where(function ($q) use ($user) {
+                if ($user->isPersonnel()) {
+                    $q->where('assigned_to', $user->id);
+                    if ($user->agency_id) {
+                        $q->orWhere('agency_id', $user->agency_id);
+                    }
+
+                    return;
+                }
+
+                $q->where('agency_id', $user->agency_id);
+            })
             ->latest('created_at')
             ->first();
     }

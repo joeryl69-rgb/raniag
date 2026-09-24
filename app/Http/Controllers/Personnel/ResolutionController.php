@@ -29,9 +29,15 @@ class ResolutionController extends Controller
 
         $data = $request->validated();
 
+        $user = $request->user();
         $activeAssignment = Assignment::where('incident_id', $record->id)
-            ->where('assigned_to', $request->user()?->id)
             ->where('is_active', true)
+            ->where(function ($q) use ($user) {
+                $q->where('assigned_to', $user?->id);
+                if ($user?->agency_id) {
+                    $q->orWhere('agency_id', $user->agency_id);
+                }
+            })
             ->latest('assigned_at')
             ->first();
 
@@ -39,8 +45,13 @@ class ResolutionController extends Controller
 
         $activeAssignments = Assignment::query()
             ->where('incident_id', $record->id)
-            ->where('assigned_to', $request->user()?->id)
             ->where('is_active', true)
+            ->where(function ($q) use ($user) {
+                $q->where('assigned_to', $user?->id);
+                if ($user?->agency_id) {
+                    $q->orWhere('agency_id', $user->agency_id);
+                }
+            })
             ->orderByDesc('assigned_at')
             ->get();
 

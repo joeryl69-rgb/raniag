@@ -9,7 +9,7 @@
     $phase = $assignment?->field_phase ?? ($assignment?->isAcknowledged() ? 'accepted' : null);
     $steps = [
         'accepted' => ['label' => 'Accepted', 'icon' => 'bi-check2-circle'],
-        'en_route' => ['label' => 'En route', 'icon' => 'bi-car-front-fill'],
+        'en_route' => ['label' => 'En route', 'icon' => 'bi-person-walking'],
         'on_scene' => ['label' => 'On scene', 'icon' => 'bi-geo-alt-fill'],
     ];
     $order = array_keys($steps);
@@ -18,7 +18,7 @@
 
     // Next actionable phase (what the primary CTA advances to), if any.
     $nextKey = $order[$currentIndex + 1] ?? null;
-    $canSms = ! $incident->is_anonymous && filled($incident->reporter_phone);
+    $canSms = ! $incident->is_anonymous && filled($incident->safeReporterPhone());
 @endphp
 
 @if ($assignment && $assignment->isAcknowledged() && ! in_array($incident->status->value, ['resolved', 'closed'], true))
@@ -51,10 +51,12 @@
     </div>
 
     <div class="rg-gps-share" id="rg-gps-share-status" role="status">
-        @if (in_array($phase, ['en_route', 'on_scene'], true))
-            Tap My location on the map and allow the prompt. This device’s pin then moves on the case map, the admin case file, and the public tracking page.
+        @if ($phase === 'on_scene')
+            You are on scene. This device keeps sharing location until the case is closed.
+        @elseif ($phase === 'en_route')
+            Live location is sharing. On scene is set automatically when this device reaches the incident.
         @else
-            Tap My location on the map, allow the prompt, then mark En route. The truck pin moves here and on the public tracking page.
+            Mark En route to turn location on. The pin and route then update on this map and on the public tracking page.
         @endif
     </div>
 

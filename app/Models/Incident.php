@@ -98,9 +98,25 @@ class Incident extends Model
 
     public function currentAssignments(): HasMany
     {
-        return $this->assignments()->whereRaw(
-            'assignments.created_at >= (select incidents.created_at from incidents where incidents.id = assignments.incident_id)'
-        );
+        // Every assignment row for this incident id. A created_at comparison
+        // against the incident hid later agencies when clocks or backfills
+        // made the assignment look older than the case.
+        return $this->assignments();
+    }
+
+    /**
+     * Reporter phone, or null when the ciphertext cannot be decrypted.
+     * A bad value must not take down the case file.
+     */
+    public function safeReporterPhone(): ?string
+    {
+        try {
+            $phone = $this->reporter_phone;
+
+            return is_string($phone) && $phone !== '' ? $phone : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function statusUpdates(): HasMany

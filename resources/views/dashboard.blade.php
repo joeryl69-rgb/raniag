@@ -623,7 +623,8 @@
             const CENTER = [{{ config('raniag.map.default_lat') }}, {{ config('raniag.map.default_lng') }}];
             const MAP_CONFIG = @json(config('raniag.map'));
             const REFRESH_MS = 30000;
-            const SEEN_KEY = 'raniag.dashboard.seen_incident_id.' + ROLE;
+            const SEEN_KEY = 'raniag.dashboard.seen_incident_id.v2.' + ROLE;
+            let alertShownFor = 0;
 
             let map, streetLayer, satLayer, boundaryLayer, barangayLayer, markerLayer, hazardLayer, evacLayer, jurisdictionBounds;
             let charts = {};
@@ -721,7 +722,10 @@
                 if (dismiss) {
                     dismiss.addEventListener('click', function () {
                         const banner = document.getElementById('incident-alert-banner');
-                        if (banner) banner.classList.remove('is-visible');
+                        if (!banner) return;
+                        const id = parseInt(banner.dataset.incidentId || '0', 10) || 0;
+                        if (id) localStorage.setItem(SEEN_KEY, String(id));
+                        banner.classList.remove('is-visible');
                     });
                 }
             }
@@ -754,33 +758,12 @@
 
                 const stored = parseInt(localStorage.getItem(SEEN_KEY) || '0', 10) || 0;
                 const latestId = parseInt(latest.id, 10);
+                alertPrimed = true;
 
-                // A page freshly opened right after a report came in should still
-                // surface it — only suppress the alert on first load when the
-                // latest known case is NOT recent (i.e. it's stale/already-seen
-                // history), otherwise a dispatcher opening the dashboard right
-                // after dispatch would silently miss the very incident they need
-                // to see first.
-                const reportedAt = latest.reported_at ? Date.parse(latest.reported_at) : NaN;
-                const ageMs = Number.isNaN(reportedAt) ? Infinity : (Date.now() - reportedAt);
-                const isFresh = ageMs <= 2 * 60 * 1000; // within the last 2 minutes
-
-                if (!alertPrimed) {
-                    alertPrimed = true;
-                    if (!stored || latestId > stored) {
-                        if (!isFresh) {
-                            localStorage.setItem(SEEN_KEY, String(latestId));
-                            return;
-                        }
-                        // fresh + unseen on first load: fall through and show it.
-                    } else {
-                        return;
-                    }
-                } else if (latestId <= stored) {
-                    return;
-                }
-
-                localStorage.setItem(SEEN_KEY, String(latestId));
+                // Stay up until the dispatcher dismisses it. A newer id always
+                // shows again. Do not mark an incident seen just because the
+                // page loaded.
+                if (latestId <= stored) return;
 
                 const banner = document.getElementById('incident-alert-banner');
                 const copy = document.getElementById('incident-alert-copy');
@@ -798,8 +781,12 @@
                     meta.textContent = bits.join(' · ');
                 }
                 link.href = INCIDENT_URL_BASE + '/' + latestId;
+                banner.dataset.incidentId = String(latestId);
                 banner.classList.add('is-visible');
-                playAlertTone();
+                if (alertShownFor !== latestId) {
+                    alertShownFor = latestId;
+                    playAlertTone();
+                }
             }
 
             function bindToolbar() {

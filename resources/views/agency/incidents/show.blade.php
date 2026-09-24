@@ -129,9 +129,9 @@
                     @if ($needsAcceptance)
                         <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
-                            <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation.</p>
+                            <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation. Location is not required to accept.</p>
                             <div class="rg-sticky-cta">
-                                <button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
                                     <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
                                 </button>
                             </div>
@@ -610,7 +610,6 @@
                         unitsUrl: @json(route('agency.incidents.live_units', $incident)),
                         selfLabel: @json(auth()->user()->agency?->name ?? auth()->user()->name ?? 'You'),
                         statusEl: 'agency-units-status',
-                        locate: true,
                         pollMs: 5000,
                     });
 
@@ -619,7 +618,9 @@
                     @endphp
                     window.RANIAG_LocationPing?.start({
                         url: @json(route('agency.location_ping')),
+                        phaseUrl: @json(route('agency.incidents.field_phase', $incident)),
                         phase: @json($__agencyPhase),
+                        scene: { lat: lat, lng: lng },
                         getPhase() {
                             return document.getElementById('field-phase-strip')?.dataset?.fieldPhase || @json($__agencyPhase);
                         },

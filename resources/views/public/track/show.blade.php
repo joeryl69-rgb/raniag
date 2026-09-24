@@ -155,7 +155,7 @@
         @endphp
         <div class="track-agency-sheet mb-4">
             <div class="sheet-head">
-                <h2 class="sheet-title"><i class="bi bi-truck me-1"></i>Responding agencies</h2>
+                <h2 class="sheet-title"><i class="bi bi-people-fill me-1"></i>Responding agencies</h2>
                 <span class="badge text-bg-light border">{{ $incident->assignments->count() }}</span>
             </div>
             @foreach ($incident->assignments as $assignment)
@@ -173,12 +173,17 @@
                         default => 'bi-hourglass-split',
                     };
                 @endphp
-                <div class="track-agency-row">
+                <div class="track-agency-row" data-unit-name="{{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="track-agency-avatar track-phase-badge {{ $phaseClass }}"><i class="bi {{ $phaseIcon }}"></i></span>
                         <div>
                             <div class="agency-name">
                                 {{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}
+                            </div>
+                            <div class="agency-meta agency-eta">
+                                @if (in_array($phase, ['en_route', 'on_scene'], true))
+                                    ETA appears when this unit is sharing location
+                                @endif
                             </div>
                             <div class="agency-meta">
                                 @if ($assignment->acknowledged_at)

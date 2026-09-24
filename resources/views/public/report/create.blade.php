@@ -130,11 +130,6 @@
                 </li>
             </ol>
 
-            <div class="rg-stepper-actions">
-                <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
-                <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
-                <button type="submit" class="btn btn-primary d-none" id="wizard-submit">Submit Report</button>
-            </div>
             <div id="wizard-step-error" class="alert alert-warning py-2 px-3 mt-2 mb-0 d-none" role="alert"></div>
         </div>
 
@@ -515,6 +510,12 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="rg-wizard-dock" id="wizard-actions">
+            <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
+            <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
+            <button type="submit" class="btn btn-primary d-none" id="wizard-submit">Submit Report</button>
         </div>
     </form>
 </div>

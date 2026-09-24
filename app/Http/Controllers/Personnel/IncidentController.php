@@ -27,6 +27,7 @@ class IncidentController extends Controller
         abort_if(! $personnelId, 403, 'No personnel account is associated with this login.');
 
         $filters = $request->only(['status', 'priority', 'barangay', 'q', 'sort', 'direction', 'date_from', 'date_to']);
+        $filters['viewer_agency_id'] = $request->user()?->agency_id;
 
         $incidents = $this->incidents->paginateForPersonnel(
             $personnelId,
@@ -38,8 +39,14 @@ class IncidentController extends Controller
             return response()->json($incidents);
         }
 
+        $agencyId = $request->user()?->agency_id;
         $barangays = Incident::query()
-            ->whereHas('assignments', fn ($q) => $q->where('assignments.assigned_to', $personnelId))
+            ->whereHas('assignments', function ($q) use ($personnelId, $agencyId) {
+                $q->where('assignments.assigned_to', $personnelId);
+                if ($agencyId) {
+                    $q->orWhere('assignments.agency_id', $agencyId);
+                }
+            })
             ->whereNotNull('barangay')
             ->distinct()
             ->orderBy('barangay')
@@ -56,8 +63,14 @@ class IncidentController extends Controller
         $personnelId = $request->user()?->id;
         abort_if(! $personnelId, 403);
 
+        $agencyId = $request->user()?->agency_id;
         $hasAnyAssignmentForPersonnel = $record->currentAssignments()
-            ->where('assigned_to', $personnelId)
+            ->where(function ($q) use ($personnelId, $agencyId) {
+                $q->where('assigned_to', $personnelId);
+                if ($agencyId) {
+                    $q->orWhere('agency_id', $agencyId);
+                }
+            })
             ->exists();
 
         abort_if(
@@ -92,9 +105,15 @@ class IncidentController extends Controller
         $personnelId = $request->user()?->id;
         abort_if(! $personnelId, 403);
 
+        $agencyId = $request->user()?->agency_id;
         $hasActiveAssignment = $record->currentAssignments()
-            ->where('assigned_to', $personnelId)
             ->where('is_active', true)
+            ->where(function ($q) use ($personnelId, $agencyId) {
+                $q->where('assigned_to', $personnelId);
+                if ($agencyId) {
+                    $q->orWhere('agency_id', $agencyId);
+                }
+            })
             ->exists();
 
         abort_if(
@@ -154,10 +173,16 @@ class IncidentController extends Controller
         $personnelId = $request->user()?->id;
         abort_if(! $personnelId, 403);
 
+        $agencyId = $request->user()?->agency_id;
         $assignment = Assignment::where('incident_id', $record->id)
-            ->where('assigned_to', $personnelId)
             ->where('is_active', true)
-            ->where('created_at', '>=', $record->created_at)
+            ->where(function ($q) use ($personnelId, $agencyId) {
+                $q->where('assigned_to', $personnelId);
+                if ($agencyId) {
+                    $q->orWhere('agency_id', $agencyId);
+                }
+            })
+            ->latest('created_at')
             ->first();
 
         abort_if(! $assignment, 403, 'No active assignment found for this incident for your account.');

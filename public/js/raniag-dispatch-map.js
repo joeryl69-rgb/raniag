@@ -14,7 +14,7 @@
         const name = esc(label || 'Unit');
         return L.divIcon({
             className: 'rg-unit-marker',
-            html: `<div class="rg-unit-pin"><i class="bi bi-truck"></i></div><div class="rg-unit-label">${name}</div>`,
+            html: `<div class="rg-unit-pin"><i class="bi bi-person-fill"></i></div><div class="rg-unit-label">${name}</div>`,
             iconSize: [160, 58],
             iconAnchor: [80, 22],
         });
@@ -60,6 +60,7 @@
         let followMe = false;
         let fitted = false;
         let lastRouteAt = 0;
+        let lastRoute = null;
         const markerByKey = new Map();
 
         async function drawUnits(units) {
@@ -98,37 +99,41 @@
 
             if (statusEl && !plotted) {
                 statusEl.textContent = list.length
-                    ? 'Assigned, but no GPS yet. Tap My location, then mark En route.'
-                    : 'No live responder GPS yet. Tap My location on the map while en route.';
+                    ? 'Assigned. Mark En route to share this device and draw the route.'
+                    : 'No live responder yet. Mark En route to share location.';
             }
 
             if (!plotted) return;
 
-            const movedEnough = !lastRouteAt || (Date.now() - lastRouteAt) > 12000;
-            if (token && Mapbox && primary && movedEnough) {
+            const from = { lat: Number(primary.latitude), lng: Number(primary.longitude) };
+            const to = { lat: cfg.lat, lng: cfg.lng };
+            const movedEnough = !lastRouteAt || (Date.now() - lastRouteAt) > 8000;
+            if (token && Mapbox && movedEnough) {
                 lastRouteAt = Date.now();
                 try {
                     const result = await Mapbox.fetchDirections({
                         token,
-                        from: { lat: Number(primary.latitude), lng: Number(primary.longitude) },
-                        to: { lat: cfg.lat, lng: cfg.lng },
+                        from,
+                        to,
                         profile: 'driving',
                         routeGroup,
                         color: '#16a34a',
                     });
-                    if (result && statusEl) {
-                        statusEl.textContent =
-                            `${esc(primary.label)} · ${Mapbox.formatDistance(result.distance)} · ~${Mapbox.formatDuration(result.duration)} drive`;
-                    }
+                    if (result) lastRoute = result;
                 } catch (e) {
-                    if (statusEl) {
-                        statusEl.textContent = `${esc(primary.label)} is moving · route unavailable`;
+                    if (!lastRoute && Mapbox.showFallbackRoute) {
+                        lastRoute = Mapbox.showFallbackRoute({ from, to, routeGroup, color: '#16a34a' });
                     }
                 }
-            } else if (statusEl && primary && !movedEnough) {
-                /* keep the last distance/ETA while the pin keeps moving */
+            } else if (Mapbox?.showFallbackRoute && (!lastRoute || lastRoute.fallback)) {
+                lastRoute = Mapbox.showFallbackRoute({ from, to, routeGroup, color: '#16a34a' });
+            }
+            if (statusEl && lastRoute) {
+                const kind = lastRoute.fallback ? 'straight-line' : 'drive';
+                statusEl.textContent =
+                    `${esc(primary.label)} · ${Mapbox.formatDistance(lastRoute.distance)} · ~${Mapbox.formatDuration(lastRoute.duration)} ${kind}`;
             } else if (statusEl) {
-                statusEl.textContent = `${plotted} live unit${plotted === 1 ? '' : 's'} on the map`;
+                statusEl.textContent = `${esc(primary.label)} is on the map`;
             }
 
             if (followMe && localFix) {
@@ -163,25 +168,6 @@
             } catch (e) { /* offline */ }
         }
 
-        if (cfg.locate) {
-            const Locate = L.control({ position: 'topleft' });
-            Locate.onAdd = function () {
-                const btn = L.DomUtil.create('button', 'rg-map-locate');
-                btn.type = 'button';
-                btn.innerHTML = '<i class="bi bi-crosshair"></i> My location';
-                L.DomEvent.disableClickPropagation(btn);
-                L.DomEvent.on(btn, 'click', (event) => {
-                    L.DomEvent.stop(event);
-                    followMe = true;
-                    btn.classList.add('is-on');
-                    btn.innerHTML = '<i class="bi bi-crosshair"></i> Sharing';
-                    global.RANIAG_LocationPing?.enableFromGesture();
-                });
-                return btn;
-            };
-            Locate.addTo(map);
-        }
-
         document.addEventListener('raniag:gps', (event) => {
             const lat = Number(event.detail?.lat);
             const lng = Number(event.detail?.lng);
@@ -192,6 +178,7 @@
                 latitude: lat,
                 longitude: lng,
             };
+            followMe = true;
             drawUnits([localFix]);
         });
 

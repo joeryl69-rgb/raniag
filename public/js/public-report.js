@@ -747,7 +747,6 @@
             applyEvidenceGate();
         }
         window.RANIAG_JO?.syncReportCoach(wizardStep);
-        document.getElementById('report-wizard-nav')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function validateWizardStep(step) {

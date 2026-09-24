@@ -49,13 +49,14 @@
                                 <div class="text-muted">Tracking #</div>
                                 <strong class="font-monospace">{{ $incident->tracking_number }}</strong>
                             </div>
-                            @if ($incident->reporter_name || $incident->reporter_phone)
+                            @php $reporterPhone = $incident->safeReporterPhone(); @endphp
+                            @if ($incident->reporter_name || $reporterPhone)
                                 <div class="col-12">
                                     <div class="text-muted">Reporter</div>
                                     <strong>
                                         {{ $incident->reporter_name ?? 'Public reporter' }}
-                                        @if ($incident->reporter_phone)
-                                            <span class="text-muted fw-normal">· {{ $incident->reporter_phone }}</span>
+                                        @if ($reporterPhone)
+                                            <span class="text-muted fw-normal">· {{ $reporterPhone }}</span>
                                         @endif
                                     </strong>
                                 </div>

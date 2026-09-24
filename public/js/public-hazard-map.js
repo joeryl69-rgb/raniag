@@ -332,11 +332,26 @@
                 updateJoTip('route');
             } catch (e) {
                 if (seq !== routeFetchSeq || !layersOn().you) return;
-                if (!routeLayer) {
+                const fallback = Mapbox?.showFallbackRoute?.({
+                    from: youLatLng,
+                    to: { lat: Number(nc.latitude), lng: Number(nc.longitude) },
+                    routeGroup,
+                    color: '#0b5ed7',
+                });
+                if (fallback) {
+                    routeLayer = fallback.layer;
+                    lastRouteAt = Date.now();
+                    lastRouteLatLng = leaflet.latLng(youLatLng.lat, youLatLng.lng);
                     if (routeSummary) {
-                        routeSummary.textContent = `Nearest: ${nc.name} (~${formatDistance(nc.distance_m)} straight-line).`;
+                        routeSummary.textContent = `${formatDistance(fallback.distance)} · ~${formatDuration(fallback.duration)} straight-line to ${nc.name}`;
                     }
-                    setRouteStatus('Could not load Mapbox route. Try again or switch Walk/Drive.', true);
+                    setRouteStatus('Road route unavailable. Showing a straight line and an estimated time.', false);
+                    updateJoTip('route');
+                    return;
+                }
+                if (!routeLayer && routeSummary) {
+                    routeSummary.textContent = `Nearest: ${nc.name} (~${formatDistance(nc.distance_m)} straight-line).`;
+                    setRouteStatus('Could not load a route for this center.', true);
                 }
             }
         }

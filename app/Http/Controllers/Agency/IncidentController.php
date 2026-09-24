@@ -173,7 +173,7 @@ class IncidentController extends Controller
         $assignment = Assignment::where('incident_id', $record->id)
             ->where('agency_id', $agencyId)
             ->where('is_active', true)
-            ->where('created_at', '>=', $record->created_at)
+            ->latest('created_at')
             ->first();
 
         abort_if(! $assignment, 403, 'No active assignment found for this incident for your agency.');

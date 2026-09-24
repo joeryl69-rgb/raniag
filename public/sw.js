@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v13';
+const CACHE_NAME = 'raniag-cache-dev-v14';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [

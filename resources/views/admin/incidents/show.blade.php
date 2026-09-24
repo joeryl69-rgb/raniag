@@ -500,7 +500,7 @@
                         <div class="alert alert-info py-2 px-3 mb-2 small">
                             <i class="bi bi-telephone-outbound me-1"></i>
                             Call-back verification queue — submitted without GPS photo evidence.
-                            @if (! empty($incident->reporter_phone))
+                            @if ($incident->safeReporterPhone())
                                 Phone on file (encrypted). Contact the reporter to verify.
                             @endif
                         </div>
@@ -550,7 +550,7 @@
                             <dd class="mb-2 text-dark fw-semibold">{{ $incident->reporter_name ?? 'N/A' }}</dd>
                             
                             <dt class="text-muted small">Phone Number</dt>
-                            <dd class="mb-2 text-dark">{{ $incident->reporter_phone ?? 'N/A' }}</dd>
+                            <dd class="mb-2 text-dark">{{ $incident->safeReporterPhone() ?? 'N/A' }}</dd>
                             
                             <dt class="text-muted small">Email Address</dt>
                             <dd class="mb-0 text-dark">{{ $incident->reporter_email ?? 'N/A' }}</dd>
