@@ -47,25 +47,41 @@
 
         const unitGroup = L.layerGroup().addTo(map);
         const routeGroup = L.layerGroup().addTo(map);
+        const markerByKey = new Map();
+        let fitted = false;
+        let lastRouteAt = 0;
         const token = String(cfg.map?.mapbox_token || '').trim();
         const statusEl = document.getElementById(cfg.statusEl || 'track-units-status');
 
         async function paint(units) {
-            unitGroup.clearLayers();
-            routeGroup.clearLayers();
             const list = Array.isArray(units) ? units : [];
 
             const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
             let plotted = 0;
+            const seen = new Set();
             list.forEach((u) => {
                 const lat = Number(u.latitude);
                 const lng = Number(u.longitude);
                 if (Number.isNaN(lat) || Number.isNaN(lng)) return;
                 plotted += 1;
                 bounds.extend([lat, lng]);
-                L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 })
-                    .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(u.field_phase || 'assigned')}`)
-                    .addTo(unitGroup);
+                const key = String(u.label || 'Responder');
+                seen.add(key);
+                const existing = markerByKey.get(key);
+                if (existing) {
+                    existing.setLatLng([lat, lng]);
+                } else {
+                    const marker = L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 })
+                        .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(u.field_phase || 'assigned')}`)
+                        .addTo(unitGroup);
+                    markerByKey.set(key, marker);
+                }
+            });
+            markerByKey.forEach((marker, key) => {
+                if (!seen.has(key)) {
+                    unitGroup.removeLayer(marker);
+                    markerByKey.delete(key);
+                }
             });
 
             if (statusEl) {
@@ -78,8 +94,10 @@
 
             if (!plotted) return;
 
-            const primary = list[0];
-            if (token && Mapbox && primary) {
+            const primary = list.find((u) => !Number.isNaN(Number(u.latitude)) && !Number.isNaN(Number(u.longitude))) || list[0];
+            const refreshRoute = !lastRouteAt || (Date.now() - lastRouteAt) > 12000;
+            if (token && Mapbox && primary && refreshRoute) {
+                lastRouteAt = Date.now();
                 try {
                     const result = await Mapbox.fetchDirections({
                         token,
@@ -97,18 +115,19 @@
                 } catch (e) {
                     if (statusEl) statusEl.textContent = `${esc(primary.label)} is on the map · route unavailable`;
                 }
-            } else if (statusEl && primary) {
+            } else if (statusEl && primary && !(token && Mapbox)) {
                 statusEl.textContent = `${esc(primary.label)} is on the map`;
             }
 
-            try {
-                // Prefer a modest pad + capped zoom so a wide desktop
-                // aspect-ratio frame doesn't over-fit into a stretched look.
-                map.fitBounds(bounds.pad(0.18), {
-                    maxZoom: 14,
-                    padding: [28, 28],
-                });
-            } catch (e) { /* */ }
+            if (!fitted) {
+                fitted = true;
+                try {
+                    map.fitBounds(bounds.pad(0.18), {
+                        maxZoom: 15,
+                        padding: [28, 28],
+                    });
+                } catch (e) { /* */ }
+            }
         }
 
         async function refresh() {
@@ -136,7 +155,7 @@
             await paint(cfg.units);
         }
         await refresh();
-        setInterval(refresh, cfg.pollMs || 12000);
+        setInterval(refresh, cfg.pollMs || 5000);
         // Invalidate after layout settles so aspect-ratio containers paint correctly.
         [100, 350, 800].forEach((ms) => setTimeout(() => map.invalidateSize(), ms));
         if (typeof ResizeObserver !== 'undefined') {

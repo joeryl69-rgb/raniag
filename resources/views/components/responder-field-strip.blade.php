@@ -52,9 +52,9 @@
 
     <div class="rg-gps-share" id="rg-gps-share-status" role="status">
         @if (in_array($phase, ['en_route', 'on_scene'], true))
-            Requesting this device's location so the case map can follow you…
+            Tap My location on the map and allow the prompt. This device’s pin then moves on the case map, the admin case file, and the public tracking page.
         @else
-            Your live position is shared with the case map once you mark En route.
+            Tap My location on the map, allow the prompt, then mark En route. The truck pin moves here and on the public tracking page.
         @endif
     </div>
 

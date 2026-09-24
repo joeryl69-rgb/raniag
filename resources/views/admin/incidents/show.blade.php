@@ -965,7 +965,7 @@
                         scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
                         unitsUrl: @json(route('admin.incidents.live_units', $incident)),
                         statusEl: 'dispatch-units-status',
-                        pollMs: 15000,
+                        pollMs: 5000,
                     });
                 });
             </script>

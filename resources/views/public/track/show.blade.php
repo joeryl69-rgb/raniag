@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
         unitsUrl: @json($unitsUrl ?? null),
         units: @json($liveUnits ?? []),
         statusEl: 'track-units-status',
-        pollMs: 12000,
+        pollMs: 5000,
     });
 });
 </script>

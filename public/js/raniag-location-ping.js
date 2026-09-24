@@ -39,7 +39,7 @@
 
         function post(lat, lng) {
             const now = Date.now();
-            if (now - lastPost < 12000) return;
+            if (now - lastPost < 4000) return;
             lastPost = now;
             fetch(opts.url, {
                 method: 'POST',
@@ -92,16 +92,27 @@
 
         begin();
 
-        return {
+        const api = {
             stop() {
                 stopped = true;
                 if (watchId != null) navigator.geolocation.clearWatch(watchId);
             },
+            begin,
             refresh() {
                 if (!stopped) begin();
             },
         };
+        active = api;
+        return api;
     }
 
-    global.RANIAG_LocationPing = { start };
+    // Must be called from a click/tap. Browsers often ignore GPS that
+    // starts on its own; this is the "turn on my location" gesture.
+    function enableFromGesture() {
+        if (active) active.begin();
+    }
+
+    let active = null;
+
+    global.RANIAG_LocationPing = { start, enableFromGesture };
 })(window);

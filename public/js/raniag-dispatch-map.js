@@ -57,15 +57,17 @@
             ? (typeof cfg.statusEl === 'string' ? document.getElementById(cfg.statusEl) : cfg.statusEl)
             : null;
         let localFix = null;
+        let followMe = false;
+        let fitted = false;
+        let lastRouteAt = 0;
+        const markerByKey = new Map();
 
         async function drawUnits(units) {
-            unitGroup.clearLayers();
-            routeGroup.clearLayers();
             const list = Array.isArray(units) ? units : [];
-
             const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
             let primary = null;
             let plotted = 0;
+            const seen = new Set();
 
             list.forEach((u) => {
                 const lat = Number(u.latitude);
@@ -74,23 +76,37 @@
                 plotted += 1;
                 if (!primary) primary = u;
                 bounds.extend([lat, lng]);
-                L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 })
-                    .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(u.field_phase || 'assigned')}`)
-                    .addTo(unitGroup);
+                const key = String(u.label || 'Unit');
+                seen.add(key);
+                const existing = markerByKey.get(key);
+                if (existing) {
+                    existing.setLatLng([lat, lng]);
+                } else {
+                    const marker = L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 })
+                        .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(u.field_phase || 'assigned')}`)
+                        .addTo(unitGroup);
+                    markerByKey.set(key, marker);
+                }
+            });
+
+            markerByKey.forEach((marker, key) => {
+                if (!seen.has(key)) {
+                    unitGroup.removeLayer(marker);
+                    markerByKey.delete(key);
+                }
             });
 
             if (statusEl && !plotted) {
                 statusEl.textContent = list.length
-                    ? 'Assigned, but no GPS yet. On the responder phone, mark En route and allow location.'
-                    : 'No live responder GPS yet — units appear after they share location while en route.';
+                    ? 'Assigned, but no GPS yet. Tap My location, then mark En route.'
+                    : 'No live responder GPS yet. Tap My location on the map while en route.';
             }
 
-            if (!plotted) {
-                map.setView([cfg.lat, cfg.lng], 14);
-                return;
-            }
+            if (!plotted) return;
 
-            if (token && Mapbox && primary) {
+            const movedEnough = !lastRouteAt || (Date.now() - lastRouteAt) > 12000;
+            if (token && Mapbox && primary && movedEnough) {
+                lastRouteAt = Date.now();
                 try {
                     const result = await Mapbox.fetchDirections({
                         token,
@@ -103,21 +119,26 @@
                     if (result && statusEl) {
                         statusEl.textContent =
                             `${esc(primary.label)} · ${Mapbox.formatDistance(result.distance)} · ~${Mapbox.formatDuration(result.duration)} drive`;
-                    } else if (statusEl) {
-                        statusEl.textContent = `${plotted} live unit${plotted === 1 ? '' : 's'} on the map · route unavailable`;
                     }
                 } catch (e) {
                     if (statusEl) {
-                        statusEl.textContent = `${plotted} live unit${plotted === 1 ? '' : 's'} on the map · route unavailable`;
+                        statusEl.textContent = `${esc(primary.label)} is moving · route unavailable`;
                     }
                 }
+            } else if (statusEl && primary && !movedEnough) {
+                /* keep the last distance/ETA while the pin keeps moving */
             } else if (statusEl) {
                 statusEl.textContent = `${plotted} live unit${plotted === 1 ? '' : 's'} on the map`;
             }
 
-            try {
-                map.fitBounds(bounds.pad(0.2), { maxZoom: 14, padding: [24, 24] });
-            } catch (e) { /* */ }
+            if (followMe && localFix) {
+                map.panTo([localFix.latitude, localFix.longitude], { animate: true });
+            } else if (!fitted) {
+                fitted = true;
+                try {
+                    map.fitBounds(bounds.pad(0.2), { maxZoom: 15, padding: [28, 28] });
+                } catch (e) { /* */ }
+            }
         }
 
         async function refresh() {
@@ -140,6 +161,25 @@
                 const units = data.units || [];
                 await drawUnits(units.length ? units : (localFix ? [localFix] : []));
             } catch (e) { /* offline */ }
+        }
+
+        if (cfg.locate) {
+            const Locate = L.control({ position: 'topleft' });
+            Locate.onAdd = function () {
+                const btn = L.DomUtil.create('button', 'rg-map-locate');
+                btn.type = 'button';
+                btn.innerHTML = '<i class="bi bi-crosshair"></i> My location';
+                L.DomEvent.disableClickPropagation(btn);
+                L.DomEvent.on(btn, 'click', (event) => {
+                    L.DomEvent.stop(event);
+                    followMe = true;
+                    btn.classList.add('is-on');
+                    btn.innerHTML = '<i class="bi bi-crosshair"></i> Sharing';
+                    global.RANIAG_LocationPing?.enableFromGesture();
+                });
+                return btn;
+            };
+            Locate.addTo(map);
         }
 
         document.addEventListener('raniag:gps', (event) => {
