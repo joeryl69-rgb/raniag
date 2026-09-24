@@ -7,6 +7,7 @@ use App\Models\IncidentType;
 use App\Models\User;
 use App\Services\AssignmentService;
 use App\Services\IncidentService;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 
 test('assigning an agency only advances status when transition is legal', function () {
@@ -66,6 +67,49 @@ test('second agency assignment does not re-transition from assigned', function (
 
     expect($incident->fresh()->status)->toBe(IncidentStatus::Assigned)
         ->and($incident->fresh()->currentAssignments()->count())->toBe(2);
+});
+
+test('agency and assigned personnel both retain case access when multiple agency dispatches exist', function () {
+    $type = IncidentType::factory()->create();
+    $admin = User::factory()->create([
+        'role' => 'administrator',
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+    $agencyA = Agency::query()->create(['name' => 'Agency A', 'code' => 'AG1', 'is_active' => true]);
+    $agencyB = Agency::query()->create(['name' => 'Agency B', 'code' => 'AG2', 'is_active' => true]);
+    $agencyUser = User::factory()->agency()->create([
+        'agency_id' => $agencyB->id,
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+    $personnel = User::factory()->create([
+        'role' => 'personnel',
+        'agency_id' => null,
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+
+    $incident = Incident::query()->create([
+        'tracking_number' => 'RAN-ASN-0004',
+        'tracking_pin' => Hash::make('444444'),
+        'incident_type_id' => $type->id,
+        'status' => IncidentStatus::Received,
+        'priority' => 'medium',
+        'description' => 'Access control regression case for second agency + personnel dispatch.',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+
+    $service = app(AssignmentService::class);
+    $service->assignToAgency($incident, $agencyA, $admin);
+    $service->assignToAgency($incident->fresh(), $agencyB, $admin);
+    $service->assignToPersonnel($incident->fresh(), $personnel, $admin);
+
+    expect(Gate::forUser($agencyUser)->allows('view', $incident->fresh()))
+        ->toBeTrue()
+        ->and(Gate::forUser($personnel)->allows('view', $incident->fresh()))
+        ->toBeTrue();
 });
 
 test('acknowledging assignment moves assigned incident to in_progress', function () {
