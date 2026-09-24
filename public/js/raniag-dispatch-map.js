@@ -10,12 +10,13 @@
         }[c]));
     }
 
-    function unitIcon() {
+    function unitIcon(label) {
+        const name = esc(label || 'Unit');
         return L.divIcon({
             className: 'rg-unit-marker',
-            html: '<div style="width:16px;height:16px;border-radius:50%;background:#16a34a;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
+            html: `<div class="rg-unit-pin"><i class="bi bi-truck"></i></div><div class="rg-unit-label">${name}</div>`,
+            iconSize: [160, 58],
+            iconAnchor: [80, 22],
         });
     }
 
@@ -61,29 +62,32 @@
             routeGroup.clearLayers();
             const list = Array.isArray(units) ? units : [];
 
-            if (statusEl) {
-                statusEl.textContent = list.length
-                    ? `${list.length} live unit${list.length === 1 ? '' : 's'} · updates every ~15s`
-                    : 'No live responder GPS yet — units appear after they share location while en route.';
-            }
-
-            if (!list.length) {
-                map.setView([cfg.lat, cfg.lng], 14);
-                return;
-            }
-
             const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
-            let primary = list[0];
+            let primary = null;
+            let plotted = 0;
 
             list.forEach((u) => {
                 const lat = Number(u.latitude);
                 const lng = Number(u.longitude);
                 if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+                plotted += 1;
+                if (!primary) primary = u;
                 bounds.extend([lat, lng]);
-                L.marker([lat, lng], { icon: unitIcon() })
+                L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 })
                     .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(u.field_phase || 'assigned')}`)
                     .addTo(unitGroup);
             });
+
+            if (statusEl && !plotted) {
+                statusEl.textContent = list.length
+                    ? 'Assigned, but no GPS yet. On the responder phone, mark En route and allow location.'
+                    : 'No live responder GPS yet — units appear after they share location while en route.';
+            }
+
+            if (!plotted) {
+                map.setView([cfg.lat, cfg.lng], 14);
+                return;
+            }
 
             if (token && Mapbox && primary) {
                 try {
@@ -97,10 +101,17 @@
                     });
                     if (result && statusEl) {
                         statusEl.textContent =
-                            `${list.length} live unit${list.length === 1 ? '' : 's'} · ` +
-                            `${Mapbox.formatDistance(result.distance)} · ~${Mapbox.formatDuration(result.duration)} drive`;
+                            `${esc(primary.label)} · ${Mapbox.formatDistance(result.distance)} · ~${Mapbox.formatDuration(result.duration)} drive`;
+                    } else if (statusEl) {
+                        statusEl.textContent = `${plotted} live unit${plotted === 1 ? '' : 's'} on the map · route unavailable`;
                     }
-                } catch (e) { /* keep markers */ }
+                } catch (e) {
+                    if (statusEl) {
+                        statusEl.textContent = `${plotted} live unit${plotted === 1 ? '' : 's'} on the map · route unavailable`;
+                    }
+                }
+            } else if (statusEl) {
+                statusEl.textContent = `${plotted} live unit${plotted === 1 ? '' : 's'} on the map`;
             }
 
             try {

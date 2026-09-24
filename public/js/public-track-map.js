@@ -10,12 +10,13 @@
         }[c]));
     }
 
-    function unitIcon() {
+    function unitIcon(label) {
+        const name = esc(label || 'Responder');
         return L.divIcon({
             className: 'rg-unit-marker',
-            html: '<div style="width:14px;height:14px;border-radius:50%;background:#0b5ed7;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
+            html: `<div class="rg-unit-pin"><i class="bi bi-truck"></i></div><div class="rg-unit-label">${name}</div>`,
+            iconSize: [160, 58],
+            iconAnchor: [80, 22],
         });
     }
 
@@ -54,24 +55,28 @@
             routeGroup.clearLayers();
             const list = Array.isArray(units) ? units : [];
 
-            if (statusEl) {
-                statusEl.textContent = list.length
-                    ? `${list.length} responding unit${list.length === 1 ? '' : 's'} approaching`
-                    : 'Responders will appear here live once they are en route and sharing location.';
-            }
-
-            if (!list.length) return;
-
             const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
+            let plotted = 0;
             list.forEach((u) => {
                 const lat = Number(u.latitude);
                 const lng = Number(u.longitude);
                 if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+                plotted += 1;
                 bounds.extend([lat, lng]);
-                L.marker([lat, lng], { icon: unitIcon() })
+                L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 })
                     .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(u.field_phase || 'assigned')}`)
                     .addTo(unitGroup);
             });
+
+            if (statusEl) {
+                statusEl.textContent = plotted
+                    ? `${plotted} responding unit${plotted === 1 ? '' : 's'} on the map`
+                    : (list.length
+                        ? 'A unit is assigned, but their GPS has not arrived yet.'
+                        : 'Responders appear here once they are en route and this device is sharing location.');
+            }
+
+            if (!plotted) return;
 
             const primary = list[0];
             if (token && Mapbox && primary) {
@@ -86,8 +91,14 @@
                     if (result && statusEl) {
                         statusEl.textContent =
                             `${esc(primary.label)} · ${Mapbox.formatDistance(result.distance)} · ~${Mapbox.formatDuration(result.duration)} away`;
+                    } else if (statusEl) {
+                        statusEl.textContent = `${esc(primary.label)} is on the map · route unavailable`;
                     }
-                } catch (e) { /* markers only */ }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = `${esc(primary.label)} is on the map · route unavailable`;
+                }
+            } else if (statusEl && primary) {
+                statusEl.textContent = `${esc(primary.label)} is on the map`;
             }
 
             try {

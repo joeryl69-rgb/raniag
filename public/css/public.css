@@ -2137,6 +2137,57 @@ body.raniag-public {
     padding: .55rem .75rem;
 }
 .rg-field-sms-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem; padding: .75rem; }
+.rg-gps-share {
+    font-size: .78rem;
+    font-weight: 600;
+    color: #1e3a8a;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: .6rem;
+    padding: .5rem .7rem;
+    margin-bottom: .7rem;
+}
+.rg-gps-share.is-live { color: #14532d; background: #f0fdf4; border-color: #bbf7d0; }
+.rg-gps-share.is-error { color: #991b1b; background: #fef2f2; border-color: #fecaca; }
+
+/* Responder pin on dispatch + public tracking maps */
+.rg-unit-marker.leaflet-div-icon,
+.leaflet-div-icon.rg-unit-marker {
+    background: transparent;
+    border: 0;
+}
+.rg-unit-pin {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto;
+    border-radius: 50% 50% 50% 4px;
+    transform: rotate(-45deg);
+    background: #0b5ed7;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #fff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .4);
+    font-size: 1rem;
+}
+.rg-unit-pin i { transform: rotate(45deg); }
+.rg-unit-label {
+    margin-top: 4px;
+    background: #0f172a;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-align: center;
+    white-space: nowrap;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, .25);
+}
 
 /* ---- Case Action Control console shell (agency/personnel/admin case file) ---- */
 .rg-console-card {

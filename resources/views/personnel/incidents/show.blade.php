@@ -540,8 +540,7 @@
                 url: @json(route('personnel.location_ping')),
                 phase: @json(optional($myAssignment ?? null)->field_phase),
                 getPhase() {
-                    const active = document.querySelector('#field-phase-strip .btn-primary');
-                    return active ? (active.closest('form')?.querySelector('[name="field_phase"]')?.value || '') : '';
+                    return document.getElementById('field-phase-strip')?.dataset?.fieldPhase || @json(optional($myAssignment ?? null)->field_phase);
                 },
             });
         });

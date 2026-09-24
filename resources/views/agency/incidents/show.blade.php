@@ -619,8 +619,7 @@
                         url: @json(route('agency.location_ping')),
                         phase: @json($__agencyPhase),
                         getPhase() {
-                            const active = document.querySelector('#field-phase-strip .btn-primary');
-                            return active ? (active.closest('form')?.querySelector('[name="field_phase"]')?.value || '') : @json($__agencyPhase);
+                            return document.getElementById('field-phase-strip')?.dataset?.fieldPhase || @json($__agencyPhase);
                         },
                     });
                 });

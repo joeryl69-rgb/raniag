@@ -37,7 +37,7 @@
     {{-- Visual phase stepper: replaces the flat row of identical buttons with a
          clear "you are here, this is next" progression so it reads as a live
          status console rather than an arbitrary set of selection buttons. --}}
-    <div class="rg-phase-stepper" id="field-phase-strip">
+    <div class="rg-phase-stepper" id="field-phase-strip" data-field-phase="{{ $phase }}">
         @foreach ($steps as $key => $meta)
             @php $stepIndex = array_search($key, $order, true); @endphp
             <div class="rg-phase-step {{ $stepIndex < $currentIndex ? 'is-done' : ($stepIndex === $currentIndex ? 'is-current' : 'is-pending') }}">
@@ -48,6 +48,14 @@
                 <div class="rg-phase-connector {{ $stepIndex < $currentIndex ? 'is-done' : '' }}"></div>
             @endif
         @endforeach
+    </div>
+
+    <div class="rg-gps-share" id="rg-gps-share-status" role="status">
+        @if (in_array($phase, ['en_route', 'on_scene'], true))
+            Requesting this device's location so the case map can follow you…
+        @else
+            Your live position is shared with the case map once you mark En route.
+        @endif
     </div>
 
     <div class="rg-field-actions">

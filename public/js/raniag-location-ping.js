@@ -1,65 +1,101 @@
 /**
- * Responder GPS ping — posts lat/lng to location-ping while on an active field case.
- * Interval is shorter when en_route / on_scene.
+ * Responder GPS ping — watches the device while the case is en route / on scene
+ * and posts lat/lng so dispatch and public tracking can draw the unit.
  */
 (function (global) {
     'use strict';
 
     function start(opts) {
-        if (!opts?.url || !navigator.geolocation) return { stop() {} };
+        if (!opts?.url || !navigator.geolocation) {
+            setStatus('This browser cannot share location.', 'error');
+            return { stop() {} };
+        }
 
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content
             || opts.csrf
             || '';
-        let timer = null;
+        let watchId = null;
         let stopped = false;
+        let lastPost = 0;
 
-        function intervalMs() {
-            const phase = (opts.getPhase && opts.getPhase()) || opts.phase || '';
-            if (phase === 'en_route' || phase === 'on_scene') return 35000;
-            return 120000;
+        function currentPhase() {
+            const fromDom = document.getElementById('field-phase-strip')?.dataset?.fieldPhase || '';
+            const fromOpt = (opts.getPhase && opts.getPhase()) || opts.phase || '';
+            return String(fromDom || fromOpt || '');
         }
 
-        function ping() {
-            if (stopped) return;
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    fetch(opts.url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json',
-                            'X-CSRF-TOKEN': csrf,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        body: JSON.stringify({
-                            lat: pos.coords.latitude,
-                            lng: pos.coords.longitude,
-                        }),
-                        credentials: 'same-origin',
-                    }).catch(() => {});
+        function tracking() {
+            const phase = currentPhase();
+            return phase === 'en_route' || phase === 'on_scene';
+        }
+
+        function setStatus(message, kind) {
+            const el = document.getElementById('rg-gps-share-status');
+            if (!el) return;
+            el.textContent = message;
+            el.classList.toggle('is-live', kind === 'live');
+            el.classList.toggle('is-error', kind === 'error');
+        }
+
+        function post(lat, lng) {
+            const now = Date.now();
+            if (now - lastPost < 12000) return;
+            lastPost = now;
+            fetch(opts.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
-                () => {},
-                { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+                body: JSON.stringify({ lat, lng }),
+                credentials: 'same-origin',
+            }).then((res) => {
+                if (!res.ok) setStatus('Location was read but could not be saved. Refresh and try again.', 'error');
+            }).catch(() => {
+                setStatus('Location was read but the network save failed.', 'error');
+            });
+        }
+
+        function begin() {
+            if (stopped) return;
+            if (watchId != null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            if (!tracking()) {
+                setStatus('Mark En route to share this device’s live location on the case map.', '');
+                return;
+            }
+            setStatus('Allow location when the browser asks — the case map follows this device while you are en route.', '');
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                    setStatus('Live location is on. The case map and public tracking page update as you move.', 'live');
+                    post(pos.coords.latitude, pos.coords.longitude);
+                },
+                (err) => {
+                    const denied = err && err.code === 1;
+                    setStatus(
+                        denied
+                            ? 'Location is blocked. Allow location for this site, then refresh, so dispatch can see you en route.'
+                            : 'GPS could not be read. Turn on location services and refresh this page.',
+                        'error'
+                    );
+                },
+                { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
             );
         }
 
-        function schedule() {
-            if (stopped) return;
-            if (timer) clearTimeout(timer);
-            ping();
-            timer = setTimeout(schedule, intervalMs());
-        }
-
-        schedule();
+        begin();
 
         return {
             stop() {
                 stopped = true;
-                if (timer) clearTimeout(timer);
+                if (watchId != null) navigator.geolocation.clearWatch(watchId);
             },
             refresh() {
-                if (!stopped) schedule();
+                if (!stopped) begin();
             },
         };
     }
