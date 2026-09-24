@@ -91,7 +91,12 @@
             }
 
             try {
-                map.fitBounds(bounds.pad(0.3), { maxZoom: 15 });
+                // Prefer a modest pad + capped zoom so a wide desktop
+                // aspect-ratio frame doesn't over-fit into a stretched look.
+                map.fitBounds(bounds.pad(0.18), {
+                    maxZoom: 14,
+                    padding: [28, 28],
+                });
             } catch (e) { /* */ }
         }
 
@@ -107,7 +112,11 @@
 
         await refresh();
         setInterval(refresh, cfg.pollMs || 12000);
-        setTimeout(() => map.invalidateSize(), 250);
+        // Invalidate after layout settles so aspect-ratio containers paint correctly.
+        [100, 350, 800].forEach((ms) => setTimeout(() => map.invalidateSize(), ms));
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => map.invalidateSize()).observe(el.parentElement || el);
+        }
     }
 
     global.RANIAG_TrackMap = { init };

@@ -130,17 +130,70 @@
     @endif
 
     @if ($incident->latitude && $incident->longitude)
-        <div class="card raniag-card mb-4">
+        <div class="card raniag-card mb-4 overflow-hidden">
             <div class="card-header raniag-card-header py-3 d-flex justify-content-between align-items-center gap-2">
-                <strong>Live response map</strong>
+                <strong><i class="bi bi-broadcast-pin text-primary me-1"></i>Live response map</strong>
                 <span class="small text-muted" id="track-units-status">Loading responders…</span>
             </div>
             <div class="card-body p-0">
-                <div id="track-live-map" style="height:280px;width:100%;" data-lenis-prevent></div>
+                <div class="track-map-frame">
+                    <div id="track-live-map" data-lenis-prevent></div>
+                </div>
             </div>
             <div class="card-footer bg-white small text-muted">
                 Approaching units appear after responders share location while en route. Exact report address stays on this private tracking page only.
             </div>
+        </div>
+    @endif
+
+    @if ($incident->assignments->isNotEmpty())
+        @php
+            $phaseLabels = [
+                'accepted' => 'Accepted',
+                'en_route' => 'En route',
+                'on_scene' => 'On scene',
+            ];
+        @endphp
+        <div class="track-agency-sheet mb-4">
+            <div class="sheet-head">
+                <h2 class="sheet-title"><i class="bi bi-truck me-1"></i>Responding agencies</h2>
+                <span class="badge text-bg-light border">{{ $incident->assignments->count() }}</span>
+            </div>
+            @foreach ($incident->assignments as $assignment)
+                @php
+                    $phase = $assignment->field_phase
+                        ?? ($assignment->isAcknowledged() ? 'accepted' : null);
+                    $phaseClass = $phase ? 'is-'.$phase : 'is-pending';
+                    $phaseText = $phase
+                        ? ($phaseLabels[$phase] ?? ucfirst(str_replace('_', ' ', $phase)))
+                        : 'Awaiting acceptance';
+                    $phaseIcon = match ($phase) {
+                        'accepted' => 'bi-check2-circle',
+                        'en_route' => 'bi-sign-turn-right',
+                        'on_scene' => 'bi-geo-alt-fill',
+                        default => 'bi-hourglass-split',
+                    };
+                @endphp
+                <div class="track-agency-row">
+                    <div>
+                        <div class="agency-name">
+                            {{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}
+                        </div>
+                        <div class="agency-meta">
+                            @if ($assignment->acknowledged_at)
+                                Accepted {{ $assignment->acknowledged_at->diffForHumans() }}
+                            @elseif ($assignment->assigned_at)
+                                Assigned {{ $assignment->assigned_at->diffForHumans() }}
+                            @else
+                                Assigned to this report
+                            @endif
+                        </div>
+                    </div>
+                    <span class="track-phase-badge {{ $phaseClass }}">
+                        <i class="bi {{ $phaseIcon }}"></i>{{ $phaseText }}
+                    </span>
+                </div>
+            @endforeach
         </div>
     @endif
 
@@ -189,29 +242,6 @@
                     @endif
                 </div>
             </div>
-
-            @if ($incident->assignments->isNotEmpty())
-                <div class="card raniag-card">
-                    <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                        <span class="raniag-step-badge"><i class="bi bi-people"></i></span>
-                        <span>Responding Agencies</span>
-                    </div>
-                    <div class="card-body p-4">
-                        @foreach ($incident->assignments as $assignment)
-                            <div class="rg-agency-row {{ !$loop->last ? 'mb-3 pb-3 border-bottom' : '' }}">
-                                <div class="fw-semibold small">
-                                    {{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}
-                                </div>
-                                @if ($assignment->isAcknowledged())
-                                    <span class="badge rg-badge-accepted"><i class="bi bi-check2-circle me-1"></i>Accepted</span>
-                                @else
-                                    <span class="badge rg-badge-pending"><i class="bi bi-hourglass-split me-1"></i>Awaiting acceptance</span>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
 
         <div class="col-lg-8">

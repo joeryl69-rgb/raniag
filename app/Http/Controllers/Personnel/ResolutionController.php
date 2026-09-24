@@ -53,7 +53,6 @@ class ResolutionController extends Controller
             resolvedBy: $request->user(),
             data: [
                 'summary' => $data['summary'],
-                'actions_taken' => $data['actions_taken'],
             ],
         );
 
@@ -112,7 +111,6 @@ class ResolutionController extends Controller
 
         $resolution->update([
             'summary' => $data['summary'],
-            'actions_taken' => $data['actions_taken'],
         ]);
 
         if (! empty($data['evidence'])) {

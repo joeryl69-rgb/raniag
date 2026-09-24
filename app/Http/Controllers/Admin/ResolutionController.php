@@ -13,12 +13,10 @@ class ResolutionController extends Controller
     {
         $data = $request->validate([
             'summary' => ['required', 'string', 'min:20'],
-            'actions_taken' => ['required', 'string', 'min:20'],
         ]);
 
         $resolution->update([
             'summary' => $data['summary'],
-            'actions_taken' => $data['actions_taken'],
         ]);
 
         return redirect()

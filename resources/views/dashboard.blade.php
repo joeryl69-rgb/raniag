@@ -102,6 +102,44 @@
             .live-pulse .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--raniag-success); box-shadow: 0 0 0 0 rgba(22,163,74,.6); animation: pulse-dot 1.8s infinite; }
             @keyframes pulse-dot { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.55);} 70% { box-shadow: 0 0 0 8px rgba(22,163,74,0);} 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0);} }
 
+            /* ---- New-incident alert banner ---- */
+            .incident-alert-banner {
+                display: none;
+                align-items: center;
+                gap: .85rem;
+                flex-wrap: wrap;
+                padding: .85rem 1.1rem;
+                margin-bottom: 1rem;
+                border-radius: 1rem;
+                border: 1px solid rgba(220, 53, 69, .35);
+                background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, .35);
+                animation: alert-banner-pulse 1.6s ease-in-out infinite;
+            }
+            .incident-alert-banner.is-visible { display: flex; }
+            .incident-alert-banner .alert-pulse-dot {
+                width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+                background: #dc3545;
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, .7);
+                animation: alert-dot-pulse 1.4s infinite;
+            }
+            .incident-alert-banner .alert-body { flex: 1; min-width: 0; }
+            .incident-alert-banner .alert-title {
+                font-size: .78rem; font-weight: 800; letter-spacing: .04em;
+                text-transform: uppercase; color: #b91c1c; margin-bottom: .15rem;
+            }
+            .incident-alert-banner .alert-copy { font-size: .92rem; color: #0f172a; font-weight: 600; }
+            .incident-alert-banner .alert-meta { font-size: .78rem; color: #64748b; }
+            @keyframes alert-banner-pulse {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .28); }
+                50% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+            }
+            @keyframes alert-dot-pulse {
+                0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .65); }
+                70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+            }
+
             /* ---- Map card ---- */
             .map-card { overflow: hidden; }
             .map-card .map-toolbar {
@@ -143,6 +181,43 @@
             .popup-view-btn:hover { text-decoration: underline; }
 
             .map-wrap { position: relative; }
+            .map-filters {
+                display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
+                padding: .55rem 1.1rem; border-bottom: 1px solid var(--raniag-border);
+                background: #f8fafc;
+            }
+            .map-filters select {
+                font-size: .78rem; font-weight: 600; border-radius: .5rem;
+                border: 1px solid var(--raniag-border); padding: .3rem .55rem;
+                background: #fff; color: var(--raniag-ink); max-width: 9.5rem;
+            }
+            .map-insight-panel {
+                position: absolute; left: 12px; top: 12px; z-index: 500;
+                width: min(280px, calc(100% - 24px));
+                background: #fff; border-radius: .85rem;
+                border: 1px solid var(--raniag-border);
+                box-shadow: 0 .5rem 1.25rem rgba(15,23,42,.14);
+                padding: .75rem .85rem; font-size: .82rem;
+                display: none;
+            }
+            .map-insight-panel.is-open { display: block; }
+            .map-insight-panel .insight-title {
+                font-size: .68rem; font-weight: 800; letter-spacing: .05em;
+                text-transform: uppercase; color: var(--raniag-muted); margin-bottom: .35rem;
+            }
+            .map-insight-panel .insight-name { font-weight: 800; font-size: .98rem; color: var(--raniag-ink); }
+            .map-insight-panel .insight-stat {
+                display: flex; justify-content: space-between; gap: .5rem;
+                padding: .35rem 0; border-top: 1px dashed var(--raniag-border); margin-top: .35rem;
+            }
+            .map-insight-panel .insight-close {
+                position: absolute; top: .45rem; right: .45rem; border: 0; background: transparent;
+                color: var(--raniag-muted); font-size: .9rem; line-height: 1; cursor: pointer;
+            }
+            @media (max-width: 575.98px) {
+                .map-insight-panel { left: 8px; right: 8px; width: auto; top: auto; bottom: 52px; }
+            }
+
             .map-card:fullscreen {
                 background: #fff; display: flex; flex-direction: column;
                 margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
@@ -190,6 +265,122 @@
             .feed-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--raniag-primary); margin-top: .4rem; flex-shrink: 0; }
         </style>
     @endpush
+
+    {{-- New-incident alert (shown when poll detects a newer report) --}}
+    <div id="incident-alert-banner" class="incident-alert-banner" role="alert" aria-live="assertive">
+        <span class="alert-pulse-dot" aria-hidden="true"></span>
+        <div class="alert-body">
+            <div class="alert-title">New Incident Alert</div>
+            <div class="alert-copy" id="incident-alert-copy">—</div>
+            <div class="alert-meta" id="incident-alert-meta"></div>
+        </div>
+        <a href="#" id="incident-alert-link" class="btn btn-sm btn-danger">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Open Case
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="incident-alert-dismiss" aria-label="Dismiss">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    {{-- ===================== LIVE MAP (primary — map-first for command decisions) ===================== --}}
+    <div class="row mb-4" id="situational-map-section">
+        <div class="col-12">
+            <div class="dash-card map-card">
+                <div class="map-toolbar">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt-fill text-primary"></i> Situational Map</h5>
+                        <span class="live-pulse"><span class="dot"></span> Live</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="map-mode-switch" role="group">
+                            <button type="button" id="mode-live" class="active"><i class="bi bi-broadcast"></i> Live Map</button>
+                            <button type="button" id="mode-layers"><i class="bi bi-layers"></i> Layers</button>
+                        </div>
+                        <button type="button" id="map-refresh-btn" class="btn btn-sm btn-outline-secondary" title="Refresh now">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button type="button" id="map-fullscreen-btn" class="btn btn-sm btn-outline-secondary" title="Fullscreen">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                </div>
+                @if($isAdmin)
+                <div class="map-filters" id="map-filters">
+                    <span class="small text-muted fw-semibold text-uppercase" style="letter-spacing:.04em;font-size:.68rem;">Filters</span>
+                    <select id="filter-status" aria-label="Filter by status">
+                        <option value="">All statuses</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="received">Received</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="pending_info">Pending info</option>
+                    </select>
+                    <select id="filter-priority" aria-label="Filter by priority">
+                        <option value="">All priorities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                    <select id="filter-barangay" aria-label="Filter by barangay">
+                        <option value="">All barangays</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="filter-clear">Clear</button>
+                </div>
+                @endif
+                <div class="map-wrap">
+                    <div id="dashboard-map" class="{{ $isAdmin ? 'h-admin' : 'h-role' }}" data-role="{{ $role }}"></div>
+                    <div class="map-insight-panel" id="map-insight-panel" aria-live="polite">
+                        <button type="button" class="insight-close" id="map-insight-close" aria-label="Close">&times;</button>
+                        <div class="insight-title">Area insight</div>
+                        <div class="insight-name" id="map-insight-name">—</div>
+                        <div class="insight-stat"><span>Open reports</span><strong id="map-insight-open">—</strong></div>
+                        <div class="insight-stat"><span>Hotspot flag</span><strong id="map-insight-hotspot">—</strong></div>
+                        <div class="small text-muted mt-2 mb-0" id="map-insight-note">Tap a marker or choose a barangay filter to inspect this area.</div>
+                    </div>
+                    <div class="map-nav">
+                        <div class="map-nav-group">
+                            <button type="button" class="map-nav-btn" id="map-zoom-in" title="Zoom in"><i class="bi bi-plus-lg"></i></button>
+                            <button type="button" class="map-nav-btn" id="map-zoom-out" title="Zoom out"><i class="bi bi-dash-lg"></i></button>
+                        </div>
+                        <button type="button" class="map-nav-btn" id="map-recenter" title="Recenter on jurisdiction"><i class="bi bi-crosshair"></i></button>
+                    </div>
+                    <div class="layer-panel" id="layer-panel">
+                        <div class="layer-panel-title">Base Map</div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="basemap" id="base-street" checked>
+                            <label class="form-check-label" for="base-street">Street</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="basemap" id="base-satellite">
+                            <label class="form-check-label" for="base-satellite">Satellite</label>
+                        </div>
+                        <hr class="my-2">
+                        <div class="layer-panel-title">Overlays</div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="layer-boundary" checked>
+                            <label class="form-check-label" for="layer-boundary">Municipal Boundary</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="layer-barangays">
+                            <label class="form-check-label" for="layer-barangays">Barangay Borders</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="layer-markers" checked>
+                            <label class="form-check-label" for="layer-markers">Incident Markers</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="map-legend px-3 py-2 border-top">
+                    <span><span class="dot" style="background:#b91c1c"></span>Critical</span>
+                    <span><span class="dot" style="background:#dc3545"></span>High</span>
+                    <span><span class="dot" style="background:#f59e0b"></span>Medium</span>
+                    <span><span class="dot" style="background:#0d6efd"></span>Low</span>
+                    <span class="ms-auto small" id="map-count-label">— points plotted</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- ===================== KPI STRIP ===================== --}}
     <div class="kpi-grid mb-4" id="kpi-grid">
@@ -316,74 +507,6 @@
         </div>
     @endif
 
-    {{-- ===================== LIVE MAP ===================== --}}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="dash-card map-card">
-                <div class="map-toolbar">
-                    <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt-fill text-primary"></i> Situational Map</h5>
-                        <span class="live-pulse"><span class="dot"></span> Live</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <div class="map-mode-switch" role="group">
-                            <button type="button" id="mode-live" class="active"><i class="bi bi-broadcast"></i> Live Map</button>
-                            <button type="button" id="mode-layers"><i class="bi bi-layers"></i> Layers</button>
-                        </div>
-                        <button type="button" id="map-refresh-btn" class="btn btn-sm btn-outline-secondary" title="Refresh now">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                        <button type="button" id="map-fullscreen-btn" class="btn btn-sm btn-outline-secondary" title="Fullscreen">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="map-wrap">
-                    <div id="dashboard-map" class="{{ $isAdmin ? 'h-admin' : 'h-role' }}" data-role="{{ $role }}"></div>
-                    <div class="map-nav">
-                        <div class="map-nav-group">
-                            <button type="button" class="map-nav-btn" id="map-zoom-in" title="Zoom in"><i class="bi bi-plus-lg"></i></button>
-                            <button type="button" class="map-nav-btn" id="map-zoom-out" title="Zoom out"><i class="bi bi-dash-lg"></i></button>
-                        </div>
-                        <button type="button" class="map-nav-btn" id="map-recenter" title="Recenter on jurisdiction"><i class="bi bi-crosshair"></i></button>
-                    </div>
-                    <div class="layer-panel" id="layer-panel">
-                        <div class="layer-panel-title">Base Map</div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="basemap" id="base-street" checked>
-                            <label class="form-check-label" for="base-street">Street</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="basemap" id="base-satellite">
-                            <label class="form-check-label" for="base-satellite">Satellite</label>
-                        </div>
-                        <hr class="my-2">
-                        <div class="layer-panel-title">Overlays</div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="layer-boundary" checked>
-                            <label class="form-check-label" for="layer-boundary">Municipal Boundary</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="layer-barangays">
-                            <label class="form-check-label" for="layer-barangays">Barangay Borders</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="layer-markers" checked>
-                            <label class="form-check-label" for="layer-markers">Incident Markers</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="map-legend px-3 py-2 border-top">
-                    <span><span class="dot" style="background:#b91c1c"></span>Critical</span>
-                    <span><span class="dot" style="background:#dc3545"></span>High</span>
-                    <span><span class="dot" style="background:#f59e0b"></span>Medium</span>
-                    <span><span class="dot" style="background:#0d6efd"></span>Low</span>
-                    <span class="ms-auto small" id="map-count-label">— points plotted</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
     @if($isAdmin)
         {{-- ===================== ADMIN ANALYTICS ===================== --}}
         <div class="section-head">
@@ -413,12 +536,6 @@
             </div>
             <div class="col-12 col-lg-6">
                 <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Top Barangays</strong>
-                    <div class="chart-wrap"><canvas id="chart-barangay"></canvas></div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-5">
-                <div class="dash-card analytics-card h-100">
                     <strong class="small text-uppercase text-muted d-block mb-2">Incidents by Priority</strong>
                     <div class="chart-wrap"><canvas id="chart-priority"></canvas></div>
                 </div>
@@ -429,13 +546,7 @@
                     <div class="chart-wrap"><canvas id="chart-agency-response"></canvas></div>
                 </div>
             </div>
-            <div class="col-12 col-lg-6">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2"><i class="bi bi-fire text-danger"></i> Redundancy Hotspots</strong>
-                    <div id="hotspot-list"><div class="empty-note">Loading hotspot data…</div></div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-5">
                 <div class="dash-card analytics-card h-100">
                     <strong class="small text-uppercase text-muted d-block mb-2">Signal Health</strong>
                     <div id="signal-health">
@@ -498,17 +609,171 @@
             const CENTER = [{{ config('raniag.map.default_lat') }}, {{ config('raniag.map.default_lng') }}];
             const MAP_CONFIG = @json(config('raniag.map'));
             const REFRESH_MS = 30000;
+            const SEEN_KEY = 'raniag.dashboard.seen_incident_id.' + ROLE;
 
             let map, streetLayer, satLayer, boundaryLayer, barangayLayer, markerLayer, hazardLayer, evacLayer, jurisdictionBounds;
             let charts = {};
             let currentPoints = [];
+            let rawPoints = [];
+            let barangayCounts = {};
+            let hotspotByBarangay = {};
+            let alertPrimed = false;
 
             document.addEventListener('DOMContentLoaded', function () {
                 initMap();
                 loadData();
                 setInterval(loadData, REFRESH_MS);
                 bindToolbar();
+                bindIncidentAlert();
+                bindMapFilters();
             });
+
+            function bindMapFilters() {
+                ['filter-status', 'filter-priority', 'filter-barangay'].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('change', applyMapFilters);
+                });
+                const clearBtn = document.getElementById('filter-clear');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function () {
+                        ['filter-status', 'filter-priority', 'filter-barangay'].forEach((id) => {
+                            const el = document.getElementById(id);
+                            if (el) el.value = '';
+                        });
+                        applyMapFilters();
+                        closeMapInsight();
+                    });
+                }
+                const closeInsight = document.getElementById('map-insight-close');
+                if (closeInsight) closeInsight.addEventListener('click', closeMapInsight);
+
+                const brgyFilter = document.getElementById('filter-barangay');
+                if (brgyFilter) {
+                    brgyFilter.addEventListener('change', function () {
+                        if (this.value) showBarangayInsight(this.value);
+                        else closeMapInsight();
+                    });
+                }
+            }
+
+            function applyMapFilters() {
+                const status = document.getElementById('filter-status')?.value || '';
+                const priority = document.getElementById('filter-priority')?.value || '';
+                const barangay = document.getElementById('filter-barangay')?.value || '';
+                const filtered = rawPoints.filter((p) => {
+                    if (status && String(p.status || '') !== status) return false;
+                    if (priority && String(p.priority || '').toLowerCase() !== priority) return false;
+                    if (barangay && String(p.barangay || '') !== barangay) return false;
+                    return true;
+                });
+                plotPoints(filtered);
+            }
+
+            function populateBarangayFilter(counts) {
+                const sel = document.getElementById('filter-barangay');
+                if (!sel) return;
+                const current = sel.value;
+                const names = Object.keys(counts || {}).sort((a, b) => a.localeCompare(b));
+                sel.innerHTML = '<option value="">All barangays</option>' +
+                    names.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)} (${counts[n]})</option>`).join('');
+                if (current && names.includes(current)) sel.value = current;
+            }
+
+            function showBarangayInsight(name) {
+                const panel = document.getElementById('map-insight-panel');
+                if (!panel || !name) return;
+                const open = barangayCounts[name] ?? rawPoints.filter((p) => p.barangay === name).length;
+                const hotspot = hotspotByBarangay[name];
+                setText('map-insight-name', name);
+                setText('map-insight-open', String(open));
+                setText('map-insight-hotspot', hotspot
+                    ? `${hotspot.count}× ${hotspot.type}`
+                    : 'None flagged');
+                const note = document.getElementById('map-insight-note');
+                if (note) {
+                    note.textContent = hotspot
+                        ? `Repeat pattern detected for ${hotspot.type} in this barangay.`
+                        : 'Use filters to isolate status or priority for this area.';
+                }
+                panel.classList.add('is-open');
+            }
+
+            function closeMapInsight() {
+                document.getElementById('map-insight-panel')?.classList.remove('is-open');
+            }
+
+            function bindIncidentAlert() {
+                const dismiss = document.getElementById('incident-alert-dismiss');
+                if (dismiss) {
+                    dismiss.addEventListener('click', function () {
+                        const banner = document.getElementById('incident-alert-banner');
+                        if (banner) banner.classList.remove('is-visible');
+                    });
+                }
+            }
+
+            function playAlertTone() {
+                try {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (!Ctx) return;
+                    const ctx = new Ctx();
+                    const now = ctx.currentTime;
+                    [880, 1174].forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.0001, now);
+                        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02 + i * 0.12);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22 + i * 0.14);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + i * 0.14);
+                        osc.stop(now + 0.28 + i * 0.14);
+                    });
+                    setTimeout(() => ctx.close().catch(() => {}), 800);
+                } catch (e) { /* autoplay policies may block — banner still shows */ }
+            }
+
+            function maybeShowIncidentAlert(latest) {
+                if (!latest || !latest.id) return;
+
+                const stored = parseInt(localStorage.getItem(SEEN_KEY) || '0', 10) || 0;
+                const latestId = parseInt(latest.id, 10);
+
+                // First successful poll only seeds the baseline so a page refresh
+                // doesn't re-alert for an already-known case.
+                if (!alertPrimed) {
+                    alertPrimed = true;
+                    if (!stored || latestId > stored) {
+                        localStorage.setItem(SEEN_KEY, String(latestId));
+                    }
+                    return;
+                }
+
+                if (latestId <= stored) return;
+
+                localStorage.setItem(SEEN_KEY, String(latestId));
+
+                const banner = document.getElementById('incident-alert-banner');
+                const copy = document.getElementById('incident-alert-copy');
+                const meta = document.getElementById('incident-alert-meta');
+                const link = document.getElementById('incident-alert-link');
+                if (!banner || !copy || !link) return;
+
+                const typeLabel = latest.type || 'Incident';
+                const place = latest.barangay ? ` in ${latest.barangay}` : '';
+                copy.textContent = `${typeLabel}${place} · #${latest.tracking_number || latest.id}`;
+                if (meta) {
+                    const bits = [];
+                    if (latest.priority) bits.push(String(latest.priority).replace(/_/g, ' '));
+                    if (latest.status) bits.push(String(latest.status).replace(/_/g, ' '));
+                    meta.textContent = bits.join(' · ');
+                }
+                link.href = INCIDENT_URL_BASE + '/' + latestId;
+                banner.classList.add('is-visible');
+                playAlertTone();
+            }
 
             function bindToolbar() {
                 const liveBtn = document.getElementById('mode-live');
@@ -709,6 +974,9 @@
                     (pt.barangay ? `<br><small class="text-muted">${escapeHtml(pt.barangay)}</small>` : '') +
                     `<br><a class="popup-view-btn" href="${INCIDENT_URL_BASE}/${pt.id}"><i class="bi bi-box-arrow-up-right"></i> View</a>`
                 );
+                marker.on('click', function () {
+                    if (pt.barangay) showBarangayInsight(pt.barangay);
+                });
                 marker.addTo(markerLayer);
             }
 
@@ -834,8 +1102,21 @@
                 const analytics = data.analytics || {};
                 setText('kpi-avg-resolution', `Avg. resolution ${analytics.avg_resolution_hours ?? 0}h`);
 
-                plotPoints(data.recent_incidents || []);
+                barangayCounts = analytics.barangays || {};
+                hotspotByBarangay = {};
+                (analytics.redundancy_hotspots || []).forEach((h) => {
+                    if (!h?.barangay) return;
+                    // Keep the highest-count hotspot per barangay for the insight panel.
+                    if (!hotspotByBarangay[h.barangay] || hotspotByBarangay[h.barangay].count < h.count) {
+                        hotspotByBarangay[h.barangay] = { type: h.type, count: h.count };
+                    }
+                });
+                populateBarangayFilter(barangayCounts);
+
+                rawPoints = data.recent_incidents || [];
+                applyMapFilters();
                 plotHazardLayers(data);
+                maybeShowIncidentAlert(data.latest_incident);
 
                 const sms = data.sms_stats || {};
                 setText('sms-sent', sms.sent ?? 0);
@@ -846,10 +1127,8 @@
                 renderTrendChart(analytics.weekly_trends || []);
                 renderStatusChart(sb);
                 renderCategoryChart(analytics.categories || {});
-                renderBarangayChart(analytics.barangays || {});
                 renderPriorityChart(analytics.priority_breakdown || {});
                 renderAgencyResponseChart(analytics.agency_response_times || {});
-                renderHotspots(analytics.redundancy_hotspots || []);
 
                 const perf = data.performance || {};
                 setRing('ring-resolution-fill', 'ring-resolution-value', perf.resolution_rate);
@@ -924,15 +1203,6 @@
                 });
             }
 
-            function renderBarangayChart(brgy) {
-                const labels = Object.keys(brgy);
-                ensureChart('barangay', 'chart-barangay', {
-                    type: 'bar',
-                    data: { labels, datasets: [{ data: labels.map(l => brgy[l]), backgroundColor: '#20c997', borderRadius: 6, maxBarThickness: 26 }] },
-                    options: baseOpts({ legend: false })
-                });
-            }
-
             const PRIORITY_COLORS = { critical: '#b91c1c', high: '#dc3545', medium: '#f59e0b', low: '#0d6efd' };
             function renderPriorityChart(priority) {
                 const labels = Object.keys(priority);
@@ -965,18 +1235,6 @@
                 };
             }
 
-            function renderHotspots(rows) {
-                const el = document.getElementById('hotspot-list');
-                if (!el) return;
-                if (!rows.length) { el.innerHTML = '<div class="empty-note">No repeat hotspots detected recently.</div>'; return; }
-                el.innerHTML = rows.map(r => `
-                    <div class="hotspot-row">
-                        <span><i class="bi bi-geo-alt text-danger"></i> <strong>${escapeHtml(r.barangay)}</strong> &middot; ${escapeHtml(r.type)}</span>
-                        <span class="hotspot-count">${r.count}×</span>
-                    </div>
-                `).join('');
-            }
-
             // ---------------- Agency / Personnel rendering ----------------
             function renderRole(data) {
                 const sb = data.incident_status_breakdown || {};
@@ -988,6 +1246,7 @@
                 plotPoints(data.active_dispatches || []);
                 renderDispatchTable(data.active_dispatches || []);
                 renderStatusFeed(data.recent_status_updates || []);
+                maybeShowIncidentAlert(data.latest_incident);
             }
 
             function renderDispatchTable(rows) {

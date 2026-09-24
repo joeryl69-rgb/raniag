@@ -7,10 +7,38 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
         <style>
             #show-incident-map {
-                height: 300px;
+                /* filled by .case-map-frame absolute child */
+            }
+            .case-map-frame {
+                width: 100%;
+                aspect-ratio: 16 / 10;
+                min-height: 220px;
+                max-height: min(55vh, 420px);
+                position: relative;
+                overflow: hidden;
                 border-radius: 0.5rem;
                 border: 1px solid #dee2e6;
+                background: #eef2f6;
+            }
+            .case-map-frame #show-incident-map,
+            .case-map-frame .leaflet-container {
+                position: absolute;
+                inset: 0;
+                width: 100% !important;
+                height: 100% !important;
                 z-index: 1;
+                border: 0;
+                border-radius: 0;
+            }
+            @media (max-width: 767.98px) {
+                .case-map-frame { aspect-ratio: 4 / 3; max-height: 50vh; }
+            }
+            .case-unit-strip {
+                display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+                padding: .55rem 0; font-size: .82rem; color: #64748b;
+            }
+            .case-unit-strip .live-dot {
+                width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
             }
             .evidence-img-container {
                 position: relative;
@@ -486,7 +514,10 @@
                                 Pinned location is outside Pamplona municipality limits.
                             </div>
                         @endif
-                        <div id="show-incident-map" class="mb-2"></div>
+                        <div class="case-map-frame mb-2">
+                            <div id="show-incident-map"></div>
+                        </div>
+                        <div class="case-unit-strip" id="dispatch-units-status">Loading live units…</div>
                         <div class="text-muted font-monospace small text-center mt-1">
                             Coordinates: {{ $incident->latitude }}, {{ $incident->longitude }}
                         </div>
@@ -727,10 +758,6 @@
                                                                 <label class="form-label">Resolution Summary <span class="text-danger">*</span></label>
                                                                 <textarea class="form-control" name="summary" rows="4" required minlength="20">{{ old('summary', $assignmentResolution->summary) }}</textarea>
                                                             </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label">Actions Taken <span class="text-danger">*</span></label>
-                                                                <textarea class="form-control" name="actions_taken" rows="4" required minlength="20">{{ old('actions_taken', $assignmentResolution->actions_taken) }}</textarea>
-                                                            </div>
                                                             <div class="alert alert-warning small mb-0">
                                                                 <i class="bi bi-exclamation-triangle me-1"></i>
                                                                 You are modifying the official resolution report submitted for this assignment.
@@ -912,14 +939,10 @@
                     const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
                     const hazardZones = @json($incident->meta['hazard_zones'] ?? []);
 
-                    const statusBox = document.createElement('div');
-                    statusBox.id = 'dispatch-units-status';
-                    statusBox.className = 'small text-muted mb-2';
-                    statusBox.textContent = 'Loading live units…';
+                    const statusBox = document.getElementById('dispatch-units-status');
                     const mapEl = document.getElementById('show-incident-map');
-                    if (mapEl?.parentNode) mapEl.parentNode.insertBefore(statusBox, mapEl);
 
-                    if (Array.isArray(hazardZones) && hazardZones.length) {
+                    if (Array.isArray(hazardZones) && hazardZones.length && statusBox?.parentNode) {
                         const hz = document.createElement('div');
                         hz.className = 'alert alert-warning py-2 px-3 small mb-2';
                         hz.innerHTML = '<strong>Inside hazard zone:</strong> ' +

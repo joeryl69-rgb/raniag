@@ -6,11 +6,43 @@
     @push('styles')
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
         <style>
-            #personnel-incident-map {
-                height: 250px;
-                border-radius: 0.5rem;
+            .case-map-frame {
+                width: 100%;
+                aspect-ratio: 16 / 10;
+                min-height: 220px;
+                max-height: min(55vh, 420px);
+                position: relative;
+                overflow: hidden;
+                border-radius: 0.75rem;
+                background: #eef5f0;
                 border: 1px solid #dee2e6;
+            }
+            .case-map-frame #personnel-incident-map,
+            .case-map-frame .leaflet-container {
+                position: absolute;
+                inset: 0;
+                width: 100% !important;
+                height: 100% !important;
                 z-index: 1;
+                border: 0;
+            }
+            @media (max-width: 767.98px) {
+                .case-map-frame { aspect-ratio: 4 / 3; max-height: 50vh; }
+            }
+            .case-unit-strip {
+                display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+                padding: .65rem .85rem; font-size: .82rem; color: #334155;
+                background: #f8fafc; border-top: 1px solid #e2e8f0;
+            }
+            .case-unit-strip .live-dot {
+                width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
+                box-shadow: 0 0 0 0 rgba(22,163,74,.55);
+                animation: case-live-pulse 1.8s infinite;
+            }
+            @keyframes case-live-pulse {
+                0% { box-shadow: 0 0 0 0 rgba(22,163,74,.55); }
+                70% { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
+                100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
             }
             .evidence-thumb {
                 aspect-ratio: 4 / 3;
@@ -19,15 +51,43 @@
         </style>
     @endpush
 
-    <div class="d-flex mb-4">
+    <div class="d-flex mb-3 mb-md-4">
         <a href="{{ route('personnel.incidents.index') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i>Back to Dispatches
         </a>
     </div>
 
+    <div class="card raniag-card shadow-sm border-0 mb-3 overflow-hidden">
+        <div class="card-header raniag-card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-broadcast-pin text-primary me-2"></i>Live Response Map</h5>
+            <span class="font-monospace text-muted small">#{{ $incident->tracking_number }}</span>
+        </div>
+        <div class="card-body p-0">
+            @if ($incident->barangay || $incident->location_address)
+                <div class="px-3 pt-3 pb-2 small">
+                    <strong>{{ $incident->barangay ?: 'Location' }}</strong>
+                    @if ($incident->location_address)
+                        <span class="text-muted">· {{ $incident->location_address }}</span>
+                    @endif
+                </div>
+            @endif
+            @if ($incident->latitude && $incident->longitude)
+                <div class="case-map-frame mx-3 mb-0">
+                    <div id="personnel-incident-map"></div>
+                </div>
+                <div class="case-unit-strip mx-3 mb-3 rounded-bottom">
+                    <span class="live-dot" aria-hidden="true"></span>
+                    <span id="personnel-units-status">Checking responder GPS…</span>
+                </div>
+            @else
+                <div class="alert alert-light text-center m-3 mb-3 text-muted">No location coordinates set for this incident.</div>
+            @endif
+        </div>
+    </div>
+
     <div class="row g-4">
         <!-- Details Column -->
-        <div class="col-lg-8">
+        <div class="col-lg-7 order-2">
             <div class="card raniag-card shadow-sm border-0 mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <div class="d-flex align-items-center justify-content-between">
@@ -147,30 +207,7 @@
         </div>
 
         <!-- Sidebar Actions Column -->
-        <div class="col-lg-4">
-            <!-- Map Location -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt text-primary me-2"></i>Map Coordinates</h5>
-                </div>
-                <div class="card-body">
-                    @if ($incident->barangay || $incident->location_address)
-                        <div class="mb-2">
-                            <strong>Barangay:</strong> {{ $incident->barangay }}
-                            @if ($incident->location_address)
-                                <div class="text-muted small">{{ $incident->location_address }}</div>
-                            @endif
-                        </div>
-                    @endif
-
-                    @if ($incident->latitude && $incident->longitude)
-                        <div id="personnel-incident-map" class="mb-2"></div>
-                    @else
-                        <div class="alert alert-light text-center mb-0 text-muted">No location coordinates set.</div>
-                    @endif
-                </div>
-            </div>
-
+        <div class="col-lg-5 order-1">
             <!-- Case Action Terminal -->
             <div class="card raniag-card shadow-sm border-primary border-0">
                 <div class="card-header bg-primary text-white py-3 rounded-top">
@@ -188,14 +225,21 @@
                             && ! in_array($incident->status->value, ['resolved', 'closed']);
                     @endphp
                     @if ($needsAcceptance)
-                        <!-- Action: Accept assignment (per-personnel, independent of other assignees' status) -->
+                        <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
                             <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation.</p>
-                            <form action="{{ route('personnel.incidents.accept', $incident->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge</button>
-                            </form>
+                            <button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                                <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
+                            </button>
                         </div>
+                        <x-confirm-action-modal
+                            id="acceptAcknowledgeModal"
+                            title="Confirm Accept & Acknowledge"
+                            confirm-label="Confirm & Accept"
+                            confirm-class="btn-primary"
+                            :form-action="route('personnel.incidents.accept', $incident->id)"
+                            :incident="$incident"
+                        />
                     @elseif ($incident->status->value === 'in_progress' || $incident->status->value === 'pending_info')
                         @php
                             $hasActiveAssignment = $myAssignment !== null;
@@ -278,11 +322,6 @@
                                 @endif
 
                                 <div class="mb-3">
-                                    <label for="actions_taken" class="form-label">Actions Taken <span class="text-danger">*</span></label>
-                                    <textarea class="form-control" name="actions_taken" id="actions_taken" rows="3" required minlength="20" placeholder="Detail the physical or technical actions taken (min 20 chars)..."></textarea>
-                                </div>
-
-                                <div class="mb-3">
                                     <x-gps-camera />
                                     <label for="evidence" class="form-label">Resolution Photos / Reports <span class="text-muted">(optional)</span></label>
                                     <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.pdf">
@@ -304,10 +343,6 @@
                                             <div class="mb-3">
                                                 <div class="text-muted small fw-semibold">Resolution Summary</div>
                                                 <p class="mb-0" id="reviewSummary" style="white-space: pre-wrap;"></p>
-                                            </div>
-                                            <div class="mb-3">
-                                                <div class="text-muted small fw-semibold">Actions Taken</div>
-                                                <p class="mb-0" id="reviewActionsTaken" style="white-space: pre-wrap;"></p>
                                             </div>
                                             <div class="mb-0">
                                                 <div class="text-muted small fw-semibold">Evidence Attached</div>
@@ -369,7 +404,6 @@
                                         if (!form.reportValidity()) return;
 
                                         document.getElementById('reviewSummary').textContent = document.getElementById('summary').value.trim();
-                                        document.getElementById('reviewActionsTaken').textContent = document.getElementById('actions_taken').value.trim();
                                         const fileCount = document.getElementById('evidence').files.length;
                                         document.getElementById('reviewEvidenceCount').textContent = fileCount > 0
                                             ? `${fileCount} file${fileCount === 1 ? '' : 's'} attached`
@@ -425,11 +459,6 @@
                                                     <div class="mb-3">
                                                         <label for="edit_summary" class="form-label">Resolution Summary <span class="text-danger">*</span></label>
                                                         <textarea class="form-control" name="summary" id="edit_summary" rows="3" required minlength="20">{{ old('summary', $agencyResolution->summary) }}</textarea>
-                                                    </div>
-
-                                                    <div class="mb-3">
-                                                        <label for="edit_actions_taken" class="form-label">Actions Taken <span class="text-danger">*</span></label>
-                                                        <textarea class="form-control" name="actions_taken" id="edit_actions_taken" rows="3" required minlength="20">{{ old('actions_taken', $agencyResolution->actions_taken) }}</textarea>
                                                     </div>
 
                                                     <div class="mb-3">
@@ -533,6 +562,7 @@
                         outsideJurisdiction: withinJurisdiction === false,
                         scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
                         unitsUrl: @json(route('personnel.incidents.live_units', $incident)),
+                        statusEl: 'personnel-units-status',
                         pollMs: 15000,
                     });
                 });

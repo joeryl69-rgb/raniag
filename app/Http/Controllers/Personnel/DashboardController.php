@@ -166,6 +166,17 @@ class DashboardController extends Controller
             'recent_status_updates' => $recentUpdates ?? $recentUpdates,
             'sms_alerts_this_week' => $smsReceived,
             'active_dispatches' => $activeDispatches,
+            'latest_incident' => $activeDispatches->first() ? [
+                'id' => $activeDispatches->first()['id'],
+                'tracking_number' => $activeDispatches->first()['tracking_number'],
+                'barangay' => $activeDispatches->first()['barangay'],
+                'priority' => $activeDispatches->first()['priority'],
+                'status' => $activeDispatches->first()['status'],
+                'type' => is_object($activeDispatches->first()['incident_type'] ?? null)
+                    ? ($activeDispatches->first()['incident_type']->name ?? null)
+                    : null,
+                'reported_at' => $activeDispatches->first()['reported_at'] ?? null,
+            ] : null,
         ]);
     }
 }

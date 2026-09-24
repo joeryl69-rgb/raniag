@@ -104,7 +104,7 @@
             }
 
             try {
-                map.fitBounds(bounds.pad(0.25), { maxZoom: 15 });
+                map.fitBounds(bounds.pad(0.2), { maxZoom: 14, padding: [24, 24] });
             } catch (e) { /* */ }
         }
 
@@ -123,7 +123,10 @@
 
         await refresh();
         if (cfg.unitsUrl) setInterval(refresh, cfg.pollMs || 15000);
-        setTimeout(() => map.invalidateSize(), 200);
+        [100, 350, 800].forEach((ms) => setTimeout(() => map.invalidateSize(), ms));
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => map.invalidateSize()).observe(el.parentElement || el);
+        }
 
         return { map, refresh, sceneMarker };
     }

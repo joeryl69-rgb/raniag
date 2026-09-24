@@ -267,10 +267,31 @@ class DashboardController extends Controller
             ? (int) round(($withinSlaCount / $resolvedForSla->count()) * 100)
             : null;
 
+        $latestIncident = Incident::query()
+            ->with('incidentType:id,name')
+            ->orderByDesc('id')
+            ->first(['id', 'tracking_number', 'barangay', 'priority', 'status', 'incident_type_id', 'reported_at', 'created_at']);
+
+        $latestIncidentPayload = $latestIncident ? [
+            'id' => $latestIncident->id,
+            'tracking_number' => $latestIncident->tracking_number,
+            'barangay' => $latestIncident->barangay,
+            'priority' => $latestIncident->priority instanceof \BackedEnum
+                ? $latestIncident->priority->value
+                : (string) $latestIncident->priority,
+            'status' => $latestIncident->status instanceof \BackedEnum
+                ? $latestIncident->status->value
+                : (string) $latestIncident->status,
+            'type' => $latestIncident->incidentType?->name,
+            'reported_at' => $latestIncident->reported_at?->toIso8601String()
+                ?? $latestIncident->created_at?->toIso8601String(),
+        ] : null;
+
         return array_merge([
             'incident_status_breakdown' => $statusCounts,
             'total_incidents' => $totalIncidents,
             'active_agencies' => $agencies,
+            'latest_incident' => $latestIncidentPayload,
             'performance' => [
                 'resolution_rate' => $resolutionRate,
                 'resolved_closed_count' => $resolvedClosedCount,

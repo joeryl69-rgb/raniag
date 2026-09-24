@@ -1937,3 +1937,80 @@ body.raniag-public {
   .rg-you-accuracy,
   .leaflet-interactive.rg-hazard-poly { animation: none !important; }
 }
+
+/* ---- Public track: fixed-aspect live map (mobile-first) ---- */
+.track-map-frame {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  aspect-ratio: 4 / 3;
+  min-height: 240px;
+  max-height: min(70vh, 520px);
+  position: relative;
+  overflow: hidden;
+  background: #eef2f6;
+}
+.track-map-frame #track-live-map,
+.track-map-frame .leaflet-container {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+@media (max-width: 575.98px) {
+  .track-map-frame {
+    max-width: none;
+    aspect-ratio: 1 / 1;
+    max-height: 70vh;
+    border-radius: 0;
+  }
+}
+
+/* ---- Responding agencies panel (sheet-style) ---- */
+.track-agency-sheet {
+  border-radius: 1rem;
+  border: 1px solid var(--raniag-border, #dde5ea);
+  background: #fff;
+  box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.06);
+}
+.track-agency-sheet .sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--raniag-border, #dde5ea);
+}
+.track-agency-sheet .sheet-title {
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0;
+}
+.track-agency-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.track-agency-row:last-child { border-bottom: 0; }
+.track-agency-row .agency-name { font-weight: 700; font-size: .92rem; color: #0f172a; }
+.track-agency-row .agency-meta { font-size: .75rem; color: #64748b; margin-top: .15rem; }
+.track-phase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .3rem .55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.track-phase-badge.is-pending { background: #fff7ed; color: #c2410c; }
+.track-phase-badge.is-accepted { background: #eff6ff; color: #1d4ed8; }
+.track-phase-badge.is-en_route { background: #e0f2fe; color: #0369a1; }
+.track-phase-badge.is-on_scene { background: #ecfdf5; color: #047857; }

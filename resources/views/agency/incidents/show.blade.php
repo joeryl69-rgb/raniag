@@ -6,12 +6,54 @@
     @push('styles')
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
         <style>
-            #agency-incident-map {
-                height: 250px;
+            .case-map-frame {
+                width: 100%;
+                aspect-ratio: 16 / 10;
+                min-height: 220px;
+                max-height: min(55vh, 420px);
+                position: relative;
+                overflow: hidden;
                 border-radius: 0.75rem;
-                border: 1px solid #dcefe1;
-                z-index: 1;
                 background: linear-gradient(180deg, #f9fdf9 0%, #eef8f0 100%);
+                border: 1px solid #dcefe1;
+            }
+            .case-map-frame #agency-incident-map,
+            .case-map-frame .leaflet-container {
+                position: absolute;
+                inset: 0;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 1;
+                border: 0;
+                border-radius: 0;
+            }
+            @media (max-width: 767.98px) {
+                .case-map-frame {
+                    aspect-ratio: 4 / 3;
+                    max-height: 50vh;
+                    border-radius: 0.5rem;
+                }
+            }
+            .case-unit-strip {
+                display: flex;
+                align-items: center;
+                gap: .5rem;
+                flex-wrap: wrap;
+                padding: .65rem .85rem;
+                font-size: .82rem;
+                color: #334155;
+                background: #f8fafc;
+                border-top: 1px solid #e7f1ea;
+            }
+            .case-unit-strip .live-dot {
+                width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
+                box-shadow: 0 0 0 0 rgba(22,163,74,.55);
+                animation: case-live-pulse 1.8s infinite;
+            }
+            @keyframes case-live-pulse {
+                0% { box-shadow: 0 0 0 0 rgba(22,163,74,.55); }
+                70% { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
+                100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
             }
             .evidence-thumb {
                 aspect-ratio: 4 / 3;
@@ -24,186 +66,82 @@
             .agency-detail-card .card-header {
                 border-bottom: 1px solid #eef5ee;
             }
+            @media (max-width: 767.98px) {
+                .case-collapse-body.collapse:not(.show) { display: none; }
+            }
         </style>
     @endpush
 
-    <div class="d-flex mb-4">
+    @php
+        $agencyId = auth()->user()->agency_id;
+        $myAssignment = \App\Models\Assignment::where('incident_id', $incident->id)
+            ->where('agency_id', $agencyId)
+            ->where('is_active', true)
+            ->latest('created_at')
+            ->first();
+        $needsAcceptance = $myAssignment && ! $myAssignment->isAcknowledged()
+            && ! in_array($incident->status->value, ['resolved', 'closed']);
+    @endphp
+
+    <div class="d-flex mb-3 mb-md-4">
         <a href="{{ route('agency.incidents.index') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i>Back to Dispatches
         </a>
     </div>
 
-    <div class="row g-4">
-        <!-- Details Column -->
-        <div class="col-lg-8">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-folder-fill text-primary me-2"></i>Case Details</h5>
-                        <span class="font-monospace text-muted small">Tracking #: {{ $incident->tracking_number }}</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    @if ($incident->title)
-                        <h3 class="h5 fw-bold text-dark mb-2">{{ $incident->title }}</h3>
-                    @endif
-                    <p class="mb-4 text-dark fs-6" style="white-space: pre-wrap;">{{ $incident->description }}</p>
-
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Incident Category</div>
-                                <span class="badge rounded-pill mt-1 text-white" style="background-color: {{ $incident->incidentType->color ?? '#6c757d' }}">
-                                    {{ $incident->incidentType->name }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Current Status</div>
-                                <div class="mt-1"><x-public.status-badge :status="$incident->status" /></div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Assigned Priority</div>
-                                <span class="badge bg-secondary text-capitalize mt-1">{{ $incident->priority->label() ?? $incident->priority }}</span>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Reported At</div>
-                                <strong class="text-dark d-block mt-1">{{ $incident->reported_at->format('M d, Y h:i A') }}</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Evidence / Media -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-images text-primary me-2"></i>Attached Evidence</h5>
-                </div>
-                <div class="card-body">
-                    @if ($incident->evidence->isEmpty())
-                        <p class="text-muted mb-0">No evidence attached.</p>
-                    @else
-                        <div class="row g-2">
-                            @foreach ($incident->evidence as $ev)
-                                <div class="col-6 col-md-4">
-                                    <div class="card h-100 border">
-                                        @if (str_starts_with($ev->mime_type, 'image/'))
-                                            <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
-                                                <img src="{{ $ev->url() }}" class="card-img-top evidence-thumb" alt="Evidence">
-                                            </a>
-                                        @else
-                                            <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top evidence-thumb">
-                                                <i class="bi bi-file-earmark fs-1"></i>
-                                            </div>
-                                        @endif
-                                        <div class="card-body p-2 small">
-                                            <div class="text-truncate">{{ $ev->original_filename }}</div>
-                                            <div class="text-muted" style="font-size: 0.75rem;">
-                                                @if ($ev->is_gps_capture)
-                                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-geo-alt-fill"></i> GPS Capture</span>
-                                                @endif
-                                                @if ($ev->uploader)
-                                                    <div class="mt-1"><i class="bi bi-person-fill me-1"></i>{{ $ev->uploader->name }}</div>
-                                                @else
-                                                    <div class="mt-1"><i class="bi bi-person me-1"></i>Public reporter</div>
-                                                @endif
-                                            </div>
-                                            <a href="{{ $ev->url() }}" download class="btn btn-link btn-sm p-0 mt-1"><i class="bi bi-download me-1"></i>Download</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-            </div>
-
-            <!-- History Timeline -->
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Investigation updates Log</h5>
-                </div>
-                <div class="card-body">
-                    @if ($incident->statusUpdates->isEmpty())
-                        <p class="text-muted mb-0">No history logged.</p>
-                    @else
-                        <div class="raniag-timeline raniag-timeline-wide">
-                            @foreach ($incident->statusUpdates as $update)
-                                <div class="raniag-timeline-item" data-status="{{ $update->to_status->value ?? $update->to_status }}">
-                                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
-                                        <div>
-                                            <x-public.status-badge :status="$update->to_status" :comment="$update->comment" />
-                                            <span class="text-muted small ms-2">by {{ $update->user?->display_title ?? 'System/Public' }}{{ $update->user?->agency ? ' · '.$update->user->agency->name : '' }}</span>
-                                        </div>
-                                        <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
-                                    </div>
-                                    @if ($update->comment)
-                                        <p class="mb-0 text-dark p-2 bg-light rounded mt-1 small">{{ $update->comment }}</p>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-            </div>
+    {{-- Map-first: live scene + responding units --}}
+    <div class="card shadow-sm border-0 mb-3 agency-detail-card overflow-hidden">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-broadcast-pin text-primary me-2"></i>Live Response Map</h5>
+            <span class="font-monospace text-muted small">#{{ $incident->tracking_number }}</span>
         </div>
-
-        <!-- Sidebar Actions Column -->
-        <div class="col-lg-4">
-            <!-- Map Location -->
-            <div class="card shadow-sm border-0 mb-4 agency-detail-card">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt text-primary me-2"></i>Map Coordinates</h5>
-                </div>
-                <div class="card-body">
-                    @if ($incident->barangay || $incident->location_address)
-                        <div class="mb-2">
-                            <strong>Barangay:</strong> {{ $incident->barangay }}
-                            @if ($incident->location_address)
-                                <div class="text-muted small">{{ $incident->location_address }}</div>
-                            @endif
-                        </div>
-                    @endif
-
-                    @if ($incident->latitude && $incident->longitude)
-                        <div id="agency-incident-map" class="mb-2"></div>
-                    @else
-                        <div class="alert alert-light text-center mb-0 text-muted">No location coordinates set.</div>
+        <div class="card-body p-0">
+            @if ($incident->barangay || $incident->location_address)
+                <div class="px-3 pt-3 pb-2 small">
+                    <strong>{{ $incident->barangay ?: 'Location' }}</strong>
+                    @if ($incident->location_address)
+                        <span class="text-muted">· {{ $incident->location_address }}</span>
                     @endif
                 </div>
-            </div>
+            @endif
+            @if ($incident->latitude && $incident->longitude)
+                <div class="case-map-frame mx-3 mb-0">
+                    <div id="agency-incident-map"></div>
+                </div>
+                <div class="case-unit-strip mx-3 mb-3 rounded-bottom">
+                    <span class="live-dot" aria-hidden="true"></span>
+                    <span id="agency-units-status">Checking responder GPS…</span>
+                </div>
+            @else
+                <div class="alert alert-light text-center m-3 mb-3 text-muted">No location coordinates set for this incident.</div>
+            @endif
+        </div>
+    </div>
 
-            <!-- Case Action Terminal -->
+    <div class="row g-4">
+        <!-- Case Action Control — primary actions under the map -->
+        <div class="col-lg-5 order-1">
             <div class="card shadow-sm border-0 agency-detail-card">
                 <div class="card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-play-circle text-primary me-2"></i>Case Action Control</h5>
                 </div>
                 <div class="card-body">
-                    @php
-                        $agencyId = auth()->user()->agency_id;
-                        $myAssignment = \App\Models\Assignment::where('incident_id', $incident->id)
-                            ->where('agency_id', $agencyId)
-                            ->where('is_active', true)
-                            ->latest('created_at')
-                            ->first();
-                        $needsAcceptance = $myAssignment && ! $myAssignment->isAcknowledged()
-                            && ! in_array($incident->status->value, ['resolved', 'closed']);
-                    @endphp
                     @if ($needsAcceptance)
-                        <!-- Action: Accept assignment (per-agency, independent of other agencies' status) -->
+                        <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
                             <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation.</p>
-                            <form action="{{ route('agency.incidents.accept', $incident->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge</button>
-                            </form>
+                            <button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                                <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
+                            </button>
                         </div>
+                        <x-confirm-action-modal
+                            id="acceptAcknowledgeModal"
+                            title="Confirm Accept & Acknowledge"
+                            confirm-label="Confirm & Accept"
+                            confirm-class="btn-primary"
+                            :form-action="route('agency.incidents.accept', $incident->id)"
+                            :incident="$incident"
+                        />
                     @elseif ($incident->status->value === 'in_progress' || $incident->status->value === 'pending_info')
                         @php
                             $hasActiveAssignment = $myAssignment !== null;
@@ -268,11 +206,6 @@
                                 @endif
 
                                 <div class="mb-3">
-                                    <label for="actions_taken" class="form-label">Actions Taken <span class="text-danger">*</span></label>
-                                    <textarea class="form-control" name="actions_taken" id="actions_taken" rows="3" required minlength="20" placeholder="Detail the physical or technical actions taken (min 20 chars)..."></textarea>
-                                </div>
-
-                                <div class="mb-3">
                                     <x-gps-camera />
                                     <label for="evidence" class="form-label">Resolution Photos / Reports <span class="text-muted">(optional)</span></label>
                                     <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.pdf">
@@ -297,10 +230,6 @@
                                             <div class="mb-3">
                                                 <div class="text-muted small fw-semibold">Resolution Summary</div>
                                                 <p class="mb-0" id="reviewSummary" style="white-space: pre-wrap;"></p>
-                                            </div>
-                                            <div class="mb-3">
-                                                <div class="text-muted small fw-semibold">Actions Taken</div>
-                                                <p class="mb-0" id="reviewActionsTaken" style="white-space: pre-wrap;"></p>
                                             </div>
                                             <div class="mb-0">
                                                 <div class="text-muted small fw-semibold">Evidence Attached</div>
@@ -362,7 +291,6 @@
                                         if (!form.reportValidity()) return;
 
                                         document.getElementById('reviewSummary').textContent = document.getElementById('summary').value.trim();
-                                        document.getElementById('reviewActionsTaken').textContent = document.getElementById('actions_taken').value.trim();
                                         const fileCount = document.getElementById('evidence').files.length;
                                         document.getElementById('reviewEvidenceCount').textContent = fileCount > 0
                                             ? `${fileCount} file${fileCount === 1 ? '' : 's'} attached`
@@ -417,11 +345,6 @@
                                                     <div class="mb-3">
                                                         <label for="edit_summary" class="form-label">Resolution Summary <span class="text-danger">*</span></label>
                                                         <textarea class="form-control" name="summary" id="edit_summary" rows="3" required minlength="20">{{ old('summary', $agencyResolution->summary) }}</textarea>
-                                                    </div>
-
-                                                    <div class="mb-3">
-                                                        <label for="edit_actions_taken" class="form-label">Actions Taken <span class="text-danger">*</span></label>
-                                                        <textarea class="form-control" name="actions_taken" id="edit_actions_taken" rows="3" required minlength="20">{{ old('actions_taken', $agencyResolution->actions_taken) }}</textarea>
                                                     </div>
 
                                                     <div class="mb-3">
@@ -510,6 +433,130 @@
                 </div>
             </div>
         </div>
+
+        <!-- Case file details — secondary column -->
+        <div class="col-lg-7 order-2">
+            <div class="card raniag-card shadow-sm border-0 mb-4">
+                <div class="card-header raniag-card-header bg-white py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-folder-fill text-primary me-2"></i>Case Details</h5>
+                        <span class="font-monospace text-muted small">#{{ $incident->tracking_number }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if ($incident->title)
+                        <h3 class="h5 fw-bold text-dark mb-2">{{ $incident->title }}</h3>
+                    @endif
+                    <p class="mb-4 text-dark fs-6" style="white-space: pre-wrap;">{{ $incident->description }}</p>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="text-muted small">Incident Category</div>
+                                <span class="badge rounded-pill mt-1 text-white" style="background-color: {{ $incident->incidentType->color ?? '#6c757d' }}">
+                                    {{ $incident->incidentType->name }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="text-muted small">Current Status</div>
+                                <div class="mt-1"><x-public.status-badge :status="$incident->status" /></div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="text-muted small">Assigned Priority</div>
+                                <span class="badge bg-secondary text-capitalize mt-1">{{ $incident->priority->label() ?? $incident->priority }}</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="text-muted small">Reported At</div>
+                                <strong class="text-dark d-block mt-1">{{ $incident->reported_at->format('M d, Y h:i A') }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card raniag-card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-images text-primary me-2"></i>Attached Evidence</h5>
+                    <button class="btn btn-sm btn-outline-secondary d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#agencyEvidenceCollapse" aria-expanded="false">
+                        Toggle
+                    </button>
+                </div>
+                <div class="card-body case-collapse-body collapse show" id="agencyEvidenceCollapse">
+                    @if ($incident->evidence->isEmpty())
+                        <p class="text-muted mb-0">No evidence attached.</p>
+                    @else
+                        <div class="row g-2">
+                            @foreach ($incident->evidence as $ev)
+                                <div class="col-6 col-md-4">
+                                    <div class="card h-100 border">
+                                        @if (str_starts_with($ev->mime_type, 'image/'))
+                                            <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
+                                                <img src="{{ $ev->url() }}" class="card-img-top evidence-thumb" alt="Evidence">
+                                            </a>
+                                        @else
+                                            <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top evidence-thumb">
+                                                <i class="bi bi-file-earmark fs-1"></i>
+                                            </div>
+                                        @endif
+                                        <div class="card-body p-2 small">
+                                            <div class="text-truncate">{{ $ev->original_filename }}</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">
+                                                @if ($ev->is_gps_capture)
+                                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-geo-alt-fill"></i> GPS Capture</span>
+                                                @endif
+                                                @if ($ev->uploader)
+                                                    <div class="mt-1"><i class="bi bi-person-fill me-1"></i>{{ $ev->uploader->name }}</div>
+                                                @else
+                                                    <div class="mt-1"><i class="bi bi-person me-1"></i>Public reporter</div>
+                                                @endif
+                                            </div>
+                                            <a href="{{ $ev->url() }}" download class="btn btn-link btn-sm p-0 mt-1"><i class="bi bi-download me-1"></i>Download</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="card raniag-card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Investigation Updates Log</h5>
+                    <button class="btn btn-sm btn-outline-secondary d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#agencyTimelineCollapse" aria-expanded="false">
+                        Toggle
+                    </button>
+                </div>
+                <div class="card-body case-collapse-body collapse show" id="agencyTimelineCollapse">
+                    @if ($incident->statusUpdates->isEmpty())
+                        <p class="text-muted mb-0">No history logged.</p>
+                    @else
+                        <div class="raniag-timeline raniag-timeline-wide">
+                            @foreach ($incident->statusUpdates as $update)
+                                <div class="raniag-timeline-item" data-status="{{ $update->to_status->value ?? $update->to_status }}">
+                                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
+                                        <div>
+                                            <x-public.status-badge :status="$update->to_status" :comment="$update->comment" />
+                                            <span class="text-muted small ms-2">by {{ $update->user?->display_title ?? 'System/Public' }}{{ $update->user?->agency ? ' · '.$update->user->agency->name : '' }}</span>
+                                        </div>
+                                        <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
+                                    </div>
+                                    @if ($update->comment)
+                                        <p class="mb-0 text-dark p-2 bg-light rounded mt-1 small">{{ $update->comment }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </div>
 
     @push('scripts')
@@ -555,6 +602,7 @@
                         outsideJurisdiction: withinJurisdiction === false,
                         scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
                         unitsUrl: @json(route('agency.incidents.live_units', $incident)),
+                        statusEl: 'agency-units-status',
                         pollMs: 15000,
                     });
 

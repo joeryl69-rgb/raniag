@@ -188,8 +188,10 @@
                 </div>
                 <strong style="font-size: 10pt;">Summary:</strong>
                 <p style="font-size: 10pt; margin-top: 2px;">{{ $res->summary }}</p>
-                <strong style="font-size: 10pt;">Actions Taken:</strong>
-                <p style="font-size: 10pt; margin-top: 2px; margin-bottom: 0;">{{ $res->actions_taken }}</p>
+                @if ($res->actions_taken)
+                    <strong style="font-size: 10pt;">Actions Taken:</strong>
+                    <p style="font-size: 10pt; margin-top: 2px; margin-bottom: 0;">{{ $res->actions_taken }}</p>
+                @endif
             </div>
         @endforeach
     @endif
