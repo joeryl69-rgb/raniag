@@ -52,4 +52,7 @@ Route::name('public.')->group(function () {
     Route::get('/track/evidence/{evidence}', [\App\Http\Controllers\Public\TrackEvidenceController::class, 'show'])
         ->middleware('throttle:60,1')
         ->name('track.evidence');
+    Route::get('/track/{trackingNumber}', [IncidentTrackController::class, 'caseFile'])
+        ->where('trackingNumber', '[A-Za-z0-9\-]+')
+        ->name('track.case');
 });

@@ -190,6 +190,9 @@ test('users can track an incident by tracking number via web', function () {
     $this->post(route('public.track.lookup'), [
         'tracking_number' => $trackingNumber,
     ])
+        ->assertRedirect(route('public.track.case', $trackingNumber));
+
+    $this->get(route('public.track.case', $trackingNumber))
         ->assertOk()
         ->assertSee($trackingNumber, false)
         ->assertSee('Incident Status', false);

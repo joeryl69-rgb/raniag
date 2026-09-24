@@ -18,9 +18,12 @@ class IncidentPolicy
             return true;
         }
 
-        // Agency users can view if they have any assignment on this incident
+        // Agency users can view if they have any assignment on this incident.
+        // Query the table directly so a later agency is not hidden by a
+        // relationship that was already loaded for the first assignee.
         if ($user->isAgency() && $user->agency_id) {
-            return $incident->currentAssignments()
+            return \Illuminate\Support\Facades\DB::table('assignments')
+                ->where('incident_id', $incident->id)
                 ->where('agency_id', $user->agency_id)
                 ->exists();
         }

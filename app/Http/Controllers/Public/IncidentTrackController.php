@@ -27,10 +27,43 @@ class IncidentTrackController extends Controller
 
     public function show(TrackIncidentRequest $request): View|JsonResponse|RedirectResponse
     {
-        return $this->resolveTrackingView(
-            $request->validated('tracking_number'),
-            $request->wantsJson(),
-        );
+        if ($request->wantsJson()) {
+            return $this->resolveTrackingView(
+                $request->validated('tracking_number'),
+                true,
+            );
+        }
+
+        $trackingNumber = strtoupper(trim($request->validated('tracking_number')));
+        $incident = $this->incidentService->findByTrackingNumber($trackingNumber);
+
+        if (! $incident) {
+            return redirect()
+                ->route('public.track')
+                ->withInput(['tracking_number' => $trackingNumber])
+                ->withErrors([
+                    'tracking_number' => 'No matching report for that tracking number. Check it and try again.',
+                ]);
+        }
+
+        session()->put('track_verified.'.$incident->id, true);
+
+        return redirect()->route('public.track.case', $incident->tracking_number);
+    }
+
+    public function caseFile(Request $request, string $trackingNumber): View|RedirectResponse
+    {
+        $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
+
+        if (! $incident || session()->get('track_verified.'.$incident->id) !== true) {
+            return redirect()
+                ->route('public.track', ['tracking_number' => strtoupper(trim($trackingNumber))])
+                ->withErrors([
+                    'tracking_number' => 'Look up that tracking number again to open the report.',
+                ]);
+        }
+
+        return $this->trackingPage($incident);
     }
 
     public static function trackUnitsToken(\App\Models\Incident $incident): string
@@ -91,6 +124,11 @@ class IncidentTrackController extends Controller
             ]);
         }
 
+        return $this->trackingPage($incident);
+    }
+
+    private function trackingPage(\App\Models\Incident $incident): View
+    {
         session()->put('track_verified.'.$incident->id, true);
 
         $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency']);
@@ -129,7 +167,7 @@ class IncidentTrackController extends Controller
         );
 
         return redirect()
-            ->route('public.track')
+            ->route('public.track.case', $incident->tracking_number)
             ->with('success', 'Your reply was sent. Responders will continue from your update.');
     }
 

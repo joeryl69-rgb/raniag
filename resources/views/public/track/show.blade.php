@@ -175,7 +175,7 @@
                 @endphp
                 <div class="track-agency-row" data-unit-name="{{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}">
                     <div class="d-flex align-items-start gap-2">
-                        <span class="track-agency-avatar track-phase-badge {{ $phaseClass }}"><i class="bi {{ $phaseIcon }}"></i></span>
+                        <span class="rg-unit-pin rg-unit-pin-inline" title="{{ $phaseText }}"><i class="bi bi-broadcast-pin"></i></span>
                         <div>
                             <div class="agency-name">
                                 {{ $assignment->agency?->name ?? $assignment->assignee?->display_title ?? 'Personnel' }}

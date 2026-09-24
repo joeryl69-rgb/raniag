@@ -64,7 +64,8 @@ class IncidentController extends Controller
         abort_if(! $personnelId, 403);
 
         $agencyId = $request->user()?->agency_id;
-        $hasAnyAssignmentForPersonnel = $record->currentAssignments()
+        $hasAnyAssignmentForPersonnel = \Illuminate\Support\Facades\DB::table('assignments')
+            ->where('incident_id', $record->id)
             ->where(function ($q) use ($personnelId, $agencyId) {
                 $q->where('assigned_to', $personnelId);
                 if ($agencyId) {

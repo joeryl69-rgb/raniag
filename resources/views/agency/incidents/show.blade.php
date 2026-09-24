@@ -130,11 +130,9 @@
                         <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
                             <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation. Location is not required to accept.</p>
-                            <div class="rg-sticky-cta">
-                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
-                                    <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                                <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
+                            </button>
                         </div>
                         <x-confirm-action-modal
                             id="acceptAcknowledgeModal"
@@ -206,9 +204,7 @@
                                     <div class="form-text">Use the GPS Camera above for a geotagged, watermarked photo, or attach files directly here.</div>
                                 </div>
 
-                                <div class="rg-sticky-cta">
-                                    <button type="button" class="btn btn-success w-100" id="resolutionReviewBtn"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
-                                </div>
+                                <button type="button" class="btn btn-success" id="resolutionReviewBtn"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
                             </form>
 
                             {{-- Review-before-submit: shows exactly what's about to be sent so the
@@ -459,8 +455,8 @@
                         <div class="col-sm-6">
                             <div class="p-3 bg-light rounded-3">
                                 <div class="text-muted small">Incident Category</div>
-                                <span class="badge rounded-pill mt-1 text-white" style="background-color: {{ $incident->incidentType->color ?? '#6c757d' }}">
-                                    {{ $incident->incidentType->name }}
+                                <span class="badge rounded-pill mt-1 text-white" style="background-color: {{ $incident->incidentType?->color ?? '#6c757d' }}">
+                                    {{ $incident->incidentType?->name ?? 'Incident' }}
                                 </span>
                             </div>
                         </div>
@@ -603,8 +599,8 @@
                         lat,
                         lng,
                         map: @json(config('raniag.map')),
-                        icon: @json($incident->incidentType->icon ?? null),
-                        color: @json($incident->incidentType->color ?? null),
+                        icon: @json($incident->incidentType?->icon),
+                        color: @json($incident->incidentType?->color),
                         outsideJurisdiction: withinJurisdiction === false,
                         scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
                         unitsUrl: @json(route('agency.incidents.live_units', $incident)),

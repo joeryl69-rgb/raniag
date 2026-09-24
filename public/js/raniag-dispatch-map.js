@@ -14,9 +14,9 @@
         const name = esc(label || 'Unit');
         return L.divIcon({
             className: 'rg-unit-marker',
-            html: `<div class="rg-unit-pin"><i class="bi bi-person-fill"></i></div><div class="rg-unit-label">${name}</div>`,
-            iconSize: [160, 58],
-            iconAnchor: [80, 22],
+            html: `<div class="rg-unit-pin"><i class="bi bi-broadcast-pin"></i></div><div class="rg-unit-label">${name}</div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
         });
     }
 

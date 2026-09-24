@@ -234,11 +234,9 @@
                         <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
                             <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation. Location is not required to accept.</p>
-                            <div class="rg-sticky-cta">
-                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
-                                    <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                                <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
+                            </button>
                         </div>
                         <x-confirm-action-modal
                             id="acceptAcknowledgeModal"
@@ -328,9 +326,7 @@
                                     <div class="form-text">Use the GPS Camera above for a geotagged, watermarked photo, or attach files directly here.</div>
                                 </div>
 
-                                <div class="rg-sticky-cta">
-                                    <button type="button" class="btn btn-success w-100" id="resolutionReviewBtn"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
-                                </div>
+                                <button type="button" class="btn btn-success" id="resolutionReviewBtn"><i class="bi bi-check-all me-1"></i>Resolve Incident</button>
                             </form>
 
                             <div class="modal fade" id="resolutionReviewModal" tabindex="-1" aria-hidden="true">

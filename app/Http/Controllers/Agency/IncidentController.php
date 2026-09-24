@@ -62,8 +62,9 @@ class IncidentController extends Controller
         // even after resolving, as long as this agency was involved.
         // If this agency has ANY assignment (past or active), allow access.
 
-        $hasAnyAssignmentForAgency = $record->currentAssignments()
-            ->where('agency_id', $request->user()?->agency_id)
+        $hasAnyAssignmentForAgency = \Illuminate\Support\Facades\DB::table('assignments')
+            ->where('incident_id', $record->id)
+            ->where('agency_id', $agencyId)
             ->exists();
 
         abort_if(

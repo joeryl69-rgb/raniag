@@ -1757,20 +1757,33 @@ body.raniag-public {
   justify-content: space-between;
 }
 .rg-wizard-dock {
-  position: sticky;
-  bottom: 0;
-  z-index: 30;
-  margin-top: 12px;
-  padding: 12px;
-  background: #fff;
-  border: 1px solid var(--raniag-border, #dde5ea);
-  border-radius: 14px;
-  box-shadow: 0 -10px 28px rgba(15, 23, 42, .1);
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 .rg-wizard-dock .btn {
-  min-height: 48px;
-  flex: 1 1 8rem;
+  min-height: 44px;
+  min-width: 7.5rem;
+  flex: 0 0 auto;
   font-weight: 700;
+}
+@media (max-width: 575.98px) {
+  .rg-wizard-dock {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin-top: 12px;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(255,255,255,0), #fff 28%);
+  }
+  .rg-wizard-dock .btn { flex: 1 1 0; min-width: 0; }
 }
 .rg-success-jo {
   display: inline-flex;
@@ -2173,22 +2186,30 @@ body.raniag-public {
     background: transparent;
     border: 0;
 }
+.leaflet-div-icon.rg-unit-marker { overflow: visible !important; }
 .rg-unit-pin {
-    width: 36px;
-    height: 36px;
-    margin: 0 auto;
-    border-radius: 50% 50% 50% 4px;
-    transform: rotate(-45deg);
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    border-radius: 50%;
     background: #0b5ed7;
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 3px solid #fff;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, .4);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .35);
     font-size: 1rem;
+    line-height: 1;
 }
-.rg-unit-pin i { transform: rotate(45deg); }
+.rg-unit-pin i {
+    transform: none;
+    line-height: 1;
+    display: block;
+}
+.rg-unit-pin-inline {
+    flex: 0 0 auto;
+}
 .rg-map-locate {
     display: inline-flex;
     align-items: center;
@@ -2206,7 +2227,11 @@ body.raniag-public {
 }
 .rg-map-locate.is-on { background: #15803d; }
 .rg-unit-label {
-    margin-top: 4px;
+    position: absolute;
+    left: 17px;
+    top: 38px;
+    transform: translateX(-50%);
+    margin-top: 0;
     background: #0f172a;
     color: #fff;
     font-size: 11px;
@@ -2288,24 +2313,5 @@ body.raniag-public {
 .rg-status-hero .rg-status-hero-title { font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #1d4ed8; }
 .rg-status-hero .rg-status-hero-value { font-size: 1.15rem; font-weight: 800; color: #0f172a; }
 
-/* Floats a primary CTA to the bottom of the viewport on phones so it's
-   always one thumb-reach away instead of scrolled off below a long
-   case-file column — no button duplication needed. */
-body:has(.rg-sticky-cta) { padding-bottom: 92px; }
-.rg-sticky-cta {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1040;
-    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
-    background: #fff;
-    border-top: 1px solid #fecaca;
-    box-shadow: 0 -10px 28px rgba(127, 29, 29, .16);
-}
-.rg-sticky-cta .btn {
-    min-height: 52px;
-    font-size: 1.05rem;
-    font-weight: 800;
-    box-shadow: 0 10px 24px -10px rgba(220, 38, 38, .65);
-}
+/* Resolve and Accept stay in the case column. A viewport-fixed bar was
+   covering Case Details with a full-width Resolve Incident button. */
