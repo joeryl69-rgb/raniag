@@ -98,6 +98,49 @@ test('a remembered device signs in from the account icon without a password', fu
     $this->assertAuthenticatedAs($user);
 });
 
+test('agency and personnel are sent to the email code, and removing them requires it again', function (string $role, string $home) {
+    Mail::fake();
+    config(['raniag.two_factor.enabled' => true]);
+
+    $user = User::factory()->create([
+        'role' => $role,
+        'password' => bcrypt('secret123'),
+    ]);
+
+    $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertRedirect(route('two-factor.challenge'));
+
+    $this->assertGuest();
+
+    $twoFactor = app(TwoFactorService::class);
+    $trusted = $twoFactor->issueTrustedDeviceCookie($user);
+    $recognized = $twoFactor->issueRecognizedUserCookie(\Illuminate\Http\Request::create('/'), $user);
+
+    $this->withCookie($trusted->getName(), $trusted->getValue())
+        ->post(route('login.quick'), ['email' => $user->email])
+        ->assertRedirect(route($home, absolute: false));
+
+    $this->post('/logout');
+
+    $this->withCookie($trusted->getName(), $trusted->getValue())
+        ->withCookie($recognized->getName(), $recognized->getValue())
+        ->post(route('login.forget-device'), ['email' => $user->email])
+        ->assertCookieExpired(TwoFactorService::TRUSTED_COOKIE);
+
+    $this->withCookie(TwoFactorService::TRUSTED_COOKIE, '[]');
+    Mail::fake();
+
+    $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertRedirect(route('two-factor.challenge'));
+})->with([
+    ['agency', 'agency.dashboard'],
+    ['personnel', 'personnel.dashboard'],
+]);
+
 test('an unremembered account cannot sign in from the account icon', function () {
     $user = User::factory()->administrator()->create();
 

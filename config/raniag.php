@@ -18,7 +18,7 @@ return [
     // the "SLA Compliance" ring on the admin Command Center dashboard.
     'sla_target_hours' => (int) env('RANIAG_SLA_TARGET_HOURS', 48),
 
-    // Email OTP after password login for administrator + agency accounts.
+    // Email OTP after password login for every staff account.
     'two_factor' => [
         'enabled' => (bool) env('RANIAG_TWO_FACTOR_ENABLED', true),
         'otp_ttl_minutes' => (int) env('RANIAG_TWO_FACTOR_OTP_TTL', 10),

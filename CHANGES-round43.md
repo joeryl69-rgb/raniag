@@ -92,6 +92,10 @@ Files:
 The login page does not have a separate Remember me switch. Remember
 this device on the verification screen is already on. Leaving it on
 stores this browser for that account. Signing out does not clear it.
+This applies to the administrator, the agency, and personnel. Each
+account gets the email code. Removing that account from the login
+page forgets only that account, so the next sign-in asks for the code
+again.
 
 The next time that account appears under Choose an account, tapping
 the icon signs in without the password and without another email code.
@@ -139,9 +143,11 @@ Verify after Hostinger deploy
 6. Agency, personnel, and the administrator on the same case see
    "Texts to the reporter." Office dispatch texts are not in that list.
    A text sent by the administrator shows up for the assigned accounts.
-7. Sign in, leave Remember this device on, and finish the email code.
-   Sign out, then tap that account's icon. The password and the code
-   are both skipped. Remove the account and the password is required
-   again. The login page has no Remember me switch.
+7. Sign in as administrator, agency, and personnel. Each one is asked
+   for the email code. Leave Remember this device on, sign out, and
+   tap that account's icon. The password and the code are both
+   skipped. Remove that account from the login page and sign in with
+   the password again. The email code is required. The login page has
+   no Remember me switch.
 8. On a public report, add a GPS photo or video. Report anonymously
    turns on. Remove that evidence and it turns off.

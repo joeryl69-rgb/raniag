@@ -30,7 +30,7 @@ class TwoFactorService
             return false;
         }
 
-        return $user->isAdministrator() || $user->isAgency();
+        return $user->isAdministrator() || $user->isAgency() || $user->isPersonnel();
     }
 
     public const MAX_VERIFY_ATTEMPTS = 5;
