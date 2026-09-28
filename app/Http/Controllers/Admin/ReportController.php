@@ -20,13 +20,20 @@ class ReportController extends Controller
      * render in on the PDF, so what's picked is exactly (and only) what's
      * generated, in the same order every time.
      */
-    private const CHART_KEYS = ['status_breakdown', 'type_breakdown', 'barangay_hotspots', 'trend'];
+    private const CHART_KEYS = [
+        'open_workload',
+        'response_time',
+        'where_to_send',
+        'agency_load',
+        'when_reports_arrived',
+    ];
 
     private const CHART_LABELS = [
-        'status_breakdown' => 'Incidents by Status',
-        'type_breakdown' => 'Incidents by Type',
-        'barangay_hotspots' => 'Barangay Hotspots',
-        'trend' => 'Trend Over Time',
+        'open_workload' => 'What still needs a team',
+        'response_time' => 'How fast the office answered',
+        'where_to_send' => 'Where to send people',
+        'agency_load' => 'Which office is carrying the cases',
+        'when_reports_arrived' => 'When reports came in',
     ];
 
     public function index(): View
@@ -89,19 +96,6 @@ class ReportController extends Controller
                 ->with('warning', 'No incidents found for the selected filters. Please try a different date range or criteria.');
         }
 
-        // Dashboard-style analytics for the same filtered period
-        $byStatus = (clone $query)->selectRaw('status, COUNT(*) as count')->groupBy('status')->pluck('count', 'status');
-        $byType = (clone $query)->join('incident_types', 'incidents.incident_type_id', '=', 'incident_types.id')
-            ->selectRaw('incident_types.name, COUNT(*) as count')->groupBy('incident_types.name')->orderByDesc('count')->pluck('count', 'name');
-        $accidentProneAreas = (clone $query)->join('incident_types', 'incidents.incident_type_id', '=', 'incident_types.id')
-            ->whereNotNull('barangay')
-            ->selectRaw('barangay, incident_types.name as type, COUNT(*) as count')
-            ->groupBy('barangay', 'incident_types.name')
-            ->having('count', '>', 1)
-            ->orderByDesc('count')
-            ->limit(15)
-            ->get();
-
         $writer = new \App\Services\SimpleXlsxWriter;
         $writer->setColumnWidths([16, 14, 16, 20, 14, 18]);
 
@@ -111,32 +105,37 @@ class ReportController extends Controller
         $writer->mergeRow(0, 5);
         $writer->addRow([]);
 
-        $writer->addRow(['Summary by Status'], $writer::STYLE_SECTION);
+        $decision = $this->decisionTables($incidents);
+
+        $writer->addRow(['What still needs a team'], $writer::STYLE_SECTION);
         $writer->mergeRow(0, 5);
-        $writer->addRow(['Status', 'Count'], $writer::STYLE_HEADER);
-        foreach ($byStatus as $status => $count) {
-            $writer->addRow([ucfirst(str_replace('_', ' ', $status)), $count], $writer::STYLE_BODY);
+        $writer->addRow(['Still open', 'Count'], $writer::STYLE_HEADER);
+        foreach ($decision['open_workload']['rows'] as $row) {
+            $writer->addRow([$row['label'], $row['count']], $writer::STYLE_BODY);
         }
         $writer->addRow([]);
 
-        $writer->addRow(['Summary by Incident Type'], $writer::STYLE_SECTION);
+        $writer->addRow(['How fast the office answered'], $writer::STYLE_SECTION);
         $writer->mergeRow(0, 5);
-        $writer->addRow(['Type', 'Count'], $writer::STYLE_HEADER);
-        foreach ($byType as $type => $count) {
-            $writer->addRow([$type, $count], $writer::STYLE_BODY);
+        $writer->addRow(['Measure', 'Value'], $writer::STYLE_HEADER);
+        foreach ($decision['response_time']['rows'] as $row) {
+            $writer->addRow([$row['label'], $row['hint'] ?? $row['count']], $writer::STYLE_BODY);
         }
         $writer->addRow([]);
 
-        $writer->addRow(['Accident-Prone Areas (Barangay Hotspots)'], $writer::STYLE_SECTION);
+        $writer->addRow(['Where to send people'], $writer::STYLE_SECTION);
         $writer->mergeRow(0, 5);
-        $writer->addRow(['Barangay', 'Incident Type', 'Cases'], $writer::STYLE_HEADER);
-        if ($accidentProneAreas->isEmpty()) {
-            $writer->addRow(['No repeat hotspots found for this period.'], $writer::STYLE_BODY);
-            $writer->mergeRow(0, 2);
-        } else {
-            foreach ($accidentProneAreas as $area) {
-                $writer->addRow([$area->barangay, $area->type, $area->count], $writer::STYLE_BODY);
-            }
+        $writer->addRow(['Place', 'Main type of case', 'Cases', 'Still open'], $writer::STYLE_HEADER);
+        foreach ($decision['where_to_send']['rows'] as $row) {
+            $writer->addRow([$row['label'], $row['type'], $row['count'], $row['open']], $writer::STYLE_BODY);
+        }
+        $writer->addRow([]);
+
+        $writer->addRow(['Which office is carrying the cases'], $writer::STYLE_SECTION);
+        $writer->mergeRow(0, 5);
+        $writer->addRow(['Office', 'Cases', 'Still open'], $writer::STYLE_HEADER);
+        foreach ($decision['agency_load']['rows'] as $row) {
+            $writer->addRow([$row['label'], $row['count'], $row['open']], $writer::STYLE_BODY);
         }
         $writer->addRow([]);
 
@@ -174,8 +173,8 @@ class ReportController extends Controller
     public function chartSummary(Request $request)
     {
         $validated = $this->validateFilters($request, withView: true);
-        $query = $this->buildFilteredQuery($validated, ['incidentType']);
-        $incidents = $query->orderBy('reported_at')->get(['id', 'incident_type_id', 'barangay', 'status', 'reported_at']);
+        $query = $this->buildFilteredQuery($validated, ['incidentType', 'agency', 'assignments.agency']);
+        $incidents = $query->orderBy('reported_at')->get();
 
         if ($incidents->isEmpty()) {
             return redirect()->route('admin.reports.index')
@@ -191,13 +190,15 @@ class ReportController extends Controller
         $viewMode = $validated['view_mode'] ?? 'periodic';
         $periods = $this->bucketByPeriod($incidents, $viewMode, $validated['date_from'], $validated['date_to']);
 
+        $tables = $this->decisionTables($incidents);
         $charts = [];
         foreach ($selectedCharts as $key) {
             $charts[$key] = match ($key) {
-                'status_breakdown' => $this->buildStatusBreakdown($incidents),
-                'type_breakdown' => $this->buildTypeBreakdown($incidents),
-                'barangay_hotspots' => $this->buildBarangayHotspots($incidents),
-                'trend' => $this->buildTrendChart($periods, $viewMode),
+                'open_workload' => $tables['open_workload'],
+                'response_time' => $tables['response_time'],
+                'where_to_send' => $tables['where_to_send'],
+                'agency_load' => $tables['agency_load'],
+                'when_reports_arrived' => $this->buildTrendChart($periods, $viewMode),
                 default => null,
             };
         }
@@ -251,7 +252,7 @@ class ReportController extends Controller
         $validated['aor_scope'] = $validated['aor_scope'] ?? 'aor_only';
 
         if ($withView) {
-            $validated['view_mode'] = $validated['view_mode'] ?? 'periodic';
+            $validated['view_mode'] = $validated['view_mode'] ?? 'weekly';
             $validated['charts'] = $validated['charts'] ?? self::CHART_KEYS;
         }
 
@@ -422,20 +423,151 @@ class ReportController extends Controller
      * for word. No free-text generation, so there's nothing for the "not
      * consistent" complaint to attach to.
      */
+    /**
+     * Numbers an MDRRMO desk actually uses: what is still open, how long
+     * the first assignment took, which place needs which kind of team, and
+     * which office is holding the open cases.
+     *
+     * @return array<string, array{rows: array<int, array<string, mixed>>, total: int}>
+     */
+    private function decisionTables($incidents): array
+    {
+        $openStatuses = ['submitted', 'received', 'assigned', 'in_progress', 'pending_info'];
+        $statusOf = fn ($incident) => is_object($incident->status) ? $incident->status->value : (string) $incident->status;
+        $open = $incidents->filter(fn ($incident) => in_array($statusOf($incident), $openStatuses, true));
+
+        $priorityRows = [];
+        foreach (['critical', 'high', 'medium', 'low'] as $priority) {
+            $count = $open->filter(function ($incident) use ($priority) {
+                $value = is_object($incident->priority) ? $incident->priority->value : (string) $incident->priority;
+
+                return $value === $priority;
+            })->count();
+            if ($count > 0) {
+                $priorityRows[] = [
+                    'label' => ucfirst($priority).' priority, still open',
+                    'count' => $count,
+                    'pct' => $open->count() > 0 ? round($count / $open->count() * 100, 1) : 0.0,
+                ];
+            }
+        }
+        if ($open->isEmpty()) {
+            $priorityRows[] = ['label' => 'Nothing is still waiting for a team', 'count' => 0, 'pct' => 0.0];
+        }
+
+        $assignMinutes = [];
+        $resolveMinutes = [];
+        foreach ($incidents as $incident) {
+            $assignedAt = $incident->assignments
+                ->filter(fn ($assignment) => $assignment->assigned_at)
+                ->min('assigned_at');
+            if ($incident->reported_at && $assignedAt) {
+                $assignMinutes[] = max(0, (int) $incident->reported_at->diffInMinutes(\Carbon\Carbon::parse($assignedAt)));
+            }
+            if ($incident->reported_at && $incident->resolved_at) {
+                $resolveMinutes[] = max(0, (int) $incident->reported_at->diffInMinutes($incident->resolved_at));
+            }
+        }
+        $within30 = count(array_filter($assignMinutes, fn ($m) => $m <= 30));
+        $within2h = count(array_filter($assignMinutes, fn ($m) => $m > 30 && $m <= 120));
+        $after2h = count(array_filter($assignMinutes, fn ($m) => $m > 120));
+        $notAssigned = $incidents->count() - count($assignMinutes);
+        $responseRows = [
+            ['label' => 'First team assigned within 30 minutes', 'count' => $within30, 'hint' => (string) $within30, 'pct' => 0],
+            ['label' => 'First team assigned in 30 minutes to 2 hours', 'count' => $within2h, 'hint' => (string) $within2h, 'pct' => 0],
+            ['label' => 'First team assigned after 2 hours', 'count' => $after2h, 'hint' => (string) $after2h, 'pct' => 0],
+            ['label' => 'No team assigned yet', 'count' => $notAssigned, 'hint' => (string) $notAssigned, 'pct' => 0],
+            ['label' => 'Median time to first assignment', 'count' => 0, 'hint' => $this->medianLabel($assignMinutes), 'pct' => 0],
+            ['label' => 'Median time to resolution', 'count' => 0, 'hint' => $this->medianLabel($resolveMinutes), 'pct' => 0],
+        ];
+
+        $places = $incidents->groupBy(fn ($incident) => $incident->barangay ?: 'No barangay recorded')
+            ->map(function ($group, $place) use ($statusOf, $openStatuses) {
+                $types = $group->groupBy(fn ($incident) => $incident->incidentType->name ?? 'Uncategorized')->map->count()->sortDesc();
+
+                return [
+                    'label' => $place,
+                    'type' => (string) ($types->keys()->first() ?? '—'),
+                    'count' => $group->count(),
+                    'open' => $group->filter(fn ($incident) => in_array($statusOf($incident), $openStatuses, true))->count(),
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(8)
+            ->values();
+        $placeTotal = max(1, (int) $places->sum('count'));
+        $placeRows = $places->map(fn ($row) => $row + ['pct' => round($row['count'] / $placeTotal * 100, 1)])->all();
+
+        $offices = [];
+        foreach ($incidents as $incident) {
+            $name = $this->resolveAgencyName($incident) ?: 'Not assigned to an office';
+            $offices[$name]['count'] = ($offices[$name]['count'] ?? 0) + 1;
+            if (in_array($statusOf($incident), $openStatuses, true)) {
+                $offices[$name]['open'] = ($offices[$name]['open'] ?? 0) + 1;
+            }
+        }
+        uasort($offices, fn ($a, $b) => ($b['open'] ?? 0) <=> ($a['open'] ?? 0));
+        $officeRows = [];
+        foreach ($offices as $name => $row) {
+            $officeRows[] = [
+                'label' => $name,
+                'count' => $row['count'],
+                'open' => $row['open'] ?? 0,
+                'pct' => $incidents->count() > 0 ? round($row['count'] / $incidents->count() * 100, 1) : 0.0,
+            ];
+        }
+
+        return [
+            'open_workload' => ['rows' => $priorityRows, 'total' => $open->count()],
+            'response_time' => ['rows' => $responseRows, 'total' => $incidents->count()],
+            'where_to_send' => ['rows' => $placeRows, 'total' => $incidents->count()],
+            'agency_load' => ['rows' => $officeRows, 'total' => $incidents->count()],
+        ];
+    }
+
+    private function medianLabel(array $minutes): string
+    {
+        if ($minutes === []) {
+            return 'Not enough closed or assigned cases yet';
+        }
+        sort($minutes);
+        $mid = (int) floor((count($minutes) - 1) / 2);
+        $median = count($minutes) % 2 === 0
+            ? (int) round(($minutes[$mid] + $minutes[$mid + 1]) / 2)
+            : $minutes[$mid];
+        if ($median < 60) {
+            return $median.' minutes';
+        }
+
+        return round($median / 60, 1).' hours';
+    }
+
     private function buildNarrative($incidents, array $periods, string $viewMode, array $charts): array
     {
         $lines = [];
         $total = $incidents->count();
-        $lines[] = "A total of {$total} incident".($total === 1 ? '' : 's')." matched the selected filters.";
+        $lines[] = "{$total} report".($total === 1 ? '' : 's').' matched these filters.';
 
-        if (isset($charts['type_breakdown']['rows'][0])) {
-            $top = $charts['type_breakdown']['rows'][0];
-            $lines[] = "The most frequent incident type was \"{$top['label']}\" with {$top['count']} case".($top['count'] === 1 ? '' : 's')." ({$top['pct']}% of total).";
+        $openTotal = $charts['open_workload']['total'] ?? null;
+        if ($openTotal !== null) {
+            $lines[] = $openTotal > 0
+                ? "{$openTotal} of those still need a team. Start with the critical and high priority rows."
+                : 'Every report in this period is already resolved, closed, or referred.';
         }
 
-        if (isset($charts['barangay_hotspots']['rows'][0])) {
-            $top = $charts['barangay_hotspots']['rows'][0];
-            $lines[] = "{$top['label']} recorded the most incidents among barangays with {$top['count']} case".($top['count'] === 1 ? '' : 's')." ({$top['pct']}% of total).";
+        $median = collect($charts['response_time']['rows'] ?? [])->firstWhere('label', 'Median time to first assignment');
+        if ($median) {
+            $lines[] = 'Median time from the report to the first assigned office: '.$median['hint'].'.';
+        }
+
+        if (isset($charts['where_to_send']['rows'][0])) {
+            $top = $charts['where_to_send']['rows'][0];
+            $lines[] = "{$top['label']} has the most reports ({$top['count']}), mostly {$top['type']}. {$top['open']} there ".($top['open'] === 1 ? 'is' : 'are').' still open.';
+        }
+
+        $busiestOffice = collect($charts['agency_load']['rows'] ?? [])->sortByDesc('open')->first();
+        if ($busiestOffice && ($busiestOffice['open'] ?? 0) > 0) {
+            $lines[] = "{$busiestOffice['label']} is holding the most open cases ({$busiestOffice['open']}).";
         }
 
         if ($viewMode !== 'periodic' && count($periods) >= 2) {

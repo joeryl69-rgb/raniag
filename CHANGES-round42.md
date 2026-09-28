@@ -88,17 +88,32 @@ Files:
 =====================================================================
 6. Reports and public tracking
 =====================================================================
-Generate Reports explains the three downloads: incident-list PDF,
-Excel of the same incidents, and a chart summary that uses only the
-charts left checked.
+Generate Reports is two steps. Step 1 sets the period. Step 2 is three
+separate downloads, each stating the question it answers: the incident
+register, the working spreadsheet, and the operations brief.
+
+The brief is no longer a generic status/type/hotspot/trend set. It
+shows what is still open by priority, how long the first assignment
+took, which barangay needs which kind of team, which office is holding
+the open cases, and when reports arrived.
 
 On the public tracking map, two agencies at the same spot are offset
 so both names show. The public map asks for a fresh saved position
 every few seconds, matching the movement the agency map already drew
 from the phone.
 
+The agency GPS camera no longer stamps every photo as Pamplona. A fix
+inside a Pamplona barangay keeps that barangay name. A fix outside,
+such as Langagan, uses the real place name, and the accuracy reading
+from the phone is shown.
+
 Files:
   resources/views/admin/reports/index.blade.php
+  resources/views/admin/reports/chart_summary_pdf.blade.php
+  app/Http/Controllers/Admin/ReportController.php
+  public/js/gps-camera.js
+  public/js/raniag-location-ping.js
+  app/Http/Controllers/Public/HazardMapController.php
   public/js/public-track-map.js
   public/js/raniag-dispatch-map.js
   public/js/raniag-mapbox.js
@@ -115,6 +130,11 @@ Verify after Hostinger deploy
 4. Public report has no Voice button.
 5. Case documents offer a photo upload and do not scan text.
 6. On a case, open the GPS camera while En route. Coordinates should
-   appear without switching browser tabs.
-7. Public tracking shows two agency names when they share a location,
+   appear without switching browser tabs. Outside Pamplona the place
+   line names the real barangay (for example Langagan), and the badge
+   shows the meter accuracy from the phone.
+7. Generate Reports shows three separate downloads. The operations
+   brief lists open cases by priority, assignment time, places to send
+   people, office load, and when reports arrived.
+8. Public tracking shows two agency names when they share a location,
    and the pin moves after the responder is En route.

@@ -71,7 +71,7 @@
 </head>
 <body>
     @include('admin.reports.partials._footer')
-    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'Chart Summary Report — '.config('raniag.organization')])
+    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'Operations brief — '.config('raniag.organization')])
 
     <div class="meta-info" style="text-align:right; font-size:9pt; color:#666; margin-bottom:20px;">
         <strong>Generated:</strong> {{ $generated_at->format('M d, Y h:i A') }}
@@ -108,73 +108,57 @@
         @endforeach
     </div>
 
-    @if(isset($charts['status_breakdown']))
-        <div class="section-title">{{ $chartLabels['status_breakdown'] }}</div>
-        @if(empty($charts['status_breakdown']['rows']))
-            <p class="no-data">No data for this chart.</p>
+    @foreach($charts as $key => $chart)
+        <div class="section-title">{{ $chartLabels[$key] ?? $key }}</div>
+        @if(empty($chart['rows']))
+            <p class="no-data">No cases in this period for this section.</p>
+        @elseif($key === 'where_to_send')
+            <table>
+                <thead>
+                    <tr><th>Place</th><th>Main type of case</th><th>Cases</th><th>Still open</th></tr>
+                </thead>
+                <tbody>
+                    @foreach($chart['rows'] as $row)
+                        <tr>
+                            <td>{{ $row['label'] }}</td>
+                            <td>{{ $row['type'] ?? '—' }}</td>
+                            <td>{{ $row['count'] }}</td>
+                            <td>{{ $row['open'] ?? 0 }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @elseif($key === 'agency_load')
+            <table>
+                <thead>
+                    <tr><th>Office</th><th>Cases</th><th>Still open</th></tr>
+                </thead>
+                <tbody>
+                    @foreach($chart['rows'] as $row)
+                        <tr>
+                            <td>{{ $row['label'] }}</td>
+                            <td>{{ $row['count'] }}</td>
+                            <td>{{ $row['open'] ?? 0 }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         @else
-            @php $csMax = collect($charts['status_breakdown']['rows'])->max('count') ?: 1; @endphp
-            @foreach($charts['status_breakdown']['rows'] as $row)
-                <div class="bar-row">
-                    <div class="bar-label">{{ $row['label'] }}</div>
-                    <div class="bar-track"><div class="bar-fill" style="width: {{ round($row['count'] / $csMax * 100, 1) }}%;"></div></div>
-                    <div class="bar-value">{{ $row['count'] }} ({{ $row['pct'] }}%)</div>
-                </div>
-            @endforeach
+            <table>
+                <thead>
+                    <tr><th>{{ $key === 'when_reports_arrived' ? 'Period' : 'Measure' }}</th><th>Result</th></tr>
+                </thead>
+                <tbody>
+                    @foreach($chart['rows'] as $row)
+                        <tr>
+                            <td>{{ $row['label'] }}</td>
+                            <td>{{ ($row['count'] ?? 0) === 0 && !empty($row['hint']) ? $row['hint'] : ($row['hint'] ?? $row['count']) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         @endif
-    @endif
-
-    @if(isset($charts['type_breakdown']))
-        <div class="section-title">{{ $chartLabels['type_breakdown'] }}</div>
-        @if(empty($charts['type_breakdown']['rows']))
-            <p class="no-data">No data for this chart.</p>
-        @else
-            @php $ctMax = collect($charts['type_breakdown']['rows'])->max('count') ?: 1; @endphp
-            @foreach($charts['type_breakdown']['rows'] as $row)
-                <div class="bar-row">
-                    <div class="bar-label">{{ $row['label'] }}</div>
-                    <div class="bar-track"><div class="bar-fill alt" style="width: {{ round($row['count'] / $ctMax * 100, 1) }}%;"></div></div>
-                    <div class="bar-value">{{ $row['count'] }} ({{ $row['pct'] }}%)</div>
-                </div>
-            @endforeach
-        @endif
-    @endif
-
-    @if(isset($charts['barangay_hotspots']))
-        <div class="section-title">{{ $chartLabels['barangay_hotspots'] }} <span style="text-transform:none; font-weight:normal; font-size:9pt; color:#666;">(top 10)</span></div>
-        @if(empty($charts['barangay_hotspots']['rows']))
-            <p class="no-data">No barangay data for this chart.</p>
-        @else
-            @php $cbMax = collect($charts['barangay_hotspots']['rows'])->max('count') ?: 1; @endphp
-            @foreach($charts['barangay_hotspots']['rows'] as $row)
-                <div class="bar-row">
-                    <div class="bar-label">{{ $row['label'] }}</div>
-                    <div class="bar-track"><div class="bar-fill" style="width: {{ round($row['count'] / $cbMax * 100, 1) }}%;"></div></div>
-                    <div class="bar-value">{{ $row['count'] }} ({{ $row['pct'] }}%)</div>
-                </div>
-            @endforeach
-        @endif
-    @endif
-
-    @if(isset($charts['trend']))
-        <div class="section-title">
-            {{ $chartLabels['trend'] }}
-            @if(!$charts['trend']['bucketed'])
-                <span style="text-transform:none; font-weight:normal; font-size:9pt; color:#666;">(single period — switch to Weekly or Monthly view for a real trend line)</span>
-            @endif
-        </div>
-        @if(empty($charts['trend']['rows']))
-            <p class="no-data">No data for this chart.</p>
-        @else
-            @foreach($charts['trend']['rows'] as $row)
-                <div class="bar-row">
-                    <div class="bar-label">{{ $row['label'] }}</div>
-                    <div class="bar-track"><div class="bar-fill alt" style="width: {{ $row['pct'] }}%;"></div></div>
-                    <div class="bar-value">{{ $row['count'] }}</div>
-                </div>
-            @endforeach
-        @endif
-    @endif
+    @endforeach
 
     <div style="margin-top:30px; padding-top:15px; border-top:1px solid #e2e8f0; text-align:center; color:#666; font-size:9pt;">
         <p style="margin:0 0 4px;">This report was generated automatically by {{ config('raniag.name') }} — {{ config('raniag.organization') }}</p>

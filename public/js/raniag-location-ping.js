@@ -133,7 +133,9 @@
                     setStatus('Live location is on. The case map and public tracking page update as you move.', 'live');
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
-                    document.dispatchEvent(new CustomEvent('raniag:gps', { detail: { lat, lng } }));
+                    document.dispatchEvent(new CustomEvent('raniag:gps', {
+                        detail: { lat, lng, accuracy: pos.coords.accuracy },
+                    }));
                     post(lat, lng);
                     maybeArrive(lat, lng);
                 },

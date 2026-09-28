@@ -184,13 +184,23 @@
         lastResolved = event.detail;
         updateCaptureReadiness();
         if (placeEl && event.detail) {
-            const { barangay, municipality, province, country } = event.detail;
-            const parts = [];
-            if (barangay) parts.push(`Barangay ${barangay}`);
-            if (municipality) parts.push(municipality);
-            if (province) parts.push(province);
-            if (country) parts.push(country);
-            placeEl.textContent = parts.length ? parts.join(', ') : 'Resolving location…';
+            if (event.detail.coordinatesOnly) {
+                const lat = Number(event.detail.lat);
+                const lng = Number(event.detail.lng);
+                placeEl.textContent = Number.isNaN(lat)
+                    ? 'Reading this GPS fix…'
+                    : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            } else {
+                const { barangay, municipality, province, country } = event.detail;
+                const parts = [];
+                if (barangay) parts.push(`Barangay ${barangay}`);
+                if (municipality) parts.push(municipality);
+                if (province) parts.push(province);
+                if (country) parts.push(country);
+                placeEl.textContent = parts.length
+                    ? parts.join(', ')
+                    : (event.detail.placeLabel || 'Reading this GPS fix…');
+            }
         }
     });
 
@@ -230,8 +240,9 @@
         const { latitude, longitude, accuracy } = position.coords;
         coordsEl.textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
         if (accuracyEl) {
-            accuracyEl.textContent = accuracy
-                ? `±${Math.round(accuracy)} m`
+            const meters = Number(accuracy);
+            accuracyEl.textContent = Number.isFinite(meters)
+                ? `±${Math.round(meters)} m`
                 : 'Accuracy unknown';
         }
         updateMapThumbnail(latitude, longitude);
@@ -253,19 +264,14 @@
         }
     }
 
-    // Barangay comes from RANIAG's own boundary file, which answers in
-    // milliseconds. Nominatim was blocking the shutter for several seconds
-    // and often never returned on a phone network.
+    // Do not label the shot "Pamplona" until a boundary check says the
+    // point is inside a Pamplona barangay. A fix in Langagan (Sanchez Mira)
+    // was being stamped as Pamplona, and the shared GPS watch was dropping
+    // the accuracy reading, so the camera looked fixed and "Accuracy unknown".
     function resolvePlaceLocally(lat, lng) {
-        if (!lastResolved || !(lastResolved.barangay || lastResolved.municipality)) {
+        if (!lastResolved) {
             window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                detail: {
-                    lat,
-                    lng,
-                    municipality: 'Pamplona',
-                    province: 'Cagayan',
-                    country: 'Philippines',
-                },
+                detail: { lat, lng, coordinatesOnly: true },
             }));
         }
 
@@ -282,15 +288,60 @@
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
                 clearTimeout(timer);
-                if (!data) return;
+                if (data?.inside && data.barangay) {
+                    window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                        detail: {
+                            lat,
+                            lng,
+                            barangay: data.barangay,
+                            municipality: data.municipality || 'Pamplona',
+                            province: data.province || 'Cagayan',
+                            country: data.country || 'Philippines',
+                        },
+                    }));
+                    return;
+                }
+                if (data && (data.barangay || data.municipality)) {
+                    window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                        detail: {
+                            lat,
+                            lng,
+                            barangay: data.barangay || null,
+                            municipality: data.municipality || null,
+                            province: data.province || null,
+                            country: data.country || null,
+                        },
+                    }));
+                    return;
+                }
+                resolvePlaceFromNominatim(lat, lng);
+            })
+            .catch(() => {
+                clearTimeout(timer);
+                resolvePlaceFromNominatim(lat, lng);
+            });
+    }
+
+    function resolvePlaceFromNominatim(lat, lng) {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+        fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                clearTimeout(timer);
+                const addr = data?.address || {};
+                const barangay = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || null;
+                const municipality = addr.city || addr.town || addr.municipality || null;
+                if (!barangay && !municipality) return;
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                     detail: {
                         lat,
                         lng,
-                        barangay: data.barangay || null,
-                        municipality: data.municipality || 'Pamplona',
-                        province: data.province || 'Cagayan',
-                        country: data.country || 'Philippines',
+                        barangay,
+                        municipality,
+                        province: addr.state || addr.province || null,
+                        country: addr.country || null,
                     },
                 }));
             })
@@ -331,7 +382,7 @@
     // barangay was matched, or the outside-municipality fallback (which
     // always carries a municipality name) has been set.
     function isLocationReady() {
-        return !!lastPosition && !!lastResolved && !!(lastResolved.barangay || lastResolved.municipality);
+        return !!lastPosition;
     }
     // Ready = actionable. The button's *color*, not just its opacity, now
     // reflects that: neutral/outline while not ready (waiting on GPS/address

@@ -9,6 +9,7 @@ use App\Services\GeofenceService;
 use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class HazardMapController extends Controller
@@ -44,16 +45,74 @@ class HazardMapController extends Controller
             'lng' => ['required', 'numeric', 'between:-180,180'],
         ]);
 
-        $name = $this->geofence->resolveBarangay((float) $data['lat'], (float) $data['lng']);
+        $lat = (float) $data['lat'];
+        $lng = (float) $data['lng'];
+        $name = $this->geofence->resolveBarangay($lat, $lng);
         $address = config('raniag.address');
 
+        if ($name !== null) {
+            return response()->json([
+                'barangay' => $name,
+                'municipality' => $address['municipality'] ?? 'Pamplona',
+                'province' => $address['province'] ?? 'Cagayan',
+                'country' => $address['country'] ?? 'Philippines',
+                'inside' => true,
+            ])->header('Cache-Control', 'no-store');
+        }
+
+        $outside = $this->reverseOutsidePamplona($lat, $lng);
+
         return response()->json([
-            'barangay' => $name,
-            'municipality' => $address['municipality'] ?? 'Pamplona',
-            'province' => $address['province'] ?? 'Cagayan',
-            'country' => $address['country'] ?? 'Philippines',
-            'inside' => $name !== null,
+            'barangay' => $outside['barangay'],
+            'municipality' => $outside['municipality'],
+            'province' => $outside['province'],
+            'country' => $outside['country'],
+            'inside' => false,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * A fix outside the Pamplona barangay polygons must not be labeled
+     * Pamplona. Ask the public geocoder once; if it is unreachable, return
+     * empty names so the camera keeps the raw coordinates.
+     *
+     * @return array{barangay: ?string, municipality: ?string, province: ?string, country: ?string}
+     */
+    private function reverseOutsidePamplona(float $lat, float $lng): array
+    {
+        $empty = ['barangay' => null, 'municipality' => null, 'province' => null, 'country' => null];
+
+        try {
+            $response = Http::timeout(3)
+                ->withHeaders([
+                    'User-Agent' => 'RANIAG-MDRRMO-Pamplona/1.0 (field camera)',
+                    'Accept' => 'application/json',
+                ])
+                ->get('https://nominatim.openstreetmap.org/reverse', [
+                    'format' => 'jsonv2',
+                    'lat' => $lat,
+                    'lon' => $lng,
+                    'zoom' => 16,
+                    'addressdetails' => 1,
+                ]);
+        } catch (\Throwable) {
+            return $empty;
+        }
+
+        if (! $response->ok()) {
+            return $empty;
+        }
+
+        $addr = $response->json('address') ?? [];
+        $barangay = $addr['village'] ?? $addr['suburb'] ?? $addr['hamlet'] ?? $addr['neighbourhood'] ?? null;
+        $municipality = $addr['city'] ?? $addr['town'] ?? $addr['municipality'] ?? null;
+
+        return [
+            'barangay' => is_string($barangay) ? $barangay : null,
+            'municipality' => is_string($municipality) ? $municipality : null,
+            'province' => is_string($addr['state'] ?? null) ? $addr['state'] : (is_string($addr['province'] ?? null) ? $addr['province'] : null),
+            'country' => is_string($addr['country'] ?? null) ? $addr['country'] : null,
+        ];
     }
 
     public function nearestCenter(Request $request): JsonResponse
