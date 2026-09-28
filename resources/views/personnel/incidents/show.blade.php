@@ -149,6 +149,8 @@
                                             <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
                                                 <img src="{{ $ev->url() }}" class="card-img-top evidence-thumb" alt="Evidence">
                                             </a>
+                                        @elseif (str_starts_with((string) $ev->mime_type, 'video/'))
+                                            <video src="{{ $ev->url() }}" class="card-img-top evidence-thumb" controls playsinline preload="metadata"></video>
                                         @else
                                             <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top evidence-thumb">
                                                 <i class="bi bi-file-earmark fs-1"></i>

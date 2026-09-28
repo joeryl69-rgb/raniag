@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Evidence;
 use App\Support\PrivateIncidentFiles;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TrackEvidenceController extends Controller
@@ -13,7 +14,7 @@ class TrackEvidenceController extends Controller
      * Serve reporter-submitted evidence only after a successful /track lookup
      * in this session (tracking number + access code).
      */
-    public function show(Evidence $evidence): StreamedResponse
+    public function show(Evidence $evidence): StreamedResponse|BinaryFileResponse
     {
         $evidence->loadMissing('incident');
 
@@ -33,6 +34,15 @@ class TrackEvidenceController extends Controller
         $absolute = PrivateIncidentFiles::absolutePath($path);
         $mime = $evidence->mime_type ?: 'application/octet-stream';
         $downloadName = $evidence->original_filename ?: basename($path);
+
+        if (str_starts_with($mime, 'video/')) {
+            return response()->file($absolute, [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="'.$downloadName.'"',
+                'Cache-Control' => 'private, max-age=3600',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
 
         return response()->stream(function () use ($absolute) {
             $stream = fopen($absolute, 'rb');

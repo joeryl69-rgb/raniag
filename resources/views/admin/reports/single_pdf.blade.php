@@ -201,7 +201,9 @@
     @else
         <div class="evidence-grid">
             @foreach($incident->evidence as $ev)
-                @if(str_starts_with($ev->mime_type, 'image/'))
+                @if(str_starts_with((string) $ev->mime_type, 'video/'))
+                    {{-- GPS videos stay on the case. Generated reports print photos only. --}}
+                @elseif(str_starts_with((string) $ev->mime_type, 'image/'))
                     <div class="evidence-item">
                         <img src="{{ \App\Support\PrivateIncidentFiles::absolutePath($ev->file_path) }}" class="evidence-img" alt="Evidence Image">
                         <div class="evidence-caption">

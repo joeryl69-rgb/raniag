@@ -18,7 +18,11 @@
 
     // Next actionable phase (what the primary CTA advances to), if any.
     $nextKey = $order[$currentIndex + 1] ?? null;
-    $canSms = ! $incident->is_anonymous && filled($incident->safeReporterPhone());
+    // A GPS-camera photo or video lets the reporter stay anonymous. Without
+    // one they had to leave their name and a phone or email, so the text
+    // box is only offered for that identified report.
+    $identifiedWithoutGps = ! $incident->reporterSubmittedGpsCamera() && ! $incident->is_anonymous;
+    $canSms = $identifiedWithoutGps && filled($incident->safeReporterPhone());
 @endphp
 
 @if ($assignment && $assignment->isAcknowledged() && ! in_array($incident->status->value, ['resolved', 'closed'], true))
@@ -59,6 +63,21 @@
             Mark En route to turn location on. The pin and route then update on this map and on the public tracking page.
         @endif
     </div>
+
+    @if ($identifiedWithoutGps)
+        <div class="alert alert-warning d-flex gap-2 align-items-start small mb-2 py-2" role="status">
+            <i class="bi bi-person-badge mt-1"></i>
+            <div>
+                <strong>Reporter is not anonymous.</strong>
+                No GPS camera photo or video was submitted, so they had to leave their contact details.
+                @if ($canSms)
+                    Use the message button to text the number on the report.
+                @else
+                    No phone number is on file. Use the email on the case if you need to reach them.
+                @endif
+            </div>
+        </div>
+    @endif
 
     <div class="rg-field-actions">
         @if ($nextKey)

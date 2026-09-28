@@ -90,7 +90,7 @@ return [
 
     'evidence' => [
         'max_files' => (int) env('RANIAG_EVIDENCE_MAX_FILES', 5),
-        'max_size_kb' => (int) env('RANIAG_EVIDENCE_MAX_SIZE_KB', 5120),
+        'max_size_kb' => (int) env('RANIAG_EVIDENCE_MAX_SIZE_KB', 10240),
         'allowed_mimes' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mp4', 'mov', 'webm'],
     ],
 
@@ -103,6 +103,7 @@ return [
     'gps_camera' => [
         'jpeg_quality' => 0.88,
         'max_captures' => (int) env('RANIAG_GPS_MAX_CAPTURES', 5),
+        'video_max_seconds' => 60,
     ],
 
     // Official PSGC 0201518000 barangay list for Pamplona, Cagayan (18

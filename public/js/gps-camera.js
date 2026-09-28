@@ -10,6 +10,15 @@
         maximumAge: 0,
     };
     const jpegQuality = config.jpeg_quality ?? 0.88;
+    const videoMaxMs = (Number(config.video_max_seconds) || 60) * 1000;
+    let captureMode = 'photo';
+    let recording = false;
+    let discardRecording = false;
+    let mediaRecorder = null;
+    let recordChunks = [];
+    let recordTimer = null;
+    let recordStartedAt = 0;
+    let paintFrameId = 0;
 
     const moduleEl = document.getElementById('gps-camera-module');
     if (!moduleEl) {
@@ -392,11 +401,22 @@
     // color swap.
     function updateCaptureReadiness() {
         if (!captureBtn) return;
+        if (recording) {
+            captureBtn.disabled = false;
+            captureBtn.classList.remove('gps-capture-pending', 'btn-success', 'btn-outline-light');
+            captureBtn.classList.add('btn-danger');
+            captureBtn.innerHTML = '<i class="bi bi-stop-fill me-1"></i>Stop';
+            return;
+        }
         const ready = isLocationReady() && canAddMoreCaptures();
         captureBtn.disabled = !ready;
         captureBtn.classList.toggle('gps-capture-pending', !ready);
         captureBtn.classList.toggle('btn-success', ready);
         captureBtn.classList.toggle('btn-outline-light', !ready);
+        captureBtn.classList.remove('btn-danger');
+        captureBtn.innerHTML = captureMode === 'video'
+            ? '<i class="bi bi-record-circle me-1"></i>Record'
+            : '<i class="bi bi-camera-fill me-1"></i>Capture Photo';
     }
 
     // Counts actual attached evidence (GPS captures + any manually chosen
@@ -410,8 +430,8 @@
         evidenceBadgeEl.classList.toggle('bg-secondary', count === 0);
         evidenceBadgeEl.classList.toggle('bg-success', count > 0);
         evidenceBadgeEl.innerHTML = count > 0
-            ? `<i class="bi bi-camera-fill me-1"></i>${count} evidence photo${count === 1 ? '' : 's'} attached`
-            : '<i class="bi bi-camera me-1"></i>No evidence photo yet';
+            ? `<i class="bi bi-camera-fill me-1"></i>${count} evidence file${count === 1 ? '' : 's'} attached`
+            : '<i class="bi bi-camera me-1"></i>No evidence yet';
     }
 
     function syncEvidenceInput() {
@@ -441,8 +461,43 @@
         });
     }
 
-    function enterReviewMode(previewUrl) {
-        if (reviewImgEl) reviewImgEl.src = previewUrl;
+    function ensureReviewVideo() {
+        if (document.getElementById('gps-review-video')) {
+            return document.getElementById('gps-review-video');
+        }
+        if (!reviewImgEl) return null;
+        const video = document.createElement('video');
+        video.id = 'gps-review-video';
+        video.className = 'gps-review-video d-none';
+        video.controls = true;
+        video.playsInline = true;
+        reviewImgEl.insertAdjacentElement('afterend', video);
+        return video;
+    }
+
+    function enterReviewMode(previewUrl, kind) {
+        const isVideo = kind === 'video';
+        if (reviewImgEl) {
+            reviewImgEl.classList.toggle('d-none', isVideo);
+            if (!isVideo) reviewImgEl.src = previewUrl;
+        }
+        const reviewVideo = ensureReviewVideo();
+        if (reviewVideo) {
+            reviewVideo.classList.toggle('d-none', !isVideo);
+            if (isVideo) {
+                reviewVideo.src = previewUrl;
+                reviewVideo.play().catch(() => {});
+            } else {
+                reviewVideo.pause();
+                reviewVideo.removeAttribute('src');
+            }
+        }
+        document.getElementById('gps-review-watermark')?.classList.toggle('d-none', isVideo);
+        if (useBtn) {
+            useBtn.innerHTML = isVideo
+                ? '<i class="bi bi-check-lg me-1"></i>Use Video'
+                : '<i class="bi bi-check-lg me-1"></i>Use Photo';
+        }
         // Freeze the exact watermark text used for this shot (coords/place
         // change live as GPS keeps refining, so this must be a snapshot,
         // not a live-bound reference).
@@ -505,6 +560,11 @@
     }
 
     function retakeCapture() {
+        const reviewVideo = document.getElementById('gps-review-video');
+        if (reviewVideo) {
+            reviewVideo.pause();
+            reviewVideo.removeAttribute('src');
+        }
         if (pendingCapture?.previewUrl) {
             URL.revokeObjectURL(pendingCapture.previewUrl);
         }
@@ -515,7 +575,26 @@
     let lightboxHome = null;
     function openLightbox(item) {
         if (!lightboxImgEl || !lightboxModalEl) return;
-        lightboxImgEl.src = item.previewUrl;
+        const isVideo = item.kind === 'video';
+        lightboxImgEl.classList.toggle('d-none', isVideo);
+        let lightboxVideo = document.getElementById('gps-lightbox-video');
+        if (!lightboxVideo) {
+            lightboxVideo = document.createElement('video');
+            lightboxVideo.id = 'gps-lightbox-video';
+            lightboxVideo.className = 'img-fluid rounded w-100 d-none';
+            lightboxVideo.controls = true;
+            lightboxVideo.playsInline = true;
+            lightboxImgEl.insertAdjacentElement('afterend', lightboxVideo);
+        }
+        document.getElementById('gps-lightbox-watermark')?.classList.toggle('d-none', isVideo);
+        if (isVideo) {
+            lightboxVideo.classList.remove('d-none');
+            lightboxVideo.src = item.previewUrl;
+        } else {
+            lightboxVideo.pause();
+            lightboxVideo.classList.add('d-none');
+            lightboxImgEl.src = item.previewUrl;
+        }
 
         const wrap = document.getElementById('gps-lightbox-watermark');
         if (wrap) {
@@ -587,12 +666,18 @@
             const card = document.createElement('div');
             card.className = 'gps-capture-thumb card border-0 shadow-sm';
 
-            const img = document.createElement('img');
-            img.src = item.previewUrl;
-            img.alt = `GPS capture ${index + 1}`;
-            img.className = 'card-img-top';
-            img.title = 'Tap to view full size';
-            img.addEventListener('click', () => openLightbox(item));
+            const media = item.kind === 'video' ? document.createElement('video') : document.createElement('img');
+            media.src = item.previewUrl;
+            media.className = 'card-img-top';
+            if (item.kind === 'video') {
+                media.muted = true;
+                media.playsInline = true;
+                media.preload = 'metadata';
+            } else {
+                media.alt = `GPS capture ${index + 1}`;
+            }
+            media.title = 'Tap to view full size';
+            media.addEventListener('click', () => openLightbox(item));
 
             const body = document.createElement('div');
             body.className = 'card-body p-2 small';
@@ -608,7 +693,7 @@
             removeBtn.addEventListener('click', () => removeCapture(index));
 
             body.appendChild(removeBtn);
-            card.appendChild(img);
+            card.appendChild(media);
             card.appendChild(body);
             col.appendChild(card);
             previewEl.appendChild(col);
@@ -807,6 +892,9 @@
     }
 
     function stopCamera() {
+        if (recording || (mediaRecorder && mediaRecorder.state !== 'inactive')) {
+            stopRecording(true);
+        }
         if (mediaStream) {
             mediaStream.getTracks().forEach((track) => track.stop());
             mediaStream = null;
@@ -1087,9 +1175,237 @@
         );
     }
 
+    function frameCrop() {
+        if (!videoEl) return null;
+        const nativeWidth = videoEl.videoWidth;
+        const nativeHeight = videoEl.videoHeight;
+        if (!nativeWidth || !nativeHeight) return null;
+        const displayWidth = videoEl.clientWidth || nativeWidth;
+        const displayHeight = videoEl.clientHeight || nativeHeight;
+        const displayRatio = displayWidth / displayHeight;
+        const nativeRatio = nativeWidth / nativeHeight;
+        let sx = 0;
+        let sy = 0;
+        let sWidth = nativeWidth;
+        let sHeight = nativeHeight;
+        if (nativeRatio > displayRatio) {
+            sWidth = Math.round(nativeHeight * displayRatio);
+            sx = Math.round((nativeWidth - sWidth) / 2);
+        } else if (nativeRatio < displayRatio) {
+            sHeight = Math.round(nativeWidth / displayRatio);
+            sy = Math.round((nativeHeight - sHeight) / 2);
+        }
+        return { sx, sy, sWidth, sHeight, width: sWidth, height: sHeight };
+    }
+
+    function paintGpsStamp(context, width, height) {
+        const lines = [
+            'RANIAG GPS CAMERA',
+            coordsEl?.textContent || '',
+            placeEl?.textContent || '',
+            timeEl?.textContent || '',
+        ].filter(Boolean);
+        const fontSize = Math.max(16, Math.round(width / 36));
+        const pad = Math.round(fontSize * 0.7);
+        context.save();
+        context.font = `600 ${fontSize}px sans-serif`;
+        const blockH = lines.length * (fontSize + 6) + pad * 2;
+        context.fillStyle = 'rgba(15, 23, 42, 0.78)';
+        context.fillRect(0, height - blockH, width, blockH);
+        context.fillStyle = '#fff';
+        lines.forEach((line, index) => {
+            context.fillText(line, pad, height - blockH + pad + fontSize + index * (fontSize + 6), width - pad * 2);
+        });
+        context.restore();
+    }
+
+    function paintRecordFrame() {
+        if (!recording || !videoEl || !canvasEl) return;
+        const crop = frameCrop();
+        if (crop) {
+            const context = canvasEl.getContext('2d');
+            context.save();
+            if (facingMode === 'user') {
+                context.translate(crop.width, 0);
+                context.scale(-1, 1);
+            }
+            context.drawImage(videoEl, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, crop.width, crop.height);
+            context.restore();
+            paintGpsStamp(context, crop.width, crop.height);
+        }
+        paintFrameId = requestAnimationFrame(paintRecordFrame);
+    }
+
+    function pickRecorderMime() {
+        if (!window.MediaRecorder) return '';
+        const types = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+        return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+    }
+
+    async function ensureMic() {
+        if (!mediaStream || mediaStream.getAudioTracks().length) return;
+        try {
+            const audio = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audio.getAudioTracks().forEach((track) => mediaStream.addTrack(track));
+        } catch (err) {
+            // The clip still records. The phone declined the microphone.
+        }
+    }
+
+    function finishRecording(mime) {
+        const chunks = recordChunks.splice(0);
+        const discard = discardRecording;
+        discardRecording = false;
+        mediaRecorder = null;
+        if (discard || chunks.length === 0) return;
+        const type = mime.split(';')[0] || 'video/webm';
+        const ext = type.includes('mp4') ? 'mp4' : 'webm';
+        const blob = new Blob(chunks, { type });
+        const timestamp = new Date();
+        const filename = `gps-${timestamp.getTime()}.${ext}`;
+        const file = new File([blob], filename, { type, lastModified: timestamp.getTime() });
+        const previewUrl = URL.createObjectURL(blob);
+        const { latitude, longitude, accuracy } = lastPosition.coords;
+        pendingCapture = {
+            file,
+            filename,
+            previewUrl,
+            kind: 'video',
+            latitude,
+            longitude,
+            accuracy,
+            captured_at: timestamp.toISOString(),
+            place: placeEl?.textContent || '',
+            mapThumbSrc: mapThumbImg?.src || '',
+        };
+        setError('');
+        enterReviewMode(previewUrl, 'video');
+    }
+
+    function stopRecording(discard = false) {
+        if (!recording && (!mediaRecorder || mediaRecorder.state === 'inactive')) return;
+        discardRecording = discard;
+        recording = false;
+        clearInterval(recordTimer);
+        recordTimer = null;
+        cancelAnimationFrame(paintFrameId);
+        document.getElementById('gps-mode-rail')?.classList.remove('d-none');
+        document.getElementById('gps-record-timer')?.classList.add('d-none');
+        updateCaptureReadiness();
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        } else if (discard) {
+            discardRecording = false;
+            recordChunks = [];
+        }
+    }
+
+    async function startRecording() {
+        if (recording) return;
+        if (!lastPosition) {
+            setError('Waiting for GPS fix. Hold steady until coordinates appear, then record.');
+            return;
+        }
+        if (!canAddMoreCaptures()) {
+            setError(`Maximum of ${maxCaptures} evidence files allowed.`);
+            return;
+        }
+        const mime = pickRecorderMime();
+        if (!mime || !canvasEl?.captureStream) {
+            setError('This phone cannot record video here. Use photo instead.');
+            return;
+        }
+        const crop = frameCrop();
+        if (!crop) {
+            videoEl?.play().catch(() => {});
+            setError('Camera preview is still starting. Wait for the picture, then record.');
+            return;
+        }
+        await ensureMic();
+        canvasEl.width = crop.width;
+        canvasEl.height = crop.height;
+        recording = true;
+        discardRecording = false;
+        recordChunks = [];
+        updateCaptureReadiness();
+        document.getElementById('gps-mode-rail')?.classList.add('d-none');
+        const timerEl = document.getElementById('gps-record-timer');
+        if (timerEl) {
+            timerEl.textContent = '0:00';
+            timerEl.classList.remove('d-none');
+        }
+        paintRecordFrame();
+        const stream = canvasEl.captureStream(20);
+        mediaStream?.getAudioTracks().forEach((track) => {
+            try { stream.addTrack(track); } catch (err) { /* video-only */ }
+        });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 700000 });
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size) recordChunks.push(event.data);
+        };
+        mediaRecorder.onstop = () => finishRecording(mime);
+        mediaRecorder.start(250);
+        recordStartedAt = Date.now();
+        recordTimer = setInterval(() => {
+            const elapsed = Date.now() - recordStartedAt;
+            const seconds = Math.min(Math.round(videoMaxMs / 1000), Math.floor(elapsed / 1000));
+            if (timerEl) timerEl.textContent = `0:${String(seconds).padStart(2, '0')}`;
+            if (elapsed >= videoMaxMs) stopRecording(false);
+        }, 200);
+    }
+
+    function setCaptureMode(mode) {
+        if (recording) return;
+        captureMode = mode === 'video' ? 'video' : 'photo';
+        document.querySelectorAll('[data-gps-mode]').forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.gpsMode === captureMode);
+        });
+        updateCaptureReadiness();
+        if (captureMode === 'video') ensureMic();
+    }
+
+    function mountModeRail() {
+        if (!liveViewEl || document.getElementById('gps-mode-rail')) return;
+        const rail = document.createElement('div');
+        rail.id = 'gps-mode-rail';
+        rail.className = 'gps-mode-rail';
+        rail.innerHTML = '<button type="button" data-gps-mode="photo" class="is-active">Photo</button><button type="button" data-gps-mode="video">Video</button>';
+        liveViewEl.appendChild(rail);
+        const timer = document.createElement('div');
+        timer.id = 'gps-record-timer';
+        timer.className = 'gps-record-timer d-none';
+        timer.textContent = '0:00';
+        liveViewEl.appendChild(timer);
+        rail.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-gps-mode]');
+            if (!button) return;
+            setCaptureMode(button.dataset.gpsMode);
+        });
+        let startX = null;
+        liveViewEl.addEventListener('touchstart', (event) => {
+            if (recording) return;
+            startX = event.changedTouches[0].clientX;
+        }, { passive: true });
+        liveViewEl.addEventListener('touchend', (event) => {
+            if (startX == null || recording) return;
+            const dx = event.changedTouches[0].clientX - startX;
+            startX = null;
+            if (Math.abs(dx) < 56) return;
+            setCaptureMode(dx < 0 ? 'video' : 'photo');
+        }, { passive: true });
+    }
+
     startBtn?.addEventListener('click', startCamera);
     stopBtn?.addEventListener('click', stopCamera);
-    captureBtn?.addEventListener('click', capturePhoto);
+    captureBtn?.addEventListener('click', () => {
+        if (captureMode === 'video') {
+            if (recording) stopRecording(false);
+            else startRecording();
+            return;
+        }
+        capturePhoto();
+    });
+    mountModeRail();
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible' || !mediaStream || !videoEl) return;

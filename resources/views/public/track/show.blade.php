@@ -281,7 +281,11 @@
                         <div class="row g-2">
                             @foreach ($reporterEvidence as $ev)
                                 <div class="col-6 col-md-4">
-                                    <img src="{{ route('public.track.evidence', $ev) }}" class="img-fluid rounded shadow-sm rg-evidence-thumb" style="cursor: zoom-in;" alt="{{ $ev->original_filename }}" loading="lazy">
+                                    @if (str_starts_with((string) $ev->mime_type, 'video/'))
+                                        <video src="{{ route('public.track.evidence', $ev) }}" class="img-fluid rounded shadow-sm w-100" style="background:#0f172a;" controls playsinline preload="metadata"></video>
+                                    @elseif (str_starts_with((string) $ev->mime_type, 'image/'))
+                                        <img src="{{ route('public.track.evidence', $ev) }}" class="img-fluid rounded shadow-sm rg-evidence-thumb" style="cursor: zoom-in;" alt="{{ $ev->original_filename }}" loading="lazy">
+                                    @endif
                                 </div>
                             @endforeach
                         </div>

@@ -24,7 +24,7 @@
             <span class="rg-icon-tile"><i class="bi bi-camera-video"></i></span>
             <div>
                 <h3 class="h6 fw-bold mb-1">GPS Camera</h3>
-                <p class="text-muted small mb-0">Capture geotagged photos using your device camera and GPS — the account that captured it is recorded automatically.</p>
+                <p class="text-muted small mb-0">Swipe between photo and a 1-minute video. Both are tagged with this device’s GPS. Videos stay on the case and are left out of printed reports.</p>
             </div>
         </div>
         <span class="badge rounded-pill bg-secondary" id="gps-camera-status">Camera off</span>
@@ -126,7 +126,7 @@
     </div>
 
     <p class="small text-muted mt-2 mb-0">
-        Each capture tags the photo with live coordinates, full address, a map preview, and the date/time — burned into the image and recorded against your account.
+        Photo and video both carry the live coordinates, place, and time. A video stops at 1 minute. Printed reports include photos only.
     </p>
 
     <div class="row g-2 mt-2" id="gps-camera-preview"></div>

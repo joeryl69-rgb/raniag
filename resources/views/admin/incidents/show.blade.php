@@ -148,6 +148,8 @@
                                                 <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-public-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
                                                     <img src="{{ $ev->url() }}" class="card-img-top" alt="Evidence">
                                                 </a>
+                                            @elseif (str_starts_with((string) $ev->mime_type, 'video/'))
+                                                <video src="{{ $ev->url() }}" class="card-img-top" style="height: 150px; object-fit: cover; background: #0f172a;" controls playsinline preload="metadata"></video>
                                             @else
                                                 <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top" style="height: 150px;">
                                                     <i class="bi bi-file-earmark fs-1"></i>
@@ -624,6 +626,9 @@
                                             <div class="row g-2 mb-3">
                                                 @foreach($assignmentEvidence as $ev)
                                                     <div class="col-4 col-sm-3">
+                                                        @if(str_starts_with((string) $ev->mime_type, 'video/'))
+                                                            <video src="{{ $ev->url() }}" class="img-fluid rounded border shadow-sm w-100" style="aspect-ratio: 4/3; object-fit: cover; background:#0f172a;" controls playsinline preload="metadata"></video>
+                                                        @else
                                                         <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-assignment-{{ $assignment->id }}" data-caption="{{ $ev->original_filename }}">
                                                             @if(str_starts_with($ev->mime_type, 'image/'))
                                                                 <img src="{{ $ev->url() }}" class="img-fluid rounded border shadow-sm" style="aspect-ratio: 4/3; object-fit: cover;" alt="Evidence">
@@ -633,6 +638,7 @@
                                                                 </div>
                                                             @endif
                                                         </a>
+                                                        @endif
                                                     </div>
                                                 @endforeach
                                             </div>

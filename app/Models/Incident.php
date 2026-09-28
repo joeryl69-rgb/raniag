@@ -81,6 +81,22 @@ class Incident extends Model
         return $this->belongsTo(Agency::class);
     }
 
+    /**
+     * The original public report included a GPS-camera photo or video.
+     * Without that, the reporter had to leave contact details and could
+     * not stay anonymous.
+     */
+    public function reporterSubmittedGpsCamera(): bool
+    {
+        $evidence = $this->relationLoaded('evidence')
+            ? $this->evidence
+            : $this->evidence()->get();
+
+        return $evidence->contains(
+            fn ($item) => $item->uploaded_by === null && $item->is_gps_capture
+        );
+    }
+
     public function evidence(): HasMany
     {
         return $this->hasMany(Evidence::class);
