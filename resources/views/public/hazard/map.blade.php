@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Live Map — Hazards & Risk')
+@section('title', 'Live Map')
 
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -10,11 +10,11 @@
 <div class="container">
     <div class="rg-page-head d-flex flex-wrap justify-content-between align-items-start gap-3" data-rg-reveal>
         <div>
-            <span class="rg-eyebrow"><i class="bi bi-broadcast-pin"></i> Live situational awareness</span>
-            <h1 class="rg-page-title">Hazard &amp; risk map</h1>
+            <span class="rg-eyebrow"><i class="bi bi-broadcast-pin"></i> Live map</span>
+            <h1 class="rg-page-title">What is happening in Pamplona</h1>
             <p class="rg-page-sub mb-0">
-                Active hazard zones, open evacuation centers, and community risk awareness across Pamplona
-                (barangay pressure only — individual reports stay private).
+                Hazard zones and evacuation centers are drawn by {{ config('raniag.organization') }}.
+                Risk shows how many reports are still open in each barangay. Exact report locations stay private.
             </p>
         </div>
         <div class="text-md-end">
@@ -33,15 +33,15 @@
         </div>
 
         <aside class="rg-hazard-panel">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <img src="/images/guide/jo-map.svg" alt="JO" width="48" height="60" class="flex-shrink-0" id="hazard-jo-avatar">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <img src="/images/guide/jo-map.svg" alt="" width="40" height="50" class="flex-shrink-0" id="hazard-jo-avatar">
                 <div>
-                    <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
-                    <div class="small text-muted" id="hazard-jo-tip">Turn on My location for a live route to the nearest open center. Risk awareness shows where open reports are concentrated by barangay.</div>
+                    <div class="small fw-bold" style="color:var(--rg-brand);">Live map guide</div>
+                    <div class="small text-muted" id="hazard-jo-tip">Tap a zone or center on the map for the advisory, capacity, and barangay. Use the tabs below so this panel stays short on a phone.</div>
                 </div>
             </div>
 
-            <div class="rg-hazard-chips mb-3" role="group" aria-label="Map layers">
+            <div class="rg-hazard-chips mb-2" role="group" aria-label="Map layers">
                 <input type="checkbox" class="btn-check" id="layer-zones" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-zones">Hazard zones</label>
 
@@ -49,7 +49,7 @@
                 <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
 
                 <input type="checkbox" class="btn-check" id="layer-risk" checked autocomplete="off">
-                <label class="btn btn-sm rg-hazard-chip" for="layer-risk">Risk awareness</label>
+                <label class="btn btn-sm rg-hazard-chip" for="layer-risk">Barangay risk</label>
 
                 <input type="checkbox" class="btn-check" id="layer-you" autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-you">My location</label>
@@ -57,45 +57,54 @@
 
             <p class="small text-muted d-none mb-2" id="hazard-geo-status" role="status"></p>
 
-            <div class="rg-hazard-legend mb-3">
-                <span><i class="rg-hazard-swatch" style="background:#b45309"></i> Hazard zone</span>
-                <span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%"></i> Evac center</span>
-                <span><i class="rg-hazard-swatch" style="background:#f97316"></i> Risk (open reports)</span>
-                <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> My location</span>
+            <div class="rg-hazard-legend mb-2">
+                <span><i class="rg-hazard-swatch" style="background:#b45309"></i> Zone</span>
+                <span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%"></i> Center</span>
+                <span><i class="rg-hazard-swatch" style="background:#f97316"></i> Open reports</span>
+                <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> You</span>
             </div>
 
-            <div id="risk-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small mb-2">
-                <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Community risk awareness</div>
-                <div id="risk-summary" class="fw-semibold">Loading…</div>
-                <div id="risk-list" class="mt-1 text-muted" style="font-size:.78rem"></div>
+            <div class="rg-hazard-tabs" role="tablist" aria-label="Map details">
+                <button type="button" class="rg-hazard-tab is-active" data-hazard-tab="risk" role="tab" aria-selected="true">Risk</button>
+                <button type="button" class="rg-hazard-tab" data-hazard-tab="places" role="tab" aria-selected="false">Places</button>
+                <button type="button" class="rg-hazard-tab" data-hazard-tab="route" role="tab" aria-selected="false">Route</button>
             </div>
 
-            <div id="nearest-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small d-none mb-2"></div>
-
-            <div id="route-box" class="rg-hazard-route border rounded-3 py-2 px-3 small d-none mb-2">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                    <div class="fw-semibold">Route to nearest center</div>
-                    <div class="rg-hazard-chips" role="group" aria-label="Route mode">
-                        <input type="radio" class="btn-check" name="route-profile" id="route-walk" value="walking" checked autocomplete="off">
-                        <label class="btn btn-sm rg-hazard-chip" for="route-walk">Walk</label>
-                        <input type="radio" class="btn-check" name="route-profile" id="route-drive" value="driving" autocomplete="off">
-                        <label class="btn btn-sm rg-hazard-chip" for="route-drive">Drive</label>
-                    </div>
+            <div class="rg-hazard-pane" data-hazard-pane="risk">
+                <div id="risk-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small mb-2">
+                    <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Open reports by barangay</div>
+                    <div id="risk-summary" class="fw-semibold">Loading…</div>
+                    <div id="risk-list" class="mt-1 text-muted" style="font-size:.78rem"></div>
                 </div>
-                <p class="mb-1 text-muted" id="route-summary">Turn on My location to see a live path.</p>
-                <p class="mb-0 small text-danger d-none" id="route-status" role="status"></p>
+                <div id="nearest-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small d-none mb-2"></div>
+                <div id="containing-zones-box" class="alert alert-warning border py-2 px-3 small d-none mb-0"></div>
             </div>
 
-            <div id="containing-zones-box" class="alert alert-warning border py-2 px-3 small d-none mb-3"></div>
-
-            <div id="zone-section">
-                <h2 class="h6 fw-bold">Active zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
-                <div id="zone-list" class="d-grid gap-1 mb-3"></div>
+            <div class="rg-hazard-pane d-none" data-hazard-pane="places">
+                <div id="zone-section">
+                    <h2 class="h6 fw-bold">Hazard zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
+                    <div id="zone-list" class="d-grid gap-1 mb-3"></div>
+                </div>
+                <div id="center-section">
+                    <h2 class="h6 fw-bold">Open evacuation centers <span class="text-muted fw-normal" id="center-count"></span></h2>
+                    <div id="center-list" class="d-grid gap-1"></div>
+                </div>
             </div>
 
-            <div id="center-section">
-                <h2 class="h6 fw-bold">Open centers <span class="text-muted fw-normal" id="center-count"></span></h2>
-                <div id="center-list" class="d-grid gap-1"></div>
+            <div class="rg-hazard-pane d-none" data-hazard-pane="route">
+                <div id="route-box" class="rg-hazard-route border rounded-3 py-2 px-3 small mb-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div class="fw-semibold">Nearest open center</div>
+                        <div class="rg-hazard-chips" role="group" aria-label="Route mode">
+                            <input type="radio" class="btn-check" name="route-profile" id="route-walk" value="walking" checked autocomplete="off">
+                            <label class="btn btn-sm rg-hazard-chip" for="route-walk">Walk</label>
+                            <input type="radio" class="btn-check" name="route-profile" id="route-drive" value="driving" autocomplete="off">
+                            <label class="btn btn-sm rg-hazard-chip" for="route-drive">Drive</label>
+                        </div>
+                    </div>
+                    <p class="mb-1 text-muted" id="route-summary">Turn on My location to see a live path.</p>
+                    <p class="mb-0 small text-danger d-none" id="route-status" role="status"></p>
+                </div>
             </div>
         </aside>
     </div>

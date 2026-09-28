@@ -76,7 +76,7 @@
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <div>
                 <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>UPDATES</span>
-                <h2 class="h4 fw-bold mb-0">{{ __('Updates &amp; Announcements') }}</h2>
+                <h2 class="h4 fw-bold mb-0">{{ __('Updates and announcements') }}</h2>
             </div>
         </div>
 

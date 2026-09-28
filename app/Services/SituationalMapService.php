@@ -47,7 +47,9 @@ class SituationalMapService
                 'name' => $zone->name,
                 'geometry' => $zone->geometry,
                 'color' => $zone->displayColor(),
+                'barangay' => $zone->barangay,
                 'advisory_note' => $zone->advisory_note,
+                'advisory_url' => $zone->advisory_url,
                 'type' => $zone->type ? ['name' => $zone->type->name, 'color' => $zone->type->color] : null,
             ];
         })->values();
@@ -69,6 +71,8 @@ class SituationalMapService
                 'name' => $c->name,
                 'latitude' => (float) $c->latitude,
                 'longitude' => (float) $c->longitude,
+                'barangay' => $c->barangay,
+                'address' => $c->address,
                 'capacity' => $c->capacity,
                 'notes' => $c->notes,
                 'is_open' => true,
@@ -238,6 +242,7 @@ class SituationalMapService
                 }
 
                 $units[] = [
+                    'id' => $assignment->id.'-'.$user->id,
                     'assignment_id' => $assignment->id,
                     'label' => $label,
                     'field_phase' => $assignment->field_phase,
@@ -248,11 +253,10 @@ class SituationalMapService
             }
         }
 
-        // Deduplicate by approximate position + label
         $seen = [];
         $unique = [];
         foreach ($units as $unit) {
-            $key = $unit['label'].'|'.round($unit['latitude'], 4).'|'.round($unit['longitude'], 4);
+            $key = $unit['id'];
             if (isset($seen[$key])) {
                 continue;
             }

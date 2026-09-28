@@ -3,8 +3,8 @@
 test('public hazard map page renders live risk chrome', function () {
     $this->get(route('public.hazard.map'))
         ->assertOk()
-        ->assertSee('Hazard &amp; risk map', false)
-        ->assertSee('Risk awareness', false)
+        ->assertSee('What is happening in Pamplona', false)
+        ->assertSee('Barangay risk', false)
         ->assertSee('id="hazard-map"', false)
         ->assertSee('data-lenis-prevent', false);
 });

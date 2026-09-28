@@ -171,7 +171,7 @@
             <div class="card raniag-card rg-app-card mb-4" id="case-documents">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-folder2-open me-2 text-primary"></i>Case Documents Repository</h5>
-                    <div class="text-muted small mt-1">Attach a photo (or file) of each paper form for this incident. These are kept on file and can be included in printable copies requested by agencies.</div>
+                    <div class="text-muted small mt-1">Upload a photo of each paper form. The file is stored as an image. Text is not scanned from it.</div>
                 </div>
                 <div class="card-body">
                     @php
@@ -199,10 +199,6 @@
                                                             <div class="rg-docthumb-img rg-docthumb-file"><i class="bi bi-file-earmark-pdf fs-4"></i></div>
                                                         @endif
                                                     </a>
-                                                    <button type="button" class="btn btn-sm btn-outline-dark rg-docthumb-textbtn" title="View/edit scanned text"
-                                                        onclick="openTextModal({{ $incident->id }}, {{ $doc->id }}, @js($docType->label()), @js($doc->extracted_text ?? ''))">
-                                                        <i class="bi bi-body-text"></i>
-                                                    </button>
                                                     <form method="POST" action="{{ route('admin.incidents.documents.destroy', [$incident->id, $doc->id]) }}" class="rg-docthumb-delform" onsubmit="return confirm('Remove this document?');">
                                                         @csrf
                                                         @method('DELETE')
@@ -214,8 +210,8 @@
                                     @endif
 
                                     <div class="d-flex gap-2">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), true)"><i class="bi bi-camera me-1"></i>Take Photo</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), false)"><i class="bi bi-upload me-1"></i>Upload File</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), true)"><i class="bi bi-camera me-1"></i>Take photo</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), false)"><i class="bi bi-upload me-1"></i>Upload image</button>
                                     </div>
                                 </div>
                             </div>
@@ -224,10 +220,6 @@
                 </div>
             </div>
 
-            {{-- Scan popup: pick/take a photo, auto-extract its text client-side
-                 (same "GPS-camera popup" UX pattern), let the admin review and
-                 edit the text, then submit — no need to leave the browser for
-                 a separate scanning app. --}}
             <div class="modal fade" id="scanModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg modal-dialog-scrollable rg-scan-dialog">
                     <div class="modal-content">
@@ -235,24 +227,21 @@
                             @csrf
                             <input type="hidden" name="document_type" id="scanDocType">
                             <input type="hidden" name="is_camera_capture" id="scanIsCamera">
-                            <input type="hidden" name="extracted_text" id="scanExtractedText">
                             <div class="modal-header">
-                                <h5 class="modal-title"><i class="bi bi-camera-fill me-2 text-primary"></i>Scan <span id="scanDocLabel" class="fw-bold ms-1"></span></h5>
+                                <h5 class="modal-title"><i class="bi bi-image me-2 text-primary"></i>Add photo of <span id="scanDocLabel" class="fw-bold ms-1"></span></h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
+                                <p class="small text-muted">The photo is saved as-is. Nothing is read or converted into text.</p>
                                 <div class="d-flex gap-2 align-items-start mb-3">
-                                    <input type="file" name="file" id="scanFileInput" class="form-control" required>
+                                    <input type="file" name="file" id="scanFileInput" class="form-control" accept="image/*" required>
                                     <button type="button" class="btn btn-outline-secondary flex-shrink-0 d-none" id="scanRetakeBtn" title="Retake photo">
                                         <i class="bi bi-arrow-counterclockwise me-1"></i>Retake
                                     </button>
                                 </div>
-                                <div id="scanPreviewWrap" class="d-none text-center mb-3">
-                                    <img id="scanPreviewImg" class="img-fluid rounded border" style="max-height:280px;" alt="Scan preview">
+                                <div id="scanPreviewWrap" class="d-none text-center mb-0">
+                                    <img id="scanPreviewImg" class="img-fluid rounded border" style="max-height:280px;" alt="Document photo preview">
                                 </div>
-                                <div id="scanOcrStatus" class="small text-muted mb-2"></div>
-                                <label class="form-label small fw-semibold">Extracted Text (editable)</label>
-                                <textarea id="scanTextArea" rows="8" class="form-control" placeholder="Scanned text will appear here automatically — you can edit it before saving."></textarea>
                             </div>
                             <div class="modal-footer rg-scan-footer">
                                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -292,31 +281,7 @@
             </style>
             @endpush
 
-            {{-- View/edit already-extracted text for an existing document. --}}
-            <div class="modal fade" id="textModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <form method="POST" id="textForm">
-                            @csrf
-                            @method('PUT')
-                            <div class="modal-header">
-                                <h5 class="modal-title"><i class="bi bi-body-text me-2 text-primary"></i><span id="textDocLabel"></span> &mdash; Extracted Text</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <textarea name="extracted_text" id="textDocArea" rows="10" class="form-control" placeholder="No text extracted yet."></textarea>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
             @push('scripts')
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js" integrity="sha384-llrj4SUC221pVa/E3xKZwmp2zd8q9ReUcs9N37u6A5pQhjiymLsQRg+1AysLVKOZ" crossorigin="anonymous"></script>
             <script src="{{ asset('js/document-camera.js') }}?v={{ @filemtime(public_path('js/document-camera.js')) }}"></script>
             <script>
                 const incidentDocumentsBaseUrl = @json(route('admin.incidents.documents.store', $incident->id));
@@ -337,20 +302,14 @@
                     document.getElementById('scanDocType').value = docTypeValue;
                     document.getElementById('scanIsCamera').value = isCamera ? '1' : '0';
                     document.getElementById('scanDocLabel').textContent = docLabel;
-                    document.getElementById('scanTextArea').value = '';
-                    document.getElementById('scanOcrStatus').textContent = '';
                     document.getElementById('scanPreviewWrap').classList.add('d-none');
                     scanIsCameraFlow = !!isCamera;
                     document.getElementById('scanRetakeBtn').classList.toggle('d-none', !isCamera);
                     const fileInput = document.getElementById('scanFileInput');
                     fileInput.value = '';
-                    fileInput.setAttribute('accept', isCamera ? 'image/*' : 'image/*,application/pdf');
-                    fileInput.removeAttribute('capture');
+                    fileInput.setAttribute('accept', 'image/*');
 
                     if (isCamera) {
-                        // Guided in-app camera (framing guide + flash) instead of
-                        // handing off to the phone's native camera app — a properly
-                        // framed, well-lit capture is what actually fixes OCR accuracy.
                         window.RaniagDocCamera.open(scanFileFromCamera);
                         return;
                     }
@@ -358,94 +317,30 @@
                     new bootstrap.Modal(document.getElementById('scanModal')).show();
                 }
 
-                // "Retake" — lets you reshoot/reselect without closing the whole
-                // form and losing your place, matching the retake affordance the
-                // in-app camera itself already offers before you get here.
                 document.getElementById('scanRetakeBtn').addEventListener('click', function () {
                     if (scanIsCameraFlow) {
                         window.RaniagDocCamera.open(scanFileFromCamera);
                     } else {
                         document.getElementById('scanFileInput').value = '';
                         document.getElementById('scanPreviewWrap').classList.add('d-none');
-                        document.getElementById('scanTextArea').value = '';
-                        document.getElementById('scanOcrStatus').textContent = '';
                     }
                 });
 
                 document.getElementById('scanFileInput').addEventListener('change', function (e) {
                     const file = e.target.files[0];
-                    if (!file) return;
-                    const status = document.getElementById('scanOcrStatus');
                     const previewWrap = document.getElementById('scanPreviewWrap');
                     const previewImg = document.getElementById('scanPreviewImg');
-                    const textArea = document.getElementById('scanTextArea');
-
-                    if (!file.type.startsWith('image/')) {
+                    if (!file || !file.type.startsWith('image/')) {
                         previewWrap.classList.add('d-none');
-                        status.textContent = 'Text scanning only works for image files — PDFs are attached as-is.';
                         return;
                     }
-
-                    // Grayscale + contrast-stretch the image before handing it to
-                    // Tesseract — flat/dim lighting (common with the in-app camera
-                    // on a phone) was a real contributor to garbled OCR output.
-                    function preprocessForOcr(dataUrl) {
-                        return new Promise((resolve) => {
-                            const img = new Image();
-                            img.onload = function () {
-                                const canvas = document.createElement('canvas');
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0);
-                                const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                                const d = frame.data;
-                                for (let i = 0; i < d.length; i += 4) {
-                                    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-                                    const contrasted = Math.min(255, Math.max(0, (gray - 128) * 1.35 + 128));
-                                    d[i] = d[i + 1] = d[i + 2] = contrasted;
-                                }
-                                ctx.putImageData(frame, 0, 0);
-                                resolve(canvas.toDataURL('image/jpeg', 0.95));
-                            };
-                            img.onerror = function () { resolve(dataUrl); };
-                            img.src = dataUrl;
-                        });
-                    }
-
                     const reader = new FileReader();
                     reader.onload = function (evt) {
                         previewImg.src = evt.target.result;
                         previewWrap.classList.remove('d-none');
-                        status.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Scanning document for text…';
-                        document.getElementById('scanSubmitBtn').disabled = true;
-
-                        preprocessForOcr(evt.target.result)
-                            .then((processedUrl) => Tesseract.recognize(processedUrl, 'eng'))
-                            .then(({ data: { text } }) => {
-                                textArea.value = text.trim();
-                                status.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Text scanned — review and edit below before saving. If it looks off, use Retake for a sharper shot.';
-                            })
-                            .catch(() => {
-                                status.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Automatic scan failed — you can still type the text manually, or use Retake.';
-                            })
-                            .finally(() => {
-                                document.getElementById('scanSubmitBtn').disabled = false;
-                            });
                     };
                     reader.readAsDataURL(file);
                 });
-
-                document.getElementById('scanForm').addEventListener('submit', function () {
-                    document.getElementById('scanExtractedText').value = document.getElementById('scanTextArea').value;
-                });
-
-                function openTextModal(incidentId, documentId, docLabel, existingText) {
-                    document.getElementById('textForm').action = `/admin/incidents/${incidentId}/documents/${documentId}/text`;
-                    document.getElementById('textDocLabel').textContent = docLabel;
-                    document.getElementById('textDocArea').value = existingText || '';
-                    new bootstrap.Modal(document.getElementById('textModal')).show();
-                }
             </script>
             @endpush
 

@@ -55,7 +55,8 @@
         const statusEl = document.getElementById(cfg.statusEl || 'track-units-status');
 
         async function paint(units) {
-            const list = Array.isArray(units) ? units : [];
+            const raw = Array.isArray(units) ? units : [];
+            const list = Mapbox?.spreadUnitPositions ? Mapbox.spreadUnitPositions(raw) : raw;
 
             const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
             let plotted = 0;
@@ -66,14 +67,16 @@
                 if (Number.isNaN(lat) || Number.isNaN(lng)) return;
                 plotted += 1;
                 bounds.extend([lat, lng]);
-                const key = String(u.label || 'Responder');
+                const key = String(u.id || u.assignment_id || u.label || 'Responder');
                 seen.add(key);
+                const phase = String(u.field_phase || 'assigned').replaceAll('_', ' ');
                 const existing = markerByKey.get(key);
                 if (existing) {
                     existing.setLatLng([lat, lng]);
+                    existing.setPopupContent(`<strong>${esc(u.label)}</strong><br>${esc(phase)}`);
                 } else {
-                    const marker = L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 })
-                        .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(u.field_phase || 'assigned')}`)
+                    const marker = L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 + plotted })
+                        .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(phase)}`)
                         .addTo(unitGroup);
                     markerByKey.set(key, marker);
                 }
@@ -152,9 +155,11 @@
                 return;
             }
             try {
-                const res = await fetch(cfg.unitsUrl, {
+                const glue = cfg.unitsUrl.includes('?') ? '&' : '?';
+                const res = await fetch(`${cfg.unitsUrl}${glue}_=${Date.now()}`, {
                     headers: { Accept: 'application/json' },
                     credentials: 'same-origin',
+                    cache: 'no-store',
                 });
                 if (!res.ok) {
                     if (statusEl) statusEl.textContent = `Could not load responders (${res.status}).`;

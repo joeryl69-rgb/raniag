@@ -37,6 +37,25 @@ class HazardMapController extends Controller
         return response()->json($this->situational->publicSnapshot());
     }
 
+    public function barangay(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $name = $this->geofence->resolveBarangay((float) $data['lat'], (float) $data['lng']);
+        $address = config('raniag.address');
+
+        return response()->json([
+            'barangay' => $name,
+            'municipality' => $address['municipality'] ?? 'Pamplona',
+            'province' => $address['province'] ?? 'Cagayan',
+            'country' => $address['country'] ?? 'Philippines',
+            'inside' => $name !== null,
+        ])->header('Cache-Control', 'no-store');
+    }
+
     public function nearestCenter(Request $request): JsonResponse
     {
         $data = $request->validate([

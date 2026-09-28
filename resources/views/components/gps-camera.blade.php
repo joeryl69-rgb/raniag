@@ -65,7 +65,7 @@
                             <div class="gps-watermark-text">
                                 <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
                                 <div class="gps-watermark-line" id="gps-camera-coords">Waiting for GPS signal…</div>
-                                <div class="gps-watermark-line" id="gps-camera-place">Resolving address…</div>
+                                <div class="gps-watermark-line" id="gps-camera-place">Waiting for GPS…</div>
                                 <div class="gps-watermark-line" id="gps-camera-time">—</div>
                             </div>
                         </div>

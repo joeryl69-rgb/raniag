@@ -249,55 +249,53 @@
                 window.RANIAG_LOCATION_API.resolve(latitude, longitude);
             }
         } else {
-            // Neither global exists here — this page (agency/personnel incident
-            // detail) never loads public-report.js, which is the only place
-            // those two are defined. Previously that silently meant address
-            // resolution never ran on these pages at all: the watermark stayed
-            // on "Resolving address…" forever and the capture button never
-            // enabled, because isLocationReady() waits on a resolved
-            // barangay/municipality that was never going to arrive. Do a
-            // simple, self-contained reverse geocode instead so this page
-            // doesn't depend on the public form's script being present.
-            standaloneResolveAddress(latitude, longitude);
+            resolvePlaceLocally(latitude, longitude);
         }
     }
 
-    // Lightweight fallback reverse-geocode, used only when this page has no
-    // RANIAG_MAP_API/RANIAG_LOCATION_API (i.e. it isn't the public report
-    // form). Dispatches the same 'raniag:location-resolved' event the public
-    // page uses, so the rest of this file needs no special-casing.
-    function standaloneResolveAddress(lat, lng) {
+    // Barangay comes from RANIAG's own boundary file, which answers in
+    // milliseconds. Nominatim was blocking the shutter for several seconds
+    // and often never returned on a phone network.
+    function resolvePlaceLocally(lat, lng) {
+        if (!lastResolved || !(lastResolved.barangay || lastResolved.municipality)) {
+            window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                detail: {
+                    lat,
+                    lng,
+                    municipality: 'Pamplona',
+                    province: 'Cagayan',
+                    country: 'Philippines',
+                },
+            }));
+        }
+
         const now = Date.now();
-        if (now - lastGeocodedAt < 8000) {
+        if (now - lastGeocodedAt < 4000) {
             return;
         }
         lastGeocodedAt = now;
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
-        fetch(url, { headers: { Accept: 'application/json' } })
+        const base = config.barangayUrl || '/hazard-map/barangay';
+        const url = `${base}?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 2500);
+        fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal })
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
-                const addr = data?.address || {};
-                const barangay = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || null;
-                const municipality = addr.city || addr.town || addr.municipality || addr.county || null;
-                const province = addr.state || null;
-                const country = addr.country || null;
+                clearTimeout(timer);
+                if (!data) return;
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                     detail: {
-                        lat, lng, barangay,
-                        // isLocationReady() requires barangay OR municipality — fall
-                        // back to the raw display_name so a real fix is never stuck
-                        // waiting on structured fields Nominatim didn't return.
-                        municipality: municipality || data?.display_name || 'Location detected',
-                        province, country,
+                        lat,
+                        lng,
+                        barangay: data.barangay || null,
+                        municipality: data.municipality || 'Pamplona',
+                        province: data.province || 'Cagayan',
+                        country: data.country || 'Philippines',
                     },
                 }));
             })
             .catch(() => {
-                // Network/geocoder failure: still unblock capture using the raw
-                // coordinates rather than leaving the operator stuck indefinitely.
-                window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                    detail: { lat, lng, municipality: `${lat.toFixed(5)}, ${lng.toFixed(5)}` },
-                }));
+                clearTimeout(timer);
             });
     }
 
@@ -588,6 +586,23 @@
         }
     }
 
+    let sharedGpsBound = false;
+    let cameraOwnsWatch = false;
+
+    function onSharedGps(event) {
+        if (cameraOwnsWatch) return;
+        const lat = Number(event.detail?.lat);
+        const lng = Number(event.detail?.lng);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+        onGeoSuccess({
+            coords: {
+                latitude: lat,
+                longitude: lng,
+                accuracy: event.detail?.accuracy ?? null,
+            },
+        });
+    }
+
     function onGeoSuccess(position) {
         const accuracy = position.coords.accuracy;
 
@@ -602,6 +617,13 @@
         updateCoordsDisplay(position);
         setStatus('GPS active', 'success');
         setError('');
+
+        if (cameraOwnsWatch) {
+            const { latitude, longitude } = position.coords;
+            document.dispatchEvent(new CustomEvent('raniag:gps', {
+                detail: { lat: latitude, lng: longitude, accuracy },
+            }));
+        }
     }
 
     function onGeoError(error) {
@@ -633,8 +655,25 @@
             return;
         }
 
+        // The case page already watches GPS for the live route. A second
+        // watchPosition on the same phone drops updates, so the map moved
+        // while this camera stayed on "Waiting for GPS" until a tab switch
+        // woke the browser up.
+        if (window.RANIAG_LocationPing?.watching?.()) {
+            cameraOwnsWatch = false;
+            window.RANIAG_GpsOwner = 'ping';
+            if (!sharedGpsBound) {
+                document.addEventListener('raniag:gps', onSharedGps);
+                sharedGpsBound = true;
+            }
+            setStatus('Using the case GPS…', 'warning');
+            return;
+        }
+
         setStatus('Acquiring GPS…', 'warning');
         bestAccuracy = Infinity;
+        cameraOwnsWatch = true;
+        window.RANIAG_GpsOwner = 'camera';
         watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, geoOptions);
     }
 
@@ -642,6 +681,13 @@
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
+        }
+        if (cameraOwnsWatch) {
+            cameraOwnsWatch = false;
+            if (window.RANIAG_GpsOwner === 'camera') {
+                window.RANIAG_GpsOwner = null;
+            }
+            window.RANIAG_LocationPing?.refresh?.();
         }
     }
 
@@ -681,7 +727,12 @@
             if (videoEl) {
                 videoEl.srcObject = mediaStream;
                 videoEl.classList.toggle('gps-mirrored', facingMode === 'user');
-                await videoEl.play();
+                const playPreview = () => videoEl.play().catch(() => {});
+                if (cameraModalEl) {
+                    cameraModalEl.addEventListener('shown.bs.modal', playPreview, { once: true });
+                }
+                playPreview();
+                requestAnimationFrame(playPreview);
             }
             startBtn?.classList.add('d-none');
             stopBtn?.classList.remove('d-none');
@@ -807,7 +858,8 @@
         const nativeWidth = videoEl.videoWidth;
         const nativeHeight = videoEl.videoHeight;
         if (!nativeWidth || !nativeHeight) {
-            setError('Camera is not ready yet. Please wait a moment.');
+            videoEl.play().catch(() => {});
+            setError('Camera preview is still starting. Wait for the picture, then capture.');
             return;
         }
 
@@ -987,6 +1039,15 @@
     startBtn?.addEventListener('click', startCamera);
     stopBtn?.addEventListener('click', stopCamera);
     captureBtn?.addEventListener('click', capturePhoto);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || !mediaStream || !videoEl) return;
+        const resume = () => {
+            if (videoEl.srcObject) videoEl.play().catch(() => {});
+        };
+        resume();
+        setTimeout(resume, 250);
+    });
     switchBtn?.addEventListener('click', switchCamera);
     useLocationBtn?.addEventListener('click', useCurrentLocation);
 

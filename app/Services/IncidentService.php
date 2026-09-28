@@ -185,11 +185,23 @@ class IncidentService
             );
 
             if ($isPublic) {
-                try {
-                    $this->notifications->notifyReporterStatusUpdate($incident, $comment ?: 'Status is now '.$toStatus->label());
-                } catch (\Exception $e) {
-                    Log::warning('SMS alert to reporter failed: '.$e->getMessage());
-                }
+                $incidentId = $incident->id;
+                $updateMessage = $comment ?: 'Status is now '.$toStatus->label();
+                // Mail is sent after the browser already has the redirect.
+                // Sending it inside this transaction left Accept stuck on the
+                // loading screen whenever the mail server was slow.
+                dispatch(function () use ($incidentId, $updateMessage) {
+                    $fresh = Incident::query()->find($incidentId);
+                    if (! $fresh) {
+                        return;
+                    }
+                    try {
+                        app(\App\Services\NotificationService::class)
+                            ->notifyReporterStatusUpdate($fresh, $updateMessage);
+                    } catch (\Exception $e) {
+                        Log::warning('Reporter status notification failed: '.$e->getMessage());
+                    }
+                })->afterResponse();
             }
 
             Cache::forget('admin.dashboard.json');

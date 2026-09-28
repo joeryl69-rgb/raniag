@@ -60,6 +60,25 @@
             });
         }
 
+        function markOnSceneInPlace() {
+            const strip = document.getElementById('field-phase-strip');
+            if (strip) strip.dataset.fieldPhase = 'on_scene';
+            setStatus('You are on scene. Location stays on so the GPS camera can tag this spot.', 'live');
+            document.querySelectorAll('.rg-phase-step').forEach((step, index) => {
+                step.classList.toggle('is-done', index < 2);
+                step.classList.toggle('is-current', index === 2);
+                step.classList.toggle('is-pending', index > 2);
+            });
+            document.querySelectorAll('.rg-phase-connector').forEach((line) => line.classList.add('is-done'));
+            const form = document.querySelector('.field-phase-form');
+            if (form && !document.querySelector('.rg-field-done-hint')) {
+                const hint = document.createElement('div');
+                hint.className = 'rg-field-done-hint flex-grow-1';
+                hint.innerHTML = '<i class="bi bi-flag-fill me-1 text-success"></i>On scene — location stays on. Log the update and close the case when you are done.';
+                form.replaceWith(hint);
+            }
+        }
+
         function maybeArrive(lat, lng) {
             if (arrivalSent || currentPhase() !== 'en_route' || !opts.phaseUrl || !opts.scene) return;
             const sceneLat = Number(opts.scene.lat);
@@ -82,8 +101,11 @@
                 body: JSON.stringify({ field_phase: 'on_scene' }),
                 credentials: 'same-origin',
             }).then((res) => {
-                if (res.ok) window.location.reload();
-                else arrivalSent = false;
+                if (!res.ok) {
+                    arrivalSent = false;
+                    return;
+                }
+                markOnSceneInPlace();
             }).catch(() => {
                 arrivalSent = false;
             });
@@ -91,6 +113,12 @@
 
         function begin() {
             if (stopped) return;
+            if (global.RANIAG_GpsOwner === 'camera') {
+                if (tracking()) {
+                    setStatus('Live location is on. The GPS camera is using the same fix, so this page will not start a second one.', 'live');
+                }
+                return;
+            }
             if (watchId != null) {
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
@@ -128,15 +156,32 @@
             stop() {
                 stopped = true;
                 if (watchId != null) navigator.geolocation.clearWatch(watchId);
+                watchId = null;
             },
             begin,
             refresh() {
                 if (!stopped) begin();
             },
+            watching() {
+                return watchId != null;
+            },
+            note(lat, lng) {
+                if (stopped) return;
+                post(lat, lng);
+                maybeArrive(lat, lng);
+            },
         };
         active = api;
         return api;
     }
+
+    document.addEventListener('raniag:gps', (event) => {
+        if (global.RANIAG_GpsOwner !== 'camera' || !active) return;
+        const lat = Number(event.detail?.lat);
+        const lng = Number(event.detail?.lng);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+        if (typeof active.note === 'function') active.note(lat, lng);
+    });
 
     function enableFromGesture() {
         if (active) active.begin();
@@ -185,5 +230,14 @@
         );
     });
 
-    global.RANIAG_LocationPing = { start, enableFromGesture };
+    global.RANIAG_LocationPing = {
+        start,
+        enableFromGesture,
+        watching() {
+            return !!(active && active.watching());
+        },
+        refresh() {
+            if (active) active.refresh();
+        },
+    };
 })(window);

@@ -1937,6 +1937,36 @@ body.raniag-public {
   max-height: min(70vh, 640px);
   overflow: auto;
 }
+.rg-hazard-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.rg-hazard-tab {
+  flex: 1 1 0;
+  border: 1px solid var(--raniag-border, #dde5ea);
+  background: #fff;
+  color: #3a4560;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 6px 8px;
+}
+.rg-hazard-tab.is-active {
+  background: rgba(11, 94, 215, .1);
+  border-color: rgba(11, 94, 215, .35);
+  color: var(--rg-brand, #0b5ed7);
+}
+.rg-hazard-pane {
+  max-height: 280px;
+  overflow: auto;
+}
+@media (max-width: 991.98px) {
+  #hazard-map { height: 46vh; min-height: 240px; }
+  .rg-hazard-stage { min-height: 240px; }
+  .rg-hazard-panel { max-height: none; }
+  .rg-hazard-pane { max-height: 200px; }
+}
 .rg-hazard-list-item {
   border: 1px solid transparent;
   border-radius: 10px;

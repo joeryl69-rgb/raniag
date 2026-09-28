@@ -155,6 +155,37 @@
         return 0.52;
     }
 
+    function spreadUnitPositions(list) {
+        const groups = new Map();
+        (Array.isArray(list) ? list : []).forEach((u) => {
+            const lat = Number(u.latitude);
+            const lng = Number(u.longitude);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+            const bucket = `${lat.toFixed(4)}|${lng.toFixed(4)}`;
+            if (!groups.has(bucket)) groups.set(bucket, []);
+            groups.get(bucket).push(u);
+        });
+        const placed = [];
+        groups.forEach((group) => {
+            group.forEach((u, index) => {
+                if (group.length < 2) {
+                    placed.push(u);
+                    return;
+                }
+                const angle = (2 * Math.PI * index) / group.length;
+                const meters = 22;
+                const lat = Number(u.latitude);
+                const lng = Number(u.longitude);
+                placed.push({
+                    ...u,
+                    latitude: lat + (meters * Math.cos(angle)) / 111320,
+                    longitude: lng + (meters * Math.sin(angle)) / (111320 * Math.cos((lat * Math.PI) / 180)),
+                });
+            });
+        });
+        return placed;
+    }
+
     global.RANIAG_Mapbox = {
         addBasemap,
         fetchDirections,
@@ -165,5 +196,6 @@
         riskFillColor,
         riskFillOpacity,
         normalizeStyle,
+        spreadUnitPositions,
     };
 })(window);

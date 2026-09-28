@@ -195,17 +195,7 @@
                         @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
-                            <label for="description" class="form-label mb-0">Description <span class="text-danger">*</span></label>
-                            <div class="d-flex align-items-center gap-2">
-                                <span id="voice-listening-indicator" class="d-none small text-danger fw-semibold">
-                                    <span class="spinner-grow spinner-grow-sm me-1" role="status" aria-hidden="true"></span>Listening
-                                </span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="voice-to-text-btn" title="Dictate description" aria-pressed="false">
-                                    <i class="bi bi-mic"></i> Voice
-                                </button>
-                            </div>
-                        </div>
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
                         <textarea class="form-control @error('description') is-invalid @enderror" id="description"
                                   name="description" rows="5" required minlength="10" maxlength="5000"
                                   placeholder="Describe what happened, when it occurred, and who may be affected...">{{ old('description') }}</textarea>
@@ -214,7 +204,6 @@
                             <div class="form-text" id="description-guidance">Minimum 10 characters.</div>
                             <div class="form-text text-nowrap" id="description-counter" aria-live="polite">0 / 5000</div>
                         </div>
-                        <div class="form-text text-muted" id="voice-to-text-status" aria-live="polite">Idle — tap Voice to dictate into the description.</div>
                     </div>
                 </div>
             </div>
@@ -334,7 +323,7 @@
                                             <div class="gps-watermark-text">
                                                 <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
                                                 <div class="gps-watermark-line" id="gps-camera-coords">Waiting for GPS signal…</div>
-                                                <div class="gps-watermark-line" id="gps-camera-place">Resolving address…</div>
+                                                <div class="gps-watermark-line" id="gps-camera-place">Waiting for GPS…</div>
                                                 <div class="gps-watermark-line" id="gps-camera-time">—</div>
                                             </div>
                                         </div>

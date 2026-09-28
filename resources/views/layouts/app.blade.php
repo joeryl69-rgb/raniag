@@ -565,6 +565,15 @@
             staffLockedScrollY = window.scrollY || window.pageYOffset || 0;
             document.body.classList.add('rg-scroll-locked');
             document.body.style.top = (-staffLockedScrollY) + 'px';
+            clearTimeout(window.__rgLoadingWatch);
+            window.__rgLoadingWatch = setTimeout(function () {
+                hideLoadingOverlay();
+                document.querySelectorAll('button[data-original-text]').forEach(function (button) {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                    if (button.dataset.originalText) button.innerHTML = button.dataset.originalText;
+                });
+            }, 20000);
         }
  
         function hideLoadingOverlay() {
@@ -691,9 +700,15 @@
             // what caused "logout says page expired" / "no permission"
             // after switching accounts in another tab.
             window.addEventListener('pageshow', function (event) {
-                if (event.persisted) {
-                    window.location.reload();
+                if (!event.persisted) return;
+                const key = 'raniag-bfcache-reload';
+                if (sessionStorage.getItem(key) === location.pathname) {
+                    sessionStorage.removeItem(key);
+                    hideLoadingOverlay();
+                    return;
                 }
+                sessionStorage.setItem(key, location.pathname);
+                window.location.reload();
             });
         });
     </script>

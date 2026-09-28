@@ -119,7 +119,7 @@
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
                 risk: 'Risk awareness highlights barangays with open community reports — no exact addresses are shown.',
                 you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
-                both: 'Toggle layers for zones, centers, and risk. Turn on My location for a live route to the nearest open center.',
+                both: 'Use the tabs for risk, places, and the route. Turn on My location for a path to the nearest open center.',
                 route: 'Live route to the nearest open center. It updates as you move.',
                 off: 'My location is off. Turn it on to track yourself and show the route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
@@ -274,10 +274,24 @@
             fitActiveView({ animate: true });
         }
 
-        function showRouteBox(visible) {
+        function showRouteBox() {
             if (!routeBox) return;
-            routeBox.classList.toggle('d-none', !visible);
+            routeBox.classList.remove('d-none');
         }
+
+        document.querySelectorAll('[data-hazard-tab]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const name = btn.dataset.hazardTab;
+                document.querySelectorAll('[data-hazard-tab]').forEach((other) => {
+                    const on = other === btn;
+                    other.classList.toggle('is-active', on);
+                    other.setAttribute('aria-selected', on ? 'true' : 'false');
+                });
+                document.querySelectorAll('[data-hazard-pane]').forEach((pane) => {
+                    pane.classList.toggle('d-none', pane.dataset.hazardPane !== name);
+                });
+            });
+        });
 
         async function fetchRoute({ force } = {}) {
             if (!layersOn().you) {
@@ -456,10 +470,11 @@
                     const name = feature.properties?.name || 'Barangay';
                     const n = feature.properties?.open_count || 0;
                     layer.bindPopup(
-                        `<strong>${esc(name)}</strong><br>` +
-                        (n > 0
-                            ? `${n} open community report${n === 1 ? '' : 's'} (locations stay private)`
-                            : 'No open reports in this barangay')
+                        `<strong>${esc(name)}</strong>` +
+                        `<div class="small mt-1">${n > 0
+                            ? `${n} report${n === 1 ? '' : 's'} still open in this barangay.`
+                            : 'No open reports in this barangay.'}</div>` +
+                        '<div class="small text-muted mt-1">This is a count only. House locations are not shown.</div>'
                     );
                 },
             }).addTo(riskGroup);
@@ -632,9 +647,9 @@
                     ? zones.map((z) => `
                         <button type="button" class="rg-hazard-list-item text-start w-100 bg-transparent" data-zone-id="${z.id}">
                             <strong class="d-block small">${esc(z.name)}</strong>
-                            <span class="text-muted" style="font-size:.72rem">${esc(z.type?.name || 'Hazard')}</span>
+                            <span class="text-muted" style="font-size:.72rem">${esc(z.type?.name || 'Hazard')}${z.barangay ? ` · ${esc(z.barangay)}` : ''}</span>
                         </button>`).join('')
-                    : '<div class="small text-muted">No active zones.</div>';
+                    : '<div class="small text-muted">No active hazard zones. Staff add these under Zones and centers.</div>';
             }
 
             if (cList) {
@@ -642,9 +657,9 @@
                     ? centers.map((c) => `
                         <button type="button" class="rg-hazard-list-item text-start w-100 bg-transparent" data-center-id="${c.id}">
                             <strong class="d-block small">${esc(c.name)}</strong>
-                            <span class="text-muted" style="font-size:.72rem">${c.capacity != null ? `Capacity ${esc(c.capacity)}` : 'Open'}</span>
+                            <span class="text-muted" style="font-size:.72rem">${c.barangay ? `${esc(c.barangay)} · ` : ''}${c.capacity != null ? `Capacity ${esc(c.capacity)}` : 'Open'}</span>
                         </button>`).join('')
-                    : '<div class="small text-muted">No open centers.</div>';
+                    : '<div class="small text-muted">No evacuation centers are open.</div>';
             }
         }
 
@@ -663,8 +678,15 @@
                         className: REDUCE ? '' : 'rg-hazard-zone-pulse',
                     },
                 });
-                const note = z.advisory_note ? `<div class="small mt-1">${esc(z.advisory_note)}</div>` : '';
-                layer.bindPopup(`<strong>${esc(z.name)}</strong>${z.type?.name ? `<br><span class="text-muted">${esc(z.type.name)}</span>` : ''}${note}`);
+                const type = z.type?.name ? `<div class="small text-muted">${esc(z.type.name)}</div>` : '';
+                const brgy = z.barangay ? `<div class="small">Barangay ${esc(z.barangay)}</div>` : '';
+                const note = z.advisory_note
+                    ? `<div class="small mt-1">${esc(z.advisory_note)}</div>`
+                    : '<div class="small text-muted mt-1">No advisory has been written for this zone yet.</div>';
+                const link = z.advisory_url
+                    ? `<div class="small mt-1"><a href="${esc(z.advisory_url)}" target="_blank" rel="noopener">Open advisory</a></div>`
+                    : '';
+                layer.bindPopup(`<strong>${esc(z.name || 'Hazard zone')}</strong>${type}${brgy}${note}${link}`);
                 layer.addTo(zoneGroup);
                 zoneLayers.set(Number(z.id), layer);
             });
@@ -675,8 +697,17 @@
             centerLayers.clear();
             (centers || []).forEach((c) => {
                 const marker = leaflet.marker([Number(c.latitude), Number(c.longitude)], { icon: evacIcon() });
-                const cap = c.capacity != null ? `<div class="small text-muted">Capacity: ${esc(c.capacity)}</div>` : '';
-                marker.bindPopup(`<strong>${esc(c.name)}</strong><div class="small">Open evacuation center</div>${cap}`);
+                const where = [c.barangay ? `Barangay ${c.barangay}` : '', c.address || ''].filter(Boolean).join(' · ');
+                const cap = c.capacity != null
+                    ? `<div class="small">Room for about ${esc(c.capacity)} people</div>`
+                    : '<div class="small text-muted">Capacity has not been set</div>';
+                const notes = c.notes ? `<div class="small mt-1">${esc(c.notes)}</div>` : '';
+                marker.bindPopup(
+                    `<strong>${esc(c.name)}</strong>` +
+                    '<div class="small">Open evacuation center</div>' +
+                    (where ? `<div class="small">${esc(where)}</div>` : '') +
+                    cap + notes
+                );
                 marker.addTo(centerGroup);
                 centerLayers.set(Number(c.id), marker);
             });

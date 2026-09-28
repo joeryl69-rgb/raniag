@@ -64,7 +64,8 @@
         const markerByKey = new Map();
 
         async function drawUnits(units) {
-            const list = Array.isArray(units) ? units : [];
+            const raw = Array.isArray(units) ? units : [];
+            const list = Mapbox?.spreadUnitPositions ? Mapbox.spreadUnitPositions(raw) : raw;
             const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
             let primary = null;
             let plotted = 0;
@@ -77,7 +78,7 @@
                 plotted += 1;
                 if (!primary) primary = u;
                 bounds.extend([lat, lng]);
-                const key = String(u.label || 'Unit');
+                const key = String(u.id || u.assignment_id || u.label || 'Unit');
                 seen.add(key);
                 const existing = markerByKey.get(key);
                 if (existing) {
@@ -152,9 +153,11 @@
                 return;
             }
             try {
-                const res = await fetch(cfg.unitsUrl, {
+                const glue = String(cfg.unitsUrl).includes('?') ? '&' : '?';
+                const res = await fetch(`${cfg.unitsUrl}${glue}_=${Date.now()}`, {
                     headers: { Accept: 'application/json' },
                     credentials: 'same-origin',
+                    cache: 'no-store',
                 });
                 if (!res.ok) {
                     if (statusEl && !unitGroup.getLayers().length) {

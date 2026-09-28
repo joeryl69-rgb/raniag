@@ -86,10 +86,13 @@
         <div class="collapse mt-2" id="rgSmsPanel">
             <form method="POST" action="{{ $smsRoute }}" class="field-sms-form rg-field-sms-form">
                 @csrf
-                <label class="form-label small fw-semibold">SMS reporter</label>
-                <textarea name="message" class="form-control form-control-sm mb-2" rows="2" maxlength="480" required placeholder="Short update to the reporter…"></textarea>
-                <input type="text" name="thread_note" class="form-control form-control-sm mb-2" maxlength="500" placeholder="Internal note (optional)">
-                <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-chat-dots me-1"></i>Send SMS</button>
+                <label class="form-label small fw-semibold" for="reporter-sms-message">Text message to the reporter</label>
+                <p class="form-text mt-0 mb-2">This is sent to the phone number on the report. Use it for a short update such as “We are on the way” or “Please stay indoors.” It does not appear on the public map.</p>
+                <textarea id="reporter-sms-message" name="message" class="form-control form-control-sm mb-2" rows="2" maxlength="480" required placeholder="We are on the way. Stay clear of the area."></textarea>
+                <label class="form-label small fw-semibold" for="reporter-sms-note">Staff note (optional)</label>
+                <p class="form-text mt-0 mb-2">Saved on the case for your team only. The reporter does not receive this.</p>
+                <input id="reporter-sms-note" type="text" name="thread_note" class="form-control form-control-sm mb-2" maxlength="500" placeholder="Example: family is waiting at the chapel">
+                <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-chat-dots me-1"></i>Send text message</button>
             </form>
         </div>
     @endif

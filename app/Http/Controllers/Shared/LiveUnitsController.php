@@ -21,6 +21,6 @@ class LiveUnitsController extends Controller
         return response()->json([
             'units' => $this->situational->liveUnitsForIncident($incident, forPublic: false),
             'updated_at' => now()->toIso8601String(),
-        ]);
+        ])->header('Cache-Control', 'no-store, private');
     }
 }

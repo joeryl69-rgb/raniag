@@ -89,7 +89,7 @@ class IncidentTrackController extends Controller
                 'longitude' => $incident->longitude !== null ? (float) $incident->longitude : null,
             ],
             'updated_at' => now()->toIso8601String(),
-        ]);
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     private function resolveTrackingView(string $trackingNumber, bool $asJson = false): View|JsonResponse|RedirectResponse

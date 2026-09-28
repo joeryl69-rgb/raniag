@@ -18,8 +18,8 @@
 <div class="container-fluid py-3">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
         <div>
-            <h1 class="h3 mb-1">Hazard &amp; evacuation mapping</h1>
-            <p class="text-muted mb-0">Draw hazard areas, manage evacuation centers, and track who has checked in.</p>
+            <h1 class="h3 mb-1">Zones and evacuation centers</h1>
+            <p class="text-muted mb-0">This is the staff editor. What you save here is what residents see on the public Live Map. Barangay risk is not drawn here — it is the count of open reports.</p>
         </div>
         <a href="{{ $publicHazardMapUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-box-arrow-up-right me-1"></i>Open public Live Map
