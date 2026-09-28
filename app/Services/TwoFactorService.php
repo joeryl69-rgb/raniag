@@ -22,11 +22,6 @@ class TwoFactorService
     // security-bearing trusted-device cookie above.
     public const RECOGNIZED_COOKIE = 'raniag_recognized_user';
 
-    // Lets a remembered account sign in from the avatar without typing the
-    // password again. HttpOnly, and removed only when that account is
-    // removed from the switcher — logout does not clear it.
-    public const QUICK_LOGIN_COOKIE = 'raniag_quick_login';
-
     private const RECOGNIZED_COOKIE_DAYS = 180;
 
     public function requiredFor(User $user): bool
@@ -307,125 +302,12 @@ class TwoFactorService
                 $accounts[] = [
                     'name' => (string) $entry['name'],
                     'email' => $email,
-                    'quick' => $user ? $this->hasQuickLogin($request, $user) : false,
+                    'quick' => $user ? $this->hasTrustedDevice($request, $user) : false,
                 ];
             }
         }
 
         return $accounts;
-    }
-
-    public function hasQuickLogin(Request $request, User $user): bool
-    {
-        foreach ($this->quickLoginEntries($request) as $entry) {
-            if ((int) ($entry['user_id'] ?? 0) !== (int) $user->id) {
-                continue;
-            }
-            $token = (string) ($entry['token'] ?? '');
-            if ($token === '') {
-                continue;
-            }
-            $cacheKey = $this->quickLoginCacheKey((int) $user->id, $token);
-            $stored = Cache::get($cacheKey);
-            if ($stored === true || $stored === 1 || $stored === '1') {
-                return true;
-            }
-            if ($stored === null) {
-                Cache::put($cacheKey, true, now()->addDays(self::RECOGNIZED_COOKIE_DAYS));
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public function issueQuickLoginCookie(Request $request, User $user): SymfonyCookie
-    {
-        $token = Str::random(40);
-        Cache::put(
-            $this->quickLoginCacheKey((int) $user->id, $token),
-            true,
-            now()->addDays(self::RECOGNIZED_COOKIE_DAYS)
-        );
-
-        $entries = array_values(array_filter(
-            $this->quickLoginEntries($request),
-            fn (array $entry) => (int) ($entry['user_id'] ?? 0) !== (int) $user->id
-        ));
-        $entries[] = ['user_id' => (int) $user->id, 'token' => $token];
-
-        return $this->makeQuickLoginCookie($entries);
-    }
-
-    public function forgetQuickLogin(Request $request, ?User $user = null): SymfonyCookie
-    {
-        $entries = $this->quickLoginEntries($request);
-        if ($user === null) {
-            foreach ($entries as $entry) {
-                $token = (string) ($entry['token'] ?? '');
-                if ($token !== '') {
-                    Cache::forget($this->quickLoginCacheKey((int) ($entry['user_id'] ?? 0), $token));
-                }
-            }
-
-            return Cookie::forget(self::QUICK_LOGIN_COOKIE);
-        }
-
-        $kept = [];
-        foreach ($entries as $entry) {
-            if ((int) ($entry['user_id'] ?? 0) === (int) $user->id) {
-                $token = (string) ($entry['token'] ?? '');
-                if ($token !== '') {
-                    Cache::forget($this->quickLoginCacheKey((int) $user->id, $token));
-                }
-                continue;
-            }
-            $kept[] = $entry;
-        }
-
-        if ($kept === []) {
-            return Cookie::forget(self::QUICK_LOGIN_COOKIE);
-        }
-
-        return $this->makeQuickLoginCookie($kept);
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function quickLoginEntries(Request $request): array
-    {
-        $raw = $request->cookie(self::QUICK_LOGIN_COOKIE);
-        if (! is_string($raw) || $raw === '') {
-            return [];
-        }
-        $decoded = json_decode($raw, true);
-
-        return is_array($decoded) ? $decoded : [];
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $entries
-     */
-    private function makeQuickLoginCookie(array $entries): SymfonyCookie
-    {
-        return Cookie::make(
-            self::QUICK_LOGIN_COOKIE,
-            json_encode(array_values($entries), JSON_THROW_ON_ERROR),
-            self::RECOGNIZED_COOKIE_DAYS * 24 * 60,
-            '/',
-            null,
-            config('session.secure'),
-            true,
-            false,
-            config('session.same_site', 'lax')
-        );
-    }
-
-    private function quickLoginCacheKey(int $userId, string $token): string
-    {
-        return 'raniag.quick_login.'.$userId.'.'.hash('sha256', $token);
     }
 
     /**
@@ -559,6 +441,11 @@ class TwoFactorService
      */
     private function makeRecognizedCookie(array $accounts): SymfonyCookie
     {
+        $accounts = array_map(
+            fn (array $account) => ['name' => (string) $account['name'], 'email' => (string) $account['email']],
+            $accounts
+        );
+
         return Cookie::make(
             self::RECOGNIZED_COOKIE,
             base64_encode(json_encode($accounts)),

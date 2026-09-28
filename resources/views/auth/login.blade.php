@@ -78,11 +78,6 @@
             </div>
             @error('password')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
-        <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" name="remember" id="remember" value="1" @checked(old('email') === null || old('remember'))>
-            <label class="form-check-label" for="remember">Remember me</label>
-            <div class="form-text">On by default. A remembered account opens from its icon without typing the password again.</div>
-        </div>
         <div class="d-flex align-items-center justify-content-end mb-4">
             @if (Route::has('password.request'))
                 <a href="{{ route('password.request') }}" class="small fw-semibold text-decoration-none" style="color:#0b5ed7;">Forgot password?</a>

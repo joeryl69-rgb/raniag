@@ -84,3 +84,25 @@ test('forget trusted device clears hasTrustedDevice for that user', function () 
 
     expect($twoFactor->hasTrustedDevice($after, $user))->toBeFalse();
 });
+
+test('a remembered device signs in from the account icon without a password', function () {
+    config(['raniag.two_factor.enabled' => true]);
+
+    $user = User::factory()->administrator()->create();
+    $trusted = app(TwoFactorService::class)->issueTrustedDeviceCookie($user);
+
+    $this->withCookie($trusted->getName(), $trusted->getValue())
+        ->post(route('login.quick'), ['email' => $user->email])
+        ->assertRedirect(route('admin.dashboard', absolute: false));
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('an unremembered account cannot sign in from the account icon', function () {
+    $user = User::factory()->administrator()->create();
+
+    $this->post(route('login.quick'), ['email' => $user->email])
+        ->assertRedirect(route('login'));
+
+    $this->assertGuest();
+});

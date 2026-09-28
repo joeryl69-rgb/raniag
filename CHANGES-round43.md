@@ -87,22 +87,22 @@ Files:
   routes/public.php
 
 =====================================================================
-4. Remember me is on, and the account icon signs you in
+4. Remember this device signs the account in from its icon
 =====================================================================
-Remember me is checked when the login page opens. Signing in with it
-on stores a remember token for that account on this browser. Logout
-does not remove it.
+The login page does not have a separate Remember me switch. Remember
+this device on the verification screen is already on. Leaving it on
+stores this browser for that account. Signing out does not clear it.
 
 The next time that account appears under Choose an account, tapping
-the icon signs in without the password. Removing the account from the
-list forgets the token, and the password is required again. A device
-that still needs the email code is still asked for that code.
+the icon signs in without the password and without another email code.
+Removing the account from the list forgets the device, so the password
+and the email code are required again. Turning Remember this device
+off before verifying also leaves the password required.
 
 Files:
   resources/views/auth/login.blade.php
+  resources/views/auth/two-factor-challenge.blade.php
   app/Http/Controllers/Auth/AuthenticatedSessionController.php
-  app/Http/Controllers/Auth/TwoFactorChallengeController.php
-  app/Http/Requests/Auth/LoginRequest.php
   app/Services/TwoFactorService.php
   routes/auth.php
 
@@ -139,7 +139,9 @@ Verify after Hostinger deploy
 6. Agency, personnel, and the administrator on the same case see
    "Texts to the reporter." Office dispatch texts are not in that list.
    A text sent by the administrator shows up for the assigned accounts.
-7. On the login page, Remember me is already checked. Sign in, sign
-   out, and tap that account's icon. The password field is not shown.
+7. Sign in, leave Remember this device on, and finish the email code.
+   Sign out, then tap that account's icon. The password and the code
+   are both skipped. Remove the account and the password is required
+   again. The login page has no Remember me switch.
 8. On a public report, add a GPS photo or video. Report anonymously
    turns on. Remove that evidence and it turns off.
