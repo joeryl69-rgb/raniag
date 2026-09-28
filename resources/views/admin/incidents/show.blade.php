@@ -442,6 +442,19 @@
                             </div>
                         </div>
                     @else
+                        @php
+                            $identifiedWithoutGps = ! $incident->reporterSubmittedGpsCamera();
+                            $reporterTexts = $identifiedWithoutGps ? $incident->reporterTextMessages() : collect();
+                        @endphp
+                        @if ($identifiedWithoutGps)
+                            <div class="alert alert-warning d-flex gap-2 align-items-start small py-2" role="status">
+                                <i class="bi bi-person-badge mt-1"></i>
+                                <div>
+                                    <strong>Reporter is not anonymous.</strong>
+                                    No GPS camera photo or video was submitted, so they had to leave their contact details.
+                                </div>
+                            </div>
+                        @endif
                         <dl class="mb-0">
                             <dt class="text-muted small">Name</dt>
                             <dd class="mb-2 text-dark fw-semibold">{{ $incident->reporter_name ?? 'N/A' }}</dd>
@@ -452,6 +465,31 @@
                             <dt class="text-muted small">Email Address</dt>
                             <dd class="mb-0 text-dark">{{ $incident->reporter_email ?? 'N/A' }}</dd>
                         </dl>
+                        @if ($reporterTexts->isNotEmpty())
+                            <h6 class="fw-bold mt-3 mb-2">Texts to the reporter</h6>
+                            <div class="small border rounded p-2 bg-white" style="max-height:180px;overflow:auto;">
+                                @foreach ($reporterTexts as $sms)
+                                    <div class="mb-2">
+                                        <div class="text-muted">{{ $sms->created_at?->timezone(config('app.timezone'))->format('M j, g:ia') }} · {{ $sms->status?->value ?? $sms->status }}</div>
+                                        <div>{{ $sms->message }}</div>
+                                        @if ($sms->thread_note)
+                                            <div class="fst-italic text-muted">Staff note: {{ $sms->thread_note }}</div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                        @if ($identifiedWithoutGps && filled($incident->safeReporterPhone()))
+                            <form method="POST" action="{{ route('admin.incidents.sms_reporter', $incident) }}" class="mt-3">
+                                @csrf
+                                <label class="form-label small fw-semibold" for="admin-reporter-sms">Text message to the reporter</label>
+                                <p class="form-text mt-0 mb-2">Sent to the phone number on this report. The same message appears for the agency and personnel assigned to the case.</p>
+                                <textarea id="admin-reporter-sms" name="message" class="form-control form-control-sm mb-2" rows="2" maxlength="480" required placeholder="We are on the way. Stay clear of the area."></textarea>
+                                <label class="form-label small fw-semibold" for="admin-reporter-note">Staff note (optional)</label>
+                                <input id="admin-reporter-note" type="text" name="thread_note" class="form-control form-control-sm mb-2" maxlength="500" placeholder="Example: family is waiting at the chapel">
+                                <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-chat-dots me-1"></i>Send text message</button>
+                            </form>
+                        @endif
                     @endif
                 </div>
             </div>

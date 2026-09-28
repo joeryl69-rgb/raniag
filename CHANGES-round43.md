@@ -67,3 +67,10 @@ Verify after Hostinger deploy
    Office dispatch texts are not mixed in.
 6. On a phone, Photo and Video sit under the picture, not on top of
    the GPS line. A recorded video includes the small map thumbnail.
+7. Opening the camera without first tapping Use current location still
+   loads the map thumbnail once GPS arrives.
+8. The GPS lines on a video sit inside the frame on a phone and on a
+   desktop preview, with space under them so they are not cut off.
+9. The administrator case page shows the same "Reporter is not
+   anonymous" notice, the same text list, and can send a text to that
+   phone. Agency and personnel see that message on the case.

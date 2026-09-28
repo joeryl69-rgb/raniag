@@ -164,22 +164,23 @@
         const yTile = Math.floor(yFloat);
 
         const url = `/map-tile/${MAP_THUMB_ZOOM}/${xTile}/${yTile}`;
-        if (mapThumbImg.dataset.tileUrl !== url) {
+        mapThumbImg.loading = 'eager';
+        mapThumbImg.dataset.pinX = String(xFloat - xTile);
+        mapThumbImg.dataset.pinY = String(yFloat - yTile);
+        if (mapThumbImg.dataset.tileUrl !== url || !mapThumbImg.classList.contains('is-loaded')) {
             mapThumbImg.dataset.tileUrl = url;
-            // Keep the previous tile visible (no opacity reset) until the
-            // new one has actually decoded, then swap — avoids a blank/
-            // broken-image flash between tiles on a slow connection.
-            const swapImg = new Image();
-            swapImg.onload = () => {
-                if (mapThumbImg.dataset.tileUrl !== url) return; // superseded
-                mapThumbImg.src = url;
+            mapThumbImg.onload = () => {
+                if (mapThumbImg.dataset.tileUrl !== url) return;
                 mapThumbImg.classList.add('is-loaded');
             };
-            swapImg.onerror = () => {
+            mapThumbImg.onerror = () => {
                 if (mapThumbImg.dataset.tileUrl !== url) return;
                 mapThumbImg.classList.remove('is-loaded');
             };
-            swapImg.src = url;
+            // Assign on the visible image itself. A hidden preload image
+            // can finish before the camera modal is on screen, and a phone
+            // then never paints the tile.
+            mapThumbImg.src = url;
         }
 
         if (mapThumbPin) {
@@ -859,6 +860,9 @@
             const camModal = getModal(cameraModalEl);
             camModal ? camModal.show() : showFallbackFullscreen(cameraModalEl);
             exitReviewMode();
+            if (lastPosition) {
+                updateMapThumbnail(lastPosition.coords.latitude, lastPosition.coords.longitude);
+            }
 
             if (videoEl) {
                 videoEl.srcObject = mediaStream;
@@ -1205,37 +1209,52 @@
             placeEl?.textContent || '',
             timeEl?.textContent || '',
         ].filter(Boolean);
-        const fontSize = Math.max(16, Math.round(width / 36));
-        const pad = Math.round(fontSize * 0.7);
-        const thumb = Math.round(fontSize * 4.2);
-        const lineH = fontSize + 6;
-        const blockH = Math.max(thumb + pad * 2, lines.length * lineH + pad * 2);
-        const top = height - blockH;
-        context.save();
-        context.fillStyle = 'rgba(15, 23, 42, 0.78)';
-        context.fillRect(0, top, width, blockH);
+        if (!lines.length) return;
+
+        // Size the band from the frame height, then lift it off the bottom
+        // edge. A width-based font pushed the lines below a phone video and
+        // below a short desktop preview.
+        const bannerH = Math.round(Math.min(Math.max(88, height * 0.2), height * 0.28, 220));
+        const lift = Math.round(Math.max(16, height * 0.045));
+        const top = Math.max(0, height - bannerH - lift);
+        const pad = Math.round(bannerH * 0.14);
+        const thumb = Math.max(36, bannerH - pad * 2);
         let textX = pad;
+        context.save();
+        context.fillStyle = 'rgba(15, 23, 42, 0.82)';
+        context.fillRect(0, top, width, bannerH);
+
         const img = mapThumbImg;
-        if (img && img.complete && img.naturalWidth > 0) {
+        if (img && img.complete && img.naturalWidth > 0 && img.classList.contains('is-loaded')) {
             try {
-                const thumbY = top + Math.round((blockH - thumb) / 2);
+                const thumbY = top + Math.round((bannerH - thumb) / 2);
                 context.drawImage(img, pad, thumbY, thumb, thumb);
+                const pinX = pad + (Number(img.dataset.pinX) || 0.5) * thumb;
+                const pinY = thumbY + (Number(img.dataset.pinY) || 0.5) * thumb;
+                context.fillStyle = '#fff';
+                context.beginPath();
+                context.arc(pinX, pinY, Math.max(5, thumb * 0.09), 0, Math.PI * 2);
+                context.fill();
                 context.fillStyle = '#2563eb';
                 context.beginPath();
-                context.arc(pad + thumb / 2, thumbY + thumb / 2, Math.max(5, thumb * 0.09), 0, Math.PI * 2);
+                context.arc(pinX, pinY, Math.max(3, thumb * 0.055), 0, Math.PI * 2);
                 context.fill();
-                context.strokeStyle = '#fff';
-                context.lineWidth = 2;
-                context.stroke();
                 textX = pad + thumb + pad;
             } catch (err) {
                 textX = pad;
             }
         }
+
+        const fontSize = Math.max(11, Math.min(22, Math.floor((bannerH - pad * 2) / lines.length) - 3));
+        const lineH = fontSize + 3;
+        const textBlock = lines.length * lineH;
+        let baseline = top + Math.round((bannerH - textBlock) / 2) + fontSize;
         context.fillStyle = '#fff';
         context.font = `600 ${fontSize}px sans-serif`;
-        lines.forEach((line, index) => {
-            context.fillText(line, textX, top + pad + fontSize + index * lineH, Math.max(40, width - textX - pad));
+        context.textBaseline = 'alphabetic';
+        lines.forEach((line) => {
+            context.fillText(line, textX, baseline, Math.max(40, width - textX - pad));
+            baseline += lineH;
         });
         context.restore();
     }

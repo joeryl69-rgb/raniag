@@ -59,7 +59,7 @@
                         <canvas id="gps-camera-canvas" class="d-none"></canvas>
                         <div class="gps-watermark-overlay" id="gps-watermark-overlay">
                             <div class="gps-watermark-map" id="gps-watermark-map">
-                                <img id="gps-watermark-map-img" alt="Map preview of the captured location" loading="lazy">
+                                <img id="gps-watermark-map-img" alt="Map preview of the captured location" loading="eager" decoding="async">
                                 <span class="gps-watermark-map-pin" id="gps-watermark-map-pin"></span>
                             </div>
                             <div class="gps-watermark-text">

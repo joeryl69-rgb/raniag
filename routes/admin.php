@@ -72,6 +72,7 @@ Route::prefix('admin')
             Route::get('/{incident}/live-units', \App\Http\Controllers\Shared\LiveUnitsController::class)->name('live_units');
             Route::post('/{incident}/validate', [IncidentController::class, 'validate'])->name('validate');
             Route::post('/{incident}/reply', [IncidentController::class, 'reply'])->name('reply');
+            Route::post('/{incident}/sms-reporter', [\App\Http\Controllers\Shared\ResponderFieldController::class, 'smsReporter'])->name('sms_reporter');
             Route::get('/{incident}/assignments', [IncidentController::class, 'assignments'])->name('assignments');
             Route::put('/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('resolutions.update');
             Route::post('/{incident}/documents', [IncidentDocumentController::class, 'store'])->name('documents.store');
