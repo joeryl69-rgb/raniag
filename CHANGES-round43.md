@@ -1,9 +1,10 @@
 # RANIAG — Round 43 Changes
 
-The field text box only appears when the reporter had to identify
-themselves. The GPS camera can record a one-minute video, on the
-public form and on a case assigned to an agency or personnel account.
-Printed reports still use photos only.
+The text to a reporter is offered only when that person had to identify
+themselves. The GPS camera records a one-minute video as well as a
+photo. The administrator, the agency, and the assigned personnel see
+the same text list. A recorded video keeps the map thumbnail and the
+GPS lines inside the frame.
 
 Hostinger deploys when this lands on `main`.
 
@@ -13,27 +14,61 @@ Hostinger deploys when this lands on `main`.
 A GPS camera photo or video lets the reporter stay anonymous, so the
 text box is not shown for those cases.
 
-When the original report has no GPS camera evidence, the assigned
-office sees "Reporter is not anonymous." That person had to leave
-contact details. The message button is offered only then, and only
-when a phone number is on the report.
+When the original report has no GPS camera evidence, the case shows
+"Reporter is not anonymous." That person had to leave contact details.
+The message button is offered only then, and only when a phone number
+is on the report.
 
 Files:
   app/Models/Incident.php
   resources/views/components/responder-field-strip.blade.php
 
 =====================================================================
-2. One-minute GPS video
+2. One text list for every account on the case
+=====================================================================
+The personnel case was printing every SMS on the incident, including
+office dispatch alerts, under the heading "SMS thread." The agency
+case did not show that list at all, so two accounts assigned to the
+same report did not see the same thing.
+
+That dump is gone. Agency and personnel now share one list, titled
+"Texts to the reporter." It includes only messages sent to the phone
+number on the report. Office alerts stay out of it.
+
+The administrator has the same notice, the same list, and a box to
+send a text to that phone. A message sent from the admin case appears
+in the list the agency and the assigned personnel already see.
+
+Files:
+  app/Models/Incident.php
+  resources/views/components/responder-field-strip.blade.php
+  resources/views/personnel/incidents/show.blade.php
+  resources/views/admin/incidents/show.blade.php
+  routes/admin.php
+
+=====================================================================
+3. One-minute GPS video
 =====================================================================
 Inside the same camera, swipe left for Video and right for Photo, or
-tap the labels. The camera does not restart when the mode changes, and
-a swipe is ignored while a clip is recording. Recording stops at one
-minute. The saved file has the coordinates, place, and time burned in.
+tap Photo and Video. Those labels sit under the picture, not on top of
+the GPS line. The camera does not restart when the mode changes, and a
+swipe is ignored while a clip is recording. Recording stops at one
+minute.
+
+The saved video has the coordinates, place, time, and the small map
+thumbnail burned in. The lines are sized from the height of the frame
+and sit above the bottom edge, on a phone and on a desktop preview, so
+the place and the time are not cut off.
+
+Opening the camera without first tapping Use current location still
+loads that map thumbnail once the phone gets a fix. The tile is loaded
+from this site so it can be drawn into the recording.
 
 The public report form, the agency case, and the personnel case use
 this camera. A video can be played on the case and on the public
 tracking page. Generated reports print photos only and leave the video
-on the case file.
+on the case file. Each evidence file may be up to 10 MB so a one-minute
+clip can be saved.
 
 Files:
   public/js/gps-camera.js
@@ -48,6 +83,42 @@ Files:
   resources/views/admin/reports/single_pdf.blade.php
   app/Http/Controllers/EvidenceFileController.php
   app/Http/Controllers/Public/TrackEvidenceController.php
+  app/Http/Controllers/Public/HazardMapController.php
+  routes/public.php
+
+=====================================================================
+4. Remember me is on, and the account icon signs you in
+=====================================================================
+Remember me is checked when the login page opens. Signing in with it
+on stores a remember token for that account on this browser. Logout
+does not remove it.
+
+The next time that account appears under Choose an account, tapping
+the icon signs in without the password. Removing the account from the
+list forgets the token, and the password is required again. A device
+that still needs the email code is still asked for that code.
+
+Files:
+  resources/views/auth/login.blade.php
+  app/Http/Controllers/Auth/AuthenticatedSessionController.php
+  app/Http/Controllers/Auth/TwoFactorChallengeController.php
+  app/Http/Requests/Auth/LoginRequest.php
+  app/Services/TwoFactorService.php
+  routes/auth.php
+
+=====================================================================
+5. Anonymous turns on with a GPS photo or video
+=====================================================================
+Report anonymously stays off until the report has a GPS camera photo
+or video. Attaching one turns the switch on, so the name and contact
+fields are cleared. Taking the evidence off turns the switch off again
+and asks for a phone or email. The switch can still be turned off by
+hand when a GPS photo or video is attached, if the reporter wants
+their name on the report.
+
+Files:
+  public/js/public-report.js
+  resources/views/public/report/create.blade.php
 
 =====================================================================
 Verify after Hostinger deploy
@@ -59,18 +130,16 @@ Verify after Hostinger deploy
    not offered.
 3. On the public report and on an assigned agency or personnel case,
    start the camera, swipe to Video, and record. It stops at one
-   minute and the clip shows the GPS line.
-4. Download a generated case report. Photos are included. The video
+   minute. The clip shows the map thumbnail, the place, and the time
+   inside the frame.
+4. Open the camera without tapping Use current location first. The map
+   thumbnail appears once GPS arrives.
+5. Download a generated case report. Photos are included. The video
    stays on the case and is not printed in that report.
-5. The text list under Live field status is "Texts to the reporter".
-   Agency and personnel assigned to the same case see the same list.
-   Office dispatch texts are not mixed in.
-6. On a phone, Photo and Video sit under the picture, not on top of
-   the GPS line. A recorded video includes the small map thumbnail.
-7. Opening the camera without first tapping Use current location still
-   loads the map thumbnail once GPS arrives.
-8. The GPS lines on a video sit inside the frame on a phone and on a
-   desktop preview, with space under them so they are not cut off.
-9. The administrator case page shows the same "Reporter is not
-   anonymous" notice, the same text list, and can send a text to that
-   phone. Agency and personnel see that message on the case.
+6. Agency, personnel, and the administrator on the same case see
+   "Texts to the reporter." Office dispatch texts are not in that list.
+   A text sent by the administrator shows up for the assigned accounts.
+7. On the login page, Remember me is already checked. Sign in, sign
+   out, and tap that account's icon. The password field is not shown.
+8. On a public report, add a GPS photo or video. Report anonymously
+   turns on. Remove that evidence and it turns off.

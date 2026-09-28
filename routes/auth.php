@@ -21,6 +21,9 @@ Route::middleware(['guest', 'no-cache'])->group(function () {
     Route::post('login', [AuthenticatedSessionController::class, 'store'])
         ->withoutMiddleware([ValidateCsrfToken::class]);
 
+    Route::post('login/quick', [AuthenticatedSessionController::class, 'quick'])
+        ->name('login.quick');
+
     Route::post('login/forget-device', [AuthenticatedSessionController::class, 'forgetDevice'])
         ->name('login.forget-device');
 

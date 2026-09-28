@@ -30,7 +30,7 @@
             <div class="rg-account-switcher-title">Choose an account</div>
             <div class="rg-account-list">
                 @foreach ($recognizedUsers as $account)
-                    <div class="rg-account-item" data-email="{{ $account['email'] }}" role="button" tabindex="0">
+                    <div class="rg-account-item" data-email="{{ $account['email'] }}" data-quick="{{ ! empty($account['quick']) ? '1' : '0' }}" role="button" tabindex="0">
                         <div class="rg-account-avatar">{{ Str::upper(Str::substr($account['name'], 0, 1)) }}</div>
                         <div class="rg-account-info">
                             <div class="rg-account-name">{{ $account['name'] }}</div>
@@ -78,6 +78,11 @@
             </div>
             @error('password')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="remember" id="remember" value="1" @checked(old('email') === null || old('remember'))>
+            <label class="form-check-label" for="remember">Remember me</label>
+            <div class="form-text">On by default. A remembered account opens from its icon without typing the password again.</div>
+        </div>
         <div class="d-flex align-items-center justify-content-end mb-4">
             @if (Route::has('password.request'))
                 <a href="{{ route('password.request') }}" class="small fw-semibold text-decoration-none" style="color:#0b5ed7;">Forgot password?</a>
@@ -87,6 +92,10 @@
             <span class="button-label">Sign in</span>
             <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true" id="login-spinner"></span>
         </button>
+    </form>
+    <form id="quick-login-form" method="POST" action="{{ route('login.quick') }}" class="d-none">
+        @csrf
+        <input type="hidden" name="email" id="quick-email" value="">
     </form>
     <x-slot name="footer">Need an account? Contact your MDRRMO administrator.</x-slot>
     <x-slot name="scripts">
@@ -104,7 +113,16 @@
             const switchAccountButton = document.getElementById('rg-switch-account');
             const addAccountButton = document.getElementById('rg-add-account');
 
-            function chooseAccount(email) {
+            function chooseAccount(email, quick) {
+                if (email && quick) {
+                    const quickEmail = document.getElementById('quick-email');
+                    const quickForm = document.getElementById('quick-login-form');
+                    if (quickEmail && quickForm) {
+                        quickEmail.value = email;
+                        quickForm.submit();
+                        return;
+                    }
+                }
                 if (emailInput) emailInput.value = email || '';
                 if (emailGroup) emailGroup.classList.toggle('d-none', !!email);
                 switcher?.classList.add('d-none');
@@ -114,12 +132,12 @@
 
             switcher?.querySelectorAll('.rg-account-item[data-email]').forEach(function (item) {
                 item.addEventListener('click', function () {
-                    chooseAccount(item.dataset.email);
+                    chooseAccount(item.dataset.email, item.dataset.quick === '1');
                 });
                 item.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        chooseAccount(item.dataset.email);
+                        chooseAccount(item.dataset.email, item.dataset.quick === '1');
                     }
                 });
                 item.querySelector('.rg-account-remove-form')?.addEventListener('click', function (e) {

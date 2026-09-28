@@ -87,7 +87,10 @@
     }
 
     if (anonymousToggle) {
-        anonymousToggle.addEventListener('change', syncReporterFields);
+        anonymousToggle.addEventListener('change', function () {
+            anonymousToggle.dataset.touched = '1';
+            syncReporterFields();
+        });
         syncReporterFields();
     }
 
@@ -101,6 +104,16 @@
     const phoneRequiredMark = document.getElementById('reporter_phone-required');
     const emailRequiredMark = document.getElementById('reporter_email-required');
     let evidenceGateModalShown = false;
+
+    function hasGpsCameraEvidence() {
+        if (captureLogInput?.value) {
+            try {
+                const parsed = JSON.parse(captureLogInput.value);
+                if (Array.isArray(parsed) && parsed.length > 0) return true;
+            } catch (e) { /* no gps capture yet */ }
+        }
+        return false;
+    }
 
     function hasClientEvidence() {
         if ((evidenceFileInput?.files?.length || 0) > 0) return true;
@@ -123,11 +136,15 @@
         const evidenced = hasClientEvidence();
 
         if (anonymousToggle) {
+            const gps = hasGpsCameraEvidence();
             anonymousToggle.disabled = !evidenced;
-            if (!evidenced && anonymousToggle.checked) {
+            if (!evidenced) {
                 anonymousToggle.checked = false;
-                syncReporterFields();
+                delete anonymousToggle.dataset.touched;
+            } else if (gps && anonymousToggle.dataset.touched !== '1') {
+                anonymousToggle.checked = true;
             }
+            syncReporterFields();
         }
 
         evidenceGateNotice?.classList.toggle('d-none', evidenced);

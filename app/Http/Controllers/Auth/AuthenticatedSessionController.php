@@ -32,19 +32,61 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
-        if ($user && $twoFactor->requiredFor($user)) {
+        return $this->finishLogin($request, $user, $twoFactor, $request->boolean('remember'));
+    }
+
+    /**
+     * Sign in a remembered account from its avatar. The password is not
+     * asked again while this browser still holds that account's remember
+     * token. Two-factor still applies when the device is not trusted.
+     */
+    public function quick(Request $request, TwoFactorService $twoFactor): RedirectResponse
+    {
+        $email = $request->validate([
+            'email' => ['required', 'string', 'email'],
+        ])['email'];
+
+        $user = User::query()->where('email', $email)->where('is_active', true)->first();
+
+        if (! $user || ! $twoFactor->hasQuickLogin($request, $user)) {
+            return redirect()->route('login')
+                ->withInput(['email' => $email])
+                ->withErrors(['password' => 'This device is not remembered for that account. Enter your password.']);
+        }
+
+        Auth::login($user, true);
+
+        return $this->finishLogin($request, $user, $twoFactor, true);
+    }
+
+    private function finishLogin(Request $request, ?User $user, TwoFactorService $twoFactor, bool $remember): RedirectResponse
+    {
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        if ($twoFactor->requiredFor($user)) {
             if ($twoFactor->hasTrustedDevice($request, $user)) {
                 $request->session()->forget('pending_2fa_id');
                 $request->session()->regenerate();
 
-                return redirect()->intended(route($user->homeRoute(), absolute: false))
-                    ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
+                return $this->withRememberCookie(
+                    redirect()->intended(route($user->homeRoute(), absolute: false))
+                        ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user)),
+                    $request,
+                    $twoFactor,
+                    $user,
+                    $remember
+                );
             }
 
             $request->session()->put('pending_2fa_id', $user->id);
+            $request->session()->put('login_remember', $remember);
 
             Auth::guard('web')->logout();
             $request->session()->regenerate();
+            $request->session()->put('pending_2fa_id', $user->id);
+            $request->session()->put('login_remember', $remember);
 
             $twoFactor->sendLoginOtp($user->fresh());
 
@@ -54,8 +96,23 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route($user->homeRoute(), absolute: false))
-            ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
+        return $this->withRememberCookie(
+            redirect()->intended(route($user->homeRoute(), absolute: false))
+                ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user)),
+            $request,
+            $twoFactor,
+            $user,
+            $remember
+        );
+    }
+
+    private function withRememberCookie(RedirectResponse $response, Request $request, TwoFactorService $twoFactor, User $user, bool $remember): RedirectResponse
+    {
+        if (! $remember) {
+            return $response;
+        }
+
+        return $response->withCookie($twoFactor->issueQuickLoginCookie($request, $user));
     }
 
     /**
@@ -79,6 +136,7 @@ class AuthenticatedSessionController extends Controller
         if ($email !== null) {
             $user = User::query()->where('email', $email)->first();
             if ($user) {
+                $response->withCookie($twoFactor->forgetQuickLogin($request, $user));
                 $response->withCookie($twoFactor->forgetTrustedDevice($request, $user));
                 $twoFactor->clearLoginChallenge($user);
 
@@ -88,6 +146,7 @@ class AuthenticatedSessionController extends Controller
             }
         } else {
             $request->session()->forget('pending_2fa_id');
+            $response->withCookie($twoFactor->forgetQuickLogin($request, null));
             $response->withCookie($twoFactor->forgetAllTrustedDevices($request));
         }
 

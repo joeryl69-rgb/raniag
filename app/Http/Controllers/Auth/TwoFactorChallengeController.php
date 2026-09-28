@@ -102,11 +102,17 @@ class TwoFactorChallengeController extends Controller
         $twoFactor->clearAttempts($user);
         $request->session()->forget('pending_2fa_id');
 
-        Auth::login($user);
+        $remember = (bool) $request->session()->pull('login_remember', false);
+
+        Auth::login($user, $remember);
         $request->session()->regenerate();
 
         $response = redirect()->intended(route($user->homeRoute(), absolute: false))
             ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
+
+        if ($remember) {
+            $response->withCookie($twoFactor->issueQuickLoginCookie($request, $user));
+        }
 
         $rememberDevice = $request->boolean('remember_device', true);
 

@@ -451,7 +451,7 @@
                     <input class="form-check-input" type="checkbox" role="switch" id="is_anonymous" name="is_anonymous"
                            value="1" @checked(old('is_anonymous', false))>
                     <label class="form-check-label fw-semibold" for="is_anonymous">Report anonymously</label>
-                    <div class="form-text mb-0" id="is_anonymous-help">Turn this on to keep your identity out of the record. You can still submit.</div>
+                    <div class="form-text mb-0" id="is_anonymous-help">Turns on when a GPS photo or video is attached. Turn it off if you want your name on the report.</div>
                 </div>
                 <div class="row g-3 reporter-fields" id="reporter-fields">
                     <div class="col-md-4">
