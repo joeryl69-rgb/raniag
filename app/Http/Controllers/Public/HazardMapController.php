@@ -9,6 +9,8 @@ use App\Services\GeofenceService;
 use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
@@ -69,6 +71,34 @@ class HazardMapController extends Controller
             'country' => $outside['country'],
             'inside' => false,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * Same-origin map tile so the GPS camera can draw it into a video.
+     * A direct OpenStreetMap image cannot be painted onto a recording.
+     */
+    public function mapTile(int $z, int $x, int $y): Response
+    {
+        abort_unless($z === 16 && $x >= 0 && $x < 65536 && $y >= 0 && $y < 65536, 404);
+
+        $bytes = Cache::get("osm-tile-{$z}-{$x}-{$y}");
+        if (! is_string($bytes) || $bytes === '') {
+            try {
+                $remote = Http::timeout(4)
+                    ->withHeaders(['User-Agent' => 'RANIAG-MDRRMO-Pamplona/1.0 (gps camera map)'])
+                    ->get("https://tile.openstreetmap.org/{$z}/{$x}/{$y}.png");
+            } catch (\Throwable) {
+                abort(404);
+            }
+            abort_unless($remote->ok(), 404);
+            $bytes = $remote->body();
+            Cache::put("osm-tile-{$z}-{$x}-{$y}", $bytes, now()->addDay());
+        }
+
+        return response($bytes, 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     /**

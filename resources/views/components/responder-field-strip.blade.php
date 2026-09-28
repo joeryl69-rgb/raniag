@@ -23,6 +23,7 @@
     // box is only offered for that identified report.
     $identifiedWithoutGps = ! $incident->reporterSubmittedGpsCamera() && ! $incident->is_anonymous;
     $canSms = $identifiedWithoutGps && filled($incident->safeReporterPhone());
+    $reporterTexts = $identifiedWithoutGps ? $incident->reporterTextMessages() : collect();
 @endphp
 
 @if ($assignment && $assignment->isAcknowledged() && ! in_array($incident->status->value, ['resolved', 'closed'], true))
@@ -100,6 +101,23 @@
             </button>
         @endif
     </div>
+
+    @if ($reporterTexts->isNotEmpty())
+        <div class="mt-2 mb-1">
+            <h6 class="fw-bold mb-2">Texts to the reporter</h6>
+            <div class="small border rounded p-2 bg-white" style="max-height:180px;overflow:auto;">
+                @foreach ($reporterTexts as $sms)
+                    <div class="mb-2">
+                        <div class="text-muted">{{ $sms->created_at?->timezone(config('app.timezone'))->format('M j, g:ia') }} · {{ $sms->status?->value ?? $sms->status }}</div>
+                        <div>{{ $sms->message }}</div>
+                        @if ($sms->thread_note)
+                            <div class="fst-italic text-muted">Staff note: {{ $sms->thread_note }}</div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     @if ($canSms)
         <div class="collapse mt-2" id="rgSmsPanel">

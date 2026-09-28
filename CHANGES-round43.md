@@ -62,3 +62,8 @@ Verify after Hostinger deploy
    minute and the clip shows the GPS line.
 4. Download a generated case report. Photos are included. The video
    stays on the case and is not printed in that report.
+5. The text list under Live field status is "Texts to the reporter".
+   Agency and personnel assigned to the same case see the same list.
+   Office dispatch texts are not mixed in.
+6. On a phone, Photo and Video sit under the picture, not on top of
+   the GPS line. A recorded video includes the small map thumbnail.

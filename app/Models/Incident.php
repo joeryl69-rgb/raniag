@@ -97,6 +97,31 @@ class Incident extends Model
         );
     }
 
+    /**
+     * Texts actually sent to the reporter's phone. Dispatch alerts to
+     * offices share the same log and must not appear in this thread.
+     */
+    public function reporterTextMessages()
+    {
+        $phone = preg_replace('/\D+/', '', (string) $this->safeReporterPhone());
+        if ($phone === '') {
+            return collect();
+        }
+        $tail = substr($phone, -10);
+
+        return $this->smsLogs()
+            ->latest()
+            ->limit(40)
+            ->get()
+            ->filter(function ($sms) use ($tail) {
+                $recipient = preg_replace('/\D+/', '', (string) $sms->recipient_phone);
+
+                return $recipient !== '' && str_ends_with($recipient, $tail);
+            })
+            ->take(12)
+            ->values();
+    }
+
     public function evidence(): HasMany
     {
         return $this->hasMany(Evidence::class);

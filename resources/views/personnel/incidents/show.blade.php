@@ -261,24 +261,6 @@
                                 :sms-route="route('personnel.incidents.sms_reporter', $incident)"
                             />
 
-                            @php $smsThread = $incident->smsLogs()->latest()->limit(20)->get(); @endphp
-                            @if ($smsThread->isNotEmpty())
-                                <div class="mb-4">
-                                    <h6 class="fw-bold mb-2">SMS thread</h6>
-                                    <div class="small border rounded p-2" style="max-height:180px;overflow:auto;">
-                                        @foreach ($smsThread as $sms)
-                                            <div class="mb-2">
-                                                <div class="text-muted">{{ $sms->created_at?->format('M j, g:ia') }} · {{ $sms->status?->value ?? $sms->status }}</div>
-                                                <div>{{ $sms->message }}</div>
-                                                @if ($sms->thread_note)
-                                                    <div class="fst-italic text-muted">Note: {{ $sms->thread_note }}</div>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-
                             <!-- Actions: Update progress or Resolve -->
                             
                             <!-- Update Status Form -->

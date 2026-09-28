@@ -163,7 +163,7 @@
         const xTile = Math.floor(xFloat);
         const yTile = Math.floor(yFloat);
 
-        const url = `https://tile.openstreetmap.org/${MAP_THUMB_ZOOM}/${xTile}/${yTile}.png`;
+        const url = `/map-tile/${MAP_THUMB_ZOOM}/${xTile}/${yTile}`;
         if (mapThumbImg.dataset.tileUrl !== url) {
             mapThumbImg.dataset.tileUrl = url;
             // Keep the previous tile visible (no opacity reset) until the
@@ -1207,14 +1207,35 @@
         ].filter(Boolean);
         const fontSize = Math.max(16, Math.round(width / 36));
         const pad = Math.round(fontSize * 0.7);
+        const thumb = Math.round(fontSize * 4.2);
+        const lineH = fontSize + 6;
+        const blockH = Math.max(thumb + pad * 2, lines.length * lineH + pad * 2);
+        const top = height - blockH;
         context.save();
-        context.font = `600 ${fontSize}px sans-serif`;
-        const blockH = lines.length * (fontSize + 6) + pad * 2;
         context.fillStyle = 'rgba(15, 23, 42, 0.78)';
-        context.fillRect(0, height - blockH, width, blockH);
+        context.fillRect(0, top, width, blockH);
+        let textX = pad;
+        const img = mapThumbImg;
+        if (img && img.complete && img.naturalWidth > 0) {
+            try {
+                const thumbY = top + Math.round((blockH - thumb) / 2);
+                context.drawImage(img, pad, thumbY, thumb, thumb);
+                context.fillStyle = '#2563eb';
+                context.beginPath();
+                context.arc(pad + thumb / 2, thumbY + thumb / 2, Math.max(5, thumb * 0.09), 0, Math.PI * 2);
+                context.fill();
+                context.strokeStyle = '#fff';
+                context.lineWidth = 2;
+                context.stroke();
+                textX = pad + thumb + pad;
+            } catch (err) {
+                textX = pad;
+            }
+        }
         context.fillStyle = '#fff';
+        context.font = `600 ${fontSize}px sans-serif`;
         lines.forEach((line, index) => {
-            context.fillText(line, pad, height - blockH + pad + fontSize + index * (fontSize + 6), width - pad * 2);
+            context.fillText(line, textX, top + pad + fontSize + index * lineH, Math.max(40, width - textX - pad));
         });
         context.restore();
     }
@@ -1370,7 +1391,12 @@
         rail.id = 'gps-mode-rail';
         rail.className = 'gps-mode-rail';
         rail.innerHTML = '<button type="button" data-gps-mode="photo" class="is-active">Photo</button><button type="button" data-gps-mode="video">Video</button>';
-        liveViewEl.appendChild(rail);
+        const footer = liveViewEl.closest('.modal-content')?.querySelector('.modal-footer');
+        if (footer) {
+            footer.prepend(rail);
+        } else {
+            liveViewEl.appendChild(rail);
+        }
         const timer = document.createElement('div');
         timer.id = 'gps-record-timer';
         timer.className = 'gps-record-timer d-none';
