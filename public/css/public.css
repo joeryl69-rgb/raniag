@@ -201,6 +201,82 @@ body.raniag-public {
     overflow: hidden;
 }
 
+.rg-how {
+    max-width: 1040px;
+    margin: 2.25rem auto 2.75rem;
+    text-align: center;
+}
+.rg-how-head { display: flex; flex-direction: column; align-items: center; }
+.rg-how-jo {
+    height: clamp(112px, 14vw, 140px);
+    max-width: 150px;
+    margin-bottom: .35rem;
+}
+.rg-how-kicker {
+    margin: 0;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--raniag-primary, #0b5ed7);
+}
+.rg-how-title {
+    margin: .15rem 0 .35rem;
+    font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+.rg-how-lead {
+    max-width: 42rem;
+    margin: 0 0 1.25rem;
+    color: #5b6780;
+}
+.rg-how-steps {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0 0 1.35rem;
+    padding: 0;
+    text-align: left;
+}
+.rg-how-steps li {
+    background: #fff;
+    border: 1px solid rgba(11, 18, 32, .08);
+    border-radius: 16px;
+    padding: 16px 16px 18px;
+    box-shadow: 0 10px 28px -22px rgba(11, 18, 32, .55);
+}
+.rg-how-num {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 10px;
+    border-radius: 9px;
+    background: var(--raniag-primary, #0b5ed7);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+}
+.rg-how-steps h3 {
+    margin: 0 0 .35rem;
+    font-size: .95rem;
+    font-weight: 700;
+}
+.rg-how-steps p {
+    margin: 0;
+    color: #5b6780;
+    font-size: .84rem;
+    line-height: 1.45;
+}
+@media (max-width: 991.98px) {
+    .rg-how-steps { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 575.98px) {
+    .rg-how-steps { grid-template-columns: 1fr; }
+}
+
 .raniag-card {
     border: none;
     border-radius: 1rem;
@@ -1714,6 +1790,11 @@ body.raniag-public {
 #hazard-jo-avatar {
   height: clamp(128px, 16vw, 168px);
   max-width: min(42%, 180px);
+}
+.jo-mascot.rg-how-jo {
+  height: clamp(112px, 14vw, 140px);
+  max-width: 150px;
+  margin-inline: auto;
 }
 .jo-mascot.jo-pose-in {
   animation: jo-pose-in .42s ease-out;

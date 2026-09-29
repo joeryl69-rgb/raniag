@@ -4,9 +4,9 @@
 
 @section('content')
 <div class="container">
-    <div class="raniag-hero p-4 p-lg-5 mb-5">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-7">
+    <div class="raniag-hero mb-4">
+        <div class="row g-0 align-items-stretch">
+            <div class="col-lg-7 p-4 p-lg-5">
                 <p class="text-uppercase small fw-semibold text-white-50 mb-2" data-rg-hero-eyebrow>{{ config('raniag.organization') }}</p>
                 <h1 class="display-5 fw-bold mb-2" data-rg-hero-title>{{ config('raniag.name') }}</h1>
                 <p class="rg-tagline mb-3" data-rg-hero-tag>{{ config('raniag.tagline') }}</p>
@@ -22,54 +22,45 @@
                     </a>
                 </div>
             </div>
-            <div class="col-lg-5" data-rg-hero-card>
-                <div class="card raniag-card rg-card-hover border-0">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center gap-2 mb-3">
-                            <img class="jo-mascot" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="180" height="220">
-                            <div>
-                                <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
-                                <h2 class="h5 fw-bold mb-0">{{ __('How it works') }}</h2>
-                            </div>
-                        </div>
-                        <ol class="mb-3 ps-3">
-                            <li class="mb-2">{{ __('Submit your incident report (anonymous or with contact details).') }}</li>
-                            <li class="mb-2">{{ __('Receive a unique tracking number instantly.') }}</li>
-                            <li class="mb-2">{{ config('raniag.organization') }} staff review and assign your report to the proper responder.</li>
-                            <li>{{ __('Track status updates anytime using your tracking number.') }}</li>
-                        </ol>
-                        <button type="button" class="btn btn-primary btn-sm" id="jo-start-tour-home">
-                            <i class="bi bi-compass me-1"></i>Start guided tour
-                        </button>
-                    </div>
-                </div>
+            <div class="col-lg-5 raniag-hero-photo">
+                <img src="/images/pamplona-landmark.jpg" alt="The I love Pamplona sign in front of the Pamplona Cultural and Sports Center" width="1024" height="640" fetchpriority="high">
             </div>
         </div>
     </div>
 
-    <div class="row g-4 mb-2" data-rg-stagger>
-        <div class="col-md-4">
-            <div class="card raniag-card h-100 text-center p-4">
-                <div class="text-primary fs-2 mb-3"><i class="bi bi-eye-slash"></i></div>
-                <h3 class="h6 fw-bold">{{ __('Report Anonymously, or Not') }}</h3>
-                <p class="text-muted small mb-0">{{ __('Skip your name and contact details entirely, or leave them so a responder can reach you directly — your choice.') }}</p>
-            </div>
+    <section class="rg-how" data-rg-hero-card aria-labelledby="rg-how-title">
+        <div class="rg-how-head">
+            <img class="jo-mascot rg-how-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="140" height="176">
+            <p class="rg-how-kicker">JO</p>
+            <h2 id="rg-how-title" class="rg-how-title">{{ __('How it works') }}</h2>
+            <p class="rg-how-lead">Four steps, from the report you file to the status you can check anytime.</p>
         </div>
-        <div class="col-md-4">
-            <div class="card raniag-card h-100 text-center p-4">
-                <div class="text-primary fs-2 mb-3"><i class="bi bi-geo-alt"></i></div>
-                <h3 class="h6 fw-bold">{{ __('GPS-Tagged Evidence') }}</h3>
-                <p class="text-muted small mb-0">Photos from the built-in camera carry your exact coordinates and barangay, so {{ config('raniag.organization') }} finds the scene fast.</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card raniag-card h-100 text-center p-4">
-                <div class="text-primary fs-2 mb-3"><i class="bi bi-bell"></i></div>
-                <h3 class="h6 fw-bold">{{ __('Real-Time Status Tracking') }}</h3>
-                <p class="text-muted small mb-0">{{ __('Your tracking number shows exactly where your report stands — submitted, assigned, in progress, or resolved.') }}</p>
-            </div>
-        </div>
-    </div>
+        <ol class="rg-how-steps">
+            <li>
+                <span class="rg-how-num">1</span>
+                <h3>File the report</h3>
+                <p>Describe what happened. Stay anonymous, or leave a number so a responder can reach you. A GPS photo helps {{ config('raniag.organization') }} find the scene.</p>
+            </li>
+            <li>
+                <span class="rg-how-num">2</span>
+                <h3>Keep your number</h3>
+                <p>You receive a tracking number the moment the report is in. That number is how you follow it later.</p>
+            </li>
+            <li>
+                <span class="rg-how-num">3</span>
+                <h3>{{ config('raniag.organization') }} assigns it</h3>
+                <p>Staff review the report and send it to the responder who covers that part of Pamplona.</p>
+            </li>
+            <li>
+                <span class="rg-how-num">4</span>
+                <h3>Watch the status</h3>
+                <p>The tracking page shows submitted, assigned, in progress, or resolved — without calling the office.</p>
+            </li>
+        </ol>
+        <button type="button" class="btn btn-primary" id="jo-start-tour-home">
+            <i class="bi bi-compass me-1"></i>Start guided tour
+        </button>
+    </section>
 
     {{-- ===================== UPDATES & ANNOUNCEMENTS ===================== --}}
     <div class="mt-5" id="updates" data-rg-reveal data-rg-stagger>

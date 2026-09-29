@@ -333,6 +333,21 @@
             pointer-events: none;
         }
         .raniag-hero > * { position: relative; z-index: 1; }
+        .raniag-hero-photo { position: relative; min-height: 100%; overflow: hidden; }
+        .raniag-hero-photo img {
+            width: 100%; height: 100%; min-height: 340px;
+            object-fit: cover; object-position: center 58%;
+            display: block;
+        }
+        .raniag-hero-photo::after {
+            content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: linear-gradient(90deg, rgba(11,18,32,.55), rgba(11,18,32,0) 34%);
+        }
+        @media (max-width: 991.98px) {
+            .raniag-hero-photo { order: -1; }
+            .raniag-hero-photo img { min-height: 220px; max-height: 260px; }
+            .raniag-hero-photo::after { display: none; }
+        }
         .rg-hero-title { font-weight: 700; letter-spacing: -.03em; }
 
         /* ---------- icon tiles ---------- */
