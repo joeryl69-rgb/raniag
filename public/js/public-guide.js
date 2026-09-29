@@ -6,7 +6,7 @@
     const STORAGE_KEY = 'raniag_guide';
     const ASSET = '/images/guide';
 
-    const POSE_VERSION = '3';
+    const POSE_VERSION = '4';
     const NAV_TOUR = [
         { sel: '[data-rg-tour="home"]', pose: 'greeting', label: 'Home', icon: 'bi-house-door', text: 'Home is where you start — overview, announcements, and how reporting works.' },
         { sel: '[data-rg-tour="track"]', pose: 'clipboard', label: 'Track Report', icon: 'bi-search', text: 'Track Report — check status anytime with your tracking or reference code.' },
@@ -43,7 +43,16 @@
     }
 
     function poseUrl(pose) {
-        return `${ASSET}/jo-${pose || 'greeting'}.svg?v=${POSE_VERSION}`;
+        return `${ASSET}/jo-${pose || 'greeting'}.jpg?v=${POSE_VERSION}`;
+    }
+
+    function markPoseChange(img) {
+        if (!img) return;
+        img.classList.remove('jo-pose-in');
+        void img.offsetWidth;
+        img.classList.add('jo-pose-in');
+        window.clearTimeout(img._joPoseTimer);
+        img._joPoseTimer = window.setTimeout(() => img.classList.remove('jo-pose-in'), 480);
     }
 
     function ensureDock() {
@@ -57,7 +66,7 @@
         dock.setAttribute('aria-label', 'JO guide');
         dock.innerHTML = `
             <div class="jo-guide-card">
-                <img class="jo-guide-avatar" id="jo-guide-avatar" src="${poseUrl('greeting')}" alt="JO" width="72" height="90">
+                <img class="jo-mascot jo-guide-avatar" id="jo-guide-avatar" src="${poseUrl('greeting')}" alt="JO" width="160" height="200">
                 <div class="jo-guide-body">
                     <div class="jo-guide-kicker">
                         <span class="jo-guide-name">JO</span>
@@ -86,7 +95,10 @@
             img.dataset.retried = next;
             img.src = next + '&r=' + Date.now();
         };
-        if (img.getAttribute('src') !== next) img.src = next;
+        if (img.getAttribute('src') !== next) {
+            img.src = next;
+            markPoseChange(img);
+        }
     }
 
     function setFocus(step, index) {
@@ -270,7 +282,10 @@
 
         const img = panel?.querySelector('.jo-report-coach-avatar, .rg-stepper-jo-avatar');
         const txt = panel?.querySelector('.jo-report-coach-text, .rg-stepper-jo-text');
-        if (img) img.src = src;
+        if (img && img.getAttribute('src') !== src) {
+            img.src = src;
+            markPoseChange(img);
+        }
         if (txt) txt.textContent = text;
 
         const dismiss = panel?.querySelector('[data-jo-dismiss]');

@@ -1699,7 +1699,40 @@ body.raniag-public {
   box-shadow: 0 16px 40px -18px rgba(11,18,32,.45);
   position: relative;
 }
-.jo-guide-avatar { flex-shrink: 0; width: 64px; height: 80px; object-fit: contain; }
+.jo-mascot {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: clamp(148px, 18vw, 200px);
+  max-width: min(46%, 220px);
+  object-fit: contain;
+  object-position: center;
+  animation: jo-float 4.6s ease-in-out infinite;
+}
+.jo-guide-avatar,
+.rg-stepper-jo-avatar,
+#hazard-jo-avatar {
+  height: clamp(128px, 16vw, 168px);
+  max-width: min(42%, 180px);
+}
+.jo-mascot.jo-pose-in {
+  animation: jo-pose-in .42s ease-out;
+}
+@keyframes jo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes jo-pose-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jo-mascot,
+  .jo-mascot.jo-pose-in {
+    animation: none;
+  }
+}
+.jo-guide-avatar { flex-shrink: 0; }
 .jo-guide-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 18px; }
 .jo-guide-name { font-size: .72rem; font-weight: 800; letter-spacing: .08em; color: var(--raniag-primary, #0b5ed7); text-transform: uppercase; }
 .jo-guide-count { font-size: .72rem; font-weight: 700; color: #64748b; }
@@ -1727,7 +1760,11 @@ body.raniag-public {
 }
 @media (max-width: 991.98px) {
   .jo-guide-dock { bottom: 84px; width: min(440px, calc(100vw - 16px)); }
-  .jo-guide-avatar { width: 56px; height: 70px; }
+  .jo-guide-avatar,
+  .rg-stepper-jo-avatar,
+  #hazard-jo-avatar {
+    height: clamp(112px, 30vw, 148px);
+  }
 }
 
 .jo-report-layout { display: contents; }
@@ -1755,8 +1792,6 @@ body.raniag-public {
 }
 .rg-stepper-jo.d-none { display: none !important; }
 .rg-stepper-jo-avatar {
-  width: 56px;
-  height: 70px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -1900,14 +1935,15 @@ body.raniag-public {
   align-items: center;
 }
 .rg-success-jo img {
-  width: 96px;
-  height: 120px;
+  height: clamp(168px, 22vw, 220px);
+  max-width: min(70%, 240px);
+  margin-inline: auto;
   object-fit: contain;
 }
 @media (max-width: 575.98px) {
   .rg-stepper-label { font-size: .65rem; }
   .rg-stepper-node { width: 26px; height: 26px; font-size: .75rem; }
-  .rg-stepper-jo-avatar { width: 48px; height: 60px; }
+  .rg-stepper-jo-avatar { max-width: min(38%, 150px); }
 }
 
 /* Live hazard map */

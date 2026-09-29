@@ -34,7 +34,7 @@
 
         <aside class="rg-hazard-panel">
             <div class="d-flex align-items-center gap-2 mb-2">
-                <img src="/images/guide/jo-map.svg?v=3" alt="" width="40" height="50" class="flex-shrink-0" id="hazard-jo-avatar">
+                <img src="/images/guide/jo-map.jpg?v=4" alt="" width="140" height="176" class="jo-mascot flex-shrink-0" id="hazard-jo-avatar">
                 <div>
                     <div class="small fw-bold" style="color:var(--rg-brand);">Live map guide</div>
                     <div class="small text-muted" id="hazard-jo-tip">Tap a zone or center on the map for the advisory, capacity, and barangay. Use the tabs below so this panel stays short on a phone.</div>

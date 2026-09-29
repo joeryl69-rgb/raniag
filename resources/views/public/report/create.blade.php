@@ -94,7 +94,7 @@
             <div class="rg-stepper-head">
                 <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
                 <div class="rg-stepper-jo" id="jo-report-coach" aria-label="JO report guide">
-                    <img class="rg-stepper-jo-avatar jo-report-coach-avatar" src="/images/guide/jo-greeting.svg?v=3" alt="JO" width="56" height="70">
+                    <img class="jo-mascot rg-stepper-jo-avatar jo-report-coach-avatar" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="140" height="176">
                     <div class="rg-stepper-jo-body min-w-0">
                         <div class="rg-stepper-jo-name">JO</div>
                         <p class="rg-stepper-jo-text jo-report-coach-text mb-0">Pick the incident type that fits best, then describe what happened.</p>
