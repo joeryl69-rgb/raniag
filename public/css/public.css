@@ -2194,22 +2194,45 @@ body.raniag-public {
   border: none;
 }
 .rg-evac-pin {
-  width: 28px;
-  height: 28px;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  background: #0b5ed7;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0f766e;
   border: 2px solid #fff;
-  box-shadow: 0 4px 10px rgba(11,18,32,.3);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, .28);
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.rg-evac-pin::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: #0f766e;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: translateX(-50%) rotate(45deg);
+  z-index: -1;
+}
+.rg-evac-pin svg { display: block; position: relative; z-index: 1; }
+.rg-evac-pin.is-closed { background: #64748b; }
+.rg-evac-pin.is-closed::before { background: #64748b; }
+.rg-shelter-draft .rg-evac-pin {
+  background: #b45309;
+  box-shadow: 0 0 0 4px rgba(180, 83, 9, .25);
+}
+.rg-shelter-draft .rg-evac-pin::before { background: #b45309; }
 .rg-evac-pin::after {
   content: '';
   position: absolute;
-  inset: -10px;
+  inset: -8px;
   border-radius: 50%;
-  border: 2px solid rgba(11,94,215,.45);
-  animation: rgRadarPing 2s ease-out infinite;
+  border: 2px solid rgba(15, 118, 110, .4);
+  animation: rgRadarPing 2.4s ease-out infinite;
 }
 .rg-you-accuracy {
   animation: rgAccuracyBreath 2.4s ease-in-out infinite;

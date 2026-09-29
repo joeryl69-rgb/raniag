@@ -19,6 +19,8 @@ class QrPosterController extends Controller
 
         if ($request->filled('edit')) {
             $editing = QrPoster::query()->find($request->integer('edit'));
+        } elseif (old('poster_id')) {
+            $editing = QrPoster::query()->find((int) old('poster_id'));
         }
 
         // One poster per barangay: the create/edit dropdown only offers
@@ -31,6 +33,7 @@ class QrPosterController extends Controller
 
         return view('admin.qr_posters.index', [
             'barangays' => $barangays,
+            'allBarangays' => $allBarangays,
             'posters' => $posters,
             'editing' => $editing,
         ]);

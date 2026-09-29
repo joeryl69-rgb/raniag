@@ -14,10 +14,10 @@
     function evacIcon() {
         return L.divIcon({
             className: 'rg-evac-marker',
-            html: '<div class="rg-evac-pin"></div>',
-            iconSize: [28, 28],
-            iconAnchor: [14, 28],
-            popupAnchor: [0, -24],
+            html: '<div class="rg-evac-pin" aria-hidden="true"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="#fff" d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg></div>',
+            iconSize: [34, 42],
+            iconAnchor: [17, 40],
+            popupAnchor: [0, -36],
         });
     }
 
@@ -724,7 +724,7 @@
                             <strong class="d-block small">${esc(z.name)}</strong>
                             <span class="text-muted" style="font-size:.72rem">${esc(z.type?.name || 'Hazard')}${z.barangay ? ` · ${esc(z.barangay)}` : ''}</span>
                         </button>`).join('')
-                    : '<div class="small text-muted">No active hazard zones. Staff add these under Zones and centers.</div>';
+                    : '<div class="small text-muted">No active hazard zones. Staff add these on the Hazard map.</div>';
             }
 
             if (cList) {

@@ -19,7 +19,7 @@
             </li>
             <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.hazard.*') ? 'active' : '' }}" href="{{ route('admin.hazard.index') }}">
-                    <i class="bi bi-triangle"></i><span>Zones and centers</span>
+                    <i class="bi bi-map"></i><span>Hazard map</span>
                 </a>
             </li>
             <li class="nav-item" data-role="administrator">
@@ -39,7 +39,7 @@
             </li>
             <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
-                    <i class="bi bi-file-earmark-text"></i><span>Make Report</span>
+                    <i class="bi bi-file-earmark-text"></i><span>Reports</span>
                 </a>
             </li>
 
