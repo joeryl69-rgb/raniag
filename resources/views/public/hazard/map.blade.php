@@ -33,38 +33,27 @@
         </div>
 
         <aside class="rg-hazard-panel">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <img src="/images/guide/jo-map.jpg?v=4" alt="" width="140" height="176" class="jo-mascot flex-shrink-0" id="hazard-jo-avatar">
-                <div>
-                    <div class="small fw-bold" style="color:var(--rg-brand);">Live map guide</div>
-                    <div class="small text-muted" id="hazard-jo-tip">Tap a zone or center on the map for the advisory, capacity, and barangay. Use the tabs below so this panel stays short on a phone.</div>
+            <div class="rg-hazard-panel-head">
+                <img src="/images/guide/jo-map.jpg?v=4" alt="" width="56" height="70" class="jo-mascot" id="hazard-jo-avatar">
+                <div class="min-w-0">
+                    <div class="small fw-bold" style="color:var(--rg-brand);">Pamplona live map</div>
+                    <div class="small text-muted" id="hazard-jo-tip">See open reports by barangay, then open Places for hazard zones and evacuation centers.</div>
                 </div>
             </div>
 
-            <div class="rg-hazard-chips mb-2" role="group" aria-label="Map layers">
+            <div class="rg-hazard-chips" role="group" aria-label="Map layers">
                 <input type="checkbox" class="btn-check" id="layer-zones" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-zones">Hazard zones</label>
-
                 <input type="checkbox" class="btn-check" id="layer-centers" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
-
                 <input type="checkbox" class="btn-check" id="layer-risk" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-risk">Barangay risk</label>
-
                 <input type="checkbox" class="btn-check" id="layer-you" autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-you">My location</label>
             </div>
 
-            <p class="small text-muted d-none mb-2" id="hazard-geo-status" role="status"></p>
-
-            <div class="rg-hazard-legend mb-2" id="hazard-legend"></div>
-
-            <div id="places-always" class="mb-2">
-                <h2 class="h6 fw-bold mb-1">Hazard zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
-                <div id="zone-list" class="d-grid gap-1 mb-2"></div>
-                <h2 class="h6 fw-bold mb-1">Open evacuation centers <span class="text-muted fw-normal" id="center-count"></span></h2>
-                <div id="center-list" class="d-grid gap-1"></div>
-            </div>
+            <p class="small text-muted d-none mb-0" id="hazard-geo-status" role="status"></p>
+            <div class="rg-hazard-legend" id="hazard-legend"></div>
 
             <div class="rg-hazard-tabs" role="tablist" aria-label="Map details">
                 <button type="button" class="rg-hazard-tab is-active" data-hazard-tab="risk" role="tab" aria-selected="true">Risk</button>
@@ -73,17 +62,20 @@
             </div>
 
             <div class="rg-hazard-pane" data-hazard-pane="risk">
-                <div id="risk-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small mb-2">
+                <div id="risk-box" class="rg-hazard-nearest small">
                     <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Open reports by barangay</div>
                     <div id="risk-summary" class="fw-semibold">Loading…</div>
                     <div id="risk-list" class="mt-1 text-muted" style="font-size:.78rem"></div>
                 </div>
-                <div id="nearest-box" class="rg-hazard-nearest alert alert-light border py-2 px-3 small d-none mb-2"></div>
-                <div id="containing-zones-box" class="alert alert-warning border py-2 px-3 small d-none mb-0"></div>
+                <div id="nearest-box" class="rg-hazard-nearest small d-none mt-2"></div>
+                <div id="containing-zones-box" class="alert alert-warning border py-2 px-3 small d-none mt-2 mb-0"></div>
             </div>
 
             <div class="rg-hazard-pane d-none" data-hazard-pane="places">
-                <p class="small text-muted mb-0">Hazard zones and open shelters are listed above this panel. Tap a name to focus the map.</p>
+                <h2 class="h6 fw-bold mb-1">Hazard zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
+                <div id="zone-list" class="d-grid gap-1 mb-3"></div>
+                <h2 class="h6 fw-bold mb-1">Open evacuation centers <span class="text-muted fw-normal" id="center-count"></span></h2>
+                <div id="center-list" class="d-grid gap-1"></div>
             </div>
 
             <div class="rg-hazard-pane d-none" data-hazard-pane="route">
@@ -97,7 +89,7 @@
                             <label class="btn btn-sm rg-hazard-chip" for="route-drive">Drive</label>
                         </div>
                     </div>
-                    <p class="mb-1 text-muted" id="route-summary">Turn on My location to see a live path.</p>
+                    <p class="mb-1 text-muted" id="route-summary">Turn on My location to see the path to the nearest open evacuation center.</p>
                     <p class="mb-0 small text-danger d-none" id="route-status" role="status"></p>
                 </div>
             </div>

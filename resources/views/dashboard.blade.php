@@ -261,6 +261,11 @@
             .analytics-card { padding: 1.1rem 1.15rem; }
             .analytics-card .chart-wrap { position: relative; height: 240px; }
             .analytics-card .chart-wrap.tall { height: 300px; }
+            .analytics-card .chart-wrap.short { height: 150px; }
+            .pulse-row { display: grid; grid-template-columns: 7.4rem 1fr 2.2rem; gap: .45rem; align-items: center; margin: .4rem 0; font-size: .78rem; }
+            .pulse-track { height: 8px; border-radius: 99px; background: #e8eef8; overflow: hidden; }
+            .pulse-fill { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .9s ease; }
+            [data-theme="dark"] .pulse-track { background: #1c2b47; }
             .mini-stat-row { display: flex; align-items: center; justify-content: space-between; padding: .5rem 0; border-bottom: 1px dashed var(--raniag-border); font-size: .84rem; }
             .mini-stat-row:last-child { border-bottom: 0; }
             .hotspot-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .55rem .1rem; border-bottom: 1px solid var(--raniag-border); font-size: .82rem; }
@@ -546,8 +551,8 @@
                             <div class="ring-unit">%</div>
                         </div>
                     </div>
-                    <div class="ring-label"><i class="bi bi-stopwatch"></i> SLA Compliance</div>
-                    <div class="ring-sub" id="ring-sla-sub">Avg. resolution vs. target</div>
+                    <div class="ring-label"><i class="bi bi-stopwatch"></i> On-time resolution</div>
+                    <div class="ring-sub" id="ring-sla-sub">Resolved within the response target</div>
                 </div>
             </div>
         </div>
@@ -556,8 +561,8 @@
     @if($isAdmin)
         {{-- ===================== ADMIN ANALYTICS ===================== --}}
         <div class="section-head">
-            <h5><i class="bi bi-lightning-charge text-primary"></i> Live operations</h5>
-            <p class="section-sub">Open cases that still need a decision, refreshed with the map</p>
+            <h5><i class="bi bi-lightning-charge text-primary"></i> Open incidents</h5>
+            <p class="section-sub">Cases still open inside Pamplona, same set as the situational map</p>
         </div>
         <div class="row g-3 mb-4">
             <div class="col-12 col-lg-7">
@@ -568,7 +573,7 @@
             </div>
             <div class="col-12 col-lg-5">
                 <div class="dash-card analytics-card h-100 mb-3">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Where reports are clustering</strong>
+                    <strong class="small text-uppercase text-muted d-block mb-2">Open reports by barangay</strong>
                     <div id="ops-places"><div class="empty-note">Loading places…</div></div>
                 </div>
                 <div class="dash-card analytics-card">
@@ -583,32 +588,26 @@
             </div>
         </div>
         <div class="section-head">
-            <h5><i class="bi bi-bar-chart-line text-primary"></i> Movement</h5>
-            <p class="section-sub">These redraw every refresh from the same live totals</p>
+            <h5><i class="bi bi-clipboard2-pulse text-primary"></i> Incident picture</h5>
+            <p class="section-sub">Status and priority of recorded incidents, and which types residents are reporting</p>
         </div>
         <div class="row g-3 mb-4">
             <div class="col-12 col-xl-7">
                 <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Reports over the last 6 weeks</strong>
-                    <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+                    <strong class="small text-uppercase text-muted d-block mb-2">Incident status</strong>
+                    <div id="status-meters"></div>
+                    <strong class="small text-uppercase text-muted d-block mt-3 mb-2">Priority of open incidents</strong>
+                    <div id="priority-meters"></div>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-xl-5">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Status right now</strong>
-                    <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+            <div class="col-12 col-xl-5">
+                <div class="dash-card analytics-card mb-3">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Reports, last 6 weeks</strong>
+                    <div class="chart-wrap short"><canvas id="chart-trend"></canvas></div>
                 </div>
-            </div>
-            <div class="col-12 col-md-6 col-xl-6">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Priority mix</strong>
-                    <div class="chart-wrap"><canvas id="chart-priority"></canvas></div>
-                </div>
-            </div>
-            <div class="col-12 col-xl-6">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">What people are reporting</strong>
-                    <div class="chart-wrap tall"><canvas id="chart-category"></canvas></div>
+                <div class="dash-card analytics-card">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Open incidents by type</strong>
+                    <div id="category-meters"></div>
                 </div>
             </div>
         </div>
@@ -618,7 +617,7 @@
             <div class="col-12 col-lg-7">
                 <div class="dash-card analytics-card h-100">
                     <div class="section-head mb-2">
-                        <h5 class="mb-0"><i class="bi bi-truck text-primary"></i> Active Dispatches</h5>
+                        <h5 class="mb-0"><i class="bi bi-truck text-primary"></i> {{ $isAgency ? 'Active dispatches' : 'My assignments' }}</h5>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0">
@@ -641,7 +640,7 @@
             <div class="col-12 col-lg-5">
                 <div class="dash-card analytics-card h-100">
                     <strong class="small text-uppercase text-muted d-block mb-2">Your cases right now</strong>
-                    <div class="chart-wrap mb-3"><canvas id="chart-status"></canvas></div>
+                    <div id="role-status-meters" class="mb-3"></div>
                     <strong class="small text-uppercase text-muted d-block mb-2"><i class="bi bi-activity text-primary"></i> Recent Status Updates</strong>
                     <div id="status-feed"><div class="empty-note">Loading updates…</div></div>
                 </div>
@@ -1230,11 +1229,33 @@
                 setText('sms-pending', sms.pending ?? 0);
                 setText('out-of-jurisdiction', analytics.out_of_jurisdiction_count ?? 0);
 
-                renderOpsBoard(rawPoints, analytics);
+                renderOpsBoard(rawPoints);
                 renderTrendChart(analytics.weekly_trends || []);
-                renderStatusChart(sb);
-                renderCategoryChart(analytics.categories || {});
-                renderPriorityChart(analytics.priority_breakdown || {});
+                const statusOrder = ['submitted', 'in_progress', 'resolved', 'closed'];
+                const statusLabels = { submitted: 'Submitted', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' };
+                renderMeters('status-meters', statusOrder.map((key) => ({
+                    label: statusLabels[key],
+                    value: Number(sb[key]) || 0,
+                    color: '#0b5ed7',
+                })));
+                const priorityColors = { critical: '#b91c1c', high: '#dc3545', medium: '#f59e0b', low: '#0d6efd' };
+                const priorityOrder = ['critical', 'high', 'medium', 'low'];
+                const priorityCounts = {};
+                const typeCounts = {};
+                (rawPoints || []).forEach((point) => {
+                    const priority = String(point.priority || 'medium').toLowerCase();
+                    priorityCounts[priority] = (priorityCounts[priority] || 0) + 1;
+                    const typeName = (point.incident_type && point.incident_type.name) || (point.incidentType && point.incidentType.name) || 'Incident';
+                    typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+                });
+                renderMeters('priority-meters', priorityOrder.filter((key) => priorityCounts[key]).map((key) => ({
+                    label: key,
+                    value: priorityCounts[key],
+                    color: priorityColors[key] || '#64748b',
+                })));
+                renderMeters('category-meters', Object.entries(typeCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([label, value]) => ({ label, value, color: '#0f766e' })));
 
                 const perf = data.performance || {};
                 setRing('ring-resolution-fill', 'ring-resolution-value', perf.resolution_rate);
@@ -1331,7 +1352,22 @@
                 });
             }
 
-            function renderOpsBoard(points, analytics) {
+            function renderMeters(id, rows) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const items = (rows || []).filter((row) => row && row.label);
+                if (!items.length) {
+                    el.innerHTML = '<div class="empty-note">Nothing to show yet.</div>';
+                    return;
+                }
+                const max = Math.max(1, ...items.map((row) => row.value));
+                el.innerHTML = items.map((row) => {
+                    const width = Math.round((row.value / max) * 100);
+                    return `<div class="pulse-row"><span class="text-capitalize">${escapeHtml(row.label)}</span><span class="pulse-track"><span class="pulse-fill" style="width:${width}%;background:${row.color}"></span></span><strong>${row.value}</strong></div>`;
+                }).join('');
+            }
+
+            function renderOpsBoard(points) {
                 const queue = document.getElementById('ops-queue');
                 const places = document.getElementById('ops-places');
                 if (queue) {
@@ -1351,13 +1387,19 @@
                             <span><span class="d-block fw-semibold">${escapeHtml(typeName)}</span><span class="ops-meta">${escapeHtml(r.barangay || '—')} · ${escapeHtml((r.status || '').replaceAll('_', ' '))}</span></span>
                             <span class="ops-age"><span class="badge badge-priority-${priority} text-capitalize">${escapeHtml(priority)}</span></span>
                         </a>`;
-                    }).join('') : '<div class="empty-note">No open cases waiting on a decision.</div>';
+                    }).join('') : '<div class="empty-note">No open incidents inside Pamplona.</div>';
                 }
                 if (places) {
-                    const entries = Object.entries(analytics.barangays || {}).slice(0, 6);
+                    const counts = {};
+                    (points || []).forEach((point) => {
+                        const name = point.barangay || '';
+                        if (!name) return;
+                        counts[name] = (counts[name] || 0) + 1;
+                    });
+                    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
                     places.innerHTML = entries.length ? entries.map(([name, count]) =>
-                        `<div class="hotspot-row"><span>${escapeHtml(name)}</span><span class="hotspot-count">${count}</span></div>`
-                    ).join('') : '<div class="empty-note">No barangay clustering yet.</div>';
+                        `<div class="hotspot-row"><span>${escapeHtml(name)}</span><span class="hotspot-count">${count} open</span></div>`
+                    ).join('') : '<div class="empty-note">No open reports in Pamplona barangays.</div>';
                 }
             }
 
@@ -1382,7 +1424,11 @@
 
                 plotPoints(data.active_dispatches || []);
                 renderDispatchTable(data.active_dispatches || []);
-                renderStatusChart(sb);
+                renderMeters('role-status-meters', Object.entries(sb).map(([label, value]) => ({
+                    label: String(label).replaceAll('_', ' '),
+                    value: Number(value) || 0,
+                    color: '#0b5ed7',
+                })));
                 renderStatusFeed(data.recent_status_updates || []);
                 maybeShowIncidentAlert(data.latest_incident);
             }

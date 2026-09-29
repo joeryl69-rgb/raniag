@@ -2100,7 +2100,7 @@ body.raniag-public {
 /* Live hazard map */
 .rg-hazard-shell { display: grid; gap: 1rem; }
 @media (min-width: 992px) {
-  .rg-hazard-shell { grid-template-columns: minmax(0, 1fr) 300px; align-items: stretch; }
+  .rg-hazard-shell { grid-template-columns: minmax(0, 1fr) 340px; align-items: stretch; }
 }
 .rg-hazard-stage {
   position: relative;
@@ -2192,9 +2192,23 @@ body.raniag-public {
   background: #fff;
   border: 1px solid var(--raniag-border, #dde5ea);
   border-radius: 16px;
-  padding: 14px;
-  max-height: min(70vh, 640px);
-  overflow: auto;
+  padding: 12px;
+  height: min(70vh, 640px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+.rg-hazard-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.rg-hazard-panel-head .jo-mascot {
+  width: 48px;
+  height: auto;
+  flex: 0 0 auto;
 }
 .rg-hazard-tabs {
   display: flex;
@@ -2217,14 +2231,21 @@ body.raniag-public {
   color: var(--rg-brand, #0b5ed7);
 }
 .rg-hazard-pane {
-  max-height: 280px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
+  padding-right: 2px;
+}
+.rg-hazard-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 @media (max-width: 991.98px) {
   #hazard-map { height: 46vh; min-height: 240px; }
   .rg-hazard-stage { min-height: 240px; }
-  .rg-hazard-panel { max-height: none; }
-  .rg-hazard-pane { max-height: 200px; }
+  .rg-hazard-panel { height: auto; max-height: none; overflow: visible; }
+  .rg-hazard-pane { max-height: 240px; flex: none; }
 }
 .rg-hazard-list-item {
   border: 1px solid transparent;
@@ -2245,7 +2266,7 @@ body.raniag-public {
   0%, 100% { background: transparent; }
   40% { background: rgba(217,85,43,.16); }
 }
-.rg-hazard-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; color: #5b6780; margin-right: 10px; }
+.rg-hazard-legend span { display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; font-weight: 700; color: #5b6780; white-space: nowrap; }
 .rg-hazard-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .rg-evac-marker {
   background: transparent;

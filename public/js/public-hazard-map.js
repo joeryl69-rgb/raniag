@@ -127,7 +127,7 @@
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
                 risk: 'Risk awareness highlights barangays with open community reports — no exact addresses are shown.',
                 you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
-                both: 'Use the tabs for risk, places, and the route. Turn on My location for a path to the nearest open center.',
+                both: 'Open reports stay as barangay counts. Exact house locations stay private. Use Places for hazard zones and evacuation centers.',
                 route: 'Live route to the nearest open center. It updates as you move.',
                 off: 'My location is off. Turn it on to track yourself and show the route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
@@ -275,7 +275,7 @@
                 youGroup.clearLayers();
                 document.getElementById('nearest-box')?.classList.add('d-none');
                 document.getElementById('containing-zones-box')?.classList.add('d-none');
-                if (routeSummary) routeSummary.textContent = 'Turn on My location to see a live path.';
+                if (routeSummary) routeSummary.textContent = 'Turn on My location to see the path to the nearest open evacuation center.';
                 setRouteStatus('');
                 setGeoStatus('');
                 showRouteBox(!!mapboxToken);
@@ -306,7 +306,7 @@
         async function fetchRoute({ force } = {}) {
             if (!layersOn().you) {
                 clearRoute();
-                if (routeSummary) routeSummary.textContent = 'Turn on My location to see a live path.';
+                if (routeSummary) routeSummary.textContent = 'Turn on My location to see the path to the nearest open evacuation center.';
                 setRouteStatus('');
                 return;
             }
@@ -316,7 +316,7 @@
                 clearRoute();
                 if (routeSummary) {
                     routeSummary.textContent = mapboxToken
-                        ? (youLatLng ? 'Looking for the nearest open center…' : 'Turn on My location to see a live path.')
+                        ? (youLatLng ? 'Looking for the nearest open center…' : 'Turn on My location to see the path to the nearest open evacuation center.')
                         : 'Mapbox token not configured — route unavailable.';
                 }
                 showRouteBox(!!mapboxToken);
@@ -720,10 +720,10 @@
             const centerSwatches = (centerColors.length ? centerColors : ['#0f766e'])
                 .map((c) => `<i class="rg-hazard-swatch rg-hazard-swatch-pin" style="background:${esc(c)}"></i>`).join('');
             el.innerHTML =
-                `<span>${zoneSwatches} Hazard area</span>` +
-                `<span>${centerSwatches} Shelter</span>` +
-                '<span><i class="rg-hazard-swatch" style="background:#fbbf24"></i><i class="rg-hazard-swatch" style="background:#f97316"></i><i class="rg-hazard-swatch" style="background:#dc2626"></i> Open reports, few to many</span>' +
-                '<span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0b5ed7"></i> You, only while My location is on</span>';
+                `<span title="Hazard zone">${zoneSwatches} Hazard zone</span>` +
+                `<span title="Evacuation center">${centerSwatches} Center</span>` +
+                '<span title="Open incident reports in this barangay"><i class="rg-hazard-swatch" style="background:#fbbf24"></i><i class="rg-hazard-swatch" style="background:#f97316"></i><i class="rg-hazard-swatch" style="background:#dc2626"></i> Open reports</span>' +
+                '<span title="Shown only while My location is on"><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0b5ed7"></i> You</span>';
         }
 
         function renderLists(zones, centers) {
@@ -862,7 +862,7 @@
                 if (!el.checked) return;
                 routeProfile = el.value === 'driving' ? 'driving' : 'walking';
                 if (!layersOn().you) {
-                    if (routeSummary) routeSummary.textContent = 'Turn on My location to see a live path.';
+                    if (routeSummary) routeSummary.textContent = 'Turn on My location to see the path to the nearest open evacuation center.';
                     return;
                 }
                 fetchRoute({ force: true }).then(() => fitActiveView({ animate: true }));
