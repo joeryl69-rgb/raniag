@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        {{ __('Incident Reports Management') }}
+        {{ __('Incidents') }}
     </x-slot>
 
     <div class="row">
@@ -9,8 +9,7 @@
                 <div class="card-header raniag-card-header bg-white py-3 border-0">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                         <div>
-                            <h5 class="mb-1 fw-bold"><i class="bi bi-filter-left me-2 text-primary"></i>All Incident Reports</h5>
-                            <p class="text-muted small mb-0">Review submitted and assigned incident reports in one consistent view.</p>
+                            <p class="text-muted small mb-0">The live queue. Open a report to dispatch it, read the evidence, and follow the status. Paper forms are filed under Case Documents.</p>
                         </div>
                         <span class="badge bg-primary-subtle text-primary border">Live queue</span>
                     </div>

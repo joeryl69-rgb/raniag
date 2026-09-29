@@ -29,7 +29,7 @@ class IncidentDocumentController extends Controller
         $query = Incident::query()
             ->whereIn('status', $statuses ?: $validStatuses)
             ->withCount('incidentDocuments')
-            ->with(['incidentType']);
+            ->with(['incidentType', 'incidentDocuments:id,incident_id,document_type']);
 
         $q = trim((string) $request->string('q'));
         if ($q !== '') {
@@ -55,6 +55,16 @@ class IncidentDocumentController extends Controller
         return view('admin.incident_documents.index', compact('incidents', 'documentTypes'));
     }
 
+    public function show(Incident $incident): View
+    {
+        $incident->load(['incidentType', 'incidentDocuments']);
+
+        return view('admin.incident_documents.show', [
+            'incident' => $incident,
+            'documentTypes' => IncidentDocumentType::cases(),
+        ]);
+    }
+
     public function store(StoreIncidentDocumentRequest $request, Incident $incident): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
@@ -77,8 +87,8 @@ class IncidentDocumentController extends Controller
         }
 
         return redirect()
-            ->route('admin.incidents.show', $incident->id)
-            ->with('success', 'Document attached to incident.');
+            ->route('admin.incident_documents.show', $incident)
+            ->with('success', 'Document saved to the case file.');
     }
 
     public function destroy(Request $request, Incident $incident, IncidentDocument $document): RedirectResponse|JsonResponse
@@ -93,8 +103,8 @@ class IncidentDocumentController extends Controller
         }
 
         return redirect()
-            ->route('admin.incidents.show', $incident->id)
-            ->with('success', 'Document removed.');
+            ->route('admin.incident_documents.show', $incident)
+            ->with('success', 'Document removed from the case file.');
     }
 
     /** Save admin edits to the scanned/extracted text without re-uploading the file. */
@@ -109,7 +119,7 @@ class IncidentDocumentController extends Controller
         $document->update($data);
 
         return redirect()
-            ->route('admin.incidents.show', $incident->id)
+            ->route('admin.incident_documents.show', $incident)
             ->with('success', 'Extracted text updated.');
     }
 }

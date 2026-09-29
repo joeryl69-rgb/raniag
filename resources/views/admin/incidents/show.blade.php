@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        {{ __('Incident Report Processing') }}
+        {{ $incident->tracking_number }}
     </x-slot>
 
     @push('styles')
@@ -169,183 +169,30 @@
                 </div>
             </div>
 
-            <!-- Case Documents Repository -->
-            <div class="card raniag-card rg-app-card mb-4" id="case-documents">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-folder2-open me-2 text-primary"></i>Case Documents Repository</h5>
-                    <div class="text-muted small mt-1">Upload a photo of each paper form. The file is stored as an image. Text is not scanned from it.</div>
+            <div class="card raniag-card rg-app-card mb-4">
+                <div class="card-header raniag-card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-folder2-open me-2 text-primary"></i>Paper forms</h5>
+                        <div class="text-muted small mt-1">The four paper forms are filed under Case Documents. This screen stays on the live report.</div>
+                    </div>
+                    <a href="{{ route('admin.incident_documents.show', $incident) }}" class="btn btn-sm btn-outline-primary">Open case file</a>
                 </div>
                 <div class="card-body">
                     @php
-                        $documentGroups = \App\Enums\IncidentDocumentType::cases();
-                        $existingDocuments = $incident->incidentDocuments ?? collect();
+                        $docs = $incident->incidentDocuments ?? collect();
+                        $typeValue = function ($doc) {
+                            return is_object($doc->document_type) ? $doc->document_type->value : $doc->document_type;
+                        };
                     @endphp
-                    <div class="row g-3">
-                        @foreach ($documentGroups as $docType)
-                            @php $docsOfType = $existingDocuments->where('document_type', $docType); @endphp
-                            <div class="col-12 col-md-6">
-                                <div class="border rounded p-3 h-100 rg-docgroup">
-                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                                        <span class="fw-semibold small">{{ $docType->label() }}</span>
-                                        <span class="badge {{ $docsOfType->isEmpty() ? 'bg-secondary' : 'bg-success' }}">{{ $docsOfType->count() }} on file</span>
-                                    </div>
-
-                                    @if ($docsOfType->isNotEmpty())
-                                        <div class="rg-docthumb-row mb-2">
-                                            @foreach ($docsOfType as $doc)
-                                                <div class="rg-docthumb">
-                                                    <a href="{{ $doc->url() }}" class="js-lightbox rg-docthumb-link" data-group="casedoc-{{ $incident->id }}-{{ $docType->value }}" data-caption="{{ $docType->label() }}">
-                                                        @if (str_starts_with((string) $doc->mime_type, 'image/'))
-                                                            <img src="{{ $doc->url() }}" alt="{{ $docType->label() }}" class="rg-docthumb-img" loading="lazy">
-                                                        @else
-                                                            <div class="rg-docthumb-img rg-docthumb-file"><i class="bi bi-file-earmark-pdf fs-4"></i></div>
-                                                        @endif
-                                                    </a>
-                                                    <form method="POST" action="{{ route('admin.incidents.documents.destroy', [$incident->id, $doc->id]) }}" class="rg-docthumb-delform" onsubmit="return confirm('Remove this document?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger rg-docthumb-delbtn" title="Remove"><i class="bi bi-x"></i></button>
-                                                    </form>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
-
-                                    <div class="d-flex gap-2">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), true)"><i class="bi bi-camera me-1"></i>Take photo</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openScanModal({{ $incident->id }}, @js($docType->value), @js($docType->label()), false)"><i class="bi bi-upload me-1"></i>Upload image</button>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (\App\Enums\IncidentDocumentType::cases() as $docType)
+                            @php $onFile = $docs->contains(fn ($doc) => $typeValue($doc) === $docType->value); @endphp
+                            <span class="badge {{ $onFile ? 'text-bg-success' : 'text-bg-light border text-muted' }}">{{ $docType->label() }}</span>
                         @endforeach
                     </div>
+                    <div class="small text-muted mt-2">{{ $docs->unique(fn ($doc) => $typeValue($doc))->count() }} of {{ count(\App\Enums\IncidentDocumentType::cases()) }} form types on file.</div>
                 </div>
             </div>
-
-            <div class="modal fade" id="scanModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-scrollable rg-scan-dialog">
-                    <div class="modal-content">
-                        <form method="POST" id="scanForm" enctype="multipart/form-data">
-                            @csrf
-                            <input type="hidden" name="document_type" id="scanDocType">
-                            <input type="hidden" name="is_camera_capture" id="scanIsCamera">
-                            <div class="modal-header">
-                                <h5 class="modal-title"><i class="bi bi-image me-2 text-primary"></i>Add photo of <span id="scanDocLabel" class="fw-bold ms-1"></span></h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p class="small text-muted">The photo is saved as-is. Nothing is read or converted into text.</p>
-                                <div class="d-flex gap-2 align-items-start mb-3">
-                                    <input type="file" name="file" id="scanFileInput" class="form-control" accept="image/*" required>
-                                    <button type="button" class="btn btn-outline-secondary flex-shrink-0 d-none" id="scanRetakeBtn" title="Retake photo">
-                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Retake
-                                    </button>
-                                </div>
-                                <div id="scanPreviewWrap" class="d-none text-center mb-0">
-                                    <img id="scanPreviewImg" class="img-fluid rounded border" style="max-height:280px;" alt="Document photo preview">
-                                </div>
-                            </div>
-                            <div class="modal-footer rg-scan-footer">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary" id="scanSubmitBtn"><i class="bi bi-check-lg me-1"></i>Save Document</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            @push('styles')
-            <style>
-                /* The scan form (file picker + preview + OCR status + an
-                   8-row textarea) was long enough to force a lot of
-                   scrolling on phones, and the footer with "Save Document"
-                   could end up out of easy reach. Go full-screen on mobile
-                   and pin the footer so it's always visible/reachable. */
-                @media (max-width: 767.98px) {
-                    .rg-scan-dialog {
-                        width: 100%;
-                        max-width: 100%;
-                        height: 100%;
-                        max-height: 100%;
-                        margin: 0;
-                    }
-                    .rg-scan-dialog .modal-content {
-                        height: 100%;
-                        border-radius: 0;
-                    }
-                    .rg-scan-footer {
-                        position: sticky;
-                        bottom: 0;
-                        background: #fff;
-                        z-index: 2;
-                    }
-                }
-            </style>
-            @endpush
-
-            @push('scripts')
-            <script src="{{ asset('js/document-camera.js') }}?v={{ @filemtime(public_path('js/document-camera.js')) }}"></script>
-            <script>
-                const incidentDocumentsBaseUrl = @json(route('admin.incidents.documents.store', $incident->id));
-
-                let scanIsCameraFlow = false;
-
-                function scanFileFromCamera(file) {
-                    const fileInput = document.getElementById('scanFileInput');
-                    const dt = new DataTransfer();
-                    dt.items.add(file);
-                    fileInput.files = dt.files;
-                    fileInput.dispatchEvent(new Event('change'));
-                    new bootstrap.Modal(document.getElementById('scanModal')).show();
-                }
-
-                function openScanModal(incidentId, docTypeValue, docLabel, isCamera) {
-                    document.getElementById('scanForm').action = incidentDocumentsBaseUrl;
-                    document.getElementById('scanDocType').value = docTypeValue;
-                    document.getElementById('scanIsCamera').value = isCamera ? '1' : '0';
-                    document.getElementById('scanDocLabel').textContent = docLabel;
-                    document.getElementById('scanPreviewWrap').classList.add('d-none');
-                    scanIsCameraFlow = !!isCamera;
-                    document.getElementById('scanRetakeBtn').classList.toggle('d-none', !isCamera);
-                    const fileInput = document.getElementById('scanFileInput');
-                    fileInput.value = '';
-                    fileInput.setAttribute('accept', 'image/*');
-
-                    if (isCamera) {
-                        window.RaniagDocCamera.open(scanFileFromCamera);
-                        return;
-                    }
-
-                    new bootstrap.Modal(document.getElementById('scanModal')).show();
-                }
-
-                document.getElementById('scanRetakeBtn').addEventListener('click', function () {
-                    if (scanIsCameraFlow) {
-                        window.RaniagDocCamera.open(scanFileFromCamera);
-                    } else {
-                        document.getElementById('scanFileInput').value = '';
-                        document.getElementById('scanPreviewWrap').classList.add('d-none');
-                    }
-                });
-
-                document.getElementById('scanFileInput').addEventListener('change', function (e) {
-                    const file = e.target.files[0];
-                    const previewWrap = document.getElementById('scanPreviewWrap');
-                    const previewImg = document.getElementById('scanPreviewImg');
-                    if (!file || !file.type.startsWith('image/')) {
-                        previewWrap.classList.add('d-none');
-                        return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = function (evt) {
-                        previewImg.src = evt.target.result;
-                        previewWrap.classList.remove('d-none');
-                    };
-                    reader.readAsDataURL(file);
-                });
-            </script>
-            @endpush
-
             <!-- Timeline Section -->
             <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header bg-white py-3">

@@ -1,32 +1,29 @@
 <x-app-layout>
-    <x-slot name="header">
-        {{ __('Case Documents Repository') }}
-    </x-slot>
+    <x-slot name="header">{{ __('Case Documents') }}</x-slot>
 
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-white py-3 border-0">
-            <p class="text-muted small mb-0"><i class="bi bi-folder2-open text-primary me-2"></i>Filed forms for resolved and closed incidents &mdash; Call Taker Form, Dispatch Form, Narrative Report, Endorsement Sheet.</p>
-        </div>
+    <p class="small text-muted mb-3">Paper forms for resolved and closed incidents. Opening a row files the photos. It does not open the live incident.</p>
+
+    <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
             <x-filters.toolbar
                 :action="route('admin.incident_documents.index')"
-                search-placeholder="e.g. RAN-1234"
+                search-placeholder="Tracking number"
                 :clear-url="route('admin.incident_documents.index')"
             >
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Status</label>
                     <select name="status" class="form-select" data-filter-default="all">
-                        <option value="all" @selected(request('status', 'all') === 'all')>All</option>
+                        <option value="all" @selected(request('status', 'all') === 'all')>Resolved and closed</option>
                         <option value="resolved" @selected(request('status') === 'resolved')>Resolved</option>
                         <option value="closed" @selected(request('status') === 'closed')>Closed</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">Documents</label>
+                    <label class="form-label small text-muted mb-1">File</label>
                     <select name="completion" class="form-select" data-filter-default="">
                         <option value="" @selected(! request('completion'))>Any</option>
-                        <option value="complete" @selected(request('completion') === 'complete')>Complete (all 4)</option>
-                        <option value="missing" @selected(request('completion') === 'missing')>Missing some</option>
+                        <option value="complete" @selected(request('completion') === 'complete')>All 4 forms</option>
+                        <option value="missing" @selected(request('completion') === 'missing')>Missing a form</option>
                     </select>
                 </div>
             </x-filters.toolbar>
@@ -34,53 +31,56 @@
     </div>
 
     <div data-live-refresh data-live-refresh-target="#rg-incident-documents-results" data-live-refresh-interval="4000">
-    <div id="rg-incident-documents-results">
-    @if($incidents->isEmpty())
-        <div class="text-center text-muted py-5">
-            <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
-            No incidents match these filters.
-        </div>
-    @else
-        <div class="row g-3">
-            @foreach($incidents as $incident)
-                @php
-                    $total = count($documentTypes);
-                    $onFile = $incident->incident_documents_count;
-                    $pct = $total > 0 ? round(($onFile / $total) * 100) : 0;
-                    $barColor = $onFile >= $total ? 'bg-success' : ($onFile > 0 ? 'bg-warning' : 'bg-secondary');
-                @endphp
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 shadow-sm border-0">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <div class="fw-bold font-monospace">{{ $incident->tracking_number }}</div>
-                                    <div class="text-muted small">{{ $incident->incidentType->name ?? 'N/A' }}</div>
-                                </div>
-                                <span class="badge bg-primary-subtle text-primary border text-capitalize">{{ $incident->status->value }}</span>
-                            </div>
-
-                            <div class="d-flex justify-content-between small text-muted mb-1">
-                                <span>Documents on file</span>
-                                <span>{{ $onFile }} / {{ $total }}</span>
-                            </div>
-                            <div class="progress mb-3" style="height: 6px;">
-                                <div class="progress-bar {{ $barColor }}" style="width: {{ $pct }}%"></div>
-                            </div>
-
-                            <a href="{{ route('admin.incidents.show', $incident->id) }}#case-documents" class="btn btn-sm btn-outline-primary w-100">
-                                <i class="bi bi-folder2-open me-1"></i>Manage Documents
-                            </a>
-                        </div>
-                    </div>
+        <div id="rg-incident-documents-results" class="card border-0 shadow-sm">
+            @if($incidents->isEmpty())
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
+                    No closed cases match these filters.
                 </div>
-            @endforeach
+            @else
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tracking</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Forms</th>
+                                <th class="text-end">Case file</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($incidents as $incident)
+                                @php
+                                    $onFile = $incident->incidentDocuments
+                                        ->map(fn ($doc) => is_object($doc->document_type) ? $doc->document_type->value : $doc->document_type)
+                                        ->unique();
+                                @endphp
+                                <tr>
+                                    <td class="fw-semibold font-monospace">{{ $incident->tracking_number }}</td>
+                                    <td>{{ $incident->incidentType->name ?? '—' }}</td>
+                                    <td><span class="badge bg-primary-subtle text-primary border text-capitalize">{{ $incident->status->value }}</span></td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach($documentTypes as $docType)
+                                                <span class="badge {{ $onFile->contains($docType->value) ? 'text-bg-success' : 'text-bg-light border text-muted' }}">{{ $docType->shortLabel() }}</span>
+                                            @endforeach
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{{ route('admin.incident_documents.show', $incident) }}" class="btn btn-sm btn-outline-primary">Open file</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @if($incidents->hasPages())
+                    <div class="card-body border-top">
+                        {!! $incidents->links('pagination::bootstrap-5') !!}
+                    </div>
+                @endif
+            @endif
         </div>
-
-        <div class="mt-4">
-            {!! $incidents->links('pagination::bootstrap-5') !!}
-        </div>
-    @endif
-    </div>
     </div>
 </x-app-layout>

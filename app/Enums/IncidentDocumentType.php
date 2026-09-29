@@ -19,6 +19,16 @@ enum IncidentDocumentType: string
         };
     }
 
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::CallTakerForm => 'Call taker',
+            self::DispatchForm => 'Dispatch',
+            self::NarrativeReport => 'Narrative',
+            self::EndorsementSheet => 'Endorsement',
+        };
+    }
+
     /**
      * @return list<string>
      */

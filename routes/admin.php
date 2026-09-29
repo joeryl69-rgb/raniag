@@ -58,6 +58,7 @@ Route::prefix('admin')
         });
 
         Route::get('/incident-documents', [IncidentDocumentController::class, 'index'])->name('incident_documents.index');
+        Route::get('/incident-documents/{incident}', [IncidentDocumentController::class, 'show'])->name('incident_documents.show');
 
         Route::prefix('incident-types')->name('incident_types.')->group(function () {
             Route::get('/', [IncidentTypeController::class, 'index'])->name('index');
