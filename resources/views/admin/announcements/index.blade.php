@@ -32,7 +32,7 @@
                         <span class="badge {{ $item->is_published ? 'bg-success' : 'bg-secondary' }}">{{ $item->is_published ? 'Published' : 'Hidden' }}</span>
                     </div>
                     <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick='openEditModal(@json($item))'><i class="bi bi-pencil"></i> Edit</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-ann-edit="{{ json_encode($item->only(['id', 'title', 'body', 'badge', 'icon', 'is_published'])) }}"><i class="bi bi-pencil"></i> Edit</button>
                         <form method="POST" action="{{ route('admin.announcements.toggle', $item) }}" class="d-inline">
                             @csrf
                             <button type="submit" class="btn btn-sm {{ $item->is_published ? 'btn-outline-secondary' : 'btn-outline-success' }}">
@@ -90,6 +90,7 @@
                             <textarea name="body" id="annBody" class="form-control" rows="4" maxlength="2000" required placeholder="Write the announcement in plain language — this is what everyone will read on the homepage."></textarea>
                         </div>
                         <div class="form-check">
+                            <input type="hidden" name="is_published" value="0">
                             <input class="form-check-input" type="checkbox" name="is_published" id="annPublished" value="1" checked>
                             <label class="form-check-label small" for="annPublished">Published (visible on landing page)</label>
                         </div>
@@ -147,8 +148,13 @@
             document.getElementById('annIcon').value = item.icon || annTypePresets[type].icon;
             document.getElementById('annForm').action = `/admin/announcements/${item.id}`;
             document.getElementById('annFormMethod').value = 'PUT';
-            new bootstrap.Modal(document.getElementById('annModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('annModal')).show();
         }
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-ann-edit]');
+            if (!button) return;
+            openEditModal(JSON.parse(button.getAttribute('data-ann-edit')));
+        });
     </script>
     @endpush
 </x-app-layout>
