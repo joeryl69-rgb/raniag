@@ -31,21 +31,14 @@ class AppearanceSettingController extends Controller
         $data = $request->validate([
             'theme_key' => ['required', 'string', Rule::in(array_keys(ThemePresets::PRESETS))],
             'dark_mode' => ['sometimes', 'boolean'],
-            'follow_system' => ['sometimes', 'boolean'],
             'font_key' => ['required', 'string', Rule::in(array_keys(ThemePresets::FONTS))],
             'font_size' => ['required', 'string', Rule::in(array_keys(ThemePresets::FONT_SIZES))],
         ]);
 
-        // Dark mode and "follow system" are mutually exclusive — if both
-        // arrived checked (shouldn't happen with the disabled inputs on the
-        // form, but a stale tab/replay could still post both), follow-system
-        // wins since it's the more specific, ongoing choice.
-        $followSystem = $request->boolean('follow_system');
-
         $request->user()->update([
             'theme_key' => $data['theme_key'],
-            'dark_mode' => $followSystem ? false : $request->boolean('dark_mode'),
-            'follow_system' => $followSystem,
+            'dark_mode' => $request->boolean('dark_mode'),
+            'follow_system' => false,
             'font_key' => $data['font_key'],
             'font_size' => $data['font_size'],
         ]);

@@ -13,24 +13,8 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagAppearance->dark_mode ? 'dark' : 'light' }}">
 <head>
-    @if ($__raniagAppearance->follow_system)
-        {{-- "Follow system appearance" is per-device, not just per-account:
-             this runs before any CSS/paint and flips data-theme to match
-             *this visitor's browser*, overriding the server-rendered
-             default above (the user's own last-saved dark_mode value) so
-             the same account still adapts correctly across their devices. --}}
-        <script>
-            (function () {
-                try {
-                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        document.documentElement.setAttribute('data-theme', 'dark');
-                    } else {
-                        document.documentElement.setAttribute('data-theme', 'light');
-                    }
-                } catch (e) {}
-            })();
-        </script>
-    @endif
+    {{-- Dark mode is the only appearance switch. The old "follow system"
+         flag is ignored so a saved OS preference cannot override the toggle. --}}
 
     <script>
         // Applied before paint (like the follow-system block above) to avoid
@@ -99,7 +83,7 @@
             display: flex;
             flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.06);
-            overflow: hidden;
+            overflow: visible;
         }
 
         #sidebar-wrapper .sidebar-nav-scroll {
@@ -343,20 +327,21 @@
 
             .rg-sidebar-collapse-btn {
                 position: absolute;
-                top: 1.4rem;
-                right: -0.9rem;
-                width: 1.8rem;
-                height: 1.8rem;
+                top: 1.35rem;
+                right: -14px;
+                width: 28px;
+                height: 28px;
                 border-radius: 50%;
                 background-color: var(--raniag-primary);
                 color: #fff;
-                border: 2px solid var(--raniag-surface);
+                border: 2px solid #fff;
+                box-shadow: 0 2px 8px rgba(15, 23, 42, 0.28);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                z-index: 1041;
-                transition: transform 0.2s ease;
+                z-index: 1050;
                 cursor: pointer;
+                padding: 0;
             }
 
             html.rg-sidebar-collapsed-init .rg-sidebar-collapse-btn i {

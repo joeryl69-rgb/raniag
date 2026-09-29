@@ -19,26 +19,12 @@
             <div class="card-body">
                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
                     <div>
-                        <div class="fw-semibold">Follow system appearance</div>
-                        <div class="small text-muted">Your device switches between light and dark automatically, based on your OS setting.</div>
-                    </div>
-                    <div class="ms-md-auto flex-shrink-0">
-                        <input class="settings-toggle" type="checkbox" role="switch" id="systemThemeSwitch"
-                               name="follow_system" value="1" {{ $setting->follow_system ? 'checked' : '' }}
-                               {{ $setting->dark_mode ? 'disabled' : '' }}
-                               aria-label="Toggle follow system appearance">
-                    </div>
-                </div>
-
-                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
-                    <div>
                         <div class="fw-semibold">Dark mode</div>
-                        <div class="small text-muted">Apply a dark interface layer over your current theme.</div>
+                        <div class="small text-muted">Dark surfaces on every page. Your color theme still sets the sidebar and buttons.</div>
                     </div>
                     <div class="ms-md-auto flex-shrink-0">
                         <input class="settings-toggle" type="checkbox" role="switch" id="darkModeSwitch"
                                name="dark_mode" value="1" {{ $setting->dark_mode ? 'checked' : '' }}
-                               {{ $setting->follow_system ? 'disabled' : '' }}
                                aria-label="Toggle dark mode">
                     </div>
                 </div>
@@ -70,8 +56,14 @@
                             $fontSizeIndex = array_search($setting->font_size, $fontSizeKeys);
                             $fontSizeIndex = $fontSizeIndex === false ? 1 : $fontSizeIndex;
                         @endphp
+                        <div class="type-preview mb-3" id="typePreview" style="font-size: {{ $fontSizes[$setting->font_size]['root_px'] ?? '16px' }};">
+                            <div class="type-preview-kicker">Sample</div>
+                            <div class="type-preview-title">Incident report</div>
+                            <p class="type-preview-body mb-0">Tracking number, barangay, and status stay at this size after you save.</p>
+                        </div>
                         <input type="range" class="form-range font-size-slider" id="fontSizeSlider"
-                               min="0" max="{{ count($fontSizeKeys) - 1 }}" step="1" value="{{ $fontSizeIndex }}">
+                               min="0" max="{{ count($fontSizeKeys) - 1 }}" step="1" value="{{ $fontSizeIndex }}"
+                               aria-valuetext="{{ $fontSizes[$setting->font_size]['label'] ?? 'Default' }}">
                         <div class="d-flex justify-content-between font-size-ticks">
                             @foreach ($fontSizes as $key => $size)
                                 <span class="{{ $setting->font_size === $key ? 'active' : '' }}" data-font-size-key="{{ $key }}">{{ $size['label'] }}</span>
@@ -91,19 +83,23 @@
                     @foreach ($presets as $key => $preset)
                         <div class="col-6 col-md-4 col-lg-2">
                             <button type="button"
-                                    class="theme-swatch-btn w-100 border rounded-3 p-3 text-center position-relative {{ $setting->theme_key === $key ? 'selected' : '' }}"
+                                    class="theme-swatch-btn w-100 border rounded-3 p-2 text-center position-relative {{ $setting->theme_key === $key ? 'selected' : '' }}"
                                     data-theme-key="{{ $key }}"
                                     onclick="selectTheme('{{ $key }}')">
-                                <i class="bi bi-check-circle-fill theme-swatch-check position-absolute top-0 end-0 m-2 text-primary"></i>
-                                <span class="d-inline-block rounded-circle mb-2" style="width:2.25rem;height:2.25rem;background-color:{{ $preset['swatch'] }};"></span>
-                                <div class="small fw-semibold">{{ $preset['label'] }}</div>
+                                <i class="bi bi-check-circle-fill theme-swatch-check position-absolute top-0 end-0 m-2"></i>
+                                <span class="theme-mini" aria-hidden="true">
+                                    <span class="theme-mini-side" style="background: {{ $preset['vars']['--raniag-sidebar'] }};"></span>
+                                    <span class="theme-mini-main" style="background: {{ $preset['vars']['--raniag-surface'] }};">
+                                        <span class="theme-mini-line" style="background: {{ $preset['vars']['--raniag-border'] }};"></span>
+                                        <span class="theme-mini-btn" style="background: {{ $preset['swatch'] }};"></span>
+                                    </span>
+                                </span>
+                                <div class="small fw-semibold mt-2">{{ $preset['label'] }}</div>
                             </button>
                         </div>
                     @endforeach
                 </div>
-                <p class="small text-muted mb-0 mt-2" id="themeDisabledNote" style="{{ ($setting->dark_mode || $setting->follow_system) ? '' : 'display:none;' }}">
-                    <i class="bi bi-info-circle me-1"></i>Color theme is disabled while dark mode or "Follow system appearance" is on — dark mode uses its own palette.
-                </p>
+                <p class="small text-muted mb-0 mt-3">Each sample is the sidebar, the page, and a button in that theme. Dark mode keeps this choice.</p>
             </div>
         </div>
 
@@ -147,12 +143,52 @@
         border-bottom: 1px solid var(--raniag-border);
     }
 
-    .theme-swatch-btn {
-        background-color: rgba(255,255,255,0.7);
+    .theme-swatch-btn,
+    .font-swatch-btn {
+        background-color: var(--raniag-surface, #fff);
+        color: inherit;
         border-color: var(--raniag-border);
         cursor: pointer;
-        transition: box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+        transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     }
+
+    .theme-mini {
+        display: flex;
+        height: 4.5rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 1px solid var(--raniag-border);
+    }
+
+    .theme-mini-side { width: 28%; }
+    .theme-mini-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.55rem;
+    }
+    .theme-mini-line { height: 6px; border-radius: 99px; width: 80%; }
+    .theme-mini-btn { height: 10px; width: 46%; border-radius: 99px; }
+
+    .type-preview {
+        border: 1px solid var(--raniag-border);
+        border-radius: 0.75rem;
+        padding: 0.9rem 1rem;
+        background: var(--raniag-surface, #fff);
+        line-height: 1.35;
+    }
+    .type-preview-kicker {
+        font-size: 0.72em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--raniag-primary);
+        font-weight: 700;
+    }
+    .type-preview-title { font-size: 1.15em; font-weight: 700; margin: 0.15rem 0; }
+    .type-preview-body { font-size: 0.92em; color: #64748b; }
+    [data-theme="dark"] .type-preview-body { color: #94a3b8; }
 
     .theme-swatch-btn:hover:not(:disabled) {
         transform: translateY(-1px);
@@ -165,9 +201,9 @@
         box-shadow: 0 0 0 0.2rem var(--raniag-primary-light);
     }
 
-    .theme-swatch-btn:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
+    .font-swatch-btn.selected {
+        border-color: var(--raniag-primary) !important;
+        box-shadow: 0 0 0 0.2rem var(--raniag-primary-light);
     }
 
     .theme-swatch-check {
@@ -220,59 +256,30 @@
     const themeButtons = [...document.querySelectorAll('.theme-swatch-btn')];
     const fontButtons = [...document.querySelectorAll('.font-swatch-btn')];
     const darkModeSwitch = document.getElementById('darkModeSwitch');
-    const systemThemeSwitch = document.getElementById('systemThemeSwitch');
-    const themeDisabledNote = document.getElementById('themeDisabledNote');
     const fontSizeSlider = document.getElementById('fontSizeSlider');
     const fontSizeCurrentLabel = document.getElementById('fontSizeCurrentLabel');
     const fontSizeTicks = [...document.querySelectorAll('.font-size-ticks span')];
+    const typePreview = document.getElementById('typePreview');
 
     function applyPreview(themeKey, darkMode) {
         const vars = THEME_VARS[themeKey];
         if (!vars) return;
         const root = document.documentElement;
         Object.entries(vars).forEach(([name, value]) => root.style.setProperty(name, value));
-
         if (darkMode) {
             root.style.setProperty('--raniag-surface', '#0f172a');
             root.style.setProperty('--raniag-border', '#253449');
-            root.style.setProperty('--raniag-sidebar', '#0f172a');
-            root.style.setProperty('--raniag-sidebar-active', '#1e293b');
+            root.style.setProperty('--raniag-primary-light', 'rgba(255, 255, 255, 0.06)');
             root.setAttribute('data-theme', 'dark');
         } else {
             root.setAttribute('data-theme', 'light');
         }
     }
 
-    // Real disabling (not just auto-unchecking) — dark mode and "follow
-    // system" are mutually exclusive, and color theme is meaningless while
-    // either forces dark mode's own palette.
-    function syncToggleAvailability() {
-        const followSystem = systemThemeSwitch.checked;
-        const forceDark = darkModeSwitch.checked;
-
-        darkModeSwitch.disabled = followSystem;
-        systemThemeSwitch.disabled = false;
-
-        const themeDisabled = followSystem || forceDark;
-        themeButtons.forEach((btn) => {
-            btn.disabled = themeDisabled;
-            btn.setAttribute('aria-disabled', String(themeDisabled));
-        });
-        themeDisabledNote.style.display = themeDisabled ? '' : 'none';
-
-        if (followSystem) {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            applyPreview(document.getElementById('selectedThemeKey').value, prefersDark);
-        } else {
-            applyPreview(document.getElementById('selectedThemeKey').value, forceDark);
-        }
-    }
-
     function selectTheme(key) {
-        if (systemThemeSwitch.checked || darkModeSwitch.checked) return;
         document.getElementById('selectedThemeKey').value = key;
         themeButtons.forEach((btn) => btn.classList.toggle('selected', btn.dataset.themeKey === key));
-        applyPreview(key, false);
+        applyPreview(key, darkModeSwitch.checked);
     }
 
     function selectFont(key) {
@@ -290,7 +297,8 @@
         document.getElementById('selectedFontSize').value = key;
         fontSizeCurrentLabel.textContent = FONT_SIZE_LABELS[key] || key;
         fontSizeTicks.forEach((tick) => tick.classList.toggle('active', tick.dataset.fontSizeKey === key));
-        document.documentElement.style.fontSize = FONT_SIZE_ROOT_PX[key] || '16px';
+        if (typePreview) typePreview.style.fontSize = FONT_SIZE_ROOT_PX[key] || '16px';
+        fontSizeSlider.setAttribute('aria-valuetext', FONT_SIZE_LABELS[key] || key);
     }
 
     fontSizeSlider.addEventListener('input', function () {
@@ -298,27 +306,12 @@
     });
 
     darkModeSwitch.addEventListener('change', function () {
-        syncToggleAvailability();
-    });
-
-    systemThemeSwitch.addEventListener('change', function () {
-        if (this.checked) {
-            darkModeSwitch.checked = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-        syncToggleAvailability();
-    });
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
-        if (systemThemeSwitch.checked) {
-            syncToggleAvailability();
-        }
+        applyPreview(document.getElementById('selectedThemeKey').value, this.checked);
     });
 
     themeButtons.forEach((btn) => {
         btn.classList.toggle('selected', btn.dataset.themeKey === '{{ $setting->theme_key }}');
     });
-
-    syncToggleAvailability();
 </script>
 @endpush
 </x-app-layout>

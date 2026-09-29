@@ -190,11 +190,10 @@ class ThemePresets
         $css = ":root {\n".implode("\n", $lines)."\n}";
 
         if ($darkMode) {
-            // Dark-mode surface/border overrides layer on top of whichever
-            // accent theme is selected, so "Ocean Blue + Dark" and
-            // "Emerald + Dark" both work from the same two independent
-            // controls (see admin/settings/index.blade.php).
-            $css .= "\n:root {\n    --raniag-surface: #0f172a;\n    --raniag-border: #253449;\n    --raniag-card-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.45);\n}";
+            // Keep the chosen theme's sidebar and accent. Only the page
+            // surface goes dark, so Ocean and Emerald still look different
+            // after dark mode is turned on.
+            $css .= "\n:root {\n    --raniag-surface: #0f172a;\n    --raniag-border: #253449;\n    --raniag-primary-light: rgba(255, 255, 255, 0.06);\n    --raniag-card-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.45);\n}";
         }
 
         return $css;
