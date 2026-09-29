@@ -483,6 +483,18 @@
                     </div>
                 @endif
 
+                @if ($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <div class="fw-semibold mb-1">Could not save.</div>
+                        <ul class="mb-0">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
                 {{ $slot ?? '' }}
                 @yield('content')
 
@@ -554,7 +566,7 @@
         });
  
         let staffLockedScrollY = 0;
-        function showLoadingOverlay(message = 'Processing, please wait...') {
+        function showLoadingOverlay(message = 'Processing, please wait...', options) {
             const overlay = document.getElementById('global-loading-overlay');
             if (!overlay) return;
             const label = overlay.querySelector('.loading-text');
@@ -562,12 +574,18 @@
                 label.textContent = message;
             }
             overlay.classList.remove('d-none');
-            staffLockedScrollY = window.scrollY || window.pageYOffset || 0;
-            document.body.classList.add('rg-scroll-locked');
-            document.body.style.top = (-staffLockedScrollY) + 'px';
+            const lockScroll = !options || options.lockScroll !== false;
+            if (lockScroll) {
+                staffLockedScrollY = window.scrollY || window.pageYOffset || 0;
+                document.body.classList.add('rg-scroll-locked');
+                document.body.style.top = (-staffLockedScrollY) + 'px';
+            }
             clearTimeout(window.__rgLoadingWatch);
             window.__rgLoadingWatch = setTimeout(function () {
                 hideLoadingOverlay();
+                document.querySelectorAll('form[data-rg-submitting]').forEach(function (form) {
+                    delete form.dataset.rgSubmitting;
+                });
                 document.querySelectorAll('button[data-original-text]').forEach(function (button) {
                     button.disabled = false;
                     button.classList.remove('disabled');
@@ -634,21 +652,17 @@
                     btn.addEventListener('click', function () { lastClickedSubmit = btn; });
                 });
 
-                form.addEventListener('submit', function () {
+                form.addEventListener('submit', function (event) {
                     if (this.classList.contains('no-loading')) return;
+                    // A confirm() cancel or another listener already stopped this.
+                    if (event.defaultPrevented) return;
+                    if (this.dataset.rgSubmitting === '1') {
+                        event.preventDefault();
+                        return;
+                    }
+
                     const submitButton = lastClickedSubmit || this.querySelector('button[type="submit"]');
                     const message = submitButton?.dataset.loadingMessage || this.dataset.loadingMessage || 'Processing, please wait...';
-                    // Chrome drops a clicked submit if this event disables the
-                    // button or pins the page (position:fixed) before the
-                    // navigation starts. The page then snaps back and the
-                    // save looks like it did nothing. Show the wait state
-                    // on the next tick, after the request is underway.
-                    window.setTimeout(function () {
-                        showLoadingOverlay(message);
-                        if (submitButton) {
-                            setButtonLoading(submitButton, message);
-                        }
-                    }, 0);
 
                     // For forms that trigger a file download (e.g. PDF export), the browser
                     // never fires a new 'load' event, so poll for a cookie set by the server
@@ -666,6 +680,15 @@
                             }
                         }, 300);
                     }
+
+                    // Chrome cancels a clicked Save when this handler disables
+                    // the button or pins the page. Cancel that click, then
+                    // post with the form's own submit, which is not tied to
+                    // the button. Do this without disabling the button.
+                    event.preventDefault();
+                    this.dataset.rgSubmitting = '1';
+                    HTMLFormElement.prototype.submit.call(this);
+                    showLoadingOverlay(message, { lockScroll: false });
                 });
             });
 

@@ -155,12 +155,13 @@
                 });
             }
             if (form && submitButton && buttonLabel && spinner) {
-                form.addEventListener('submit', function () {
-                    window.setTimeout(function () {
-                        submitButton.disabled = true;
-                        buttonLabel.textContent = 'Signing in...';
-                        spinner.classList.remove('d-none');
-                    }, 0);
+                form.addEventListener('submit', function (event) {
+                    if (event.defaultPrevented || form.dataset.rgSubmitting === '1') return;
+                    event.preventDefault();
+                    form.dataset.rgSubmitting = '1';
+                    buttonLabel.textContent = 'Signing in...';
+                    spinner.classList.remove('d-none');
+                    HTMLFormElement.prototype.submit.call(form);
                 });
             }
             let remaining = parseInt(document.getElementById('lockout-countdown')?.textContent || '0', 10);

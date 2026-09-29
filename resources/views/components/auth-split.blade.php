@@ -60,14 +60,11 @@
             document.querySelectorAll('.auth-form-side form').forEach(function (form) {
                 const btn = form.querySelector('button[type="submit"].auth-submit');
                 if (!btn || btn.querySelector('.spinner-border')) return; // already has its own
-                const labelText = btn.textContent.trim();
-                form.addEventListener('submit', function () {
-                    if (btn.disabled) return;
-                    window.setTimeout(function () {
-                        btn.disabled = true;
-                        btn.dataset.originalHtml = btn.innerHTML;
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + labelText;
-                    }, 0);
+                form.addEventListener('submit', function (event) {
+                    if (event.defaultPrevented || form.dataset.rgSubmitting === '1') return;
+                    event.preventDefault();
+                    form.dataset.rgSubmitting = '1';
+                    HTMLFormElement.prototype.submit.call(form);
                 });
             });
         });
