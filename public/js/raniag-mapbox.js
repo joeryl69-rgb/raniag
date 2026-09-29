@@ -6,12 +6,24 @@
 (function (global) {
     'use strict';
 
+    // Lenis is loaded after the map and assigns itself to window.L, which
+    // removes Leaflet. Keep the Leaflet namespace captured at load time.
+    function leafletLib() {
+        const current = global.L;
+        if (current && typeof current.map === 'function' && typeof current.polyline === 'function') {
+            global.RANIAG_Leaflet = current;
+        }
+        return global.RANIAG_Leaflet || null;
+    }
+
+    leafletLib();
+
     function normalizeStyle(style) {
         return String(style || 'mapbox/streets-v12').replace(/^mapbox:\/\//, '');
     }
 
     function addBasemap(map, mapConfig, options) {
-        const L = global.L;
+        const L = leafletLib();
         if (!L || !map) return { kind: 'none' };
 
         const opts = options || {};
@@ -73,7 +85,7 @@
      * Returns { layer, distance, duration } or null.
      */
     async function fetchDirections(opts) {
-        const L = global.L;
+        const L = leafletLib();
         const token = String(opts.token || '').trim();
         if (!L || !token || !opts.from || !opts.to || !opts.routeGroup) return null;
 
@@ -84,7 +96,14 @@
             `https://api.mapbox.com/directions/v5/mapbox/${profile}/${from};${to}` +
             `?geometries=geojson&overview=full&access_token=${encodeURIComponent(token)}`;
 
-        const res = await fetch(url);
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        let res;
+        try {
+            res = await fetch(url, { signal: controller.signal });
+        } finally {
+            clearTimeout(timer);
+        }
         if (!res.ok) throw new Error(`Directions HTTP ${res.status}`);
         const data = await res.json();
         const route = data.routes && data.routes[0];
@@ -114,7 +133,7 @@
      * Replaces the previous line only after the new one is ready.
      */
     function showFallbackRoute(opts) {
-        const L = global.L;
+        const L = leafletLib();
         if (!L || !opts?.routeGroup || !opts.from || !opts.to) return null;
         const distance = haversineMeters(opts.from, opts.to);
         if (!Number.isFinite(distance)) return null;

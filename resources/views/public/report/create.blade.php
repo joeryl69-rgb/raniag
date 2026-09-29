@@ -80,7 +80,7 @@
         <div class="alert alert-danger" data-rg-reveal>
             <strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Please correct the following:</strong>
             <ul class="mb-0 mt-2">
-                @foreach ($errors->all() as $error)
+                @foreach (array_unique($errors->all()) as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>

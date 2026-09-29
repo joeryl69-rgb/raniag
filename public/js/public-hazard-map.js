@@ -22,7 +22,9 @@
     }
 
     function init(cfg) {
-        const leaflet = window.L;
+        const leaflet = (window.L && typeof window.L.map === 'function')
+            ? window.L
+            : window.RANIAG_Leaflet;
         if (!leaflet || !cfg) return;
 
         const mapEl = document.getElementById('hazard-map');
@@ -63,10 +65,15 @@
         let routeLayer = null;
         let routeProfile = (cfg.map.directions_profile === 'driving' ? 'driving' : 'walking');
         let routeFetchSeq = 0;
+        let routeInFlight = false;
+        let routePendingForce = false;
         let lastRouteAt = 0;
         let lastRouteLatLng = null;
+        let trailLine = null;
+        const trail = [];
         const ROUTE_MIN_MOVE_M = 25;
         const ROUTE_MIN_INTERVAL_MS = 12000;
+        const TRAIL_MIN_MOVE_M = 8;
 
         const chkZones = document.getElementById('layer-zones');
         const chkCenters = document.getElementById('layer-centers');
@@ -260,6 +267,8 @@
                 youMarker = null;
                 youAccuracy = null;
                 youLatLng = null;
+                trail.length = 0;
+                trailLine = null;
                 nearestData = null;
                 didInitialYouFit = false;
                 youGroup.clearLayers();
@@ -314,20 +323,26 @@
                 return;
             }
 
+            if (routeInFlight) {
+                if (force) routePendingForce = true;
+                return;
+            }
             if (!shouldRefreshRoute(force)) return;
 
             showRouteBox(true);
-            if ((force || !routeLayer) && routeSummary) {
+            if (!routeLayer && routeSummary) {
                 routeSummary.textContent = 'Getting route…';
             }
             setRouteStatus('');
             const seq = ++routeFetchSeq;
+            const from = leaflet.latLng(youLatLng.lat, youLatLng.lng);
+            routeInFlight = true;
 
             try {
                 if (!Mapbox?.fetchDirections) throw new Error('No Mapbox helper');
                 const result = await Mapbox.fetchDirections({
                     token: mapboxToken,
-                    from: youLatLng,
+                    from,
                     to: { lat: Number(nc.latitude), lng: Number(nc.longitude) },
                     profile: routeProfile,
                     routeGroup,
@@ -337,17 +352,18 @@
 
                 routeLayer = result.layer;
                 lastRouteAt = Date.now();
-                lastRouteLatLng = leaflet.latLng(youLatLng.lat, youLatLng.lng);
+                lastRouteLatLng = from;
 
                 const label = routeProfile === 'driving' ? 'drive' : 'walk';
                 if (routeSummary) {
                     routeSummary.textContent = `${formatDistance(result.distance)} · ~${formatDuration(result.duration)} ${label} to ${nc.name} (updates as you move)`;
                 }
+                fitActiveView({ animate: true });
                 updateJoTip('route');
             } catch (e) {
                 if (seq !== routeFetchSeq || !layersOn().you) return;
                 const fallback = Mapbox?.showFallbackRoute?.({
-                    from: youLatLng,
+                    from,
                     to: { lat: Number(nc.latitude), lng: Number(nc.longitude) },
                     routeGroup,
                     color: '#0b5ed7',
@@ -355,17 +371,28 @@
                 if (fallback) {
                     routeLayer = fallback.layer;
                     lastRouteAt = Date.now();
-                    lastRouteLatLng = leaflet.latLng(youLatLng.lat, youLatLng.lng);
+                    lastRouteLatLng = from;
                     if (routeSummary) {
                         routeSummary.textContent = `${formatDistance(fallback.distance)} · ~${formatDuration(fallback.duration)} straight-line to ${nc.name}`;
                     }
                     setRouteStatus('Road route unavailable. Showing a straight line and an estimated time.', false);
+                    fitActiveView({ animate: true });
                     updateJoTip('route');
                     return;
                 }
+                lastRouteAt = Date.now();
+                lastRouteLatLng = from;
                 if (!routeLayer && routeSummary) {
                     routeSummary.textContent = `Nearest: ${nc.name} (~${formatDistance(nc.distance_m)} straight-line).`;
                     setRouteStatus('Could not load a route for this center.', true);
+                }
+            } finally {
+                if (seq === routeFetchSeq) routeInFlight = false;
+                if (!routeInFlight && routePendingForce && routeLayer && layersOn().you) {
+                    routePendingForce = false;
+                    fetchRoute({ force: true });
+                } else {
+                    routePendingForce = false;
                 }
             }
         }
@@ -376,6 +403,25 @@
             const mode = focusMode();
             updateJoTip(mode === 'both' && on.you ? 'both' : mode);
             syncListVisibility();
+
+            if (on.you && youLatLng && (routeLayer || nearestData?.nearest_center)) {
+                const focus = [];
+                if (youMarker) focus.push(youMarker);
+                if (routeLayer) focus.push(routeLayer);
+                const nearestId = nearestData?.nearest_center?.id;
+                if (nearestId && centerLayers.has(Number(nearestId))) {
+                    focus.push(centerLayers.get(Number(nearestId)));
+                }
+                if (focus.length) {
+                    try {
+                        map.fitBounds(leaflet.featureGroup(focus).getBounds().pad(0.25), {
+                            animate: !REDUCE && animate !== false,
+                            maxZoom: 16,
+                        });
+                        return;
+                    } catch (e) { /* fall through */ }
+                }
+            }
 
             if (!layers.length) {
                 if (on.you && youLatLng) goToLatLng(youLatLng, 15, animate !== false);
@@ -557,12 +603,41 @@
                 if (!res.ok) return;
                 nearestData = await res.json();
                 renderNearest();
-                await fetchRoute({ force: true });
+                await fetchRoute({ force: !routeLayer });
             } catch (e) { /* offline */ }
+        }
+
+        function recordTrail(latlng) {
+            const prev = trail[trail.length - 1];
+            if (prev && haversineMeters(prev, latlng) < TRAIL_MIN_MOVE_M) return;
+            trail.push(latlng);
+            if (trail.length > 80) trail.shift();
+            const points = trail.map((p) => [p.lat, p.lng]);
+            if (trailLine) {
+                trailLine.setLatLngs(points);
+                return;
+            }
+            trailLine = leaflet.polyline(points, {
+                color: '#0b5ed7',
+                weight: 3,
+                opacity: 0.55,
+                dashArray: '2 8',
+            }).addTo(youGroup);
+        }
+
+        function followYou(latlng) {
+            if (!didInitialYouFit || !latlng) return;
+            try {
+                if (!map.getBounds().pad(-0.15).contains(latlng)) {
+                    map.panTo(latlng, { animate: !REDUCE });
+                }
+            } catch (e) { /* map not ready */ }
         }
 
         function upsertYou(lat, lng, acc) {
             youLatLng = leaflet.latLng(lat, lng);
+            recordTrail(youLatLng);
+            followYou(youLatLng);
             if (youAccuracy) {
                 youAccuracy.setLatLng(youLatLng);
                 youAccuracy.setRadius(acc || 40);
@@ -611,7 +686,7 @@
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     upsertYou(lat, lng, pos.coords.accuracy || 40);
-                    setGeoStatus('');
+                    setGeoStatus('Live location is on. Your position updates as you move.');
                     fetchNearest(lat, lng).finally(() => {
                         if (!didInitialYouFit && layersOn().you && youLatLng) {
                             didInitialYouFit = true;

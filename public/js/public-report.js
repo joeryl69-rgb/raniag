@@ -572,6 +572,7 @@
         if (!messages.length) {
             messages.push('Please check the form and try again.');
         }
+        const uniqueMessages = [...new Set(messages)];
 
         let banner = document.getElementById('report-submit-errors');
         if (!banner) {
@@ -582,7 +583,7 @@
             form?.prepend(banner);
         }
         banner.innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Please correct the following:</strong><ul class="mb-0 mt-2">${
-            messages.map((msg) => {
+            uniqueMessages.map((msg) => {
                 const safe = String(msg)
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
@@ -601,7 +602,24 @@
             input.classList.toggle('is-invalid', failed);
         });
         applyEvidenceGate();
-        if (wizardPanes.length) showWizardStep(3);
+        if (wizardPanes.length) {
+            const stepFor = {
+                incident_type_id: 0,
+                description: 0,
+                latitude: 1,
+                longitude: 1,
+                location_address: 1,
+                evidence: 2,
+                reporter_name: 3,
+                reporter_phone: 3,
+                reporter_email: 3,
+            };
+            const errorNames = Object.keys(payload?.errors || {});
+            const steps = errorNames
+                .map((name) => stepFor[name])
+                .filter((step) => step !== undefined);
+            showWizardStep(steps.length ? Math.min(...steps) : 3);
+        }
     }
 
     if (form && submitButton) {

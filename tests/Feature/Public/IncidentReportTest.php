@@ -363,6 +363,8 @@ test('report submission without evidence enters verification queue', function ()
         'incident_type_id' => $type->id,
         'description' => 'Incident submitted without photo evidence for call-back queue.',
         'is_anonymous' => '1',
+        'reporter_name' => 'Joshua Montoya',
+        'reporter_phone' => '095630320351',
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
     ])->assertRedirect();
@@ -407,4 +409,50 @@ test('idempotency key prevents duplicate public reports', function () {
     expect(Incident::query()->count())->toBe(1)
         ->and($second->json('tracking_number'))->toBe($first->json('tracking_number'))
         ->and($second->json('duplicate'))->toBeTrue();
+});
+
+test('missing location without a gps capture is one correction', function () {
+    $type = IncidentType::factory()->create();
+
+    $response = $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'Report submitted with contact details but no GPS evidence.',
+        'is_anonymous' => false,
+        'reporter_name' => 'Joshua Montoya',
+        'reporter_phone' => '095630320351',
+        'reporter_email' => 'joeryl69@gmail.com',
+    ]);
+
+    $response->assertStatus(422)->assertJsonValidationErrors(['latitude']);
+
+    $messages = collect($response->json('errors'))
+        ->flatten()
+        ->unique()
+        ->values();
+
+    expect($messages)->toHaveCount(1)
+        ->and($messages[0])->toBe('No GPS photo or recording was attached, and your current location was not shared. Capture a GPS photo or share your location before submitting.');
+});
+
+test('gps capture coordinates fill a blank location', function () {
+    Storage::fake('local');
+    $type = IncidentType::factory()->create();
+
+    $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'GPS photo submitted without separate location fields.',
+        'is_anonymous' => true,
+        'evidence' => [UploadedFile::fake()->image('gps-123.jpg')],
+        'meta' => ['gps_captures' => json_encode([[
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ]])],
+    ])->assertCreated();
+
+    $incident = Incident::query()->first();
+    expect((float) $incident->latitude)->toBe(18.472)
+        ->and((float) $incident->longitude)->toBe(121.325);
 });

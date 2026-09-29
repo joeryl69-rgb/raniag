@@ -36,6 +36,19 @@ class StoreIncidentReportRequest extends FormRequest
             ]);
         }
 
+        // A GPS photo or recording already carries coordinates. Copy them
+        // onto the report when the location fields were left blank so a
+        // successful capture is not rejected as "no location".
+        $capture = $this->firstGpsCapture();
+        $latBlank = $this->input('latitude') === null || $this->input('latitude') === '';
+        $lngBlank = $this->input('longitude') === null || $this->input('longitude') === '';
+        if ($capture && ($latBlank || $lngBlank)) {
+            $this->merge([
+                'latitude' => $latBlank ? $capture['latitude'] : $this->input('latitude'),
+                'longitude' => $lngBlank ? $capture['longitude'] : $this->input('longitude'),
+            ]);
+        }
+
         // Priority is derived from the selected incident type's admin-configured
         // default_priority (Admin > Incident Types), not a fixed system value and
         // not something the reporter picks. Falls back to 'medium' only if the
@@ -99,9 +112,33 @@ class StoreIncidentReportRequest extends FormRequest
             'reporter_name.required_if' => 'Please provide your name or report anonymously.',
             'reporter_email.required_without' => 'No photo or GPS capture was attached, so please leave a phone number or email so MDRRMO can verify this report.',
             'reporter_phone.required_without' => 'No photo or GPS capture was attached, so please leave a phone number or email so MDRRMO can verify this report.',
-            'latitude.required' => 'Please share your current location or capture a GPS photo.',
-            'longitude.required' => 'Please share your current location or capture a GPS photo.',
+            'latitude.required' => 'No GPS photo or recording was attached, and your current location was not shared. Capture a GPS photo or share your location before submitting.',
+            'longitude.required' => 'No GPS photo or recording was attached, and your current location was not shared. Capture a GPS photo or share your location before submitting.',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $errors = $validator->errors();
+
+            // Latitude and longitude share one sentence. Keep a single bullet
+            // in "Please correct the following", and say so only when the
+            // submission also has no GPS photo or recording.
+            if ($errors->has('latitude') && $errors->has('longitude')) {
+                $errors->forget('longitude');
+            }
+
+            if ($this->hasGpsCapture() && ($errors->has('latitude') || $errors->has('longitude'))) {
+                $errors->forget('latitude');
+                $errors->forget('longitude');
+                $errors->add('latitude', 'The GPS capture is missing map coordinates. Share your current location or retake the GPS photo.');
+            }
+
+            if ($errors->has('reporter_email') && $errors->has('reporter_phone')) {
+                $errors->forget('reporter_phone');
+            }
+        });
     }
 
     /**
@@ -117,14 +154,47 @@ class StoreIncidentReportRequest extends FormRequest
             }
         }
 
-        $captures = $this->input('meta.gps_captures');
-        if (is_string($captures) && $captures !== '') {
-            $decoded = json_decode($captures, true);
-            if (is_array($decoded) && $decoded !== []) {
-                return true;
+        return $this->gpsCaptures() !== [];
+    }
+
+    /**
+     * True when the GPS camera log has at least one photo or recording
+     * that includes coordinates.
+     */
+    public function hasGpsCapture(): bool
+    {
+        return $this->firstGpsCapture() !== null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function firstGpsCapture(): ?array
+    {
+        foreach ($this->gpsCaptures() as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            if (is_numeric($item['latitude'] ?? null) && is_numeric($item['longitude'] ?? null)) {
+                return $item;
             }
         }
 
-        return false;
+        return null;
+    }
+
+    /**
+     * @return list<mixed>
+     */
+    private function gpsCaptures(): array
+    {
+        $captures = $this->input('meta.gps_captures');
+        if (! is_string($captures) || $captures === '') {
+            return [];
+        }
+
+        $decoded = json_decode($captures, true);
+
+        return is_array($decoded) ? array_values($decoded) : [];
     }
 }
