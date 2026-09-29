@@ -1047,7 +1047,7 @@
     @unless(request()->routeIs('public.support'))
         <x-help-fab :href="route('public.support')" />
     @endunless
-    <script src="{{ asset('js/public-guide.js') }}"></script>
+    <script src="{{ asset('js/public-guide.js') }}?v={{ @filemtime(public_path('js/public-guide.js')) }}"></script>
     @stack('scripts')
 </body>
 </html>

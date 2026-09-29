@@ -26,7 +26,7 @@
                 <div class="card raniag-card rg-card-hover border-0">
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center gap-2 mb-3">
-                            <img src="/images/guide/jo-greeting.svg" alt="JO" width="48" height="60">
+                            <img src="/images/guide/jo-greeting.svg?v=3" alt="JO" width="48" height="60">
                             <div>
                                 <div class="small fw-bold text-uppercase" style="letter-spacing:.06em;color:var(--rg-brand);">JO</div>
                                 <h2 class="h5 fw-bold mb-0">{{ __('How it works') }}</h2>

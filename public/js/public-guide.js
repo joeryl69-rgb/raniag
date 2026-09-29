@@ -6,13 +6,14 @@
     const STORAGE_KEY = 'raniag_guide';
     const ASSET = '/images/guide';
 
+    const POSE_VERSION = '3';
     const NAV_TOUR = [
-        { sel: '[data-rg-tour="home"]', pose: 'greeting', text: 'Home is where you start — overview, announcements, and how reporting works.' },
-        { sel: '[data-rg-tour="track"]', pose: 'clipboard', text: 'Track Report — check status anytime with your tracking or reference code.' },
-        { sel: '[data-rg-tour="hazard"]', pose: 'map', text: 'Live Map — hazard zones, evacuation centers, and barangay risk awareness in Pamplona.' },
-        { sel: '[data-rg-tour="dashboard"]', pose: 'clipboard', text: 'Community Dashboard — a public picture of reports and situational updates.' },
-        { sel: '[data-rg-tour="support"]', pose: 'phone', text: 'Support — contact MDRRMO for help. Use Report an Incident to file a new case.' },
-        { sel: '[data-rg-tour="report"]', pose: 'alert', text: 'Report an Incident — file a new report. I can walk you through it the first time.' },
+        { sel: '[data-rg-tour="home"]', pose: 'greeting', label: 'Home', icon: 'bi-house-door', text: 'Home is where you start — overview, announcements, and how reporting works.' },
+        { sel: '[data-rg-tour="track"]', pose: 'clipboard', label: 'Track Report', icon: 'bi-search', text: 'Track Report — check status anytime with your tracking or reference code.' },
+        { sel: '[data-rg-tour="hazard"]', pose: 'map', label: 'Live Map', icon: 'bi-map', text: 'Live Map — hazard zones, evacuation centers, and barangay risk awareness in Pamplona.' },
+        { sel: '[data-rg-tour="dashboard"]', pose: 'clipboard', label: 'Community Dashboard', icon: 'bi-bar-chart-line', text: 'Community Dashboard — a public picture of reports and situational updates.' },
+        { sel: '[data-rg-tour="support"]', pose: 'phone', label: 'Support', icon: 'bi-headset', text: 'Support — contact MDRRMO for help. Use Report an Incident to file a new case.' },
+        { sel: '[data-rg-tour="report"]', pose: 'alert', label: 'Report an Incident', icon: 'bi-megaphone-fill', text: 'Report an Incident — file a new report. I can walk you through it the first time.' },
     ];
 
     const REPORT_LINES = [
@@ -42,7 +43,7 @@
     }
 
     function poseUrl(pose) {
-        return `${ASSET}/jo-${pose}.svg`;
+        return `${ASSET}/jo-${pose || 'greeting'}.svg?v=${POSE_VERSION}`;
     }
 
     function ensureDock() {
@@ -58,7 +59,14 @@
             <div class="jo-guide-card">
                 <img class="jo-guide-avatar" id="jo-guide-avatar" src="${poseUrl('greeting')}" alt="JO" width="72" height="90">
                 <div class="jo-guide-body">
-                    <div class="jo-guide-name">JO</div>
+                    <div class="jo-guide-kicker">
+                        <span class="jo-guide-name">JO</span>
+                        <span class="jo-guide-count" id="jo-guide-count"></span>
+                    </div>
+                    <div class="jo-guide-focus" id="jo-guide-focus" hidden>
+                        <i id="jo-guide-focus-icon" aria-hidden="true"></i>
+                        <span id="jo-guide-focus-label"></span>
+                    </div>
                     <p class="jo-guide-text mb-2" id="jo-guide-text"></p>
                     <div class="jo-guide-actions" id="jo-guide-actions"></div>
                 </div>
@@ -71,7 +79,34 @@
 
     function setPose(pose) {
         const img = document.getElementById('jo-guide-avatar');
-        if (img) img.src = poseUrl(pose || 'greeting');
+        if (!img) return;
+        const next = poseUrl(pose || 'greeting');
+        img.onerror = function () {
+            if (img.dataset.retried === next) return;
+            img.dataset.retried = next;
+            img.src = next + '&r=' + Date.now();
+        };
+        if (img.getAttribute('src') !== next) img.src = next;
+    }
+
+    function setFocus(step, index) {
+        const chip = document.getElementById('jo-guide-focus');
+        const icon = document.getElementById('jo-guide-focus-icon');
+        const label = document.getElementById('jo-guide-focus-label');
+        const count = document.getElementById('jo-guide-count');
+        if (count) {
+            count.textContent = step
+                ? (index + 1) + ' of ' + NAV_TOUR.length
+                : '';
+        }
+        if (!chip) return;
+        if (!step) {
+            chip.hidden = true;
+            return;
+        }
+        chip.hidden = false;
+        if (icon) icon.className = 'bi ' + step.icon;
+        if (label) label.textContent = step.label;
     }
 
     function setText(text) {
@@ -103,44 +138,27 @@
         const dock = document.getElementById('jo-guide-dock');
         if (dock) dock.classList.add('d-none');
         clearNavHighlight();
-        highlightToken += 1;
-        setMobileMenu(false);
     }
 
     function clearNavHighlight() {
         document.querySelectorAll('.jo-tour-spotlight').forEach((el) => el.classList.remove('jo-tour-spotlight'));
     }
 
-    function isMobileNav() {
-        return window.matchMedia('(max-width: 991.98px)').matches;
-    }
-
-    function setMobileMenu(open) {
+    function navLinkVisible(el) {
+        if (!el) return false;
         const menu = document.getElementById('publicNav');
-        if (!menu || !isMobileNav() || !window.bootstrap) return Promise.resolve();
-        const inst = window.bootstrap.Collapse.getOrCreateInstance(menu, { toggle: false });
-        const isOpen = menu.classList.contains('show');
-        if (isOpen === open) return Promise.resolve();
-        return new Promise((resolve) => {
-            menu.addEventListener(open ? 'shown.bs.collapse' : 'hidden.bs.collapse', resolve, { once: true });
-            open ? inst.show() : inst.hide();
-        });
+        if (menu && menu.contains(el) && window.getComputedStyle(menu).display === 'none') {
+            return false;
+        }
+        const box = el.getBoundingClientRect();
+        return box.width > 0 && box.height > 0;
     }
-
-    let highlightToken = 0;
 
     function highlight(sel) {
         clearNavHighlight();
-        const token = ++highlightToken;
-        // On mobile the links live inside the collapsed menu, so open it first.
-        setMobileMenu(true).then(() => {
-            if (token !== highlightToken) return;
-            const el = document.querySelector(sel);
-            if (!el) return;
-            el.classList.add('jo-tour-spotlight');
-            if (isMobileNav()) window.scrollTo({ top: 0, behavior: 'smooth' });
-            else el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        });
+        const el = document.querySelector(sel);
+        if (!navLinkVisible(el)) return;
+        el.classList.add('jo-tour-spotlight');
     }
 
     let tourIndex = 0;
@@ -154,7 +172,9 @@
     function renderTourStep() {
         const step = NAV_TOUR[tourIndex];
         if (!step) {
+            setFocus(null, NAV_TOUR.length);
             setPose('resolved');
+            clearNavHighlight();
             setText('You’re set. Report an incident or track an existing one whenever you need.');
             setActions([
                 btn('Report an Incident', 'btn btn-primary btn-sm', () => {
@@ -165,6 +185,7 @@
             ]);
             return;
         }
+        setFocus(step, tourIndex);
         setPose(step.pose);
         setText(step.text);
         highlight(step.sel);

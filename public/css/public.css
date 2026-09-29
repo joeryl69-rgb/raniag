@@ -1682,10 +1682,11 @@ body.raniag-public {
 ============================================================ */
 .jo-guide-dock {
   position: fixed;
-  left: 16px;
-  bottom: 16px;
-  z-index: 1060;
-  max-width: min(420px, calc(100vw - 32px));
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 1080;
+  width: min(440px, calc(100vw - 24px));
 }
 .jo-guide-card {
   display: flex;
@@ -1694,12 +1695,27 @@ body.raniag-public {
   background: #fff;
   border: 1px solid var(--raniag-border, #dde5ea);
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 14px 16px 12px;
   box-shadow: 0 16px 40px -18px rgba(11,18,32,.45);
   position: relative;
 }
 .jo-guide-avatar { flex-shrink: 0; width: 64px; height: 80px; object-fit: contain; }
+.jo-guide-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 18px; }
 .jo-guide-name { font-size: .72rem; font-weight: 800; letter-spacing: .08em; color: var(--raniag-primary, #0b5ed7); text-transform: uppercase; }
+.jo-guide-count { font-size: .72rem; font-weight: 700; color: #64748b; }
+.jo-guide-focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: #0b5ed7;
+  background: #e7f0fd;
+  box-shadow: 0 0 0 3px rgba(61,139,253,.28);
+}
 .jo-guide-text { font-size: .9rem; color: #16203a; margin: 0; line-height: 1.35; }
 .jo-guide-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .jo-guide-close { position: absolute; top: 8px; right: 8px; }
@@ -1709,9 +1725,9 @@ body.raniag-public {
   border-radius: 8px;
   box-shadow: 0 0 0 6px rgba(61,139,253,.25);
 }
-@media (max-width: 575.98px) {
-  .jo-guide-dock { left: 10px; right: 10px; bottom: 78px; max-width: none; }
-  .jo-guide-avatar { width: 52px; height: 66px; }
+@media (max-width: 991.98px) {
+  .jo-guide-dock { bottom: 84px; width: min(440px, calc(100vw - 16px)); }
+  .jo-guide-avatar { width: 56px; height: 70px; }
 }
 
 .jo-report-layout { display: contents; }
