@@ -140,16 +140,12 @@
                                 <div class="col-sm-6 col-md-4">
                                     <div class="card h-100 border shadow-sm">
                                         <div class="evidence-img-container">
-                                            @if ($ev->is_gps_capture)
-                                                <span class="badge bg-success gps-badge"><i class="bi bi-geo-alt-fill me-1"></i>GPS Cam</span>
-                                            @endif
-                                            
                                             @if (str_starts_with($ev->mime_type, 'image/'))
                                                 <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-public-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
                                                     <img src="{{ $ev->url() }}" class="card-img-top" alt="Evidence">
                                                 </a>
                                             @elseif (str_starts_with((string) $ev->mime_type, 'video/'))
-                                                <video src="{{ $ev->url() }}" class="card-img-top" style="height: 150px; object-fit: cover; background: #0f172a;" controls playsinline preload="metadata"></video>
+                                                <video src="{{ $ev->url() }}" class="w-100" style="max-height: 280px; background: #0f172a; object-fit: contain;" controls playsinline preload="metadata"></video>
                                             @else
                                                 <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top" style="height: 150px;">
                                                     <i class="bi bi-file-earmark fs-1"></i>
@@ -157,6 +153,11 @@
                                             @endif
                                         </div>
                                         <div class="card-body p-2 small">
+                                            @if ($ev->is_gps_capture)
+                                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle mb-1">
+                                                    <i class="bi bi-geo-alt-fill me-1"></i>{{ str_starts_with((string) $ev->mime_type, 'video/') ? 'GPS Video' : 'GPS Photo' }}
+                                                </span>
+                                            @endif
                                             <div class="text-truncate" title="{{ $ev->original_filename }}">{{ $ev->original_filename }}</div>
                                             <div class="text-muted">{{ number_format($ev->file_size / 1024, 1) }} KB</div>
                                             <a href="{{ $ev->url() }}" download class="btn btn-link btn-sm p-0 mt-1"><i class="bi bi-download me-1"></i>Download</a>

@@ -48,6 +48,10 @@
                 aspect-ratio: 4 / 3;
                 object-fit: cover;
             }
+            video.evidence-thumb {
+                object-fit: contain;
+                background: #0f172a;
+            }
         </style>
     @endpush
 
@@ -160,7 +164,7 @@
                                             <div class="text-truncate">{{ $ev->original_filename }}</div>
                                             <div class="text-muted" style="font-size: 0.75rem;">
                                                 @if ($ev->is_gps_capture)
-                                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-geo-alt-fill"></i> GPS Capture</span>
+                                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-geo-alt-fill"></i> {{ str_starts_with((string) $ev->mime_type, 'video/') ? 'GPS Video' : 'GPS Photo' }}</span>
                                                 @endif
                                                 @if ($ev->uploader)
                                                     <div class="mt-1"><i class="bi bi-person-fill me-1"></i>{{ $ev->uploader->name }}</div>

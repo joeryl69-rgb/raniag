@@ -19,6 +19,7 @@
     let recordTimer = null;
     let recordStartedAt = 0;
     let paintFrameId = 0;
+    let recordTrack = null;
 
     const moduleEl = document.getElementById('gps-camera-module');
     if (!moduleEl) {
@@ -1199,7 +1200,19 @@
             sHeight = Math.round(nativeWidth / displayRatio);
             sy = Math.round((nativeHeight - sHeight) / 2);
         }
-        return { sx, sy, sWidth, sHeight, width: sWidth, height: sHeight };
+        let width = sWidth;
+        let height = sHeight;
+        const maxEdge = 1280;
+        const edge = Math.max(width, height);
+        if (edge > maxEdge) {
+            const scale = maxEdge / edge;
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+        }
+        width -= width % 2;
+        height -= height % 2;
+        if (width < 2 || height < 2) return null;
+        return { sx, sy, sWidth, sHeight, width, height };
     }
 
     function paintGpsStamp(context, width, height) {
@@ -1211,12 +1224,10 @@
         ].filter(Boolean);
         if (!lines.length) return;
 
-        // Size the band from the frame height, then lift it off the bottom
-        // edge. A width-based font pushed the lines below a phone video and
-        // below a short desktop preview.
-        const bannerH = Math.round(Math.min(Math.max(88, height * 0.2), height * 0.28, 220));
-        const lift = Math.round(Math.max(16, height * 0.045));
-        const top = Math.max(0, height - bannerH - lift);
+        // Sit the stamp on the bottom edge, same place as the live overlay
+        // the reporter sees while filming.
+        const bannerH = Math.round(Math.min(Math.max(96, height * 0.22), height * 0.3, 240));
+        const top = Math.max(0, height - bannerH);
         const pad = Math.round(bannerH * 0.14);
         const thumb = Math.max(36, bannerH - pad * 2);
         let textX = pad;
@@ -1272,6 +1283,9 @@
             context.drawImage(videoEl, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, crop.width, crop.height);
             context.restore();
             paintGpsStamp(context, crop.width, crop.height);
+            if (recordTrack && typeof recordTrack.requestFrame === 'function') {
+                recordTrack.requestFrame();
+            }
         }
         paintFrameId = requestAnimationFrame(paintRecordFrame);
     }
@@ -1297,6 +1311,7 @@
         const discard = discardRecording;
         discardRecording = false;
         mediaRecorder = null;
+        recordTrack = null;
         if (discard || chunks.length === 0) return;
         const type = mime.split(';')[0] || 'video/webm';
         const ext = type.includes('mp4') ? 'mp4' : 'webm';
@@ -1332,7 +1347,10 @@
         document.getElementById('gps-mode-rail')?.classList.remove('d-none');
         document.getElementById('gps-record-timer')?.classList.add('d-none');
         updateCaptureReadiness();
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            try { mediaRecorder.requestData(); } catch (err) { /* final chunk still arrives on stop */ }
+            mediaRecorder.stop();
+        } else if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         } else if (discard) {
             discardRecording = false;
@@ -1371,25 +1389,36 @@
         document.getElementById('gps-mode-rail')?.classList.add('d-none');
         const timerEl = document.getElementById('gps-record-timer');
         if (timerEl) {
-            timerEl.textContent = '0:00';
+            timerEl.textContent = '0:00 / 1:00';
             timerEl.classList.remove('d-none');
         }
+        const stream = canvasEl.captureStream(0);
+        recordTrack = stream.getVideoTracks()[0] || null;
         paintRecordFrame();
-        const stream = canvasEl.captureStream(20);
         mediaStream?.getAudioTracks().forEach((track) => {
             try { stream.addTrack(track); } catch (err) { /* video-only */ }
         });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 700000 });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 800000 });
         mediaRecorder.ondataavailable = (event) => {
             if (event.data && event.data.size) recordChunks.push(event.data);
         };
+        mediaRecorder.onerror = () => {
+            setError('The recording stopped before the full minute. Record again.');
+        };
         mediaRecorder.onstop = () => finishRecording(mime);
-        mediaRecorder.start(250);
+        // One piece, not timed slices. Slices made the saved file look like
+        // only the first few seconds once it was opened.
+        mediaRecorder.start();
         recordStartedAt = Date.now();
+        const limitSeconds = Math.round(videoMaxMs / 1000);
+        const clock = (total) => {
+            const safe = Math.max(0, total);
+            return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
+        };
         recordTimer = setInterval(() => {
             const elapsed = Date.now() - recordStartedAt;
-            const seconds = Math.min(Math.round(videoMaxMs / 1000), Math.floor(elapsed / 1000));
-            if (timerEl) timerEl.textContent = `0:${String(seconds).padStart(2, '0')}`;
+            const seconds = Math.min(limitSeconds, Math.floor(elapsed / 1000));
+            if (timerEl) timerEl.textContent = `${clock(seconds)} / ${clock(limitSeconds)}`;
             if (elapsed >= videoMaxMs) stopRecording(false);
         }, 200);
     }

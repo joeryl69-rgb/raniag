@@ -50,20 +50,21 @@
                         </div>
 
                         @if ($docsOfType->isNotEmpty())
-                            <div class="rg-docthumb-row mb-3">
+                            <div class="d-flex flex-column gap-2 mb-3">
                                 @foreach ($docsOfType as $doc)
-                                    <div class="rg-docthumb">
-                                        <a href="{{ $doc->url() }}" class="js-lightbox rg-docthumb-link" data-group="casedoc-{{ $incident->id }}-{{ $docType->value }}" data-caption="{{ $docType->label() }}">
+                                    <div class="d-flex align-items-center gap-3 border rounded p-2">
+                                        <a href="{{ $doc->url() }}" class="js-lightbox flex-shrink-0" data-group="casedoc-{{ $incident->id }}-{{ $docType->value }}" data-caption="{{ $docType->label() }}">
                                             @if (str_starts_with((string) $doc->mime_type, 'image/'))
-                                                <img src="{{ $doc->url() }}" alt="{{ $docType->label() }}" class="rg-docthumb-img" loading="lazy">
+                                                <img src="{{ $doc->url() }}" alt="{{ $docType->label() }}" width="72" height="72" class="rounded border" style="width:72px;height:72px;object-fit:cover;" loading="lazy">
                                             @else
-                                                <div class="rg-docthumb-img rg-docthumb-file"><i class="bi bi-file-earmark-pdf fs-4"></i></div>
+                                                <span class="d-inline-flex align-items-center justify-content-center rounded border bg-light text-secondary" style="width:72px;height:72px;"><i class="bi bi-file-earmark-pdf fs-4"></i></span>
                                             @endif
                                         </a>
-                                        <form method="POST" action="{{ route('admin.incidents.documents.destroy', [$incident->id, $doc->id]) }}" class="rg-docthumb-delform" onsubmit="return confirm('Remove this photo from the case file?');">
+                                        <div class="small text-muted flex-grow-1">On file</div>
+                                        <form method="POST" action="{{ route('admin.incidents.documents.destroy', [$incident->id, $doc->id]) }}" onsubmit="return confirm('Remove this photo from the case file?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger rg-docthumb-delbtn" title="Remove"><i class="bi bi-x"></i></button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                                         </form>
                                     </div>
                                 @endforeach
