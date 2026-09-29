@@ -75,6 +75,7 @@ class SituationalMapService
                 'address' => $c->address,
                 'capacity' => $c->capacity,
                 'notes' => $c->notes,
+                'color' => $c->color ?: '#0f766e',
                 'is_open' => true,
             ])
             ->values();
@@ -89,11 +90,9 @@ class SituationalMapService
     {
         $openValues = array_map(fn (IncidentStatus $s) => $s->value, self::OPEN_STATUSES);
 
-        $counts = Incident::query()
+        $counts = $this->insidePamplona(Incident::query())
             ->selectRaw('barangay, COUNT(*) as open_count')
             ->whereIn('status', $openValues)
-            ->whereNotNull('barangay')
-            ->where('barangay', '!=', '')
             ->groupBy('barangay')
             ->pluck('open_count', 'barangay');
 
@@ -103,16 +102,6 @@ class SituationalMapService
                 'name' => $name,
                 'open_count' => (int) ($counts[$name] ?? 0),
             ];
-        }
-
-        // Include any unexpected barangay labels that still appear in data.
-        foreach ($counts as $name => $count) {
-            if (! in_array($name, config('raniag.barangays', []), true)) {
-                $barangays[] = [
-                    'name' => (string) $name,
-                    'open_count' => (int) $count,
-                ];
-            }
         }
 
         $geo = $this->geofence->barangayBoundaries();
@@ -157,7 +146,7 @@ class SituationalMapService
     {
         $openValues = array_map(fn (IncidentStatus $s) => $s->value, self::OPEN_STATUSES);
 
-        return Incident::with(['incidentType', 'agency'])
+        return $this->insidePamplona(Incident::with(['incidentType', 'agency']))
             ->whereIn('status', $openValues)
             ->orderByDesc('reported_at')
             ->get()
@@ -268,10 +257,21 @@ class SituationalMapService
     }
 
     /**
-     * Full public snapshot (zones + centers + risk awareness).
+     * Reports whose barangay is inside Pamplona and were not marked outside the AOR.
      *
-     * @return array<string, mixed>
+     * @param  \Illuminate\Database\Eloquent\Builder<Incident>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Incident>
      */
+    private function insidePamplona($query)
+    {
+        return $query
+            ->whereIn('barangay', config('raniag.barangays', []))
+            ->where(function ($inner) {
+                $inner->whereNull('meta->within_jurisdiction')
+                    ->orWhere('meta->within_jurisdiction', true);
+            });
+    }
+
     public function publicSnapshot(): array
     {
         return [

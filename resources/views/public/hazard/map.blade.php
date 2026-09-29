@@ -57,11 +57,13 @@
 
             <p class="small text-muted d-none mb-2" id="hazard-geo-status" role="status"></p>
 
-            <div class="rg-hazard-legend mb-2">
-                <span><i class="rg-hazard-swatch" style="background:#b45309"></i> Zone</span>
-                <span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%"></i> Center</span>
-                <span><i class="rg-hazard-swatch" style="background:#f97316"></i> Open reports</span>
-                <span><i class="rg-hazard-swatch" style="background:#3d8bfd;border-radius:50%"></i> You</span>
+            <div class="rg-hazard-legend mb-2" id="hazard-legend"></div>
+
+            <div id="places-always" class="mb-2">
+                <h2 class="h6 fw-bold mb-1">Hazard zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
+                <div id="zone-list" class="d-grid gap-1 mb-2"></div>
+                <h2 class="h6 fw-bold mb-1">Open evacuation centers <span class="text-muted fw-normal" id="center-count"></span></h2>
+                <div id="center-list" class="d-grid gap-1"></div>
             </div>
 
             <div class="rg-hazard-tabs" role="tablist" aria-label="Map details">
@@ -81,14 +83,7 @@
             </div>
 
             <div class="rg-hazard-pane d-none" data-hazard-pane="places">
-                <div id="zone-section">
-                    <h2 class="h6 fw-bold">Hazard zones <span class="text-muted fw-normal" id="zone-count"></span></h2>
-                    <div id="zone-list" class="d-grid gap-1 mb-3"></div>
-                </div>
-                <div id="center-section">
-                    <h2 class="h6 fw-bold">Open evacuation centers <span class="text-muted fw-normal" id="center-count"></span></h2>
-                    <div id="center-list" class="d-grid gap-1"></div>
-                </div>
+                <p class="small text-muted mb-0">Hazard zones and open shelters are listed above this panel. Tap a name to focus the map.</p>
             </div>
 
             <div class="rg-hazard-pane d-none" data-hazard-pane="route">

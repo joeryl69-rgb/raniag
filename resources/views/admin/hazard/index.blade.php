@@ -128,7 +128,12 @@
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
                         @csrf
                         <input type="hidden" name="workspace" value="center">
-                        <p class="small text-muted">Click the map to drop the shelter. Drag the amber pin if you need to adjust it.</p>
+                        <p class="small text-muted">Click the map to drop the shelter. Drag the pin if you need to adjust it. The map stays on Pamplona.</p>
+                        <div class="mb-2">
+                            <label class="form-label" for="center-color">Pin color</label>
+                            <input type="color" name="color" id="center-color" class="form-control form-control-color" value="{{ old('color', '#0f766e') }}" title="Color residents see on the live map">
+                            <div class="form-text">This is the shelter pin color on the public Live Map.</div>
+                        </div>
                         <div class="mb-2">
                             <label class="form-label" for="center-name">Shelter name</label>
                             <input name="name" id="center-name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'center' ? old('name') : '' }}" placeholder="e.g. Tabba elementary school">
@@ -201,6 +206,11 @@
                                     @if ($c->capacity) / {{ $c->capacity }} @endif
                                 </div>
                             </div>
+                            <form method="POST" action="{{ route('admin.hazard.centers.update', $c) }}" class="d-flex align-items-center">
+                                @csrf
+                                @method('PATCH')
+                                <input type="color" name="color" class="form-control form-control-color" value="{{ $c->color ?: '#0f766e' }}" onchange="this.form.submit()" title="Pin color" aria-label="Pin color for {{ $c->name }}">
+                            </form>
                             <form method="POST" action="{{ route('admin.hazard.centers.destroy', $c) }}" onsubmit="return confirm('Remove this shelter? People checked in here are removed with it.');">
                                 @csrf
                                 @method('DELETE')
@@ -448,16 +458,23 @@
         if (drawnLayer && drawnLayer.setStyle) styleDrawn();
     }
 
-    function shelterIcon(open, draft) {
+    const colorInput = document.getElementById('center-color');
+    function pinColor() {
+        const value = colorInput?.value || '#0f766e';
+        return /^#[0-9A-Fa-f]{6}$/.test(value) ? value : '#0f766e';
+    }
+
+    function shelterIcon(open, draft, color) {
+        const pin = open ? (color || '#0f766e') : '#64748b';
         return L.divIcon({
             className: 'rg-evac-marker' + (draft ? ' rg-shelter-draft' : ''),
-            html: '<div class="rg-evac-pin' + (open ? '' : ' is-closed') + '" aria-hidden="true"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="#fff" d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg></div>',
+            html: '<div class="rg-evac-pin' + (open ? '' : ' is-closed') + '" style="--pin:' + pin + '" aria-hidden="true"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="#fff" d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg></div>',
             iconSize: [34, 42],
             iconAnchor: [17, 40],
         });
     }
 
-    const map = L.map('ops-map', { zoomControl: false }).setView(
+    const map = L.map('ops-map', { zoomControl: false, maxZoom: 17 }).setView(
         [mapCfg.default_lat, mapCfg.default_lng],
         mapCfg.default_zoom || 13
     );
@@ -486,7 +503,7 @@
     });
 
     existingCenters.forEach((c) => {
-        L.marker([c.lat, c.lng], { icon: shelterIcon(c.open, false), interactive: true })
+        L.marker([c.lat, c.lng], { icon: shelterIcon(c.open, false, c.color), interactive: true })
             .addTo(map)
             .bindTooltip(c.name + (c.open ? '' : ' (closed)'));
     });
@@ -569,7 +586,7 @@
         latInput.value = Number(lat).toFixed(7);
         lngInput.value = Number(lng).toFixed(7);
         if (!draftMarker) {
-            draftMarker = L.marker([lat, lng], { icon: shelterIcon(true, true), draggable: true, zIndexOffset: 1000 }).addTo(map);
+            draftMarker = L.marker([lat, lng], { icon: shelterIcon(true, true, pinColor()), draggable: true, zIndexOffset: 1000 }).addTo(map);
             draftMarker.on('dragend', () => {
                 const p = draftMarker.getLatLng();
                 placeDraft(p.lat, p.lng);
@@ -581,6 +598,10 @@
         centerSave.disabled = false;
         coordsLabel.textContent = 'Pin placed at ' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5);
     }
+
+    colorInput?.addEventListener('input', () => {
+        if (draftMarker) draftMarker.setIcon(shelterIcon(true, true, pinColor()));
+    });
 
     map.on('click', (e) => {
         if (centerForm.classList.contains('d-none')) return;
@@ -639,11 +660,19 @@
 
     function fitMap() {
         map.invalidateSize();
-        if (!(zoneLayer.getLayers().length || existingCenters.length)) return;
+        const hasZones = zoneLayer.getLayers().length > 0;
+        if (!hasZones && existingCenters.length <= 1) {
+            const spot = existingCenters[0];
+            map.setView(
+                spot ? [spot.lat, spot.lng] : [mapCfg.default_lat, mapCfg.default_lng],
+                mapCfg.default_zoom || 13
+            );
+            return;
+        }
         const bounds = L.latLngBounds([]);
-        if (zoneLayer.getLayers().length) bounds.extend(zoneLayer.getBounds());
+        if (hasZones) bounds.extend(zoneLayer.getBounds());
         existingCenters.forEach((c) => bounds.extend([c.lat, c.lng]));
-        if (bounds.isValid()) map.fitBounds(bounds.pad(0.15));
+        if (bounds.isValid()) map.fitBounds(bounds.pad(0.2), { maxZoom: 14, animate: false });
     }
 
     document.querySelector('[data-bs-target="#tab-map"]')?.addEventListener('shown.bs.tab', fitMap);

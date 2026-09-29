@@ -169,7 +169,11 @@ class DashboardController extends Controller
 
         // 2. Barangay Distribution
         $barangayCounts = Incident::selectRaw('barangay, COUNT(*) as count')
-            ->whereNotNull('barangay')
+            ->whereIn('barangay', config('raniag.barangays', []))
+            ->where(function ($inner) {
+                $inner->whereNull('meta->within_jurisdiction')
+                    ->orWhere('meta->within_jurisdiction', true);
+            })
             ->groupBy('barangay')
             ->orderByDesc('count')
             ->limit(8)

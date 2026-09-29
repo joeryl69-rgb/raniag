@@ -2255,7 +2255,7 @@ body.raniag-public {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #0f766e;
+  background: var(--pin, #0f766e);
   border: 2px solid #fff;
   box-shadow: 0 6px 14px rgba(15, 23, 42, .28);
   position: relative;
@@ -2270,20 +2270,19 @@ body.raniag-public {
   bottom: -5px;
   width: 10px;
   height: 10px;
-  background: #0f766e;
+  background: var(--pin, #0f766e);
   border-right: 2px solid #fff;
   border-bottom: 2px solid #fff;
   transform: translateX(-50%) rotate(45deg);
   z-index: -1;
 }
 .rg-evac-pin svg { display: block; position: relative; z-index: 1; }
-.rg-evac-pin.is-closed { background: #64748b; }
+.rg-evac-pin.is-closed,
 .rg-evac-pin.is-closed::before { background: #64748b; }
 .rg-shelter-draft .rg-evac-pin {
-  background: #b45309;
-  box-shadow: 0 0 0 4px rgba(180, 83, 9, .25);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pin, #0f766e) 40%, transparent);
 }
-.rg-shelter-draft .rg-evac-pin::before { background: #b45309; }
+.rg-hazard-swatch-pin { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
 .rg-evac-pin::after {
   content: '';
   position: absolute;

@@ -9,7 +9,7 @@ class EvacuationCenter extends Model
 {
     protected $fillable = [
         'name', 'barangay', 'address', 'latitude', 'longitude',
-        'capacity', 'is_open', 'notes',
+        'capacity', 'is_open', 'notes', 'color',
     ];
 
     protected function casts(): array

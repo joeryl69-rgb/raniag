@@ -11,10 +11,11 @@
         }[c]));
     }
 
-    function evacIcon() {
+    function evacIcon(color) {
+        const pin = /^#[0-9A-Fa-f]{6}$/.test(String(color || '')) ? color : '#0f766e';
         return L.divIcon({
             className: 'rg-evac-marker',
-            html: '<div class="rg-evac-pin" aria-hidden="true"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="#fff" d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg></div>',
+            html: '<div class="rg-evac-pin" style="--pin:' + pin + '" aria-hidden="true"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="#fff" d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg></div>',
             iconSize: [34, 42],
             iconAnchor: [17, 40],
             popupAnchor: [0, -36],
@@ -709,6 +710,22 @@
             );
         }
 
+        function renderLegend(zones, centers) {
+            const el = document.getElementById('hazard-legend');
+            if (!el) return;
+            const zoneColors = [...new Set((zones || []).map((z) => z.color || z.type?.color || '#b45309'))].slice(0, 4);
+            const centerColors = [...new Set((centers || []).map((c) => c.color || '#0f766e'))].slice(0, 3);
+            const zoneSwatches = (zoneColors.length ? zoneColors : ['#b45309'])
+                .map((c) => `<i class="rg-hazard-swatch" style="background:${esc(c)}"></i>`).join('');
+            const centerSwatches = (centerColors.length ? centerColors : ['#0f766e'])
+                .map((c) => `<i class="rg-hazard-swatch rg-hazard-swatch-pin" style="background:${esc(c)}"></i>`).join('');
+            el.innerHTML =
+                `<span>${zoneSwatches} Hazard area</span>` +
+                `<span>${centerSwatches} Shelter</span>` +
+                '<span><i class="rg-hazard-swatch" style="background:#fbbf24"></i><i class="rg-hazard-swatch" style="background:#f97316"></i><i class="rg-hazard-swatch" style="background:#dc2626"></i> Open reports, few to many</span>' +
+                '<span><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0b5ed7"></i> You, only while My location is on</span>';
+        }
+
         function renderLists(zones, centers) {
             const zList = document.getElementById('zone-list');
             const cList = document.getElementById('center-list');
@@ -771,7 +788,7 @@
             centerGroup.clearLayers();
             centerLayers.clear();
             (centers || []).forEach((c) => {
-                const marker = leaflet.marker([Number(c.latitude), Number(c.longitude)], { icon: evacIcon() });
+                const marker = leaflet.marker([Number(c.latitude), Number(c.longitude)], { icon: evacIcon(c.color) });
                 const where = [c.barangay ? `Barangay ${c.barangay}` : '', c.address || ''].filter(Boolean).join(' · ');
                 const cap = c.capacity != null
                     ? `<div class="small">Room for about ${esc(c.capacity)} people</div>`
@@ -793,6 +810,7 @@
             renderCenters(data.centers || []);
             renderRisk(data.risk || cfg.risk);
             renderLists(data.zones || [], data.centers || []);
+            renderLegend(data.zones || [], data.centers || []);
             lastUpdated = Date.now();
             setUpdatedLabel();
         }

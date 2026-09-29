@@ -63,6 +63,7 @@ class HazardEvacController extends Controller
                     'lat' => (float) $c->latitude,
                     'lng' => (float) $c->longitude,
                     'open' => (bool) $c->is_open,
+                    'color' => $c->color ?: '#0f766e',
                 ];
             })->values(),
             'publicHazardMapUrl' => route('public.hazard.map'),
@@ -138,6 +139,7 @@ class HazardEvacController extends Controller
             'capacity' => ['nullable', 'integer', 'min:1'],
             'is_open' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
         EvacuationCenter::create([
@@ -146,6 +148,17 @@ class HazardEvacController extends Controller
         ]);
 
         return back()->with('success', 'Evacuation center saved.');
+    }
+
+    public function updateCenter(Request $request, EvacuationCenter $center): RedirectResponse
+    {
+        $data = $request->validate([
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        $center->update(['color' => $data['color']]);
+
+        return back()->with('success', 'Shelter pin color updated. Residents see it on the Live Map.');
     }
 
     public function destroyCenter(EvacuationCenter $center): RedirectResponse

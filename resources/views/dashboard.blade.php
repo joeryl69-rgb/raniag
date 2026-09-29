@@ -582,6 +582,36 @@
                 </div>
             </div>
         </div>
+        <div class="section-head">
+            <h5><i class="bi bi-bar-chart-line text-primary"></i> Movement</h5>
+            <p class="section-sub">These redraw every refresh from the same live totals</p>
+        </div>
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-xl-7">
+                <div class="dash-card analytics-card h-100">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Reports over the last 6 weeks</strong>
+                    <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-5">
+                <div class="dash-card analytics-card h-100">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Status right now</strong>
+                    <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-6">
+                <div class="dash-card analytics-card h-100">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Priority mix</strong>
+                    <div class="chart-wrap"><canvas id="chart-priority"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <div class="dash-card analytics-card h-100">
+                    <strong class="small text-uppercase text-muted d-block mb-2">What people are reporting</strong>
+                    <div class="chart-wrap tall"><canvas id="chart-category"></canvas></div>
+                </div>
+            </div>
+        </div>
     @else
         {{-- ===================== AGENCY / PERSONNEL: DISPATCHES + FEED ===================== --}}
         <div class="row g-3 mb-4">
@@ -610,6 +640,8 @@
             </div>
             <div class="col-12 col-lg-5">
                 <div class="dash-card analytics-card h-100">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Your cases right now</strong>
+                    <div class="chart-wrap mb-3"><canvas id="chart-status"></canvas></div>
                     <strong class="small text-uppercase text-muted d-block mb-2"><i class="bi bi-activity text-primary"></i> Recent Status Updates</strong>
                     <div id="status-feed"><div class="empty-note">Loading updates…</div></div>
                 </div>
@@ -1199,6 +1231,10 @@
                 setText('out-of-jurisdiction', analytics.out_of_jurisdiction_count ?? 0);
 
                 renderOpsBoard(rawPoints, analytics);
+                renderTrendChart(analytics.weekly_trends || []);
+                renderStatusChart(sb);
+                renderCategoryChart(analytics.categories || {});
+                renderPriorityChart(analytics.priority_breakdown || {});
 
                 const perf = data.performance || {};
                 setRing('ring-resolution-fill', 'ring-resolution-value', perf.resolution_rate);
@@ -1251,7 +1287,7 @@
                             fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: '#0b5ed7'
                         }]
                     },
-                    options: baseOpts({ legend: false })
+                    options: { ...baseOpts({ legend: false }), animation: { duration: 1100, easing: 'easeOutQuart' } }
                 });
             }
 
@@ -1260,7 +1296,7 @@
                 ensureChart('status', 'chart-status', {
                     type: 'doughnut',
                     data: { labels: labels.map(l => l.replace(/_/g, ' ')), datasets: [{ data: labels.map(l => sb[l]), backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+                    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 1100, easing: 'easeOutQuart', animateRotate: true }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
                 });
             }
 
@@ -1282,7 +1318,7 @@
                         labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
                         datasets: [{ data: labels.map(l => priority[l]), backgroundColor: labels.map(l => PRIORITY_COLORS[l] || '#94a3b8'), borderWidth: 2, borderColor: '#fff' }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '62%', animation: { duration: 1100, easing: 'easeOutQuart', animateRotate: true }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
                 });
             }
 
@@ -1329,6 +1365,7 @@
                 return {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: { duration: 1100, easing: 'easeOutQuart' },
                     indexAxis: opts.indexAxis || 'x',
                     plugins: { legend: { display: !!opts.legend, position: 'bottom' } },
                     scales: { x: { grid: { display: false } }, y: { grid: { color: '#f1f4f8' } } }
@@ -1345,6 +1382,7 @@
 
                 plotPoints(data.active_dispatches || []);
                 renderDispatchTable(data.active_dispatches || []);
+                renderStatusChart(sb);
                 renderStatusFeed(data.recent_status_updates || []);
                 maybeShowIncidentAlert(data.latest_incident);
             }
