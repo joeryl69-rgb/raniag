@@ -207,10 +207,15 @@ body.raniag-public {
     text-align: center;
 }
 .rg-how-head { display: flex; flex-direction: column; align-items: center; }
+.rg-how-jo-frame {
+    isolation: isolate;
+    background: #f6f7fb;
+    line-height: 0;
+    margin-bottom: .35rem;
+}
 .rg-how-jo {
     height: clamp(112px, 14vw, 140px);
     max-width: 150px;
-    margin-bottom: .35rem;
 }
 .rg-how-kicker {
     margin: 0;
@@ -1795,6 +1800,9 @@ body.raniag-public {
   height: clamp(112px, 14vw, 140px);
   max-width: 150px;
   margin-inline: auto;
+  /* Studio white is lighter than the page gray, so darken drops the
+     rectangle and leaves the character. No cut-out, so the edges stay smooth. */
+  mix-blend-mode: darken;
 }
 .jo-mascot.jo-pose-in {
   animation: jo-pose-in .42s ease-out;

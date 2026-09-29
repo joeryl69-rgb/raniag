@@ -30,7 +30,9 @@
 
     <section class="rg-how" data-rg-hero-card aria-labelledby="rg-how-title">
         <div class="rg-how-head">
-            <img class="jo-mascot rg-how-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="140" height="176">
+            <div class="rg-how-jo-frame">
+                <img class="jo-mascot rg-how-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="140" height="176">
+            </div>
             <p class="rg-how-kicker">JO</p>
             <h2 id="rg-how-title" class="rg-how-title">{{ __('How it works') }}</h2>
             <p class="rg-how-lead">Four steps, from the report you file to the status you can check anytime.</p>
