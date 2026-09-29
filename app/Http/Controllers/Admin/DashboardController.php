@@ -99,11 +99,17 @@ class DashboardController extends Controller
 
     public function api(Request $request): JsonResponse
     {
+        // The toolbar refresh asks for a live pull. The short cache is only
+        // for the background poll, so a click is not stuck on the last payload.
+        if ($request->boolean('fresh')) {
+            Cache::forget('admin.dashboard.json');
+        }
+
         $payload = Cache::remember('admin.dashboard.json', 25, function () {
             return $this->buildDashboardPayload();
         });
 
-        return response()->json($payload);
+        return response()->json($payload)->header('Cache-Control', 'no-store, private');
     }
 
     /**

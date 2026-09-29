@@ -58,6 +58,8 @@
             .map-card .map-toolbar .map-mode-switch button.active { background: #fff; color: var(--raniag-primary); }
             .map-card .map-toolbar .btn-outline-secondary { color: #fff; border-color: rgba(255,255,255,.4); }
             .map-card .map-toolbar .btn-outline-secondary:hover { background: rgba(255,255,255,.15); color: #fff; }
+            #map-refresh-btn.is-refreshing i { animation: map-refresh-spin .7s linear infinite; }
+            @keyframes map-refresh-spin { to { transform: rotate(360deg); } }
 
             /* ---- KPI Cards ---- */
             .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
@@ -805,7 +807,9 @@
                     panel.classList.toggle('show');
                 });
 
-                document.getElementById('map-refresh-btn').addEventListener('click', loadData);
+                document.getElementById('map-refresh-btn').addEventListener('click', function () {
+                    loadData({ manual: true });
+                });
 
                 document.getElementById('map-fullscreen-btn').addEventListener('click', function () {
                     const wrap = document.querySelector('.map-card');
@@ -1095,11 +1099,59 @@
                 return (str ?? '').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
             }
 
-            function loadData() {
-                fetch(API_URL, { headers: { 'Accept': 'application/json' } })
-                    .then(r => r.json())
-                    .then(data => IS_ADMIN ? renderAdmin(data) : renderRole(data))
-                    .catch(err => console.error('Dashboard load error:', err));
+            let refreshInFlight = false;
+
+            function loadData(options) {
+                const manual = !!(options && options.manual);
+                if (manual && refreshInFlight) return;
+
+                const btn = document.getElementById('map-refresh-btn');
+                if (manual) {
+                    refreshInFlight = true;
+                    btn?.classList.add('is-refreshing');
+                    btn?.setAttribute('aria-busy', 'true');
+                    if (btn) btn.disabled = true;
+                }
+
+                const glue = API_URL.includes('?') ? '&' : '?';
+                const url = API_URL + glue + '_=' + Date.now() + (manual ? '&fresh=1' : '');
+
+                fetch(url, {
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                })
+                    .then(r => {
+                        if (!r.ok) throw new Error('Dashboard refresh failed (' + r.status + ')');
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (IS_ADMIN) renderAdmin(data);
+                        else renderRole(data);
+                        if (map) map.invalidateSize();
+                        if (manual) markMapRefreshed();
+                    })
+                    .catch(err => {
+                        console.error('Dashboard load error:', err);
+                        if (manual) {
+                            const label = document.getElementById('map-count-label');
+                            if (label) label.textContent = 'Could not refresh the map. Try again.';
+                        }
+                    })
+                    .finally(() => {
+                        if (!manual) return;
+                        refreshInFlight = false;
+                        btn?.classList.remove('is-refreshing');
+                        btn?.removeAttribute('aria-busy');
+                        if (btn) btn.disabled = false;
+                    });
+            }
+
+            function markMapRefreshed() {
+                const label = document.getElementById('map-count-label');
+                if (!label) return;
+                const base = label.textContent.replace(/ · updated.*/, '');
+                label.textContent = base + ' · updated just now';
             }
 
             // ---------------- Admin rendering ----------------
