@@ -48,7 +48,7 @@
                         </td>
                         <td class="text-end">
                             <button type="button" class="btn btn-sm btn-outline-secondary"
-                                onclick='openEditModal(@json($type))'>
+                                data-type-edit="{{ json_encode($type->only(['id', 'name', 'description', 'icon', 'color', 'default_priority', 'public_guidance', 'default_icon', 'default_color'])) }}">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <form method="POST" action="{{ route('admin.incident_types.destroy', $type) }}" class="d-inline" onsubmit="return confirm('Delete &quot;{{ $type->name }}&quot;? This cannot be undone.');">
@@ -248,8 +248,14 @@
         document.getElementById('typeForm').action = `/admin/incident-types/${type.id}`;
         document.getElementById('formMethod').value = 'PUT';
 
-        new bootstrap.Modal(document.getElementById('typeModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('typeModal')).show();
     }
+
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-type-edit]');
+        if (!button) return;
+        openEditModal(JSON.parse(button.getAttribute('data-type-edit')));
+    });
 
     function resetToDefault() {
         if (!currentDefault) return;

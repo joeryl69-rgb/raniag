@@ -156,9 +156,11 @@
             }
             if (form && submitButton && buttonLabel && spinner) {
                 form.addEventListener('submit', function () {
-                    submitButton.disabled = true;
-                    buttonLabel.textContent = 'Signing in...';
-                    spinner.classList.remove('d-none');
+                    window.setTimeout(function () {
+                        submitButton.disabled = true;
+                        buttonLabel.textContent = 'Signing in...';
+                        spinner.classList.remove('d-none');
+                    }, 0);
                 });
             }
             let remaining = parseInt(document.getElementById('lockout-countdown')?.textContent || '0', 10);

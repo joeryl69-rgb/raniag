@@ -175,7 +175,7 @@
         document.getElementById('replyForm').action = `/admin/feedback/${id}/reply`;
         const quill = getReplyQuill();
         quill.root.innerHTML = existingHtml || '';
-        new bootstrap.Modal(document.getElementById('replyModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('replyModal')).show();
     }
 
     document.getElementById('replyForm').addEventListener('submit', function () {

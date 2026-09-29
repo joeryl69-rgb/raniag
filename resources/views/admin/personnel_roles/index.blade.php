@@ -43,7 +43,7 @@
                         </td>
                         <td class="text-end">
                             <button type="button" class="btn btn-sm btn-outline-secondary"
-                                onclick='openEditModal(@json($role))'>
+                                data-role-edit="{{ json_encode($role->only(['id', 'title', 'sort_order'])) }}">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <form method="POST" action="{{ route('admin.personnel_roles.destroy', $role) }}" class="d-inline" onsubmit="return confirm('Delete &quot;{{ $role->title }}&quot;? This cannot be undone.');">
@@ -115,6 +115,12 @@
         document.getElementById('roleSortOrder').value = role.sort_order ?? '';
         roleModal.show();
     }
+
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-role-edit]');
+        if (!button) return;
+        openEditModal(JSON.parse(button.getAttribute('data-role-edit')));
+    });
 </script>
 @endpush
 </x-app-layout>

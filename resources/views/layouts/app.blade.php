@@ -638,10 +638,17 @@
                     if (this.classList.contains('no-loading')) return;
                     const submitButton = lastClickedSubmit || this.querySelector('button[type="submit"]');
                     const message = submitButton?.dataset.loadingMessage || this.dataset.loadingMessage || 'Processing, please wait...';
-                    showLoadingOverlay(message);
-                    if (submitButton) {
-                        setButtonLoading(submitButton, message);
-                    }
+                    // Chrome drops a clicked submit if this event disables the
+                    // button or pins the page (position:fixed) before the
+                    // navigation starts. The page then snaps back and the
+                    // save looks like it did nothing. Show the wait state
+                    // on the next tick, after the request is underway.
+                    window.setTimeout(function () {
+                        showLoadingOverlay(message);
+                        if (submitButton) {
+                            setButtonLoading(submitButton, message);
+                        }
+                    }, 0);
 
                     // For forms that trigger a file download (e.g. PDF export), the browser
                     // never fires a new 'load' event, so poll for a cookie set by the server
