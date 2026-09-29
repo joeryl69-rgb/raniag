@@ -212,6 +212,7 @@ body.raniag-public {
     background: #f6f7fb;
     line-height: 0;
     margin-bottom: .35rem;
+    animation: jo-float 4.6s ease-in-out infinite;
 }
 .rg-how-jo {
     height: clamp(220px, 28vw, 280px);
@@ -1800,8 +1801,10 @@ body.raniag-public {
   height: clamp(220px, 28vw, 280px);
   max-width: 240px;
   margin-inline: auto;
+  animation: none;
   /* Studio white is lighter than the page gray, so darken drops the
-     rectangle and leaves the character. No cut-out, so the edges stay smooth. */
+     rectangle and leaves the character. The float runs on the frame so
+     the picture does not slide out of that blend while it moves. */
   mix-blend-mode: darken;
 }
 .jo-mascot.jo-pose-in {
@@ -1817,7 +1820,8 @@ body.raniag-public {
 }
 @media (prefers-reduced-motion: reduce) {
   .jo-mascot,
-  .jo-mascot.jo-pose-in {
+  .jo-mascot.jo-pose-in,
+  .rg-how-jo-frame {
     animation: none;
   }
 }
