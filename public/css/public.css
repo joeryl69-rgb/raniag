@@ -1443,12 +1443,25 @@ body.raniag-public {
     color: #fff;
 }
 
+[data-theme="dark"] .table > :not(caption) > * > * {
+    background-color: #16213a !important;
+    color: #e2e8f0 !important;
+    border-color: #253449 !important;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > *,
+[data-theme="dark"] tr.table-light > * {
+    background-color: #1a2744 !important;
+}
+
 [data-theme="dark"] .form-control,
 [data-theme="dark"] .form-select,
-[data-theme="dark"] textarea {
-    background-color: #1c2b47;
-    color: #e2e8f0;
-    border-color: var(--raniag-border);
+[data-theme="dark"] textarea,
+[data-theme="dark"] .input-group-text {
+    background-color: #1c2b47 !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
 }
 
 [data-theme="dark"] .form-control::placeholder {
@@ -1457,8 +1470,10 @@ body.raniag-public {
 
 [data-theme="dark"] .form-control:focus,
 [data-theme="dark"] .form-select:focus {
-    background-color: #1c2b47;
-    color: #e2e8f0;
+    background-color: #1c2b47 !important;
+    color: #e2e8f0 !important;
+    border-color: #64748b !important;
+    box-shadow: none;
 }
 
 [data-theme="dark"] .text-dark,

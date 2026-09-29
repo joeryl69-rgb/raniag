@@ -20,7 +20,7 @@
                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
                     <div>
                         <div class="fw-semibold">Dark mode</div>
-                        <div class="small text-muted">Dark surfaces on every page. Your color theme still sets the sidebar and buttons.</div>
+                        <div class="small text-muted">Dark surfaces on every page. Color themes stay locked until you turn this off.</div>
                     </div>
                     <div class="ms-md-auto flex-shrink-0">
                         <input class="settings-toggle" type="checkbox" role="switch" id="darkModeSwitch"
@@ -85,7 +85,8 @@
                             <button type="button"
                                     class="theme-swatch-btn w-100 border rounded-3 p-2 text-center position-relative {{ $setting->theme_key === $key ? 'selected' : '' }}"
                                     data-theme-key="{{ $key }}"
-                                    onclick="selectTheme('{{ $key }}')">
+                                    onclick="selectTheme('{{ $key }}')"
+                                    @disabled($setting->dark_mode)>
                                 <i class="bi bi-check-circle-fill theme-swatch-check position-absolute top-0 end-0 m-2"></i>
                                 <span class="theme-mini" aria-hidden="true">
                                     <span class="theme-mini-side" style="background: {{ $preset['vars']['--raniag-sidebar'] }};"></span>
@@ -99,7 +100,7 @@
                         </div>
                     @endforeach
                 </div>
-                <p class="small text-muted mb-0 mt-3">Each sample is the sidebar, the page, and a button in that theme. Dark mode keeps this choice.</p>
+                <p class="small text-muted mb-0 mt-3" id="themeDisabledNote" @if(! $setting->dark_mode) hidden @endif>Color themes are off while dark mode is on. Turn dark mode off to choose a theme.</p>
             </div>
         </div>
 
@@ -190,6 +191,12 @@
     .type-preview-body { font-size: 0.92em; color: #64748b; }
     [data-theme="dark"] .type-preview-body { color: #94a3b8; }
 
+    .theme-swatch-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+    }
+
     .theme-swatch-btn:hover:not(:disabled) {
         transform: translateY(-1px);
         border-color: var(--raniag-primary) !important;
@@ -276,10 +283,19 @@
         }
     }
 
+    function syncThemeAvailability() {
+        const dark = darkModeSwitch.checked;
+        themeButtons.forEach((btn) => { btn.disabled = dark; });
+        const note = document.getElementById('themeDisabledNote');
+        if (note) note.hidden = !dark;
+        applyPreview(document.getElementById('selectedThemeKey').value, dark);
+    }
+
     function selectTheme(key) {
+        if (darkModeSwitch.checked) return;
         document.getElementById('selectedThemeKey').value = key;
         themeButtons.forEach((btn) => btn.classList.toggle('selected', btn.dataset.themeKey === key));
-        applyPreview(key, darkModeSwitch.checked);
+        applyPreview(key, false);
     }
 
     function selectFont(key) {
@@ -305,9 +321,8 @@
         applyFontSizeByIndex(parseInt(this.value, 10));
     });
 
-    darkModeSwitch.addEventListener('change', function () {
-        applyPreview(document.getElementById('selectedThemeKey').value, this.checked);
-    });
+    darkModeSwitch.addEventListener('change', syncThemeAvailability);
+    syncThemeAvailability();
 
     themeButtons.forEach((btn) => {
         btn.classList.toggle('selected', btn.dataset.themeKey === '{{ $setting->theme_key }}');

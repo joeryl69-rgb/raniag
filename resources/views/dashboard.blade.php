@@ -279,6 +279,36 @@
             .feed-item { display: flex; gap: .65rem; padding: .6rem 0; border-bottom: 1px solid var(--raniag-border); }
             .feed-item:last-child { border-bottom: 0; }
             .feed-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--raniag-primary); margin-top: .4rem; flex-shrink: 0; }
+
+            .ops-row {
+                display: grid;
+                grid-template-columns: 7.5rem 1fr auto;
+                gap: .65rem;
+                align-items: center;
+                padding: .7rem .15rem;
+                border-bottom: 1px solid var(--raniag-border);
+                color: inherit;
+                text-decoration: none;
+            }
+            .ops-row:last-child { border-bottom: 0; }
+            .ops-row:hover { background: var(--raniag-primary-light); }
+            .ops-track { font-weight: 800; font-size: .84rem; }
+            .ops-meta { font-size: .78rem; color: var(--raniag-muted); }
+            .ops-age { font-size: .75rem; font-weight: 700; color: var(--raniag-muted); white-space: nowrap; }
+
+            [data-theme="dark"] .dash-card,
+            [data-theme="dark"] .map-insight-panel {
+                background: var(--raniag-surface, #16213a);
+                color: #e2e8f0;
+            }
+            [data-theme="dark"] .map-filters,
+            [data-theme="dark"] .map-filters select,
+            [data-theme="dark"] .map-toolbar,
+            [data-theme="dark"] .kpi-card:hover {
+                background: #1c2b47;
+                color: #e2e8f0;
+            }
+            [data-theme="dark"] .map-filters select { border-color: #334155; }
         </style>
     @endpush
 
@@ -526,44 +556,22 @@
     @if($isAdmin)
         {{-- ===================== ADMIN ANALYTICS ===================== --}}
         <div class="section-head">
-            <h5><i class="bi bi-graph-up-arrow text-primary"></i> Analytics</h5>
-            <p class="section-sub">Full jurisdiction insight, refreshed with the map</p>
+            <h5><i class="bi bi-lightning-charge text-primary"></i> Live operations</h5>
+            <p class="section-sub">Open cases that still need a decision, refreshed with the map</p>
         </div>
         <div class="row g-3 mb-4">
             <div class="col-12 col-lg-7">
                 <div class="dash-card analytics-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong class="small text-uppercase text-muted">6-Week Volume Trend</strong>
-                    </div>
-                    <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+                    <strong class="small text-uppercase text-muted d-block mb-2">Needs a decision</strong>
+                    <div id="ops-queue"><div class="empty-note">Loading open cases…</div></div>
                 </div>
             </div>
             <div class="col-12 col-lg-5">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Status Breakdown</strong>
-                    <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+                <div class="dash-card analytics-card h-100 mb-3">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Where reports are clustering</strong>
+                    <div id="ops-places"><div class="empty-note">Loading places…</div></div>
                 </div>
-            </div>
-            <div class="col-12 col-lg-6">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Incidents by Category</strong>
-                    <div class="chart-wrap"><canvas id="chart-category"></canvas></div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-6">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Incidents by Priority</strong>
-                    <div class="chart-wrap"><canvas id="chart-priority"></canvas></div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-7">
-                <div class="dash-card analytics-card h-100">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Agency Avg. Response Time (hrs)</strong>
-                    <div class="chart-wrap"><canvas id="chart-agency-response"></canvas></div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-5">
-                <div class="dash-card analytics-card h-100">
+                <div class="dash-card analytics-card">
                     <strong class="small text-uppercase text-muted d-block mb-2">Signal Health</strong>
                     <div id="signal-health">
                         <div class="mini-stat-row"><span><i class="bi bi-send text-success"></i> SMS Sent</span><strong id="sms-sent">—</strong></div>
@@ -1190,11 +1198,7 @@
                 setText('sms-pending', sms.pending ?? 0);
                 setText('out-of-jurisdiction', analytics.out_of_jurisdiction_count ?? 0);
 
-                renderTrendChart(analytics.weekly_trends || []);
-                renderStatusChart(sb);
-                renderCategoryChart(analytics.categories || {});
-                renderPriorityChart(analytics.priority_breakdown || {});
-                renderAgencyResponseChart(analytics.agency_response_times || {});
+                renderOpsBoard(rawPoints, analytics);
 
                 const perf = data.performance || {};
                 setRing('ring-resolution-fill', 'ring-resolution-value', perf.resolution_rate);
@@ -1291,6 +1295,36 @@
                 });
             }
 
+            function renderOpsBoard(points, analytics) {
+                const queue = document.getElementById('ops-queue');
+                const places = document.getElementById('ops-places');
+                if (queue) {
+                    const rank = { critical: 0, high: 1, medium: 2, low: 3 };
+                    const rows = (points || []).slice().sort((a, b) => {
+                        const pa = rank[(a.priority || '').toLowerCase()] ?? 4;
+                        const pb = rank[(b.priority || '').toLowerCase()] ?? 4;
+                        if (pa !== pb) return pa - pb;
+                        return String(b.reported_at || '').localeCompare(String(a.reported_at || ''));
+                    }).slice(0, 8);
+                    queue.innerHTML = rows.length ? rows.map((r) => {
+                        const typeName = (r.incident_type && r.incident_type.name) || (r.incidentType && r.incidentType.name) || 'Incident';
+                        const priority = (r.priority || 'medium').toLowerCase();
+                        const href = INCIDENT_URL_BASE + '/' + r.id;
+                        return `<a class="ops-row" href="${href}">
+                            <span class="ops-track">${escapeHtml(r.tracking_number || ('#' + r.id))}</span>
+                            <span><span class="d-block fw-semibold">${escapeHtml(typeName)}</span><span class="ops-meta">${escapeHtml(r.barangay || '—')} · ${escapeHtml((r.status || '').replaceAll('_', ' '))}</span></span>
+                            <span class="ops-age"><span class="badge badge-priority-${priority} text-capitalize">${escapeHtml(priority)}</span></span>
+                        </a>`;
+                    }).join('') : '<div class="empty-note">No open cases waiting on a decision.</div>';
+                }
+                if (places) {
+                    const entries = Object.entries(analytics.barangays || {}).slice(0, 6);
+                    places.innerHTML = entries.length ? entries.map(([name, count]) =>
+                        `<div class="hotspot-row"><span>${escapeHtml(name)}</span><span class="hotspot-count">${count}</span></div>`
+                    ).join('') : '<div class="empty-note">No barangay clustering yet.</div>';
+                }
+            }
+
             function baseOpts(opts) {
                 return {
                     responsive: true,
@@ -1322,8 +1356,9 @@
                 body.innerHTML = rows.map(r => {
                     const typeName = r.incident_type && r.incident_type.name ? r.incident_type.name : '—';
                     const priority = (r.priority || 'medium').toLowerCase();
+                    const href = INCIDENT_URL_BASE + '/' + r.id;
                     return `
-                        <tr>
+                        <tr style="cursor:pointer" onclick="window.location='${href}'">
                             <td class="fw-semibold">${escapeHtml(r.tracking_number || ('#' + r.id))}</td>
                             <td>${escapeHtml(typeName)}</td>
                             <td>${escapeHtml(r.barangay || '—')}</td>
