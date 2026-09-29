@@ -103,19 +103,44 @@
         const dock = document.getElementById('jo-guide-dock');
         if (dock) dock.classList.add('d-none');
         clearNavHighlight();
+        highlightToken += 1;
+        setMobileMenu(false);
     }
 
     function clearNavHighlight() {
         document.querySelectorAll('.jo-tour-spotlight').forEach((el) => el.classList.remove('jo-tour-spotlight'));
     }
 
+    function isMobileNav() {
+        return window.matchMedia('(max-width: 991.98px)').matches;
+    }
+
+    function setMobileMenu(open) {
+        const menu = document.getElementById('publicNav');
+        if (!menu || !isMobileNav() || !window.bootstrap) return Promise.resolve();
+        const inst = window.bootstrap.Collapse.getOrCreateInstance(menu, { toggle: false });
+        const isOpen = menu.classList.contains('show');
+        if (isOpen === open) return Promise.resolve();
+        return new Promise((resolve) => {
+            menu.addEventListener(open ? 'shown.bs.collapse' : 'hidden.bs.collapse', resolve, { once: true });
+            open ? inst.show() : inst.hide();
+        });
+    }
+
+    let highlightToken = 0;
+
     function highlight(sel) {
         clearNavHighlight();
-        const el = document.querySelector(sel);
-        if (el) {
+        const token = ++highlightToken;
+        // On mobile the links live inside the collapsed menu, so open it first.
+        setMobileMenu(true).then(() => {
+            if (token !== highlightToken) return;
+            const el = document.querySelector(sel);
+            if (!el) return;
             el.classList.add('jo-tour-spotlight');
-            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
+            if (isMobileNav()) window.scrollTo({ top: 0, behavior: 'smooth' });
+            else el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
     }
 
     let tourIndex = 0;
