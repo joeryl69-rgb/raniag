@@ -214,8 +214,8 @@ body.raniag-public {
     margin-bottom: .35rem;
 }
 .rg-how-jo {
-    height: clamp(112px, 14vw, 140px);
-    max-width: 150px;
+    height: clamp(220px, 28vw, 280px);
+    max-width: 240px;
 }
 .rg-how-kicker {
     margin: 0;
@@ -1797,8 +1797,8 @@ body.raniag-public {
   max-width: min(42%, 180px);
 }
 .jo-mascot.rg-how-jo {
-  height: clamp(112px, 14vw, 140px);
-  max-width: 150px;
+  height: clamp(220px, 28vw, 280px);
+  max-width: 240px;
   margin-inline: auto;
   /* Studio white is lighter than the page gray, so darken drops the
      rectangle and leaves the character. No cut-out, so the edges stay smooth. */
