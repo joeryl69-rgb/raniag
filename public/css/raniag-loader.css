@@ -1,0 +1,115 @@
+/* Shared loading screen for the public site and the staff portal.
+   Motion is transform and opacity only, so it stays on the compositor. */
+#global-loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(8, 15, 28, 0.72);
+}
+
+#global-loading-overlay.d-none {
+    display: none !important;
+}
+
+#global-loading-overlay .rg-loader {
+    width: min(320px, 88vw);
+    padding: 1.35rem 1.35rem 1.1rem;
+    text-align: center;
+    border-radius: 18px;
+    background: #0f1c33;
+    border: 1px solid rgba(147, 197, 253, 0.28);
+    box-shadow: 0 24px 50px -24px rgba(0, 0, 0, 0.7);
+}
+
+#global-loading-overlay .rg-radar {
+    width: 92px;
+    height: 92px;
+    margin: 0 auto;
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
+    background:
+        radial-gradient(circle, rgba(37, 99, 235, 0.22) 0 34%, transparent 35%),
+        repeating-radial-gradient(circle, rgba(147, 197, 253, 0.45) 0 1px, transparent 1px 16px);
+}
+
+#global-loading-overlay .rg-radar-sweep {
+    position: absolute;
+    inset: 0;
+    background: conic-gradient(from 0deg, transparent 0 68%, rgba(96, 165, 250, 0.15) 82%, rgba(191, 219, 254, 0.85) 100%);
+    animation: rg-sweep 1.35s linear infinite;
+}
+
+#global-loading-overlay .rg-radar-blip {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #86efac;
+    right: 18px;
+    top: 24px;
+    animation: rg-blip 1.35s ease-out infinite;
+}
+
+#global-loading-overlay .rg-radar img {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    left: 50%;
+    top: 50%;
+    margin: -15px 0 0 -15px;
+    border-radius: 8px;
+}
+
+#global-loading-overlay .loading-text {
+    margin: 0.9rem 0 0.7rem;
+    color: #f8fafc;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+#global-loading-overlay .rg-progress {
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+}
+
+#global-loading-overlay .rg-progress-bar {
+    height: 100%;
+    width: 36%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #1d4ed8, #93c5fd);
+    animation: rg-progress-slide 1.05s ease-in-out infinite;
+}
+
+@keyframes rg-sweep {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes rg-blip {
+    0%, 62% { opacity: 0.15; transform: scale(0.6); }
+    78% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0.15; transform: scale(0.6); }
+}
+
+@keyframes rg-progress-slide {
+    0% { transform: translateX(-130%); }
+    100% { transform: translateX(320%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #global-loading-overlay .rg-radar-sweep,
+    #global-loading-overlay .rg-radar-blip,
+    #global-loading-overlay .rg-progress-bar {
+        animation: none;
+    }
+
+    #global-loading-overlay .rg-progress-bar {
+        width: 100%;
+    }
+}

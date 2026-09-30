@@ -41,6 +41,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}" rel="stylesheet">
+    <link href="{{ asset('css/raniag-loader.css') }}?v={{ @filemtime(public_path('css/raniag-loader.css')) }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json?v=8">
     <meta name="theme-color" content="#0e4a6b">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -184,22 +185,6 @@
             min-width: 0;
         }
  
-        #global-loading-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 2000;
-            background-color: rgba(15, 23, 42, 0.65);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-            transition: opacity 0.2s ease;
-        }
- 
-        #global-loading-overlay.d-none {
-            display: none !important;
-        }
-
         /* Robust scroll lock (see showLoadingOverlay/hideLoadingOverlay below):
            overflow:hidden on <body> alone doesn't stop iOS rubber-band
            scrolling, so the page could still be dragged behind the overlay. */
@@ -209,27 +194,6 @@
             left: 0;
             right: 0;
             width: 100%;
-        }
- 
-        #global-loading-overlay .loading-text {
-            margin-top: 1rem;
-            color: #f8fafc;
-            font-weight: 600;
-        }
-        #global-loading-overlay .rg-mark { width: 56px; height: 56px; margin: 0 auto; position: relative; }
-        #global-loading-overlay .rg-mark img {
-            width: 100%; height: 100%; border-radius: 14px;
-            animation: rg-pulse 1.15s ease-in-out infinite;
-        }
-        #global-loading-overlay .rg-mark::after {
-            content: ""; position: absolute; inset: -8px; border-radius: 18px;
-            border: 2px solid #93c5fd; opacity: 0;
-            animation: rg-ring 1.15s ease-out infinite;
-        }
-        @keyframes rg-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(.9); } }
-        @keyframes rg-ring { 0% { transform: scale(.85); opacity: .6; } 100% { transform: scale(1.35); opacity: 0; } }
-        @media (prefers-reduced-motion: reduce) {
-            #global-loading-overlay .rg-mark img, #global-loading-overlay .rg-mark::after { animation: none; }
         }
  
         .leaflet-control-attribution {
@@ -491,12 +455,7 @@
 
     <x-mobile-dock />
 
-    <div id="global-loading-overlay" class="d-none">
-        <div class="text-center">
-            <div class="rg-mark" aria-hidden="true"><img src="/images/icons/raniag-master.svg" alt=""></div>
-            <div class="loading-text">Processing, please wait...</div>
-        </div>
-    </div>
+    <x-loading-overlay />
  
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{{ asset('js/live-refresh.js') }}?v={{ @filemtime(public_path('js/live-refresh.js')) }}"></script>

@@ -75,6 +75,7 @@
         if (!targetSelector) return;
         const target = document.querySelector(targetSelector);
         if (!target) return;
+        if (target.querySelector('input:focus, textarea:focus, select:focus')) return;
 
         const url = window.location.href;
 

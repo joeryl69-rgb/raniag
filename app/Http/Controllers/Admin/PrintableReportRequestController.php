@@ -84,6 +84,9 @@ class PrintableReportRequestController extends Controller
     public function reject(ApproveDocumentRequestRequest $request, DocumentRequest $documentRequest): RedirectResponse|JsonResponse
     {
         $comment = $request->validated('admin_comment');
+        if ($comment === null || trim($comment) === '') {
+            $comment = 'Rejected by admin';
+        }
 
         $documentRequest->update([
             'status' => 'rejected',
