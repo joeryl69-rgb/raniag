@@ -1,7 +1,7 @@
 <div class="dropdown" id="notif-bell-wrapper">
     <button class="btn btn-light position-relative rounded-circle d-flex align-items-center justify-content-center notif-bell-btn"
-            type="button" id="notifBellToggle" data-bs-toggle="dropdown" aria-expanded="false"
-            data-bs-display="static" data-bs-offset="0,4"
+            type="button" id="notifBellToggle" aria-expanded="false"
+            aria-haspopup="true" aria-controls="notifPanel"
             aria-label="Notifications">
         <i class="bi bi-bell-fill text-secondary"></i>
         <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
@@ -9,7 +9,7 @@
         </span>
     </button>
 
-    <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0 notif-dropdown" aria-labelledby="notifBellToggle">
+    <div class="dropdown-menu shadow border-0 p-0 notif-dropdown" id="notifPanel" aria-labelledby="notifBellToggle">
         <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
             <span class="fw-bold small text-uppercase text-muted">Notifications</span>
             <div class="d-flex align-items-center gap-2">
@@ -70,11 +70,20 @@
     }
 
     .notif-dropdown {
+        box-sizing: border-box;
         width: min(360px, calc(100vw - 16px));
+        max-width: calc(100vw - 16px);
         max-height: min(420px, 70vh);
         z-index: 2075;
         overflow: hidden;
         border-radius: 14px;
+    }
+
+    .notif-dropdown.show {
+        position: fixed !important;
+        right: 8px !important;
+        left: auto !important;
+        transform: none !important;
         display: flex;
         flex-direction: column;
     }
@@ -179,12 +188,18 @@
 
     function placePanel() {
         if (!bellToggle || !notifMenu) return;
+        const view = window.visualViewport;
+        const viewWidth = view ? view.width : window.innerWidth;
+        const viewLeft = view ? view.offsetLeft : 0;
+        const margin = 8;
+        const width = Math.min(360, Math.max(200, viewWidth - margin * 2));
         const rect = bellToggle.getBoundingClientRect();
-        const width = Math.min(360, window.innerWidth - 16);
         let left = rect.right - width;
-        if (left < 8) left = 8;
-        const top = Math.min(rect.bottom + 8, window.innerHeight - 120);
-        const maxHeight = Math.max(180, Math.min(420, window.innerHeight - top - 16));
+        const minLeft = viewLeft + margin;
+        const maxLeft = viewLeft + viewWidth - width - margin;
+        left = Math.min(Math.max(minLeft, left), maxLeft);
+        const top = Math.min(rect.bottom + 8, (view ? view.height : window.innerHeight) - 140);
+        const maxHeight = Math.max(180, Math.min(420, (view ? view.height : window.innerHeight) - top - margin));
         const set = function (prop, val) { notifMenu.style.setProperty(prop, val, 'important'); };
         set('position', 'fixed');
         set('top', top + 'px');
@@ -192,6 +207,7 @@
         set('right', 'auto');
         set('bottom', 'auto');
         set('width', width + 'px');
+        set('max-width', (viewWidth - margin * 2) + 'px');
         set('height', 'auto');
         set('max-height', maxHeight + 'px');
         set('margin', '0');
@@ -200,6 +216,7 @@
         set('display', 'flex');
         set('flex-direction', 'column');
         set('overflow', 'hidden');
+        set('box-sizing', 'border-box');
         set('border-radius', '14px');
     }
 
@@ -211,6 +228,7 @@
             notifPortaled = true;
         }
         notifMenu.classList.add('show');
+        document.getElementById('layer-panel')?.classList.remove('show');
         placePanel();
         if (bellToggle) bellToggle.setAttribute('aria-expanded', 'true');
         panelOpen = true;
@@ -291,8 +309,8 @@
                 'data-read-url="' + n.read_url + '" data-target-url="' + (n.target_url || '') + '">' +
                 '<div class="text-' + n.color + ' fs-5 flex-shrink-0">' + timeIcon(n.icon) + '</div>' +
                 '<div class="flex-grow-1 min-w-0">' +
-                    '<div class="fw-semibold small text-truncate">' + n.title + '</div>' +
-                    '<div class="small text-muted text-truncate">' + n.message + '</div>' +
+                    '<div class="fw-semibold small">' + n.title + '</div>' +
+                    '<div class="small text-muted">' + n.message + '</div>' +
                     '<div class="small text-muted" style="font-size: 0.72rem;">' + n.created_at + '</div>' +
                 '</div>' +
                 unreadDot +
