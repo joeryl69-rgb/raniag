@@ -178,7 +178,9 @@ class SituationalMapService
      */
     public function liveUnitsForIncident(Incident $incident, bool $forPublic = false): array
     {
-        $cutoff = now()->subMinutes(self::UNIT_STALE_MINUTES);
+        // Staff keep a responder on the dispatch map for the length of a
+        // response. The public track page only shows a fresh ping.
+        $cutoff = now()->subMinutes($forPublic ? self::UNIT_STALE_MINUTES : 360);
 
         $assignments = Assignment::query()
             ->with(['agency', 'assignee'])
@@ -200,22 +202,26 @@ class SituationalMapService
                 $users->push($assignment->assignee);
             }
             if ($assignment->agency_id) {
-                $users = $users->merge(
-                    User::query()
-                        ->where('agency_id', $assignment->agency_id)
-                        ->where('is_active', true)
-                        ->whereNotNull('last_lat')
-                        ->whereNotNull('last_lng')
-                        ->where('last_location_at', '>=', $cutoff)
-                        ->get()
-                )->unique('id');
+                try {
+                    $users = $users->merge(
+                        User::query()
+                            ->where('agency_id', $assignment->agency_id)
+                            ->where('is_active', true)
+                            ->whereNotNull('last_lat')
+                            ->whereNotNull('last_lng')
+                            ->get()
+                    )->unique('id');
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             }
 
             foreach ($users as $user) {
                 if ($user->last_lat === null || $user->last_lng === null) {
                     continue;
                 }
-                if (! $user->last_location_at instanceof Carbon || $user->last_location_at->lt($cutoff)) {
+                $seenAt = $user->last_location_at;
+                if (! $seenAt instanceof Carbon || $seenAt->lt($cutoff)) {
                     continue;
                 }
 
@@ -230,15 +236,20 @@ class SituationalMapService
                     }
                 }
 
-                $units[] = [
-                    'id' => $assignment->id.'-'.$user->id,
-                    'assignment_id' => $assignment->id,
-                    'label' => $label,
-                    'field_phase' => $assignment->field_phase,
-                    'latitude' => (float) $user->last_lat,
-                    'longitude' => (float) $user->last_lng,
-                    'updated_at' => $user->last_location_at->toIso8601String(),
-                ];
+                try {
+                    $units[] = [
+                        'id' => $assignment->id.'-'.$user->id,
+                        'assignment_id' => $assignment->id,
+                        'label' => $label,
+                        'field_phase' => $assignment->field_phase ?: 'assigned',
+                        'latitude' => (float) $user->last_lat,
+                        'longitude' => (float) $user->last_lng,
+                        'updated_at' => $seenAt->toIso8601String(),
+                        'stale' => $seenAt->lt(now()->subMinutes(self::UNIT_STALE_MINUTES)),
+                    ];
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             }
         }
 

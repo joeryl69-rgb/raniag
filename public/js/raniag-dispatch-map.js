@@ -63,7 +63,7 @@
         let lastRoute = null;
         const markerByKey = new Map();
 
-        async function drawUnits(units) {
+        async function drawUnits(units, assigned) {
             const raw = Array.isArray(units) ? units : [];
             const list = Mapbox?.spreadUnitPositions ? Mapbox.spreadUnitPositions(raw) : raw;
             const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
@@ -99,9 +99,14 @@
             });
 
             if (statusEl && !plotted) {
-                statusEl.textContent = list.length
-                    ? 'Assigned. Mark En route to share this device and draw the route.'
-                    : 'No live responder yet. Mark En route to share location.';
+                const names = (Array.isArray(assigned) ? assigned : [])
+                    .map((row) => row && row.label)
+                    .filter(Boolean);
+                statusEl.textContent = names.length
+                    ? `${names.join(', ')} is assigned. The route is drawn when a responder marks En route and shares location.`
+                    : (list.length
+                        ? 'Assigned. Mark En route to share this device and draw the route.'
+                        : 'No agency is assigned yet.');
             }
 
             if (!plotted) return;
@@ -131,10 +136,11 @@
             }
             if (statusEl && lastRoute) {
                 const kind = lastRoute.fallback ? 'straight-line' : 'drive';
+                const fresh = primary.stale ? ' · last shared location' : '';
                 statusEl.textContent =
-                    `${esc(primary.label)} · ${Mapbox.formatDistance(lastRoute.distance)} · ~${Mapbox.formatDuration(lastRoute.duration)} ${kind}`;
+                    `${primary.label} · ${Mapbox.formatDistance(lastRoute.distance)} · ~${Mapbox.formatDuration(lastRoute.duration)} ${kind}${fresh}`;
             } else if (statusEl) {
-                statusEl.textContent = `${esc(primary.label)} is on the map`;
+                statusEl.textContent = `${primary.label} is on the map`;
             }
 
             if (followMe && localFix) {
@@ -161,13 +167,13 @@
                 });
                 if (!res.ok) {
                     if (statusEl && !unitGroup.getLayers().length) {
-                        statusEl.textContent = `Responder feed failed (${res.status}). Refresh this page.`;
+                        statusEl.textContent = 'Could not load the assigned agency on the map. Refresh this page.';
                     }
                     return;
                 }
                 const data = await res.json();
                 const units = data.units || [];
-                await drawUnits(units.length ? units : (localFix ? [localFix] : []));
+                await drawUnits(units.length ? units : (localFix ? [localFix] : []), data.assigned || []);
             } catch (e) { /* offline */ }
         }
 
