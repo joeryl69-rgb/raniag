@@ -42,6 +42,33 @@
     @media (prefers-reduced-motion: reduce) {
         .raniag-map-overlay .rg-progress-bar { animation: none; width: 100%; opacity: .85; }
     }
+    @keyframes rg-form-shake {
+        0%, 100% { transform: translateX(0); }
+        15% { transform: translateX(-10px); }
+        30% { transform: translateX(8px); }
+        45% { transform: translateX(-6px); }
+        60% { transform: translateX(4px); }
+        75% { transform: translateX(-2px); }
+    }
+    @keyframes rg-error-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(217, 85, 43, 0); }
+        50% { box-shadow: 0 0 0 4px rgba(217, 85, 43, .45); }
+    }
+    .rg-shake { animation: rg-form-shake .48s ease; }
+    .rg-error-spot { border-radius: 12px; animation: rg-error-pulse 1s ease-in-out 2; }
+    #jo-report-coach.is-alerting { border-radius: 16px; animation: rg-error-pulse 1s ease-in-out 2; }
+    .rg-location-summary {
+        display: grid;
+        gap: .75rem;
+        padding: 1rem 1.1rem;
+        border-radius: 14px;
+        background: rgba(11, 94, 215, .06);
+        border: 1px solid rgba(11, 94, 215, .16);
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .rg-shake, .rg-error-spot, #jo-report-coach.is-alerting { animation: none; }
+        .rg-error-spot, #jo-report-coach.is-alerting { box-shadow: 0 0 0 3px rgba(217, 85, 43, .55); }
+    }
     .report-wizard-pane.is-active,
     .report-wizard-pane:not(.d-none) { display: block !important; }
     .report-wizard-pane.is-active .card { opacity: 1 !important; transform: none !important; visibility: visible !important; }
@@ -70,8 +97,8 @@
         </span>
         <h1 class="rg-page-title">Report an Incident</h1>
         <p class="rg-page-sub">
-            Provide accurate details to help {{ config('raniag.organization') }} respond faster.
-            Four short steps — you'll get a tracking number the moment you submit.
+            Pick an incident type and send a GPS photo if you can.
+            Written details are optional — you'll get a tracking number the moment you submit.
         </p>
         <button type="button" class="btn btn-link btn-sm px-0 d-none" id="jo-need-help">Need help? Ask JO</button>
     </div>
@@ -87,7 +114,7 @@
         </div>
     @endif
 
-    <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form">
+    <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form" novalidate>
         @csrf
 
         <div class="rg-stepper mb-3" id="report-wizard-nav" data-rg-reveal>
@@ -97,7 +124,7 @@
                     <img class="jo-mascot rg-stepper-jo-avatar jo-report-coach-avatar" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="140" height="176">
                     <div class="rg-stepper-jo-body min-w-0">
                         <div class="rg-stepper-jo-name">JO</div>
-                        <p class="rg-stepper-jo-text jo-report-coach-text mb-0">Pick the incident type that fits best, then describe what happened.</p>
+                        <p class="rg-stepper-jo-text jo-report-coach-text mb-0">Pick the incident type. Written details are optional.</p>
                         <button type="button" class="btn btn-link btn-sm px-0 mt-1" data-jo-dismiss>Don't show guide again</button>
                     </div>
                 </div>
@@ -113,13 +140,13 @@
                 <li class="rg-stepper-item">
                     <button type="button" class="rg-stepper-btn" data-dot="1">
                         <span class="rg-stepper-node">2</span>
-                        <span class="rg-stepper-label">Location</span>
+                        <span class="rg-stepper-label">GPS camera</span>
                     </button>
                 </li>
-                <li class="rg-stepper-item">
+                <li class="rg-stepper-item" id="wizard-location-step">
                     <button type="button" class="rg-stepper-btn" data-dot="2">
                         <span class="rg-stepper-node">3</span>
-                        <span class="rg-stepper-label">Evidence</span>
+                        <span class="rg-stepper-label">Location</span>
                     </button>
                 </li>
                 <li class="rg-stepper-item">
@@ -140,7 +167,7 @@
                 <span>{{ __('Incident Type') }}</span>
             </div>
             <div class="card-body p-4">
-                <div class="row g-3">
+                <div class="row g-3" id="incident-type-grid">
                     @foreach ($incidentTypes as $type)
                         <div class="col-sm-6 col-lg-4">
                             <label class="card raniag-type-card h-100 p-3 {{ (int) old('incident_type_id') === $type->id ? 'selected' : '' }}">
@@ -180,28 +207,36 @@
             </div>
         </div>
 
+        @php
+            $detailsOn = filled(old('title')) || filled(old('description')) || $errors->has('title') || $errors->has('description');
+        @endphp
         <div class="card raniag-card mb-4">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                 <span class="raniag-step-badge">1b</span>
-                <span>{{ __('Incident Details') }}</span>
+                <span>{{ __('Incident Details') }} <span class="text-muted fw-normal small">(optional)</span></span>
             </div>
             <div class="card-body p-4">
-                <div class="row g-3">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="details-on" value="1" @checked($detailsOn)>
+                    <label class="form-check-label fw-semibold" for="details-on">Add incident details</label>
+                    <div class="form-text mb-0">Off by default. Turn this on only if you want to add a title or description.</div>
+                </div>
+                <div id="incident-details-fields" class="row g-3 mt-1 {{ $detailsOn ? '' : 'd-none' }}">
                     <div class="col-12">
                         <label for="title" class="form-label">Title <span class="text-muted">(optional)</span></label>
                         <input type="text" class="form-control @error('title') is-invalid @enderror" id="title"
                                name="title" value="{{ old('title') }}" maxlength="255"
-                               placeholder="Brief summary of the incident">
+                               placeholder="Brief summary of the incident" @disabled(! $detailsOn)>
                         @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
-                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <label for="description" class="form-label">Description <span class="text-muted">(optional)</span></label>
                         <textarea class="form-control @error('description') is-invalid @enderror" id="description"
-                                  name="description" rows="5" required minlength="10" maxlength="5000"
-                                  placeholder="Describe what happened, when it occurred, and who may be affected...">{{ old('description') }}</textarea>
+                                  name="description" rows="4" maxlength="5000"
+                                  placeholder="Add what happened, when, and who may be affected — only if you can." @disabled(! $detailsOn)>{{ old('description') }}</textarea>
                         @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
-                            <div class="form-text" id="description-guidance">Minimum 10 characters.</div>
+                            <div class="form-text" id="description-guidance">A type and a GPS photo are enough to send this report.</div>
                             <div class="form-text text-nowrap" id="description-counter" aria-live="polite">0 / 5000</div>
                         </div>
                     </div>
@@ -210,18 +245,33 @@
         </div>
         </div>{{-- wizard step 0 --}}
 
-        <div class="report-wizard-pane d-none" data-wizard-step="1">
-        <!-- Location step (detect GPS or confirm QR barangay prefill) -->
+        <div class="report-wizard-pane d-none" data-wizard-step="2">
+        <!-- Location step: a required fix when there is no GPS capture, or a summary when there is one -->
         <div class="card raniag-card mb-4" id="location-summary-card">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                <span class="raniag-step-badge">2</span>
+                <span class="raniag-step-badge">3</span>
                 <span>{{ __('Location') }}</span>
             </div>
             <div class="card-body p-4">
-                <p class="text-muted small mb-3" style="max-width: 60ch;">Use your device GPS now, or continue — a GPS camera photo in the next step can refine this.</p>
+                <div id="location-capture-summary" class="d-none mb-3">
+                    <p class="text-muted small mb-3" style="max-width: 60ch;">Taken from your GPS photo or video. The map shows where it was captured.</p>
+                    <div class="rg-location-summary">
+                        <div>
+                            <div class="text-muted small">Place</div>
+                            <div class="fw-semibold" id="location-summary-place">Reading the capture…</div>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Coordinates</div>
+                            <div class="fw-semibold" id="location-summary-coords">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="location-picker">
+                <p class="text-muted small mb-3" style="max-width: 60ch;">No GPS photo or video was attached. Share your current location before continuing.</p>
                 <button type="button" class="btn btn-outline-primary mb-3" id="use-current-location">
                     <i class="bi bi-crosshair me-1"></i>Use current location
                 </button>
+                </div>
                 <div class="position-relative mb-2">
                     <div id="incident-map" data-lenis-prevent></div>
                     <div id="map-locating-overlay" class="raniag-map-overlay d-none">
@@ -236,7 +286,7 @@
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
                     <span id="outside-jurisdiction-text"></span>
                 </div>
-                <div class="row g-3">
+                <div class="row g-3" id="location-fields">
                     <div class="col-md-4">
                         <label for="barangay" class="form-label">Barangay</label>
                         <input class="form-control @error('barangay') is-invalid @enderror" list="barangay-list"
@@ -273,17 +323,17 @@
                 </div>
             </div>
         </div>
-        </div>{{-- wizard step 1 --}}
+        </div>{{-- wizard step 2 — location --}}
 
-        <div class="report-wizard-pane d-none" data-wizard-step="2">
+        <div class="report-wizard-pane d-none" data-wizard-step="1">
         <div class="card raniag-card mb-4">
             <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
-                <span class="raniag-step-badge">3</span>
-                <span>Evidence <span class="text-muted fw-normal small">(recommended)</span></span>
+                <span class="raniag-step-badge">2</span>
+                <span>GPS camera <span class="text-muted fw-normal small">(fastest)</span></span>
             </div>
             <div class="card-body p-4">
                 <p class="text-muted small mb-3">
-                    A GPS photo is strongly preferred for credibility. If you cannot capture one (camera denied, fleeing, low-end phone), you can still submit — staff will place the report in a call-back verification queue.
+                    A GPS photo or video places this report, and the next step shows that place. Without one, you must share your location before you can continue.
                 </p>
                 <input type="hidden" name="meta[gps_captures]" id="gps-capture-log" value="">
                 <input type="hidden" name="idempotency_key" id="idempotency_key" value="">
@@ -430,7 +480,7 @@
                 @error('evidence.*')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
             </div>
         </div>
-        </div>{{-- wizard step 2 --}}
+        </div>{{-- wizard step 1 — GPS camera --}}
 
         <div class="report-wizard-pane d-none" data-wizard-step="3">
         <div class="card raniag-card mb-4">
@@ -491,7 +541,7 @@
                     <div class="modal-body">
                         <p class="mb-0">
                             You haven't taken a GPS photo or uploaded a file, so this report can't be sent anonymously.
-                            On the next step, please leave a phone number or email so MDRRMO can verify and follow up.
+                            Next, share your location. Before you submit, leave a phone number or email so MDRRMO can verify and follow up.
                         </p>
                     </div>
                     <div class="modal-footer">

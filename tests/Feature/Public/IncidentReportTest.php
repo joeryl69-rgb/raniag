@@ -456,3 +456,25 @@ test('gps capture coordinates fill a blank location', function () {
     expect((float) $incident->latitude)->toBe(18.472)
         ->and((float) $incident->longitude)->toBe(121.325);
 });
+
+test('a type and a gps capture are enough to send a report', function () {
+    $type = IncidentType::factory()->create();
+
+    $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'is_anonymous' => true,
+        'meta' => ['gps_captures' => json_encode([[
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'accuracy' => 12,
+            'captured_at' => now()->toIso8601String(),
+        ]])],
+    ])->assertCreated();
+
+    $incident = Incident::query()->first();
+    expect($incident->description)->toBe('')
+        ->and((float) $incident->latitude)->toBe(18.472)
+        ->and((float) $incident->longitude)->toBe(121.325)
+        ->and($incident->incident_type_id)->toBe($type->id);
+});

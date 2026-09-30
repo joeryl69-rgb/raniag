@@ -50,21 +50,31 @@
     const anonymousToggle = document.getElementById('is_anonymous');
     const reporterFields = document.getElementById('reporter-fields');
     const descriptionInput = document.getElementById('description');
+    const titleInput = document.getElementById('title');
+    const detailsFields = document.getElementById('incident-details-fields');
+    const detailsOn = document.getElementById('details-on');
     const descriptionCounter = document.getElementById('description-counter');
     const descriptionGuidance = document.getElementById('description-guidance');
+
+    function syncIncidentDetails() {
+        const on = Boolean(detailsOn?.checked);
+        detailsFields?.classList.toggle('d-none', !on);
+        if (titleInput) titleInput.disabled = !on;
+        if (descriptionInput) descriptionInput.disabled = !on;
+    }
+
+    detailsOn?.addEventListener('change', syncIncidentDetails);
+    syncIncidentDetails();
 
     function updateDescriptionCounter() {
         if (!descriptionInput || !descriptionCounter) return;
         const count = descriptionInput.value.length;
-        const minimum = Number(descriptionInput.minLength) || 10;
         const maximum = Number(descriptionInput.maxLength) || 5000;
-        const valid = count >= minimum;
+        const over = count > maximum;
 
         descriptionCounter.textContent = `${count} / ${maximum}`;
-        descriptionCounter.classList.toggle('text-success', valid);
-        descriptionCounter.classList.toggle('text-danger', count > maximum);
-        descriptionGuidance?.classList.toggle('text-success', valid);
-        descriptionGuidance?.classList.toggle('text-danger', !valid && count > 0);
+        descriptionCounter.classList.toggle('text-danger', over);
+        descriptionGuidance?.classList.toggle('text-danger', over);
     }
 
     descriptionInput?.addEventListener('input', updateDescriptionCounter);
@@ -145,6 +155,11 @@
                 anonymousToggle.checked = true;
             }
             syncReporterFields();
+        }
+
+        if (typeof syncLocationMode === 'function') {
+            const locationVisible = document.querySelector('[data-wizard-step="2"]')?.classList.contains('is-active');
+            syncLocationMode({ plot: locationVisible });
         }
 
         evidenceGateNotice?.classList.toggle('d-none', evidenced);
@@ -306,6 +321,7 @@
     function setResolveStatus(text, icon = 'geo-alt', tone = 'text-muted') {
         if (!resolveStatusEl) return;
         resolveStatusEl.innerHTML = `<i class="bi bi-${icon} ${tone} me-1"></i><span class="${tone}">${text}</span>`;
+        if (typeof syncLocationMode === 'function') syncLocationMode();
     }
 
     function matchBarangay(candidateText) {
@@ -602,14 +618,16 @@
             input.classList.toggle('is-invalid', failed);
         });
         applyEvidenceGate();
-        if (wizardPanes.length) {
+            if (wizardPanes.length) {
             const stepFor = {
                 incident_type_id: 0,
                 description: 0,
-                latitude: 1,
-                longitude: 1,
-                location_address: 1,
-                evidence: 2,
+                title: 0,
+                evidence: 1,
+                latitude: 2,
+                longitude: 2,
+                location_address: 2,
+                barangay: 2,
                 reporter_name: 3,
                 reporter_phone: 3,
                 reporter_email: 3,
@@ -618,7 +636,13 @@
             const steps = errorNames
                 .map((name) => stepFor[name])
                 .filter((step) => step !== undefined);
-            showWizardStep(steps.length ? Math.min(...steps) : 3);
+            showWizardStep(steps.length ? Math.min(...steps) : wizardStep);
+            const spots = errorNames.map((name) => `#${name}, [name="${name}"], [name="${name}[]"]`);
+            if (errorNames.includes('incident_type_id')) spots.push('#incident-type-grid');
+            if (errorNames.some((name) => ['latitude', 'longitude', 'location_address', 'barangay'].includes(name))) {
+                spots.push('#use-current-location', '#incident-map', '#location-resolve-status');
+            }
+            setWizardError(uniqueMessages[0], spots);
         }
     }
 
@@ -634,6 +658,8 @@
 
             event.preventDefault();
             event.stopPropagation();
+
+            if (!guardReportBeforeSubmit()) return;
 
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
@@ -696,10 +722,131 @@
     const wizardLabel = document.getElementById('wizard-step-label');
     const wizardDots = document.querySelectorAll('#wizard-dots [data-dot]');
     const wizardError = document.getElementById('wizard-step-error');
-    const wizardTitles = ['Type', 'Location', 'Evidence', 'Contact'];
+    const wizardTitles = ['Type', 'GPS camera', 'Location', 'Contact'];
+    const CAMERA_STEP = 1;
+    const LOCATION_STEP = 2;
+    const CONTACT_STEP = 3;
+    const LOCATION_ERROR_SPOTS = ['#use-current-location', '#incident-map', '#latitude', '#longitude', '#location-resolve-status'];
     let wizardStep = 0;
+    let errorSpots = [];
 
-    function setWizardError(message) {
+    function captureHasCoordinates() {
+        if (!captureLogInput?.value) return false;
+        try {
+            const parsed = JSON.parse(captureLogInput.value);
+            return Array.isArray(parsed) && parsed.some((item) =>
+                Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude))
+            );
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function locationIsReady() {
+        if (captureHasCoordinates()) return true;
+        const lat = Number(latInput?.value);
+        const lng = Number(lngInput?.value);
+        return latInput?.value !== '' && lngInput?.value !== ''
+            && Number.isFinite(lat) && Number.isFinite(lng);
+    }
+
+    function contactIsReady() {
+        if (hasClientEvidence()) return true;
+        const name = document.getElementById('reporter_name')?.value.trim();
+        const phone = document.getElementById('reporter_phone')?.value.trim();
+        const email = document.getElementById('reporter_email')?.value.trim();
+        return Boolean(name) && Boolean(phone || email);
+    }
+
+    function firstCapture() {
+        if (!captureLogInput?.value) return null;
+        try {
+            const parsed = JSON.parse(captureLogInput.value);
+            if (!Array.isArray(parsed)) return null;
+            return parsed.find((item) =>
+                Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude))
+            ) || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function syncLocationMode(options = {}) {
+        const capture = firstCapture();
+        const summary = Boolean(capture);
+        document.getElementById('location-capture-summary')?.classList.toggle('d-none', !summary);
+        document.getElementById('location-picker')?.classList.toggle('d-none', summary);
+        document.getElementById('location-fields')?.classList.toggle('d-none', summary);
+        if (!capture) return;
+
+        if (latInput && latInput.value === '') latInput.value = Number(capture.latitude).toFixed(8);
+        if (lngInput && lngInput.value === '') lngInput.value = Number(capture.longitude).toFixed(8);
+
+        const barangay = document.getElementById('barangay')?.value.trim();
+        const address = document.getElementById('location_address')?.value.trim();
+        let placeText = 'Locating this capture on the map…';
+        if (address && barangay && !address.toLowerCase().includes(barangay.toLowerCase())) {
+            placeText = `${address}, Barangay ${barangay}`;
+        } else if (address) {
+            placeText = address;
+        } else if (barangay) {
+            placeText = `Barangay ${barangay}, Pamplona`;
+        }
+        const placeEl = document.getElementById('location-summary-place');
+        const coordsEl = document.getElementById('location-summary-coords');
+        if (placeEl) {
+            placeEl.textContent = placeText;
+        }
+        if (coordsEl) {
+            coordsEl.textContent = `${latInput?.value || Number(capture.latitude).toFixed(8)}, ${lngInput?.value || Number(capture.longitude).toFixed(8)}`;
+        }
+
+        if (options.plot) showCaptureOnMap();
+    }
+
+    function showCaptureOnMap() {
+        const capture = firstCapture();
+        if (!capture) return;
+        const lat = Number(latInput?.value || capture.latitude);
+        const lng = Number(lngInput?.value || capture.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        setMarker(lat, lng, { pan: true });
+        const barangay = document.getElementById('barangay')?.value.trim();
+        const address = document.getElementById('location_address')?.value.trim();
+        if (!barangay && !address) resolveLocation(lat, lng);
+        requestAnimationFrame(() => mapInstance?.invalidateSize());
+    }
+
+    function clearFieldErrors() {
+        errorSpots.forEach((el) => el.classList.remove('is-invalid', 'rg-error-spot'));
+        errorSpots = [];
+        document.querySelector('.report-wizard-pane.is-active')?.classList.remove('rg-shake');
+        document.getElementById('jo-report-coach')?.classList.remove('is-alerting', 'rg-shake');
+    }
+
+    function playValidation(selectors) {
+        clearFieldErrors();
+        const pane = document.querySelector('.report-wizard-pane.is-active');
+        (selectors || []).forEach((selector) => {
+            document.querySelectorAll(selector).forEach((el) => {
+                el.classList.add('rg-error-spot');
+                if (el.matches('input, textarea, select, button')) el.classList.add('is-invalid');
+                errorSpots.push(el);
+            });
+        });
+        const coach = document.getElementById('jo-report-coach');
+        [pane, coach].forEach((el) => {
+            if (!el) return;
+            el.classList.remove('rg-shake');
+            void el.offsetWidth;
+            el.classList.add('rg-shake');
+        });
+        coach?.classList.add('is-alerting');
+        (errorSpots[0] || pane)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function setWizardError(message, selectors) {
         if (!wizardError) {
             if (message) alert(message);
             return;
@@ -707,24 +854,41 @@
         if (!message) {
             wizardError.classList.add('d-none');
             wizardError.textContent = '';
+            clearFieldErrors();
             window.RANIAG_JO?.syncReportCoach(wizardStep);
             return;
         }
         wizardError.textContent = message;
         wizardError.classList.remove('d-none');
-        wizardError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        window.RANIAG_JO?.syncReportCoach(wizardStep, { pose: 'alert', text: message });
+        playValidation(selectors);
+        window.RANIAG_JO?.syncReportCoach(wizardStep, { force: true, pose: 'alert', text: message });
+    }
+
+    function guardReportBeforeSubmit() {
+        if (!locationIsReady()) {
+            showWizardStep(LOCATION_STEP);
+            setWizardError('Share your current location before sending this report.', LOCATION_ERROR_SPOTS);
+            return false;
+        }
+        if (!contactIsReady()) {
+            const spots = ['#reporter_name'];
+            const phone = document.getElementById('reporter_phone')?.value.trim();
+            const email = document.getElementById('reporter_email')?.value.trim();
+            if (!phone && !email) spots.push('#reporter_phone', '#reporter_email');
+            showWizardStep(CONTACT_STEP);
+            setWizardError('Leave your name and a phone number or email so MDRRMO can verify this report.', spots);
+            return false;
+        }
+        return true;
     }
 
     function goNext(event) {
         event?.preventDefault();
         if (!validateWizardStep(wizardStep)) return;
 
-        // Leaving Evidence (step 2) for Contact (step 3) with nothing attached:
-        // warn once with a popup, then stop on this step until the reporter
-        // dismisses the alert. This prevents the modal from appearing and the
-        // wizard from still advancing underneath it, leaving the page stuck.
-        if (wizardStep === 2 && !evidenceGateModalShown && !hasClientEvidence()) {
+        // Leaving the GPS camera with nothing attached: warn once, then
+        // continue to the location step, which stays required.
+        if (wizardStep === CAMERA_STEP && !evidenceGateModalShown && !hasClientEvidence()) {
             evidenceGateModalShown = true;
             const modalEl = document.getElementById('evidence-gate-modal');
             if (modalEl && window.bootstrap?.Modal) {
@@ -775,27 +939,34 @@
         }
         const wizardSubmit = document.getElementById('wizard-submit');
         if (wizardSubmit) wizardSubmit.classList.toggle('d-none', !last);
-        if (wizardStep === 1) {
+        if (wizardStep === LOCATION_STEP) {
+            syncLocationMode({ plot: captureHasCoordinates() });
             requestAnimationFrame(() => mapInstance?.invalidateSize());
         }
-        if (wizardStep === 3) {
+        if (wizardStep === CONTACT_STEP) {
             applyEvidenceGate();
         }
-        window.RANIAG_JO?.syncReportCoach(wizardStep);
+        if (wizardStep === LOCATION_STEP && captureHasCoordinates()) {
+            window.RANIAG_JO?.syncReportCoach(wizardStep, {
+                pose: 'gps',
+                text: 'Your GPS photo or video already placed this report. Check the map, then continue.',
+            });
+        } else {
+            window.RANIAG_JO?.syncReportCoach(wizardStep);
+        }
     }
 
     function validateWizardStep(step) {
         if (step === 0) {
             const typeChecked = form?.querySelector('input[name="incident_type_id"]:checked');
             if (!typeChecked) {
-                setWizardError('Please select an incident type before continuing.');
+                setWizardError('Please select an incident type before continuing.', ['#incident-type-grid']);
                 return false;
             }
-            if (descriptionInput && descriptionInput.value.trim().length < 10) {
-                setWizardError('Please enter a description of at least 10 characters.');
-                descriptionInput.focus();
-                return false;
-            }
+        }
+        if (step === LOCATION_STEP && !locationIsReady()) {
+            setWizardError('Share your current location before continuing.', LOCATION_ERROR_SPOTS);
+            return false;
         }
         return true;
     }
@@ -826,8 +997,8 @@
         // that actually has the error instead of back at step 1.
         const stepFields = {
             0: ['incident_type_id', 'description'],
-            1: ['latitude', 'longitude', 'location_address'],
-            2: ['evidence'],
+            1: ['evidence'],
+            2: ['latitude', 'longitude', 'location_address'],
             3: ['reporter_name', 'reporter_phone', 'reporter_email'],
         };
         const erroredStep = Object.keys(stepFields).find((step) =>

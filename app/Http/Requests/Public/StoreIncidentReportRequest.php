@@ -28,6 +28,13 @@ class StoreIncidentReportRequest extends FormRequest
 
         $this->merge(['is_anonymous' => $isAnonymous]);
 
+        // The column is not nullable. A report can be sent with no written
+        // details, so a blank or missing description is stored as empty text.
+        $description = $this->input('description');
+        $this->merge([
+            'description' => is_string($description) ? trim($description) : '',
+        ]);
+
         if ($isAnonymous) {
             $this->merge([
                 'reporter_name' => null,
@@ -73,7 +80,7 @@ class StoreIncidentReportRequest extends FormRequest
 
         return [
             'incident_type_id' => ['required', 'integer', Rule::exists('incident_types', 'id')->where('is_active', true)],
-            'description' => ['required', 'string', 'min:10', 'max:5000'],
+            'description' => ['nullable', 'string', 'max:5000'],
             'title' => ['nullable', 'string', 'max:255'],
             'location_address' => ['nullable', 'string', 'max:500'],
             'barangay' => ['nullable', 'string', 'max:255'],
@@ -108,7 +115,6 @@ class StoreIncidentReportRequest extends FormRequest
     {
         return [
             'incident_type_id.required' => 'Please select an incident type.',
-            'description.min' => 'Please provide at least 10 characters describing the incident.',
             'reporter_name.required_if' => 'Please provide your name or report anonymously.',
             'reporter_email.required_without' => 'No photo or GPS capture was attached, so please leave a phone number or email so MDRRMO can verify this report.',
             'reporter_phone.required_without' => 'No photo or GPS capture was attached, so please leave a phone number or email so MDRRMO can verify this report.',

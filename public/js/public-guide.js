@@ -17,9 +17,9 @@
     ];
 
     const REPORT_LINES = [
-        { pose: 'greeting', text: 'Pick the incident type that fits best, then describe what happened.' },
-        { pose: 'gps', text: 'Pin the location. Use current location when you can so responders find the scene fast.' },
-        { pose: 'camera', text: 'Add GPS-tagged photos if you have them. Evidence helps — you can continue without it.' },
+        { pose: 'greeting', text: 'Pick the incident type. Written details are optional.' },
+        { pose: 'camera', text: 'Take a GPS photo or video if you can. The next step shows where it was taken.' },
+        { pose: 'gps', text: 'No GPS photo or video yet. Share your current location before continuing.' },
         { pose: 'clipboard', text: 'Leave contact details or stay anonymous (anonymous needs evidence). Then submit.' },
     ];
 
