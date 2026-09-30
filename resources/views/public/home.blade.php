@@ -65,7 +65,7 @@
     </section>
 
     {{-- ===================== UPDATES & ANNOUNCEMENTS ===================== --}}
-    <div class="mt-5" id="updates" data-rg-reveal data-rg-stagger>
+    <div class="mt-4" id="updates" data-rg-reveal data-rg-stagger>
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <div>
                 <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>UPDATES</span>
@@ -104,7 +104,7 @@
     </div>
 
     {{-- ===================== DOWNLOAD APP ===================== --}}
-    <div class="rg-download-cta mt-5 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="rg-download-cta mt-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
             <img src="/images/icons/raniag-master.svg" alt="RANIAG app icon" width="64" height="64" class="rounded-circle">
             <div>
@@ -117,8 +117,9 @@
         </button>
     </div>
 
+    <div class="rg-home-lower">
     {{-- ===================== FAQ ===================== --}}
-    <div class="row justify-content-center mt-5" id="faq">
+    <div class="row justify-content-center" id="faq">
         <div class="col-lg-9">
             <div class="rg-page-head text-center" data-rg-reveal>
                 <span class="rg-eyebrow"><i class="bi bi-question-circle"></i>Good to know</span>
@@ -180,7 +181,7 @@
     </div>
 
     {{-- ===================== NEED HELP → SUPPORT CENTER ===================== --}}
-    <div class="row justify-content-center mt-5" id="help">
+    <div class="row justify-content-center" id="help">
         <div class="col-lg-8">
             <div class="rg-support-card text-center p-4 p-lg-5">
                 <div class="text-primary fs-2 mb-2"><i class="bi bi-headset"></i></div>
@@ -192,7 +193,55 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
+
+@push('styles')
+<style>
+.rg-how {
+    max-width: none;
+    margin: 1.4rem 0 2rem;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    column-gap: 28px;
+    align-items: center;
+    text-align: left;
+}
+.rg-how-head { grid-row: 1 / span 2; text-align: center; }
+.rg-how-jo-frame { margin: 0; }
+.rg-how .rg-how-jo { height: 170px; max-width: 170px; }
+.rg-how-lead { margin-bottom: 0; }
+.rg-how-steps { grid-template-columns: repeat(4, minmax(0,1fr)); margin-bottom: 12px; gap: 10px; }
+.rg-how-steps li { padding: 14px; box-shadow: none; }
+.rg-how > .btn { justify-self: start; }
+.rg-home-lower {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+    gap: 24px;
+    align-items: start;
+    margin-top: 2rem;
+}
+.rg-home-lower > .row { margin: 0; }
+.rg-home-lower > .row > [class*="col-"] { width: 100%; padding: 0; }
+.rg-home-lower .rg-page-head { text-align: left !important; margin-bottom: 14px; }
+.rg-home-lower .rg-support-card { margin-top: 32px; }
+.rg-download-cta { padding: 22px 26px; }
+@media(max-width:991.98px) {
+  .rg-how { grid-template-columns:160px 1fr; }
+  .rg-how-steps { grid-template-columns:1fr 1fr; }
+  .rg-home-lower { grid-template-columns:1fr; }
+  .rg-home-lower .rg-support-card { margin-top:0; }
+}
+@media(max-width:575.98px) {
+  .rg-how { display:block; text-align:center; }
+  .rg-how .rg-how-jo { height:140px; }
+  .rg-how-lead { margin-bottom:14px; }
+  .rg-how-steps { grid-template-columns:1fr; text-align:left; }
+  .rg-how > .btn { margin-top:2px; }
+  .rg-download-cta { padding:20px; }
+}
+</style>
+@endpush
 
 @push('scripts')
 <script>

@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Public;
 use App\Enums\IncidentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Incident;
-use App\Models\IncidentType;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 
 /**
@@ -27,34 +27,48 @@ class PublicDashboardController extends Controller
 
     public function data(): JsonResponse
     {
-        $totalThisMonth = Incident::whereMonth('reported_at', now()->month)
+        $insidePamplona = fn (): Builder => Incident::query()
+            ->whereIn('barangay', config('raniag.barangays', []), 'and', false)
+            ->where('status', '!=', IncidentStatus::OutsideAor->value)
+            ->where(function (Builder $query) {
+                $query->whereNull('meta->within_jurisdiction')
+                    ->orWhere('meta->within_jurisdiction', true);
+            });
+
+        $totalThisMonth = $insidePamplona()
+            ->whereMonth('reported_at', now()->month)
             ->whereYear('reported_at', now()->year)
             ->count();
 
-        $resolvedThisMonth = Incident::whereMonth('reported_at', now()->month)
+        $resolvedThisMonth = $insidePamplona()
+            ->whereMonth('reported_at', now()->month)
             ->whereYear('reported_at', now()->year)
             ->whereIn('status', [IncidentStatus::Resolved->value, IncidentStatus::Closed->value])
             ->count();
 
-        $statusCounts = Incident::selectRaw('status, COUNT(*) as count')
+        $statusCounts = $insidePamplona()
+            ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status');
 
-        $typeCounts = IncidentType::withCount('incidents')
-            ->having('incidents_count', '>', 0)
-            ->orderByDesc('incidents_count')
+        $typeCounts = $insidePamplona()
+            ->join('incident_types', 'incidents.incident_type_id', '=', 'incident_types.id')
+            ->selectRaw('incident_types.name, incident_types.icon, incident_types.color, COUNT(*) as count')
+            ->groupBy('incident_types.id', 'incident_types.name', 'incident_types.icon', 'incident_types.color')
+            ->orderByDesc('count')
             ->get()
-            ->map(fn (IncidentType $t) => [
-                'name' => $t->name,
-                'icon' => $t->icon,
-                'color' => $t->color,
-                'count' => $t->incidents_count,
+            ->map(fn ($type) => [
+                'name' => $type->name,
+                'icon' => $type->icon,
+                'color' => $type->color,
+                'count' => (int) $type->count,
             ]);
 
         // Aggregated per-barangay counts only — never individual
         // coordinates or street addresses, so no single report can be
         // pinpointed to a specific household or person.
-        $barangayCounts = Incident::selectRaw('barangay, COUNT(*) as count')
+        $barangayCounts = $insidePamplona()
+            ->selectRaw('barangay, COUNT(*) as count')
             ->whereNotNull('barangay')
             ->groupBy('barangay')
             ->orderByDesc('count')
@@ -63,15 +77,17 @@ class PublicDashboardController extends Controller
 
         // Last 6 months trend, resolved vs total, for a simple bar/line
         // chart — no per-incident detail.
-        $monthlyTrend = collect(range(5, 0))->map(function (int $monthsAgo) {
+        $monthlyTrend = collect(range(5, 0))->map(function (int $monthsAgo) use ($insidePamplona) {
             $month = now()->subMonths($monthsAgo);
 
             return [
                 'label' => $month->format('M'),
-                'total' => Incident::whereMonth('reported_at', $month->month)
+                'total' => $insidePamplona()
+                    ->whereMonth('reported_at', $month->month)
                     ->whereYear('reported_at', $month->year)
                     ->count(),
-                'resolved' => Incident::whereMonth('reported_at', $month->month)
+                'resolved' => $insidePamplona()
+                    ->whereMonth('reported_at', $month->month)
                     ->whereYear('reported_at', $month->year)
                     ->whereIn('status', [IncidentStatus::Resolved->value, IncidentStatus::Closed->value])
                     ->count(),
@@ -81,7 +97,8 @@ class PublicDashboardController extends Controller
         // Recent activity feed — tracking number, type, barangay, status,
         // and a relative timestamp only. No reporter identity, no exact
         // address, no assigned personnel/agency name.
-        $recentActivity = Incident::with('incidentType')
+        $recentActivity = $insidePamplona()
+            ->with('incidentType')
             ->orderByDesc('reported_at')
             ->limit(8)
             ->get()
@@ -97,7 +114,7 @@ class PublicDashboardController extends Controller
         return response()->json([
             'total_this_month' => $totalThisMonth,
             'resolved_this_month' => $resolvedThisMonth,
-            'total_all_time' => Incident::count(),
+            'total_all_time' => $insidePamplona()->count(),
             'status_counts' => $statusCounts,
             'type_counts' => $typeCounts,
             'barangay_counts' => $barangayCounts,

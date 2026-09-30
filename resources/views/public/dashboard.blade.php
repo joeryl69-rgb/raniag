@@ -3,94 +3,154 @@
 @section('title', 'Community Dashboard')
 
 @section('content')
-<div class="container">
-    <div class="rg-page-head text-center mb-4" data-rg-reveal>
-        <span class="rg-eyebrow"><i class="bi bi-bar-chart-line"></i>Transparency</span>
-        <h1 class="rg-page-title">Community Situational Dashboard</h1>
-        <p class="rg-page-sub mx-auto mb-0" style="max-width:640px;">
-            Aggregated, anonymized incident statistics for {{ config('raniag.organization') }}. No personal information, exact addresses, or reporter details are shown here — only counts and trends to keep the community informed.
-        </p>
-    </div>
+<div class="container rg-community" data-dashboard-url="{{ route('public.dashboard.data') }}">
+    <header class="rg-community-head" data-rg-reveal>
+        <div>
+            <span class="rg-eyebrow"><i class="bi bi-broadcast-pin"></i>Pamplona situation</span>
+            <h1>What the community is reporting</h1>
+            <p>Current incident patterns inside Pamplona. Counts are anonymous and never show a home, reporter, or exact address.</p>
+        </div>
+        <a href="{{ route('public.report.create') }}" class="btn btn-primary">
+            <i class="bi bi-megaphone me-2"></i>Report an incident
+        </a>
+    </header>
 
     <div id="pd-loading" class="text-center text-muted py-5">
         <div class="spinner-border text-primary mb-2" role="status"></div>
-        <div>Loading community statistics…</div>
+        <div>Reading the Pamplona situation…</div>
     </div>
 
     <div id="pd-content" class="d-none">
-        {{-- KPI strip --}}
-        <div class="row g-3 mb-4" data-rg-stagger>
-            <div class="col-6 col-md-3">
-                <div class="rg-support-card h-100 text-center">
-                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 text-primary mb-2" style="width:44px;height:44px;"><i class="bi bi-calendar-week"></i></div>
-                    <div class="fs-3 fw-bold text-primary" id="pd-total-month">—</div>
-                    <div class="small text-muted">Reports This Month</div>
+        <section class="rg-community-summary" data-rg-stagger>
+            <div class="rg-community-primary">
+                <span class="rg-community-label">Open now</span>
+                <strong id="pd-active">—</strong>
+                <p>Reports still moving through review, assignment, or response.</p>
+            </div>
+            <div class="rg-community-facts">
+                <div>
+                    <span>This month</span>
+                    <strong id="pd-total-month">—</strong>
+                    <small>reports received</small>
+                </div>
+                <div>
+                    <span>Completed this month</span>
+                    <strong id="pd-resolved-month">—</strong>
+                    <small id="pd-resolution-note">of this month's reports</small>
+                </div>
+                <div>
+                    <span>Pamplona record</span>
+                    <strong id="pd-total-all">—</strong>
+                    <small>reports recorded</small>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="rg-support-card h-100 text-center">
-                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10 text-success mb-2" style="width:44px;height:44px;"><i class="bi bi-check-circle"></i></div>
-                    <div class="fs-3 fw-bold text-success" id="pd-resolved-month">—</div>
-                    <div class="small text-muted">Resolved This Month</div>
+        </section>
+
+        <div class="rg-community-grid">
+            <section class="rg-situation-card rg-trend-card">
+                <div class="rg-card-head">
+                    <div>
+                        <span class="rg-community-label">Six-month movement</span>
+                        <h2>Reports and completed cases</h2>
+                    </div>
+                    <span class="rg-privacy-note"><i class="bi bi-shield-check"></i> Pamplona only</span>
                 </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="rg-support-card h-100 text-center">
-                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary bg-opacity-10 text-secondary mb-2" style="width:44px;height:44px;"><i class="bi bi-archive"></i></div>
-                    <div class="fs-3 fw-bold" id="pd-total-all">—</div>
-                    <div class="small text-muted">Total Reports (All Time)</div>
+                <div class="rg-chart-stage"><canvas id="pd-trend-chart"></canvas></div>
+            </section>
+
+            <section class="rg-situation-card">
+                <div class="rg-card-head">
+                    <div>
+                        <span class="rg-community-label">Current mix</span>
+                        <h2>What people report</h2>
+                    </div>
                 </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="rg-support-card h-100 text-center">
-                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning bg-opacity-10 text-warning mb-2" style="width:44px;height:44px;"><i class="bi bi-lightning-charge"></i></div>
-                    <div class="fs-3 fw-bold text-warning" id="pd-active">—</div>
-                    <div class="small text-muted">Currently Active</div>
+                <div id="pd-type-list" class="rg-rank-list"></div>
+            </section>
+
+            <section class="rg-situation-card">
+                <div class="rg-card-head">
+                    <div>
+                        <span class="rg-community-label">Place signal</span>
+                        <h2>Reports by barangay</h2>
+                    </div>
                 </div>
-            </div>
+                <div id="pd-barangay-list" class="rg-place-list"></div>
+                <p class="rg-privacy-copy"><i class="bi bi-shield-lock me-1"></i>Barangay totals only. Exact locations remain private.</p>
+            </section>
+
+            <section class="rg-situation-card">
+                <div class="rg-card-head">
+                    <div>
+                        <span class="rg-community-label">Latest movement</span>
+                        <h2>Recent case activity</h2>
+                    </div>
+                </div>
+                <div id="pd-activity-list" class="rg-activity-list"></div>
+            </section>
         </div>
 
-        <div class="row g-4 mb-4" data-rg-stagger>
-            <div class="col-lg-6">
-                <div class="rg-support-card h-100">
-                    <div class="rg-support-card__head"><i class="bi bi-bar-chart-line me-2"></i>6-Month Trend</div>
-                    <div style="height:260px;"><canvas id="pd-trend-chart"></canvas></div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="rg-support-card h-100">
-                    <div class="rg-support-card__head"><i class="bi bi-pie-chart me-2"></i>By Incident Type</div>
-                    <div style="height:260px;"><canvas id="pd-type-chart"></canvas></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-4 mb-4" data-rg-stagger>
-            <div class="col-lg-6">
-                <div class="rg-support-card h-100">
-                    <div class="rg-support-card__head"><i class="bi bi-geo-alt me-2"></i>Top Barangays (Report Count)</div>
-                    <div id="pd-barangay-list" class="small"></div>
-                    <p class="small text-muted mt-2 mb-0"><i class="bi bi-shield-lock me-1"></i>Shown by barangay only — exact addresses are never made public.</p>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="rg-support-card h-100">
-                    <div class="rg-support-card__head"><i class="bi bi-clock-history me-2"></i>Recent Activity</div>
-                    <div id="pd-activity-list" class="small"></div>
-                </div>
-            </div>
-        </div>
-
-        <p class="text-center text-muted small" id="pd-updated"></p>
+        <p class="rg-community-updated" id="pd-updated"></p>
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+.rg-community { max-width: 1120px; }
+.rg-community-head { display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:26px; }
+.rg-community-head h1 { margin:.45rem 0 .4rem; font-size:clamp(2rem,4vw,3.5rem); letter-spacing:-.045em; line-height:1; }
+.rg-community-head p { max-width:700px; margin:0; color:#64748b; }
+.rg-community-summary { display:grid; grid-template-columns:minmax(250px,.8fr) 2fr; background:#0f1c33; color:#fff; border-radius:24px; overflow:hidden; margin-bottom:18px; }
+.rg-community-primary { padding:28px; background:linear-gradient(145deg,#0f766e,#115e59); }
+.rg-community-primary strong { display:block; font-size:4rem; line-height:1; margin:.45rem 0; }
+.rg-community-primary p { margin:0; color:rgba(255,255,255,.72); font-size:.86rem; }
+.rg-community-label { text-transform:uppercase; letter-spacing:.14em; font-size:.68rem; font-weight:800; color:#0f766e; }
+.rg-community-primary .rg-community-label { color:#99f6e4; }
+.rg-community-facts { display:grid; grid-template-columns:repeat(3,1fr); align-items:center; }
+.rg-community-facts > div { padding:22px 24px; border-left:1px solid rgba(255,255,255,.1); }
+.rg-community-facts span,.rg-community-facts small { display:block; color:rgba(255,255,255,.58); font-size:.74rem; }
+.rg-community-facts strong { display:block; font-size:2rem; margin:.2rem 0; }
+.rg-community-grid { display:grid; grid-template-columns:1.35fr .85fr; gap:18px; }
+.rg-situation-card { background:#fff; border:1px solid rgba(15,28,51,.09); border-radius:20px; padding:22px; min-width:0; box-shadow:0 16px 40px -35px rgba(15,28,51,.45); }
+.rg-card-head { display:flex; justify-content:space-between; align-items:start; gap:12px; margin-bottom:18px; }
+.rg-card-head h2 { font-size:1.05rem; margin:.22rem 0 0; }
+.rg-privacy-note { font-size:.72rem; color:#0f766e; background:#ecfdf5; border-radius:999px; padding:5px 9px; white-space:nowrap; }
+.rg-chart-stage { height:285px; }
+.rg-rank-row { display:grid; grid-template-columns:minmax(100px,1fr) 2fr 28px; align-items:center; gap:10px; margin-bottom:12px; }
+.rg-rank-name { font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rg-rank-track { height:8px; border-radius:999px; background:#eef2f7; overflow:hidden; }
+.rg-rank-fill { height:100%; border-radius:inherit; }
+.rg-rank-count { text-align:right; font-weight:800; font-size:.82rem; }
+.rg-place-row { display:grid; grid-template-columns:110px 1fr 28px; gap:10px; align-items:center; padding:7px 0; }
+.rg-place-name { font-size:.82rem; }
+.rg-privacy-copy { margin:14px 0 0; color:#64748b; font-size:.75rem; }
+.rg-activity-item { display:grid; grid-template-columns:32px 1fr; gap:10px; padding:10px 0; border-bottom:1px solid #edf0f4; }
+.rg-activity-item:last-child { border-bottom:0; }
+.rg-activity-icon { width:32px; height:32px; display:grid; place-items:center; border-radius:10px; background:#f1f5f9; }
+.rg-activity-item strong { font-size:.83rem; }
+.rg-activity-item small { display:block; color:#64748b; margin-top:2px; }
+.rg-community-updated { text-align:right; margin:14px 3px 0; color:#64748b; font-size:.75rem; }
+[data-theme="dark"] .rg-situation-card { background:#16213a; border-color:#2a3a5c; }
+[data-theme="dark"] .rg-rank-track,[data-theme="dark"] .rg-activity-icon { background:#1e2d4a; }
+[data-theme="dark"] .rg-activity-item { border-color:#2a3a5c; }
+@media(max-width:767.98px) {
+  .rg-community-head { align-items:start; flex-direction:column; }
+  .rg-community-summary { grid-template-columns:1fr; }
+  .rg-community-facts { grid-template-columns:repeat(3,1fr); }
+  .rg-community-facts > div { padding:16px 12px; border-left:0; text-align:center; }
+  .rg-community-facts strong { font-size:1.55rem; }
+  .rg-community-grid { grid-template-columns:1fr; }
+  .rg-chart-stage { height:235px; }
+}
+</style>
+@endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 (function () {
-    const DATA_URL = @json(route('public.dashboard.data'));
+    const DATA_URL = document.querySelector('.rg-community')?.dataset.dashboardUrl;
 
     const statusLabels = {
         submitted: 'Submitted', received: 'Received', assigned: 'Assigned',
@@ -117,6 +177,9 @@
         document.getElementById('pd-total-month').textContent = data.total_this_month;
         document.getElementById('pd-resolved-month').textContent = data.resolved_this_month;
         document.getElementById('pd-total-all').textContent = data.total_all_time;
+        document.getElementById('pd-resolution-note').textContent = data.total_this_month
+            ? `${Math.round((data.resolved_this_month / data.total_this_month) * 100)}% of reports this month`
+            : 'No reports this month';
 
         const active = (data.status_counts.submitted || 0) + (data.status_counts.received || 0)
             + (data.status_counts.assigned || 0) + (data.status_counts.in_progress || 0)
@@ -124,28 +187,26 @@
         document.getElementById('pd-active').textContent = active;
 
         new Chart(document.getElementById('pd-trend-chart'), {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: data.monthly_trend.map(m => m.label),
                 datasets: [
-                    { label: 'Total Reports', data: data.monthly_trend.map(m => m.total), backgroundColor: '#0e4a6b' },
-                    { label: 'Resolved', data: data.monthly_trend.map(m => m.resolved), backgroundColor: '#16a34a' },
+                    { label: 'Reports', data: data.monthly_trend.map(m => m.total), borderColor: '#0e4a6b', backgroundColor: 'rgba(14,74,107,.12)', fill: true, tension: .35, pointRadius: 3 },
+                    { label: 'Completed', data: data.monthly_trend.map(m => m.resolved), borderColor: '#0f766e', tension: .35, pointRadius: 3 },
                 ],
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+            options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' }, plugins: { legend: { position: 'bottom', align: 'start' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
         });
 
-        new Chart(document.getElementById('pd-type-chart'), {
-            type: 'doughnut',
-            data: {
-                labels: data.type_counts.map(t => t.name),
-                datasets: [{
-                    data: data.type_counts.map(t => t.count),
-                    backgroundColor: data.type_counts.map(t => t.color || '#64748b'),
-                }],
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } },
-        });
+        const typeEl = document.getElementById('pd-type-list');
+        const typeMax = Math.max(1, ...data.type_counts.map(t => t.count));
+        typeEl.innerHTML = data.type_counts.slice(0, 7).map(t => `
+            <div class="rg-rank-row">
+                <span class="rg-rank-name">${esc(t.name)}</span>
+                <span class="rg-rank-track"><span class="rg-rank-fill" style="display:block;width:${Math.max(5, t.count / typeMax * 100)}%;background:${safeColor(t.color)}"></span></span>
+                <span class="rg-rank-count">${Number(t.count) || 0}</span>
+            </div>
+        `).join('') || '<div class="text-muted small">No reports yet.</div>';
 
         const brgyEl = document.getElementById('pd-barangay-list');
         if (!data.barangay_counts.length) {
@@ -153,12 +214,10 @@
         } else {
             const max = Math.max(...data.barangay_counts.map(b => b.count));
             brgyEl.innerHTML = data.barangay_counts.map(b => `
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <div class="flex-shrink-0" style="width:130px;">${b.barangay}</div>
-                    <div class="flex-grow-1 bg-light rounded" style="height:10px;">
-                        <div class="bg-primary rounded" style="height:10px; width:${Math.max(6, (b.count / max) * 100)}%;"></div>
-                    </div>
-                    <div class="flex-shrink-0 fw-semibold" style="width:24px; text-align:right;">${b.count}</div>
+                <div class="rg-place-row">
+                    <span class="rg-place-name">${esc(b.barangay)}</span>
+                    <span class="rg-rank-track"><span class="rg-rank-fill" style="display:block;width:${Math.max(5, b.count / max * 100)}%;background:#2563eb"></span></span>
+                    <span class="rg-rank-count">${Number(b.count) || 0}</span>
                 </div>
             `).join('');
         }
@@ -168,17 +227,25 @@
             actEl.innerHTML = '<div class="text-muted">No recent activity.</div>';
         } else {
             actEl.innerHTML = data.recent_activity.map(a => `
-                <div class="d-flex align-items-start gap-2 py-2 border-bottom">
-                    <i class="bi ${a.icon || 'bi-bell'} mt-1" style="color:${a.color || '#64748b'};"></i>
-                    <div class="flex-grow-1">
-                        <div><strong>${a.type || 'Incident'}</strong> reported in ${a.barangay || 'Pamplona'}</div>
-                        <div class="text-muted" style="font-size:.75rem;">${statusLabels[a.status] || a.status} · ${a.reported_at}</div>
+                <div class="rg-activity-item">
+                    <span class="rg-activity-icon"><i class="bi ${esc(a.icon || 'bi-bell')}" style="color:${safeColor(a.color)}"></i></span>
+                    <div>
+                        <strong>${esc(a.type || 'Incident')} · ${esc(a.barangay || 'Pamplona')}</strong>
+                        <small>${esc(statusLabels[a.status] || a.status)} · ${esc(a.reported_at)}</small>
                     </div>
                 </div>
             `).join('');
         }
 
         document.getElementById('pd-updated').textContent = 'Last updated ' + new Date(data.generated_at).toLocaleString();
+    }
+
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function safeColor(value) {
+        return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : '#64748b';
     }
 })();
 </script>
