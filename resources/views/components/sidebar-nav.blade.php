@@ -7,6 +7,13 @@
                 <i class="bi bi-speedometer2"></i><span>Dashboard</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}" href="{{ route('notifications.index') }}" data-role="all" id="sidebar-notifications">
+                <i class="bi bi-bell"></i>
+                <span class="flex-grow-1">Notifications</span>
+                <span class="sidebar-notif-count d-none" id="sidebarNotifBadge">0</span>
+            </a>
+        </li>
 
         <!-- Administrator Menu -->
         @if(auth()->user()->isAdministrator())

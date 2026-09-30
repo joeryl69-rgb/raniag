@@ -267,6 +267,39 @@ class SituationalMapService
     }
 
     /**
+     * Reports referred outside Pamplona. They are not drawn on the
+     * municipal map, because that map is framed on the boundary.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function referredOutsidePayload(?int $agencyId = null): array
+    {
+        $query = Incident::query()
+            ->with('incidentType:id,name')
+            ->where('status', IncidentStatus::OutsideAor)
+            ->orderByDesc('reported_at')
+            ->limit(8);
+
+        if ($agencyId) {
+            $query->whereHas('assignments', function ($assignments) use ($agencyId) {
+                $assignments->where('agency_id', $agencyId);
+            });
+        }
+
+        return $query->get()->map(function (Incident $inc) {
+            $place = $inc->location_address ?: $inc->barangay;
+
+            return [
+                'id' => $inc->id,
+                'tracking_number' => $inc->tracking_number,
+                'type' => $inc->incidentType?->name,
+                'place' => $place ?: 'Outside Pamplona',
+                'reported_at' => $inc->reported_at?->diffForHumans(),
+            ];
+        })->all();
+    }
+
+    /**
      * Reports whose barangay is inside Pamplona and were not marked outside the AOR.
      *
      * @param  \Illuminate\Database\Eloquent\Builder<Incident>  $query

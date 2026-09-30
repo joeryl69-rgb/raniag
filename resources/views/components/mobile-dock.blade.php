@@ -29,7 +29,10 @@
     @endif
 
     <a href="{{ route('notifications.index') }}" class="mobile-dock-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
-        <i class="bi bi-bell"></i>
+        <span class="dock-bell">
+            <i class="bi bi-bell"></i>
+            <span class="dock-notif-count d-none" id="dockNotifBadge">0</span>
+        </span>
         <span>Alerts</span>
     </a>
 

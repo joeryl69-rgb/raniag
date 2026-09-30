@@ -312,6 +312,7 @@ class DashboardController extends Controller
                 'avg_resolution_hours' => $avgResolutionHours,
             ],
             'recent_incidents' => $recentIncidents,
+            'referred_outside' => $this->situational->referredOutsidePayload(),
             'active_assignments' => $activeAssignments,
             'assignments_completed_this_week' => $completedThisWeek,
             'sms_stats' => $smsStats,

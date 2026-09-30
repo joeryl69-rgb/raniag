@@ -38,6 +38,15 @@ class NotificationController extends Controller
 
     public function index(Request $request): View
     {
+        // Opening the list is viewing them. The sidebar and dock counts
+        // drop on the next poll. A filtered unread view stays unread so
+        // that filter still has something to show.
+        if (! $request->filled('status') && ! $request->filled('type')) {
+            Notification::where('user_id', $request->user()->id)
+                ->unread()
+                ->update(['read_at' => now()]);
+        }
+
         $query = Notification::where('user_id', $request->user()->id)
             ->orderByDesc('created_at');
 

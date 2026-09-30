@@ -70,70 +70,41 @@
     }
 
     .notif-dropdown {
-        width: 340px;
-        max-width: min(92vw, 340px);
-        z-index: 1055;
+        width: min(360px, calc(100vw - 16px));
+        max-height: min(420px, 70vh);
+        z-index: 2075;
+        overflow: hidden;
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
     }
 
     .notif-list {
-        max-height: 360px;
-        min-height: 160px;
+        max-height: 280px;
         overflow-y: auto;
+        overflow-x: hidden;
     }
 
-    @media (max-width: 767.98px) {
-        /* Full-screen sheet — portaled to <body> by JS so it escapes
-           .navbar-top's sticky stacking context (z-index:1015 root)
-           which otherwise traps children below the sidebar (z-index:1040). */
-        .notif-dropdown {
-            position: fixed !important;
-            top: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            height: 100% !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            border-radius: 0 !important;
-            transform: none !important;
-            overflow-x: hidden;
-            z-index: 2075;
-        }
-
-        .notif-dropdown.show {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .notif-list {
-            max-height: none;
-            flex: 1 1 auto;
-            overflow-x: hidden;
-        }
-
-        body.rg-notif-open {
-            overflow: hidden;
-        }
+    .sidebar-notif-count,
+    .dock-notif-count {
+        min-width: 1.15rem;
+        height: 1.15rem;
+        padding: 0 .35rem;
+        border-radius: 999px;
+        background: #dc3545;
+        color: #fff;
+        font-size: .68rem;
+        font-weight: 800;
+        line-height: 1.15rem;
+        text-align: center;
     }
 
-    /* Desktop/tablet: pin the popover to the right edge of the bell no
-       matter what Popper's auto-flip decides (the sidebar layout can make
-       Popper think there's more room on the left, which used to make the
-       panel jump to the left of the screen instead of staying under the
-       bell). This keeps placement identical/predictable on every wide
-       screen — always right-aligned, never left, and always directly
-       under the bell since .navbar-top is now sticky (same on-screen
-       position on every page). */
-    @media (min-width: 768px) {
-        #notifCloseBtn { display: none !important; }
-
-        .notif-dropdown {
-            left: auto !important;
-            right: 0 !important;
-            top: 100% !important;
-            margin-top: 0.5rem !important;
-        }
+    .sidebar-notif-count { margin-left: auto; }
+    .dock-bell { position: relative; display: inline-flex; }
+    .dock-notif-count {
+        position: absolute;
+        top: -6px;
+        right: -10px;
     }
 </style>
 @endonce
@@ -199,72 +170,60 @@
         });
     }
 
-    // --- Mobile portal (capture-phase approach) ---
-    // Root cause: .navbar-top has position:sticky + z-index:1015 → creates
-    // a stacking context. The sidebar (position:fixed, z-index:1040) lives
-    // at ROOT level, so it paints ABOVE the entire .navbar-top layer —
-    // the dropdown's own z-index is irrelevant; it's invisible.
-    //
-    // Previous fix used shown.bs.dropdown to portal, but Bootstrap's global
-    // click-outside listener fires at the same time, sees the menu is now
-    // outside the .dropdown wrapper, and immediately hides it (hence "not
-    // appearing"). Fix: intercept in CAPTURE phase — before Bootstrap's
-    // bubble handler — so Bootstrap never sees the mobile click at all.
-    // Desktop falls through to Bootstrap normally.
+    // The panel is portaled to <body> so the sticky navbar cannot clip it,
+    // and it stays a card under the bell instead of covering the page.
     const notifMenu = document.querySelector('#notif-bell-wrapper .notif-dropdown');
-    const notifSlot  = document.createComment('notif-menu-slot');
-    let mobileOpen   = false;
+    const notifSlot = document.createComment('notif-menu-slot');
+    let panelOpen = false;
     let notifPortaled = false;
-    const isMob = function () { return window.matchMedia('(max-width: 767.98px)').matches; };
 
-    // Inline styles with setProperty(..., 'important') always win over any
-    // external stylesheet, regardless of load order, media-query matching,
-    // or cache — removes all dependency on the CSS above actually landing.
-    function forceSheetStyles(el) {
-        const set = function (prop, val) { el.style.setProperty(prop, val, 'important'); };
+    function placePanel() {
+        if (!bellToggle || !notifMenu) return;
+        const rect = bellToggle.getBoundingClientRect();
+        const width = Math.min(360, window.innerWidth - 16);
+        let left = rect.right - width;
+        if (left < 8) left = 8;
+        const top = Math.min(rect.bottom + 8, window.innerHeight - 120);
+        const maxHeight = Math.max(180, Math.min(420, window.innerHeight - top - 16));
+        const set = function (prop, val) { notifMenu.style.setProperty(prop, val, 'important'); };
         set('position', 'fixed');
-        set('top', '0');
-        set('right', '0');
-        set('bottom', '0');
-        set('left', '0');
-        set('width', '100%');
-        set('height', '100%');
-        set('max-width', '100%');
+        set('top', top + 'px');
+        set('left', left + 'px');
+        set('right', 'auto');
+        set('bottom', 'auto');
+        set('width', width + 'px');
+        set('height', 'auto');
+        set('max-height', maxHeight + 'px');
         set('margin', '0');
-        set('border-radius', '0');
         set('transform', 'none');
-        set('z-index', '2147483647'); // max valid z-index — nothing can sit above it
+        set('z-index', '2075');
         set('display', 'flex');
         set('flex-direction', 'column');
-        set('overflow-x', 'hidden');
-        set('overflow-y', 'auto');
+        set('overflow', 'hidden');
+        set('border-radius', '14px');
     }
 
-    function clearSheetStyles(el) {
-        ['position', 'top', 'right', 'bottom', 'left', 'width', 'height', 'max-width',
-         'margin', 'border-radius', 'transform', 'z-index', 'display', 'flex-direction',
-         'overflow-x', 'overflow-y'].forEach(function (p) { el.style.removeProperty(p); });
-    }
-
-    function openMobileSheet() {
+    function openPanel() {
+        if (!notifMenu) return;
         if (!notifPortaled) {
             notifMenu.parentNode.insertBefore(notifSlot, notifMenu);
             document.body.appendChild(notifMenu);
             notifPortaled = true;
         }
         notifMenu.classList.add('show');
-        forceSheetStyles(notifMenu);
-        document.body.classList.add('rg-notif-open');
+        placePanel();
         if (bellToggle) bellToggle.setAttribute('aria-expanded', 'true');
-        mobileOpen = true;
+        panelOpen = true;
     }
 
-    function closeMobileSheet() {
+    function closePanel() {
+        if (!notifMenu) return;
         notifMenu.classList.remove('show');
-        clearSheetStyles(notifMenu);
-        document.body.classList.remove('rg-notif-open');
+        ['position', 'top', 'left', 'right', 'bottom', 'width', 'height', 'max-height',
+         'margin', 'transform', 'z-index', 'display', 'flex-direction', 'overflow', 'border-radius']
+            .forEach(function (prop) { notifMenu.style.removeProperty(prop); });
         if (bellToggle) bellToggle.setAttribute('aria-expanded', 'false');
-        mobileOpen = false;
+        panelOpen = false;
         if (notifPortaled && notifSlot.parentNode) {
             notifSlot.parentNode.replaceChild(notifMenu, notifSlot);
             notifPortaled = false;
@@ -272,41 +231,46 @@
     }
 
     if (bellToggle) {
-        // Capture phase (3rd arg = true) → runs before Bootstrap's bubble handler.
         bellToggle.addEventListener('click', function (e) {
-            if (!isMob()) return;           // desktop: Bootstrap handles it
-            e.stopImmediatePropagation();   // prevent Bootstrap toggle
+            e.stopImmediatePropagation();
             e.preventDefault();
-            mobileOpen ? closeMobileSheet() : openMobileSheet();
+            panelOpen ? closePanel() : openPanel();
         }, true);
-
-        // Desktop only: Bootstrap fires hidden.bs.dropdown → clean up scroll lock.
-        bellToggle.addEventListener('hidden.bs.dropdown', function () {
-            document.body.classList.remove('rg-notif-open');
-        });
     }
 
     if (closeBtn) {
-        closeBtn.addEventListener('click', function () {
-            if (isMob()) {
-                closeMobileSheet();
-            } else if (window.bootstrap) {
-                bootstrap.Dropdown.getOrCreateInstance(bellToggle).hide();
-            }
-        });
+        closeBtn.addEventListener('click', closePanel);
     }
+
+    document.addEventListener('click', function (e) {
+        if (!panelOpen) return;
+        if (e.target.closest('#notif-bell-wrapper') || e.target.closest('.notif-dropdown')) return;
+        closePanel();
+    });
+
+    window.addEventListener('resize', function () {
+        if (panelOpen) placePanel();
+    });
 
     function timeIcon(icon) {
         return '<i class="bi ' + icon + '"></i>';
     }
 
-    function render(data) {
-        if (data.unread_count > 0) {
-            badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
-            badge.classList.remove('d-none');
+    function paintCount(el, count) {
+        if (!el) return;
+        if (count > 0) {
+            el.textContent = count > 9 ? '9+' : String(count);
+            el.classList.remove('d-none');
         } else {
-            badge.classList.add('d-none');
+            el.classList.add('d-none');
         }
+    }
+
+    function render(data) {
+        const unread = data.unread_count || 0;
+        paintCount(badge, unread);
+        paintCount(document.getElementById('sidebarNotifBadge'), unread);
+        paintCount(document.getElementById('dockNotifBadge'), unread);
 
         if (!data.notifications.length) {
             list.innerHTML = '';

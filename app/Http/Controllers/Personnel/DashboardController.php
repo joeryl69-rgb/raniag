@@ -11,6 +11,7 @@ use App\Models\SmsLog;
 use App\Models\StatusUpdate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\SituationalMapService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -188,6 +189,9 @@ class DashboardController extends Controller
             'recent_status_updates' => $recentUpdates ?? $recentUpdates,
             'sms_alerts_this_week' => $smsReceived,
             'active_dispatches' => $activeDispatches,
+            'referred_outside' => $request->user()?->agency_id
+                ? app(SituationalMapService::class)->referredOutsidePayload($request->user()->agency_id)
+                : [],
             'latest_incident' => $activeDispatches->first() ? [
                 'id' => $activeDispatches->first()['id'],
                 'tracking_number' => $activeDispatches->first()['tracking_number'],

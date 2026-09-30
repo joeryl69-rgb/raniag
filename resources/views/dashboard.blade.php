@@ -171,6 +171,17 @@
             .map-mode-switch button.active { background: #fff; color: var(--raniag-primary); box-shadow: 0 1px 4px rgba(15,23,42,.12); }
             .map-legend { display: flex; align-items: center; gap: .9rem; font-size: .74rem; color: var(--raniag-muted); flex-wrap: wrap; }
             .map-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: .3rem; }
+            .legend-line { display: inline-block; width: 16px; height: 0; border-top-width: 3px; border-top-style: solid; margin-right: .35rem; vertical-align: middle; }
+            .legend-muni { border-top-color: #0b3a8c; }
+            .legend-brgy { border-top-color: #0f766e; border-top-style: dashed; }
+            .map-referred { border-top: 1px solid var(--raniag-border); background: #fff8eb; padding: .75rem 1.1rem .9rem; }
+            .map-referred-head { display: flex; gap: .6rem; align-items: flex-start; color: #8a5a00; margin-bottom: .45rem; }
+            .map-referred-head i { font-size: 1.1rem; margin-top: .1rem; }
+            .map-referred-head strong { display: block; color: #5c3b00; }
+            .map-referred-head span { display: block; font-size: .78rem; }
+            .map-referred a { display: flex; justify-content: space-between; gap: .75rem; padding: .4rem 0; border-top: 1px dashed rgba(138, 90, 0, .25); color: inherit; text-decoration: none; font-size: .84rem; }
+            .map-referred a:hover { color: var(--raniag-primary); }
+            .map-referred .ref-track { font-weight: 800; }
 
             #dashboard-map { width: 100%; z-index: 1; }
             #dashboard-map.h-admin { height: 460px; }
@@ -413,8 +424,8 @@
                             <label class="form-check-label" for="layer-boundary">Municipal Boundary</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="layer-barangays">
-                            <label class="form-check-label" for="layer-barangays">Barangay Borders</label>
+                            <input class="form-check-input" type="checkbox" id="layer-barangays" checked>
+                            <label class="form-check-label" for="layer-barangays">Barangay borders</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="layer-markers" checked>
@@ -423,11 +434,23 @@
                     </div>
                 </div>
                 <div class="map-legend px-3 py-2 border-top">
+                    <span><i class="legend-line legend-muni"></i>Pamplona boundary</span>
+                    <span><i class="legend-line legend-brgy"></i>Barangay</span>
                     <span><span class="dot" style="background:#b91c1c"></span>Critical</span>
                     <span><span class="dot" style="background:#dc3545"></span>High</span>
                     <span><span class="dot" style="background:#f59e0b"></span>Medium</span>
                     <span><span class="dot" style="background:#0d6efd"></span>Low</span>
                     <span class="ms-auto small" id="map-count-label">— points plotted</span>
+                </div>
+                <div class="map-referred d-none" id="map-referred">
+                    <div class="map-referred-head">
+                        <i class="bi bi-signpost-split"></i>
+                        <div>
+                            <strong>Referred outside Pamplona</strong>
+                            <span>These reports are not drawn on the map. The map stays on the municipal boundary.</span>
+                        </div>
+                    </div>
+                    <div id="map-referred-list"></div>
                 </div>
             </div>
         </div>
@@ -922,8 +945,17 @@
                     .then(geo => {
                         if (!geo) return;
                         boundaryLayer = L.geoJSON(geo, {
-                            style: { color: '#0b5ed7', weight: 2, fillOpacity: 0.03, dashArray: '4 3' }
+                            style: {
+                                color: '#0b3a8c',
+                                weight: 3,
+                                opacity: 1,
+                                fillColor: '#3d8bfd',
+                                fillOpacity: 0.12,
+                            }
                         }).addTo(map);
+                        boundaryLayer.eachLayer((layer) => {
+                            layer.bindTooltip('Pamplona area of responsibility', { sticky: true });
+                        });
                         try { map.fitBounds(boundaryLayer.getBounds(), { padding: [24, 24] }); jurisdictionBounds = boundaryLayer.getBounds(); } catch (e) {}
                     })
                     .catch(() => {});
@@ -933,12 +965,22 @@
                     .then(geo => {
                         if (!geo) return;
                         L.geoJSON(geo, {
-                            style: { color: '#20c997', weight: 1.5, fillOpacity: 0.04 },
+                            style: {
+                                color: '#0f766e',
+                                weight: 1.5,
+                                opacity: 0.9,
+                                fillColor: '#14b8a6',
+                                fillOpacity: 0.06,
+                                dashArray: '6 4',
+                            },
                             onEachFeature: (feature, layer) => {
-                                const name = feature.properties && (feature.properties.name || feature.properties.NAME || feature.properties.brgy);
-                                if (name) layer.bindTooltip(name, { sticky: true });
+                                const name = feature.properties && (feature.properties.name || feature.properties.NAME || feature.properties.brgy || feature.properties.adm4_en);
+                                if (name) layer.bindTooltip(String(name), { sticky: true, direction: 'center', className: 'brgy-tip' });
                             }
                         }).addTo(barangayLayer);
+                        if (document.getElementById('layer-barangays')?.checked) {
+                            barangayLayer.addTo(map);
+                        }
                     })
                     .catch(() => {});
             }
@@ -1186,6 +1228,28 @@
                     });
             }
 
+            function renderReferred(rows) {
+                const box = document.getElementById('map-referred');
+                const list = document.getElementById('map-referred-list');
+                if (!box || !list) return;
+                const items = Array.isArray(rows) ? rows : [];
+                if (!items.length) {
+                    box.classList.add('d-none');
+                    list.innerHTML = '';
+                    return;
+                }
+                box.classList.remove('d-none');
+                list.innerHTML = items.map((row) => {
+                    const href = INCIDENT_URL_BASE + '/' + row.id;
+                    const place = row.place || 'Outside Pamplona';
+                    const type = row.type ? escapeHtml(row.type) + ' · ' : '';
+                    return `<a href="${href}">
+                        <span><span class="ref-track">${escapeHtml(row.tracking_number || ('#' + row.id))}</span><span class="d-block text-muted">${type}${escapeHtml(place)}</span></span>
+                        <span class="text-muted small">${escapeHtml(row.reported_at || '')}</span>
+                    </a>`;
+                }).join('');
+            }
+
             function markMapRefreshed() {
                 const label = document.getElementById('map-count-label');
                 if (!label) return;
@@ -1219,6 +1283,7 @@
                 populateBarangayFilter(barangayCounts);
 
                 rawPoints = data.recent_incidents || [];
+                renderReferred(data.referred_outside);
                 applyMapFilters();
                 plotHazardLayers(data);
                 maybeShowIncidentAlert(data.latest_incident);
@@ -1423,6 +1488,7 @@
                 setText('kpi-sms', data.sms_alerts_this_week ?? 0);
 
                 plotPoints(data.active_dispatches || []);
+                renderReferred(data.referred_outside);
                 renderDispatchTable(data.active_dispatches || []);
                 renderMeters('role-status-meters', Object.entries(sb).map(([label, value]) => ({
                     label: String(label).replaceAll('_', ' '),

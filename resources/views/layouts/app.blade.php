@@ -267,7 +267,7 @@
             }
 
             html.rg-sidebar-collapsed-init #sidebar-wrapper .sidebar-brand span:not(.rg-brand-mark),
-            html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-link span:not(.nav-caret),
+            html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-link span:not(.nav-caret):not(.sidebar-notif-count),
             html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-section-label,
             html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-caret,
             html.rg-sidebar-collapsed-init #sidebar-wrapper .nav-submenu {
