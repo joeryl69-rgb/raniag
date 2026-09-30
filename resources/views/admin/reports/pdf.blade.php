@@ -109,19 +109,40 @@
     </div>
 
     <div class="summary">
-        <div class="section-title" style="margin-top:0;">Summary</div>
+        <div class="section-title" style="margin-top:0;">Incident picture</div>
         <div class="summary-row">
-            <span><strong>Total Incidents:</strong> {{ $incidents->count() }}</span>
+            <span><strong>Reports in this period:</strong> {{ $picture['total'] ?? $incidents->count() }}</span>
+            <span><strong>Still open:</strong> {{ $picture['open'] ?? 0 }}</span>
         </div>
         <div class="summary-row">
-            <span><strong>Resolved:</strong> {{ $incidents->where('status', 'resolved')->count() }}</span>
-            <span><strong>In Progress:</strong> {{ $incidents->where('status', 'in_progress')->count() }}</span>
-        </div>
-        <div class="summary-row">
-            <span><strong>Pending:</strong> {{ $incidents->where('status', 'submitted')->count() }}</span>
-            <span><strong>Closed:</strong> {{ $incidents->where('status', 'closed')->count() }}</span>
+            <span><strong>Median time to first assignment:</strong> {{ $picture['median_assignment'] ?? '—' }}</span>
         </div>
     </div>
+
+    <div class="section-title">Incident status</div>
+    @include('admin.reports.partials._columns', ['rows' => $picture['status'] ?? []])
+
+    <div class="section-title">Priority of open incidents</div>
+    @include('admin.reports.partials._columns', ['rows' => $picture['priority'] ?? [], 'color' => '#b45309'])
+
+    <div class="section-title">Open reports by barangay</div>
+    <table>
+        <thead>
+            <tr><th>Barangay</th><th>Main type</th><th>Reports</th><th>Still open</th></tr>
+        </thead>
+        <tbody>
+            @forelse(($picture['places'] ?? []) as $place)
+                <tr>
+                    <td>{{ $place['label'] }}</td>
+                    <td>{{ $place['type'] ?? '—' }}</td>
+                    <td>{{ $place['count'] }}</td>
+                    <td>{{ $place['open'] ?? 0 }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="4">No barangay recorded for these reports.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
 
     <div class="section-title">Incident Records</div>
     @if($incidents->count() > 0)

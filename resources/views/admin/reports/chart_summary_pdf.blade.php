@@ -143,6 +143,10 @@
                     @endforeach
                 </tbody>
             </table>
+        @elseif($key === 'open_workload')
+            @include('admin.reports.partials._columns', ['rows' => collect($chart['rows'])->map(fn ($row) => ['label' => $row['label'], 'count' => $row['count']])->all(), 'color' => '#b45309'])
+        @elseif($key === 'when_reports_arrived')
+            @include('admin.reports.partials._columns', ['rows' => $chart['rows'], 'color' => '#0f766e'])
         @else
             <table>
                 <thead>

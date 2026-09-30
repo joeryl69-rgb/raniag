@@ -71,12 +71,14 @@ class ReportController extends Controller
         $resolvedAgencyNames = $incidents->mapWithKeys(
             fn ($incident) => [$incident->id => $this->resolveAgencyName($incident)]
         );
+        $picture = $this->incidentPicture($incidents, $validated['date_from'], $validated['date_to'], 'weekly');
 
         $pdf = Pdf::loadView('admin.reports.pdf', [
             'incidents' => $incidents,
             'filters' => $validated,
             'agencyName' => $agencyName,
             'resolvedAgencyNames' => $resolvedAgencyNames,
+            'picture' => $picture,
             'generated_at' => now(),
         ]);
 
@@ -106,6 +108,24 @@ class ReportController extends Controller
         $writer->addRow([]);
 
         $decision = $this->decisionTables($incidents);
+        $status = $this->buildStatusBreakdown($incidents);
+        $types = $this->buildTypeBreakdown($incidents);
+
+        $writer->addRow(['Incident status'], $writer::STYLE_SECTION);
+        $writer->mergeRow(0, 5);
+        $writer->addRow(['Status', 'Reports'], $writer::STYLE_HEADER);
+        foreach ($status['rows'] as $row) {
+            $writer->addRow([$row['label'], $row['count']], $writer::STYLE_BODY);
+        }
+        $writer->addRow([]);
+
+        $writer->addRow(['Incidents by type'], $writer::STYLE_SECTION);
+        $writer->mergeRow(0, 5);
+        $writer->addRow(['Type', 'Reports'], $writer::STYLE_HEADER);
+        foreach ($types['rows'] as $row) {
+            $writer->addRow([$row['label'], $row['count']], $writer::STYLE_BODY);
+        }
+        $writer->addRow([]);
 
         $writer->addRow(['What still needs a team'], $writer::STYLE_SECTION);
         $writer->mergeRow(0, 5);
@@ -194,7 +214,10 @@ class ReportController extends Controller
         $charts = [];
         foreach ($selectedCharts as $key) {
             $charts[$key] = match ($key) {
-                'open_workload' => $tables['open_workload'],
+                'open_workload' => [
+                    'rows' => $this->orderedPriorityRows($tables['open_workload']['rows']),
+                    'total' => $tables['open_workload']['total'],
+                ],
                 'response_time' => $tables['response_time'],
                 'where_to_send' => $tables['where_to_send'],
                 'agency_load' => $tables['agency_load'],
@@ -224,6 +247,111 @@ class ReportController extends Controller
 
         return $pdf->download('raniag-chart-summary-'.now()->format('Y-m-d').'.pdf')
             ->cookie('download_token', $request->input('download_token'), 1, null, null, null, false);
+    }
+
+    /**
+     * Same incident picture the command center uses, for the filters on
+     * the reports page. The three downloads are built from these counts.
+     */
+    public function picture(Request $request)
+    {
+        $validated = $this->validateFilters($request, withView: true);
+        $incidents = $this->buildFilteredQuery($validated, ['incidentType', 'agency', 'assignments.agency'])
+            ->orderBy('reported_at')
+            ->get();
+
+        return response()->json(
+            $this->incidentPicture($incidents, $validated['date_from'], $validated['date_to'], $validated['view_mode'] ?? 'weekly')
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function incidentPicture($incidents, string $dateFrom, string $dateTo, string $viewMode): array
+    {
+        $tables = $this->decisionTables($incidents);
+        $periods = $this->bucketByPeriod($incidents, $viewMode, $dateFrom, $dateTo);
+        $openTypes = $this->buildTypeBreakdown($incidents->filter(function ($incident) {
+            $status = is_object($incident->status) ? $incident->status->value : (string) $incident->status;
+
+            return in_array($status, ['submitted', 'received', 'assigned', 'in_progress', 'pending_info'], true);
+        }));
+        $median = collect($tables['response_time']['rows'])->firstWhere('label', 'Median time to first assignment');
+
+        return [
+            'total' => $incidents->count(),
+            'open' => $tables['open_workload']['total'],
+            'median_assignment' => $median['hint'] ?? 'Not enough assigned cases yet',
+            'status' => $this->orderedStatusRows($incidents),
+            'priority' => $this->orderedPriorityRows($tables['open_workload']['rows']),
+            'types' => $openTypes['rows'],
+            'places' => $tables['where_to_send']['rows'],
+            'offices' => $tables['agency_load']['rows'],
+            'arrivals' => array_map(fn ($period) => [
+                'label' => $period['label'],
+                'count' => $period['count'],
+            ], $periods),
+            'lines' => $this->buildNarrative($incidents, $periods, $viewMode, [
+                'open_workload' => $tables['open_workload'],
+                'response_time' => $tables['response_time'],
+                'where_to_send' => $tables['where_to_send'],
+                'agency_load' => $tables['agency_load'],
+            ]),
+        ];
+    }
+
+    /**
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function orderedStatusRows($incidents): array
+    {
+        $order = [
+            'submitted' => 'Submitted',
+            'received' => 'Received',
+            'assigned' => 'Assigned',
+            'in_progress' => 'In progress',
+            'pending_info' => 'Pending information',
+            'resolved' => 'Resolved',
+            'closed' => 'Closed',
+            'rejected' => 'Rejected',
+            'outside_aor' => 'Referred outside Pamplona',
+        ];
+        $counts = $incidents->groupBy(fn ($incident) => is_object($incident->status) ? $incident->status->value : (string) $incident->status)
+            ->map->count();
+        $rows = [];
+        foreach ($order as $key => $label) {
+            $count = (int) ($counts[$key] ?? 0);
+            if ($count > 0) {
+                $rows[] = ['label' => $label, 'count' => $count];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function orderedPriorityRows(array $rows): array
+    {
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[strtolower((string) $row['label'])] = (int) $row['count'];
+        }
+        $out = [];
+        foreach (['critical' => 'Critical', 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low'] as $key => $label) {
+            $match = 0;
+            foreach ($counts as $stored => $count) {
+                if (str_starts_with($stored, $key)) {
+                    $match = $count;
+                }
+            }
+            $out[] = ['label' => $label, 'count' => $match];
+        }
+
+        return $out;
     }
 
     /**
