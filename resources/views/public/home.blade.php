@@ -28,37 +28,38 @@
         </div>
     </div>
 
-    <section class="rg-flow" data-rg-hero-card aria-labelledby="rg-how-title">
-        <div class="rg-flow-head">
-            <img class="jo-mascot rg-flow-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="120" height="150">
+    <section class="rg-desk" data-rg-hero-card aria-labelledby="rg-how-title">
+        <div class="rg-desk-top">
+            <img class="jo-mascot rg-desk-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="88" height="110">
             <div>
+                <p class="rg-desk-kicker">Incident desk</p>
                 <h2 id="rg-how-title">{{ __('How a report moves') }}</h2>
-                <p>Four steps, in order. You file it, you keep the number, staff send it to the right responder, and you watch the status.</p>
+                <p>One path. You file it, the desk gives you a number, a responder is assigned, and you watch the status.</p>
             </div>
             <button type="button" class="btn btn-primary" id="jo-start-tour-home">
                 <i class="bi bi-compass me-1"></i>Start guided tour
             </button>
         </div>
-        <ol class="rg-flow-steps">
+        <ol class="rg-desk-rail">
             <li>
-                <span>1</span>
-                <h3>File the report</h3>
-                <p>Pick a type and send a GPS photo if you can. Written details are optional. Without a photo, leave a number so a responder can reach you.</p>
+                <i class="bi bi-megaphone"></i>
+                <strong>1 · File</strong>
+                <span>Type plus a GPS photo. Details are optional. No photo means leave a number.</span>
             </li>
             <li>
-                <span>2</span>
-                <h3>Keep your number</h3>
-                <p>You receive a tracking number the moment the report is in. That number is how you follow it later.</p>
+                <i class="bi bi-ticket-perforated"></i>
+                <strong>2 · Number</strong>
+                <span>The tracking number is issued the moment the report is in.</span>
             </li>
             <li>
-                <span>3</span>
-                <h3>{{ config('raniag.organization') }} assigns it</h3>
-                <p>Staff review the report and send it to the responder who covers that part of Pamplona.</p>
+                <i class="bi bi-signpost-split"></i>
+                <strong>3 · Assign</strong>
+                <span>{{ config('raniag.organization') }} sends it to the responder for that part of Pamplona.</span>
             </li>
             <li>
-                <span>4</span>
-                <h3>Watch the status</h3>
-                <p>The tracking page shows submitted, assigned, in progress, or resolved — without calling the office.</p>
+                <i class="bi bi-activity"></i>
+                <strong>4 · Watch</strong>
+                <span>Submitted, assigned, in progress, or resolved — on this site, not by phone.</span>
             </li>
         </ol>
     </section>
@@ -75,21 +76,19 @@
         <div data-live-refresh data-live-refresh-target="#rg-public-announcements" data-live-refresh-interval="4000">
         <div id="rg-public-announcements">
         @if($announcements->isNotEmpty())
-            <div class="row g-3">
+            <div class="rg-log">
                 @foreach($announcements as $item)
-                    <div class="col-md-4">
-                        <div class="rg-announce-card">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 text-primary" style="width:38px;height:38px;">
-                                    <i class="bi {{ $item->icon ?? 'bi-megaphone-fill' }}"></i>
-                                </span>
-                                @if($item->badge)<span class="rg-announce-badge mb-0">{{ $item->badge }}</span>@endif
+                    <article class="rg-log-item rg-announce-card">
+                        <time datetime="{{ optional($item->published_at)->toDateString() }}">{{ optional($item->published_at)->format('M d') }}</time>
+                        <div>
+                            <div class="rg-log-meta">
+                                <i class="bi {{ $item->icon ?? 'bi-megaphone-fill' }}"></i>
+                                @if($item->badge)<span>{{ $item->badge }}</span>@endif
                             </div>
-                            <h3 class="h6 fw-bold mb-1">{{ $item->title }}</h3>
-                            <p class="small text-muted mb-2">{{ Str::limit($item->body, 140) }}</p>
-                            <div class="rg-announce-date">{{ optional($item->published_at)->format('M d, Y') }}</div>
+                            <h3>{{ $item->title }}</h3>
+                            <p>{{ Str::limit($item->body, 160) }}</p>
                         </div>
-                    </div>
+                    </article>
                 @endforeach
             </div>
         @else
@@ -102,9 +101,9 @@
         </div>
     </div>
 
-    <div class="rg-home-lower">
+    <div class="rg-home-lower" id="faq">
     {{-- ===================== FAQ ===================== --}}
-    <div id="faq">
+    <div>
             <div class="rg-page-head" data-rg-reveal>
                 <span class="rg-eyebrow"><i class="bi bi-question-circle"></i>Good to know</span>
                 <h2 class="rg-page-title h4">{{ __('Frequently Asked Questions') }}</h2>
@@ -189,69 +188,131 @@
 
 @push('styles')
 <style>
-.rg-flow { margin: .5rem 0 2rem; }
-.rg-flow-head {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    margin-bottom: 18px;
+.rg-desk {
+    margin: .25rem 0 1.75rem;
+    padding: 22px 22px 8px;
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg, rgba(11, 94, 215, .08), transparent 90px),
+        #0f1c33;
+    color: #e8eef8;
+    box-shadow: 0 18px 40px -28px rgba(8, 15, 28, .8);
 }
-.rg-flow-jo { height: 92px; max-width: 92px; animation: none; }
-.rg-flow-head h2 { margin: 0 0 .25rem; font-size: clamp(1.35rem, 2vw, 1.7rem); font-weight: 800; }
-.rg-flow-head p { margin: 0; color: #5b6780; max-width: 46rem; }
-.rg-flow-head .btn { margin-left: auto; flex-shrink: 0; }
-.rg-flow-steps {
+.rg-desk-top { display: flex; align-items: center; gap: 16px; }
+.rg-desk-jo {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 18px;
+    background: #fff;
+    flex-shrink: 0;
+}
+.rg-desk-kicker {
+    margin: 0 0 2px;
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #93c5fd;
+    font-weight: 700;
+}
+.rg-desk-top h2 { margin: 0 0 .2rem; font-size: clamp(1.35rem, 2vw, 1.75rem); font-weight: 800; color: #fff; }
+.rg-desk-top p { margin: 0; color: #b7c3d6; max-width: 40rem; }
+.rg-desk-top .btn { margin-left: auto; flex-shrink: 0; }
+.rg-desk-rail {
     list-style: none;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    margin: 0;
-    padding: 0;
+    gap: 0;
+    margin: 18px 0 8px;
+    padding: 18px 0 10px;
+    position: relative;
 }
-.rg-flow-steps li {
-    background: #fff;
-    border: 1px solid rgba(11, 18, 32, .08);
-    border-radius: 16px;
-    padding: 16px;
+.rg-desk-rail::before {
+    content: "";
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 40px;
+    height: 2px;
+    background: rgba(147, 197, 253, .25);
 }
-.rg-flow-steps span {
-    display: inline-grid;
+.rg-desk-rail::after {
+    content: "";
+    position: absolute;
+    left: 8%;
+    top: 40px;
+    height: 2px;
+    width: 18%;
+    background: #60a5fa;
+    box-shadow: 0 0 12px #60a5fa;
+    animation: rg-desk-run 4.8s ease-in-out infinite;
+}
+.rg-desk-rail li { position: relative; padding: 0 12px; text-align: center; }
+.rg-desk-rail i {
+    display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
-    margin-bottom: 8px;
-    border-radius: 9px;
-    background: var(--raniag-primary, #0b5ed7);
-    color: #fff;
-    font-size: .82rem;
-    font-weight: 700;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 10px;
+    border-radius: 14px;
+    background: #173055;
+    border: 1px solid rgba(147, 197, 253, .35);
+    color: #bfdbfe;
+    font-size: 1.15rem;
+    position: relative;
+    z-index: 1;
 }
-.rg-flow-steps h3 { margin: 0 0 .35rem; font-size: .95rem; font-weight: 700; }
-.rg-flow-steps p { margin: 0; color: #5b6780; font-size: .84rem; line-height: 1.45; }
+.rg-desk-rail strong { display: block; color: #fff; font-size: .92rem; }
+.rg-desk-rail span { display: block; margin-top: 4px; color: #9aabc2; font-size: .8rem; line-height: 1.4; }
+.rg-log { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.rg-log-item.rg-announce-card {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    height: auto;
+    border-left: 3px solid var(--raniag-primary, #0b5ed7);
+}
+.rg-log-item time {
+    font-weight: 800;
+    font-size: .78rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--raniag-primary, #0b5ed7);
+}
+.rg-log-meta { display: flex; align-items: center; gap: 8px; color: #5b6780; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.rg-log-item h3 { margin: 2px 0; font-size: 1rem; font-weight: 800; }
+.rg-log-item p { margin: 0; color: #5b6780; font-size: .86rem; }
 .rg-home-lower {
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(260px, .7fr);
-    gap: 22px;
-    align-items: start;
-    margin-top: 1.75rem;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, .75fr);
+    gap: 18px;
+    align-items: stretch;
+    margin-top: 1.5rem;
 }
-.rg-home-aside { display: grid; gap: 14px; }
-.rg-home-aside .rg-download-cta {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 18px;
-    margin: 0;
+.rg-home-aside { display: flex; flex-direction: column; gap: 12px; }
+.rg-home-aside .rg-download-cta,
+.rg-home-aside .rg-support-card { margin: 0; flex: 1; }
+.rg-home-aside .rg-download-cta { display: flex; align-items: center; gap: 14px; padding: 20px; }
+@keyframes rg-desk-run {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(420%); }
 }
-.rg-home-aside .rg-support-card { margin: 0; }
 @media (max-width: 991.98px) {
-    .rg-flow-head { flex-wrap: wrap; }
-    .rg-flow-head .btn { margin-left: 0; }
-    .rg-flow-steps { grid-template-columns: 1fr 1fr; }
+    .rg-desk-top { flex-wrap: wrap; }
+    .rg-desk-top .btn { margin-left: 0; }
+    .rg-desk-rail { grid-template-columns: 1fr 1fr; gap: 16px; }
+    .rg-desk-rail::before, .rg-desk-rail::after { display: none; }
+    .rg-desk-rail li { text-align: left; display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 10px; }
+    .rg-desk-rail i { margin: 0; }
+    .rg-desk-rail strong, .rg-desk-rail span { grid-column: 2; }
     .rg-home-lower { grid-template-columns: 1fr; }
 }
 @media (max-width: 575.98px) {
-    .rg-flow-steps { grid-template-columns: 1fr; }
+    .rg-desk-rail { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .rg-desk-rail::after { animation: none; width: 84%; }
 }
 </style>
 @endpush
