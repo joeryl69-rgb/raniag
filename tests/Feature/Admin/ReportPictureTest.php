@@ -7,7 +7,7 @@ use App\Models\IncidentType;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
-test('reports picture uses the same filters as the downloads', function () {
+test('decision report downloads a pdf for the selected dates and sections', function () {
     $type = IncidentType::factory()->create(['name' => 'Fire']);
     $admin = User::factory()->create([
         'role' => UserRole::Administrator,
@@ -20,7 +20,7 @@ test('reports picture uses the same filters as the downloads', function () {
         'incident_type_id' => $type->id,
         'status' => IncidentStatus::Submitted,
         'priority' => 'high',
-        'description' => 'Reports picture.',
+        'description' => 'Decision report.',
         'barangay' => 'Bidduang',
         'latitude' => 18.51,
         'longitude' => 121.32,
@@ -29,15 +29,15 @@ test('reports picture uses the same filters as the downloads', function () {
     ]);
 
     $this->actingAs($admin)
-        ->postJson(route('admin.reports.picture'), [
-            'date_from' => now()->subDays(7)->toDateString(),
+        ->post(route('admin.reports.decision'), [
+            'date_from' => now()->subDays(14)->toDateString(),
             'date_to' => now()->toDateString(),
             'aor_scope' => 'aor_only',
             'view_mode' => 'weekly',
+            'sections' => ['summary', 'comparison', 'projection'],
+            'compare_from' => now()->subDays(28)->toDateString(),
+            'compare_to' => now()->subDays(15)->toDateString(),
         ])
         ->assertOk()
-        ->assertJsonPath('open', 1)
-        ->assertJsonPath('places.0.label', 'Bidduang')
-        ->assertJsonPath('priority.1.label', 'High')
-        ->assertJsonPath('priority.1.count', 1);
+        ->assertHeader('content-type', 'application/pdf');
 });

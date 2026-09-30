@@ -20,6 +20,17 @@ class ReportController extends Controller
      * render in on the PDF, so what's picked is exactly (and only) what's
      * generated, in the same order every time.
      */
+    private const DECISION_SECTIONS = [
+        'summary',
+        'status',
+        'priority',
+        'types',
+        'places',
+        'arrivals',
+        'comparison',
+        'projection',
+    ];
+
     private const CHART_KEYS = [
         'open_workload',
         'response_time',
@@ -71,14 +82,11 @@ class ReportController extends Controller
         $resolvedAgencyNames = $incidents->mapWithKeys(
             fn ($incident) => [$incident->id => $this->resolveAgencyName($incident)]
         );
-        $picture = $this->incidentPicture($incidents, $validated['date_from'], $validated['date_to'], 'weekly');
-
         $pdf = Pdf::loadView('admin.reports.pdf', [
             'incidents' => $incidents,
             'filters' => $validated,
             'agencyName' => $agencyName,
             'resolvedAgencyNames' => $resolvedAgencyNames,
-            'picture' => $picture,
             'generated_at' => now(),
         ]);
 
@@ -250,19 +258,154 @@ class ReportController extends Controller
     }
 
     /**
-     * Same incident picture the command center uses, for the filters on
-     * the reports page. The three downloads are built from these counts.
+     * Downloadable decision file. The admin picks the sections, the main
+     * date range, and an optional second range to compare. The projection
+     * is the straight-line change across those periods, not a guessed event.
      */
-    public function picture(Request $request)
+    public function decision(Request $request)
     {
         $validated = $this->validateFilters($request, withView: true);
+        $sections = array_values(array_intersect(self::DECISION_SECTIONS, $validated['sections'] ?? self::DECISION_SECTIONS));
+        if ($sections === []) {
+            $sections = self::DECISION_SECTIONS;
+        }
+
         $incidents = $this->buildFilteredQuery($validated, ['incidentType', 'agency', 'assignments.agency'])
             ->orderBy('reported_at')
             ->get();
 
-        return response()->json(
-            $this->incidentPicture($incidents, $validated['date_from'], $validated['date_to'], $validated['view_mode'] ?? 'weekly')
-        );
+        if ($incidents->isEmpty()) {
+            return redirect()->route('admin.reports.index')
+                ->withInput()
+                ->with('warning', 'No incidents found for the selected filters. Please try a different date range or criteria.');
+        }
+
+        $viewMode = $validated['view_mode'] ?? 'weekly';
+        if ($viewMode === 'periodic') {
+            $viewMode = 'weekly';
+        }
+        $current = $this->incidentPicture($incidents, $validated['date_from'], $validated['date_to'], $viewMode);
+
+        $comparison = null;
+        $compareFilters = null;
+        if (in_array('comparison', $sections, true)) {
+            [$compareFrom, $compareTo] = $this->comparisonWindow($validated);
+            $compareFilters = array_merge($validated, [
+                'date_from' => $compareFrom->toDateString(),
+                'date_to' => $compareTo->toDateString(),
+            ]);
+            $earlier = $this->buildFilteredQuery($compareFilters, ['incidentType', 'agency', 'assignments.agency'])
+                ->orderBy('reported_at')
+                ->get();
+            $comparison = $this->incidentPicture($earlier, $compareFilters['date_from'], $compareFilters['date_to'], $viewMode);
+        }
+
+        $projection = in_array('projection', $sections, true)
+            ? $this->projectNextPeriod($current['arrivals'])
+            : null;
+        $paired = $comparison ? [
+            'status' => $this->pairCounts($current['status'], $comparison['status']),
+            'priority' => $this->pairCounts($current['priority'], $comparison['priority']),
+            'types' => $this->pairCounts($current['types'], $comparison['types']),
+        ] : null;
+
+        $agencyName = null;
+        if (! empty($validated['agency_id'])) {
+            $agencyName = Agency::find($validated['agency_id'])?->name ?? 'N/A';
+        }
+
+        $pdf = Pdf::loadView('admin.reports.decision_pdf', [
+            'filters' => $validated,
+            'compareFilters' => $compareFilters,
+            'agencyName' => $agencyName,
+            'sections' => $sections,
+            'current' => $current,
+            'comparison' => $comparison,
+            'paired' => $paired,
+            'projection' => $projection,
+            'generated_at' => now(),
+        ]);
+
+        return $pdf->download('raniag-decision-'.now()->format('Y-m-d').'.pdf')
+            ->cookie('download_token', $request->input('download_token'), 1, null, null, null, false);
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function comparisonWindow(array $validated): array
+    {
+        if (! empty($validated['compare_from']) && ! empty($validated['compare_to'])) {
+            return [
+                Carbon::parse($validated['compare_from'])->startOfDay(),
+                Carbon::parse($validated['compare_to'])->endOfDay(),
+            ];
+        }
+
+        $from = Carbon::parse($validated['date_from'])->startOfDay();
+        $to = Carbon::parse($validated['date_to'])->endOfDay();
+        $days = (int) $from->diffInDays($to) + 1;
+        $compareTo = $from->copy()->subDay()->endOfDay();
+
+        return [$compareTo->copy()->subDays($days - 1)->startOfDay(), $compareTo];
+    }
+
+    /**
+     * @param  array<int, array{label: string, count: int}>  $current
+     * @param  array<int, array{label: string, count: int}>  $previous
+     * @return array<int, array{label: string, current: int, previous: int, change: int}>
+     */
+    private function pairCounts(array $current, array $previous): array
+    {
+        $labels = [];
+        foreach (array_merge($current, $previous) as $row) {
+            $labels[$row['label']] = true;
+        }
+        $now = collect($current)->keyBy('label');
+        $then = collect($previous)->keyBy('label');
+        $rows = [];
+        foreach (array_keys($labels) as $label) {
+            $a = (int) ($now[$label]['count'] ?? 0);
+            $b = (int) ($then[$label]['count'] ?? 0);
+            $rows[] = ['label' => $label, 'current' => $a, 'previous' => $b, 'change' => $a - $b];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<int, array{label: string, count: int}>  $arrivals
+     * @return array{count: int, direction: string, note: string}
+     */
+    private function projectNextPeriod(array $arrivals): array
+    {
+        $counts = array_map(fn ($row) => (int) $row['count'], $arrivals);
+        $n = count($counts);
+        if ($n === 0) {
+            return [
+                'count' => 0,
+                'direction' => 'flat',
+                'note' => 'There are no periods in this range to project from.',
+            ];
+        }
+        if ($n === 1) {
+            return [
+                'count' => $counts[0],
+                'direction' => 'flat',
+                'note' => 'Only one period is in this range, so the next period is projected at the same number of reports ('.$counts[0].').',
+            ];
+        }
+
+        $slope = ($counts[$n - 1] - $counts[0]) / ($n - 1);
+        $next = max(0, (int) round($counts[$n - 1] + $slope));
+        $direction = $slope > 0.5 ? 'up' : ($slope < -0.5 ? 'down' : 'about level');
+        $unit = 'period';
+
+        return [
+            'count' => $next,
+            'direction' => $direction,
+            'note' => 'If the change from the first '.$unit.' to the last continues, the next '.$unit.' would have about '.$next.' reports. The line is '.$direction.' across this range. This is a planning figure from these dates, not a prediction of a particular incident.',
+        ];
     }
 
     /**
@@ -374,6 +517,10 @@ class ReportController extends Controller
             $rules['view_mode'] = 'nullable|string|in:periodic,weekly,monthly';
             $rules['charts'] = 'nullable|array';
             $rules['charts.*'] = 'string|in:'.implode(',', self::CHART_KEYS);
+            $rules['sections'] = 'nullable|array';
+            $rules['sections.*'] = 'string|in:'.implode(',', self::DECISION_SECTIONS);
+            $rules['compare_from'] = 'nullable|date|before_or_equal:today';
+            $rules['compare_to'] = 'nullable|date|after_or_equal:compare_from|before_or_equal:today';
         }
 
         $validated = $request->validate($rules);
@@ -664,7 +811,7 @@ class ReportController extends Controller
             ? (int) round(($minutes[$mid] + $minutes[$mid + 1]) / 2)
             : $minutes[$mid];
         if ($median < 60) {
-            return $median.' minutes';
+            return $median.' '.($median === 1 ? 'minute' : 'minutes');
         }
 
         return round($median / 60, 1).' hours';

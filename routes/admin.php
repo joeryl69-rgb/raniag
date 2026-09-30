@@ -119,8 +119,8 @@ Route::prefix('admin')
         Route::prefix('reports')->name('reports.')->group(function () {
 
             Route::get('/generate', [ReportController::class, 'index'])->name('index');
-            Route::post('/picture', [ReportController::class, 'picture'])->name('picture');
             Route::post('/generate', [ReportController::class, 'generate'])->name('generate');
+            Route::post('/decision', [ReportController::class, 'decision'])->name('decision');
             Route::post('/generate-excel', [ReportController::class, 'generateExcel'])->name('generate_excel');
             Route::post('/generate-chart-summary', [ReportController::class, 'chartSummary'])->name('generate_chart_summary');
         });
