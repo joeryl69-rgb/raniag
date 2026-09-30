@@ -45,66 +45,74 @@
     </div>
 </div>
 
-<div class="card border-0 shadow-sm" data-live-refresh data-live-refresh-target="#rg-feedback-list" data-live-refresh-interval="4000">
-    <div class="list-group list-group-flush" id="rg-feedback-list">
+<div data-live-refresh data-live-refresh-target="#rg-feedback-list" data-live-refresh-interval="4000">
+    <div class="rg-fb-list" id="rg-feedback-list">
         @forelse($submissions as $item)
-            <div class="list-group-item py-3">
-                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                    <div class="d-flex align-items-start gap-2">
-                        <i class="bi {{ $item->categoryIcon() }} fs-5 text-primary mt-1"></i>
-                        <div>
-                            <div class="fw-semibold">
-                                {{ $item->subject }}
-                                @if($item->isFromAgency())
-                                    <span class="badge bg-primary-subtle text-primary ms-1"><i class="bi bi-headset me-1"></i>Support Center{{ $item->agency ? ' · '.$item->agency->name : '' }}</span>
-                                @endif
-                            </div>
-                            <div class="small text-muted">
-                                {{ $item->categoryLabel() }}
-                                @if($item->submitter_name) · {{ $item->submitter_name }} @endif
-                                @if($item->submitter_email) · {{ $item->submitter_email }} @endif
-                                · {{ $item->created_at->diffForHumans() }}
-                            </div>
-                        </div>
+            <article class="rg-fb-case is-{{ $item->status }}">
+                <header class="rg-fb-head">
+                    <i class="bi {{ $item->categoryIcon() }}" aria-hidden="true"></i>
+                    <div>
+                        <h2>{{ $item->subject }}</h2>
+                        <p>
+                            {{ $item->categoryLabel() }}
+                            @if($item->isFromAgency())
+                                · Support Center{{ $item->agency ? ' · '.$item->agency->name : '' }}
+                            @else
+                                · Public landing page
+                            @endif
+                            @if($item->submitter_name) · {{ $item->submitter_name }} @endif
+                            @if($item->submitter_email) · {{ $item->submitter_email }} @endif
+                            · {{ $item->created_at->diffForHumans() }}
+                        </p>
                     </div>
-                    <span class="badge {{ ['new' => 'bg-danger', 'reviewed' => 'bg-warning text-dark', 'resolved' => 'bg-success'][$item->status] }}">
-                        {{ ucfirst($item->status) }}
-                    </span>
-                </div>
-                <p class="mt-2 mb-2 small">{{ $item->message }}</p>
+                    <span class="rg-fb-state">{{ ucfirst($item->status) }}</span>
+                </header>
+
+                <p class="rg-fb-message">{{ $item->message }}</p>
 
                 @if($item->admin_reply)
-                    <div class="border-start border-3 border-primary ps-3 my-2 small bg-light rounded-2 py-2">
-                        <div class="text-muted mb-1">
-                            <i class="bi bi-reply-fill me-1"></i>Replied {{ $item->replied_at?->diffForHumans() }} by {{ $item->replier?->name ?? '—' }}
+                    <div class="rg-fb-reply">
+                        <div class="rg-fb-reply-meta">
+                            <i class="bi bi-reply-fill"></i>
+                            Email sent {{ $item->replied_at?->diffForHumans() }} by {{ $item->replier?->name ?? '—' }}
                         </div>
-                        {!! $item->admin_reply !!}
+                        <div class="rg-fb-reply-body">{!! $item->admin_reply !!}</div>
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.feedback.update', $item) }}" class="d-flex flex-wrap gap-2 align-items-center">
-                    @csrf
-                    @method('PUT')
-                    <select name="status" class="form-select form-select-sm" style="width:auto;">
-                        <option value="new" @selected($item->status==='new')>New</option>
-                        <option value="reviewed" @selected($item->status==='reviewed')>Reviewed</option>
-                        <option value="resolved" @selected($item->status==='resolved')>Resolved</option>
-                    </select>
-                    <input type="text" name="admin_notes" class="form-control form-control-sm" style="max-width:320px;" placeholder="Internal note (optional)" value="{{ $item->admin_notes }}">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
-                    @if($item->reviewed_at)
-                        <span class="small text-muted">Last reviewed {{ $item->reviewed_at->diffForHumans() }} by {{ $item->reviewer?->name ?? '—' }}</span>
-                    @endif
-
-                    @if($item->submitter_email)
-                        <button type="button" class="btn btn-sm btn-primary ms-auto" onclick="openReplyModal({{ $item->id }}, @js($item->subject), @js($item->submitter_email), @js($item->admin_reply ?? ''))">
-                            <i class="bi bi-envelope-fill me-1"></i>{{ $item->admin_reply ? 'Edit & Resend Reply' : 'Reply by Email' }}
-                        </button>
-                    @else
-                        <span class="ms-auto small text-muted"><i class="bi bi-envelope-slash me-1"></i>No email provided</span>
-                    @endif
-                </form>
-            </div>
+                <div class="rg-fb-desk">
+                    <form method="POST" action="{{ route('admin.feedback.update', $item) }}">
+                        @csrf
+                        @method('PUT')
+                        <fieldset class="rg-fb-status">
+                            <legend>Update status</legend>
+                            @foreach(['new' => 'New', 'reviewed' => 'Reviewed', 'resolved' => 'Resolved'] as $value => $label)
+                                <label class="rg-fb-choice">
+                                    <input type="radio" name="status" value="{{ $value }}" @checked($item->status === $value)>
+                                    <span>{{ $label }}</span>
+                                </label>
+                            @endforeach
+                        </fieldset>
+                        <label class="rg-fb-note">
+                            <span>Internal note <em>not emailed</em></span>
+                            <input type="text" name="admin_notes" maxlength="2000" value="{{ $item->admin_notes }}" placeholder="Visible only to staff">
+                        </label>
+                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                    </form>
+                    <div class="rg-fb-mail">
+                        @if($item->reviewed_at)
+                            <p>Last saved {{ $item->reviewed_at->diffForHumans() }} by {{ $item->reviewer?->name ?? '—' }}</p>
+                        @endif
+                        @if($item->submitter_email)
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="openReplyModal({{ $item->id }}, @js($item->subject), @js($item->submitter_email), @js($item->admin_reply ?? ''))">
+                                <i class="bi bi-envelope"></i>{{ $item->admin_reply ? 'Edit and resend email' : 'Email a reply' }}
+                            </button>
+                        @else
+                            <p><i class="bi bi-envelope-slash"></i> No email on this message, so a reply cannot be sent.</p>
+                        @endif
+                    </div>
+                </div>
+            </article>
         @empty
             <div class="text-center text-muted py-5">
                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
@@ -145,6 +153,110 @@
         </div>
     </div>
 </div>
+
+@push('styles')
+<style>
+.rg-fb-list { display: grid; gap: 14px; }
+.rg-fb-case {
+    background: #fff;
+    border: 1px solid var(--raniag-border, #dde5ea);
+    border-left: 4px solid #dc3545;
+    border-radius: 14px;
+    box-shadow: var(--raniag-card-shadow, 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08));
+    padding: 16px 16px 14px;
+}
+.rg-fb-case.is-reviewed { border-left-color: #f6a723; }
+.rg-fb-case.is-resolved { border-left-color: #198754; }
+.rg-fb-head { display: flex; align-items: flex-start; gap: 12px; }
+.rg-fb-head > i {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--raniag-primary-light, #e7f0fd);
+    color: var(--raniag-primary, #0b5ed7);
+    flex-shrink: 0;
+}
+.rg-fb-head h2 { margin: 0; font-size: 1rem; font-weight: 800; }
+.rg-fb-head p { margin: 2px 0 0; color: #5b6780; font-size: .82rem; }
+.rg-fb-state {
+    margin-left: auto;
+    border-radius: 999px;
+    padding: .2rem .7rem;
+    font-size: .75rem;
+    font-weight: 800;
+    background: #fde8ea;
+    color: #b42318;
+}
+.is-reviewed .rg-fb-state { background: #fff4d6; color: #8a5a00; }
+.is-resolved .rg-fb-state { background: #e7f6ee; color: #0f7a45; }
+.rg-fb-message { margin: 12px 0 0; white-space: pre-wrap; }
+.rg-fb-reply {
+    margin-top: 12px;
+    border-radius: 12px;
+    background: #f4f7fb;
+    border: 1px solid var(--raniag-border, #dde5ea);
+    padding: 10px 12px;
+}
+.rg-fb-reply-meta { color: #5b6780; font-size: .78rem; font-weight: 700; margin-bottom: 6px; }
+.rg-fb-reply-body { max-height: 140px; overflow: auto; font-size: .9rem; }
+.rg-fb-reply-body > :last-child { margin-bottom: 0; }
+.rg-fb-desk {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: end;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--raniag-border, #dde5ea);
+}
+.rg-fb-desk form { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: end; }
+.rg-fb-status { border: 0; margin: 0; padding: 0; min-width: 0; }
+.rg-fb-status legend { width: 100%; }
+.rg-fb-status legend, .rg-fb-note span {
+    display: block;
+    margin-bottom: 4px;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #5b6780;
+}
+.rg-fb-note em { font-style: normal; font-weight: 600; text-transform: none; letter-spacing: 0; color: #8a97a8; }
+.rg-fb-status { display: flex; flex-wrap: wrap; gap: 6px; }
+.rg-fb-choice { margin: 0; }
+.rg-fb-choice input { position: absolute; opacity: 0; }
+.rg-fb-choice span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 .8rem;
+    border-radius: 999px;
+    border: 1px solid var(--raniag-border, #dde5ea);
+    background: #fff;
+    font-size: .84rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.rg-fb-choice input:checked + span { background: #0b5ed7; border-color: #0b5ed7; color: #fff; }
+.rg-fb-choice input:focus-visible + span { outline: 2px solid #0b5ed7; outline-offset: 2px; }
+.rg-fb-note { flex: 1 1 220px; margin: 0; }
+.rg-fb-note input {
+    width: 100%;
+    min-height: 34px;
+    border: 1px solid var(--raniag-border, #dde5ea);
+    border-radius: 8px;
+    padding: .35rem .6rem;
+}
+.rg-fb-mail { text-align: right; }
+.rg-fb-mail p { margin: 0 0 6px; color: #5b6780; font-size: .78rem; }
+@media (max-width: 767.98px) {
+    .rg-fb-desk { grid-template-columns: 1fr; }
+    .rg-fb-mail { text-align: left; }
+}
+</style>
+@endpush
 
 @push('scripts')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
