@@ -175,19 +175,10 @@
                                        {{ (int) old('incident_type_id') === $type->id ? 'checked' : '' }} required>
                                 <div class="d-flex align-items-start gap-2">
                                     @php
-                                        $rgIcons = [
-                                            'fire' => 'bi-fire',
-                                            'flood' => 'bi-water',
-                                            'crime' => 'bi-shield-exclamation',
-                                            'medical' => 'bi-heart-pulse',
-                                            'traffic' => 'bi-car-front',
-                                            'disaster' => 'bi-exclamation-diamond',
-                                            'infrastructure' => 'bi-cone-striped',
-                                            'other' => 'bi-question-circle',
-                                        ];
-                                        $rgIcon = $rgIcons[$type->slug] ?? 'bi-exclamation-triangle';
+                                        $rgIcon = \App\Support\IconLibrary::resolve($type->icon ?: $type->default_icon);
+                                        $rgColor = \App\Support\IconLibrary::resolveColor($type->color ?: $type->default_color);
                                     @endphp
-                                    <span class="badge rounded-pill" style="background: {{ $type->color ?? '#6c757d' }}">
+                                    <span class="badge rounded-pill" style="background: {{ $rgColor }}">
                                         <i class="bi {{ $rgIcon }}"></i>
                                     </span>
                                     <div>
@@ -562,6 +553,16 @@
 
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+@php
+    $incidentTypeMarkers = $incidentTypes->mapWithKeys(function ($type) {
+        return [$type->id => [
+            'icon' => \App\Support\IconLibrary::resolve($type->icon ?: $type->default_icon),
+            'color' => \App\Support\IconLibrary::resolveColor($type->color ?: $type->default_color),
+            'priority' => $type->default_priority?->value ?? 'medium',
+            'name' => $type->name,
+        ]];
+    });
+@endphp
 <script>
     window.RANIAG_MAP = @json($mapConfig);
     window.RANIAG_GPS = @json($gpsConfig);
@@ -569,7 +570,9 @@
     window.RANIAG_BARANGAYS = @json($barangays);
     window.RANIAG_BOUNDARY = @json($boundaryGeometry);
     window.RANIAG_BARANGAY_BOUNDARIES = @json($barangayBoundaries);
+    window.RANIAG_INCIDENT_TYPES = @json($incidentTypeMarkers);
 </script>
+<script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
 <script src="{{ asset('js/public-report.js') }}?v={{ @filemtime(public_path('js/public-report.js')) }}"></script>
 <script src="{{ asset('js/report-outbox.js') }}?v={{ @filemtime(public_path('js/report-outbox.js')) }}"></script>
 <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>

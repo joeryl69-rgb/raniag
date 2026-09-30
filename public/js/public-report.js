@@ -46,6 +46,9 @@
             document.querySelector('.text-danger.small.mt-2')?.remove();
         });
     });
+    document.querySelectorAll('input[name="incident_type_id"]').forEach((input) => {
+        input.addEventListener('change', () => refreshReportMarkerIcon());
+    });
 
     const anonymousToggle = document.getElementById('is_anonymous');
     const reporterFields = document.getElementById('reporter-fields');
@@ -465,6 +468,28 @@
         }
     }
 
+    function selectedIncidentType() {
+        const id = document.querySelector('input[name="incident_type_id"]:checked')?.value;
+        const types = window.RANIAG_INCIDENT_TYPES || {};
+        return (id && (types[id] || types[String(id)])) || null;
+    }
+
+    function reportMarkerIcon() {
+        if (!window.RaniagIcons?.buildDivIcon) return null;
+        const type = selectedIncidentType();
+        return window.RaniagIcons.buildDivIcon({
+            icon: type?.icon,
+            color: type?.color,
+            priority: type?.priority,
+            size: 36,
+        });
+    }
+
+    function refreshReportMarkerIcon() {
+        const icon = reportMarkerIcon();
+        if (mapMarker && icon) mapMarker.setIcon(icon);
+    }
+
     function setMarker(lat, lng, options = {}) {
         if (!mapInstance) {
             updateCoordinateInputs(lat, lng);
@@ -476,10 +501,19 @@
         updateCoordinateInputs(lat, lng);
 
         try {
+            let icon = null;
+            try {
+                icon = reportMarkerIcon();
+            } catch (iconError) {
+                console.error('RANIAG type marker failed:', iconError);
+            }
             if (mapMarker) {
                 mapMarker.setLatLng([lat, lng]);
+                if (icon) mapMarker.setIcon(icon);
             } else {
-                mapMarker = leaflet.marker([lat, lng], { draggable: false }).addTo(mapInstance);
+                const markerOptions = { draggable: false };
+                if (icon) markerOptions.icon = icon;
+                mapMarker = leaflet.marker([lat, lng], markerOptions).addTo(mapInstance);
             }
 
             if (options.pan !== false) {

@@ -9,6 +9,9 @@
  * public/css/public.css.
  */
 (function (window) {
+    // Keep Leaflet even if a later script replaces the global L.
+    const Leaflet = window.L;
+
     // Legacy fallback: a handful of old rows may still hold the pre-Bootstrap-
     // Icons slug values (e.g. "fire") instead of a "bi-*" class. New rows
     // always store a valid bi-* class directly (see App\Support\IconLibrary),
@@ -76,7 +79,7 @@
         // marker never quite sat on the true GPS point.
         const tipY = size / 2 + size / Math.SQRT2;
 
-        return L.divIcon({
+        return Leaflet.divIcon({
             html: '<div class="' + classes.join(' ') + '" style="background:' + color + '"><i class="bi ' + glyph + '"></i></div>',
             className: 'raniag-marker-marker',
             iconSize: [size, size],
@@ -119,7 +122,7 @@
         const color = priorityBadgeColor(opts.priority);
         const count = opts.count || 2;
 
-        return L.divIcon({
+        return Leaflet.divIcon({
             html: '<div class="raniag-marker-cluster" style="width:' + size + 'px;height:' + size + 'px;background:' + color + '"><span>' + count + '</span></div>',
             className: 'raniag-marker-marker',
             iconSize: [size, size],

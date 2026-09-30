@@ -523,6 +523,7 @@
                             <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>{{ __('Community Dashboard') }}
                         </a>
                     </li>
+                    @unless(request()->routeIs('public.home'))
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.support') ? 'active' : '' }}"
                            data-rg-tour="support"
@@ -530,6 +531,7 @@
                             <i class="bi bi-headset me-1 d-lg-none"></i>{{ __('Support') }}
                         </a>
                     </li>
+                    @endunless
                     @auth
                         <li class="nav-item">
                             <a class="nav-link rg-btn-ghost" href="{{ route('dashboard') }}">

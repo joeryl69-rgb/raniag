@@ -28,40 +28,39 @@
         </div>
     </div>
 
-    <section class="rg-how" data-rg-hero-card aria-labelledby="rg-how-title">
-        <div class="rg-how-head">
-            <div class="rg-how-jo-frame">
-                <img class="jo-mascot rg-how-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="140" height="176">
+    <section class="rg-flow" data-rg-hero-card aria-labelledby="rg-how-title">
+        <div class="rg-flow-head">
+            <img class="jo-mascot rg-flow-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="120" height="150">
+            <div>
+                <h2 id="rg-how-title">{{ __('How a report moves') }}</h2>
+                <p>Four steps, in order. You file it, you keep the number, staff send it to the right responder, and you watch the status.</p>
             </div>
-            <p class="rg-how-kicker">JO</p>
-            <h2 id="rg-how-title" class="rg-how-title">{{ __('How it works') }}</h2>
-            <p class="rg-how-lead">Four steps, from the report you file to the status you can check anytime.</p>
+            <button type="button" class="btn btn-primary" id="jo-start-tour-home">
+                <i class="bi bi-compass me-1"></i>Start guided tour
+            </button>
         </div>
-        <ol class="rg-how-steps">
+        <ol class="rg-flow-steps">
             <li>
-                <span class="rg-how-num">1</span>
+                <span>1</span>
                 <h3>File the report</h3>
-                <p>Describe what happened. Stay anonymous, or leave a number so a responder can reach you. A GPS photo helps {{ config('raniag.organization') }} find the scene.</p>
+                <p>Pick a type and send a GPS photo if you can. Written details are optional. Without a photo, leave a number so a responder can reach you.</p>
             </li>
             <li>
-                <span class="rg-how-num">2</span>
+                <span>2</span>
                 <h3>Keep your number</h3>
                 <p>You receive a tracking number the moment the report is in. That number is how you follow it later.</p>
             </li>
             <li>
-                <span class="rg-how-num">3</span>
+                <span>3</span>
                 <h3>{{ config('raniag.organization') }} assigns it</h3>
                 <p>Staff review the report and send it to the responder who covers that part of Pamplona.</p>
             </li>
             <li>
-                <span class="rg-how-num">4</span>
+                <span>4</span>
                 <h3>Watch the status</h3>
                 <p>The tracking page shows submitted, assigned, in progress, or resolved — without calling the office.</p>
             </li>
         </ol>
-        <button type="button" class="btn btn-primary" id="jo-start-tour-home">
-            <i class="bi bi-compass me-1"></i>Start guided tour
-        </button>
     </section>
 
     {{-- ===================== UPDATES & ANNOUNCEMENTS ===================== --}}
@@ -103,25 +102,10 @@
         </div>
     </div>
 
-    {{-- ===================== DOWNLOAD APP ===================== --}}
-    <div class="rg-download-cta mt-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div class="d-flex align-items-center gap-3">
-            <img src="/images/icons/raniag-master.svg" alt="RANIAG app icon" width="64" height="64" class="rounded-circle">
-            <div>
-                <h3 class="h5 fw-bold mb-1">{{ __('Get the RANIAG App') }}</h3>
-                <p class="small text-white-50 mb-0">{{ __('Install RANIAG on your phone for faster reporting and offline access — works in portrait or landscape.') }}</p>
-            </div>
-        </div>
-        <button type="button" id="rgInstallBtn" class="btn btn-light px-4">
-            <i class="bi bi-download me-2"></i>{{ __('Download App') }}
-        </button>
-    </div>
-
     <div class="rg-home-lower">
     {{-- ===================== FAQ ===================== --}}
-    <div class="row justify-content-center" id="faq">
-        <div class="col-lg-9">
-            <div class="rg-page-head text-center" data-rg-reveal>
+    <div id="faq">
+            <div class="rg-page-head" data-rg-reveal>
                 <span class="rg-eyebrow"><i class="bi bi-question-circle"></i>Good to know</span>
                 <h2 class="rg-page-title h4">{{ __('Frequently Asked Questions') }}</h2>
             </div>
@@ -133,7 +117,7 @@
                         </button>
                     </h3>
                     <div id="rgFaq1" class="accordion-collapse collapse show" data-bs-parent="#rgFaqAccordion">
-                        <div class="accordion-body">Yes. Leave the name and contact fields blank and no identifying details are attached to the report — only your tracking number links back to it, and only you hold that number.</div>
+                        <div class="accordion-body">Yes, when you attach a GPS photo, video, or file. With that evidence you can turn on Report anonymously and leave your name blank. Without a photo, a phone number or email is required so the team can verify the report. Only you hold the tracking number.</div>
                     </div>
                 </div>
                 <div class="accordion-item">
@@ -177,68 +161,97 @@
                     </div>
                 </div>
             </div>
-        </div>
     </div>
 
-    {{-- ===================== NEED HELP → SUPPORT CENTER ===================== --}}
-    <div class="row justify-content-center" id="help">
-        <div class="col-lg-8">
-            <div class="rg-support-card text-center p-4 p-lg-5">
-                <div class="text-primary fs-2 mb-2"><i class="bi bi-headset"></i></div>
-                <h2 class="h5 fw-bold mb-1">{{ __('Need Help or Have a Concern?') }}</h2>
-                <p class="text-muted small mb-3">Encountered an issue, have a suggestion, or want to raise a concern about RANIAG or {{ config('raniag.organization') }}'s response? Our Support Center goes directly to our team.</p>
-                <a href="{{ route('public.support') }}" class="rg-support-submit d-inline-flex align-items-center" style="text-decoration:none;">
-                    <i class="bi bi-send-fill me-2"></i>{{ __('Go to Support Center') }}
-                </a>
+    {{-- App install and the support desk sit beside the questions. --}}
+    <aside class="rg-home-aside" id="help">
+        <div class="rg-download-cta">
+            <img src="/images/icons/raniag-master.svg" alt="RANIAG app icon" width="52" height="52" class="rounded-circle">
+            <div>
+                <h3 class="h6 fw-bold mb-1">{{ __('Get the RANIAG App') }}</h3>
+                <p class="small text-white-50 mb-2">{{ __('Install it for faster reporting and offline access.') }}</p>
+                <button type="button" id="rgInstallBtn" class="btn btn-light btn-sm px-3">
+                    <i class="bi bi-download me-1"></i>{{ __('Download App') }}
+                </button>
             </div>
         </div>
-    </div>
+        <div class="rg-support-card p-4">
+            <div class="text-primary fs-3 mb-2"><i class="bi bi-headset"></i></div>
+            <h2 class="h5 fw-bold mb-1">{{ __('Need Help or Have a Concern?') }}</h2>
+            <p class="text-muted small mb-3">A problem with the site, a suggestion, or a concern about a response goes straight to the team.</p>
+            <a href="{{ route('public.support') }}" data-rg-tour="support" class="rg-support-submit d-inline-flex align-items-center" style="text-decoration:none;">
+                <i class="bi bi-send-fill me-2"></i>{{ __('Go to Support Center') }}
+            </a>
+        </div>
+    </aside>
     </div>
 </div>
 
 @push('styles')
 <style>
-.rg-how {
-    max-width: none;
-    margin: 1.4rem 0 2rem;
-    display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    column-gap: 28px;
+.rg-flow { margin: .5rem 0 2rem; }
+.rg-flow-head {
+    display: flex;
     align-items: center;
-    text-align: left;
+    gap: 18px;
+    margin-bottom: 18px;
 }
-.rg-how-head { grid-row: 1 / span 2; text-align: center; }
-.rg-how-jo-frame { margin: 0; }
-.rg-how .rg-how-jo { height: 170px; max-width: 170px; }
-.rg-how-lead { margin-bottom: 0; }
-.rg-how-steps { grid-template-columns: repeat(4, minmax(0,1fr)); margin-bottom: 12px; gap: 10px; }
-.rg-how-steps li { padding: 14px; box-shadow: none; }
-.rg-how > .btn { justify-self: start; }
+.rg-flow-jo { height: 92px; max-width: 92px; animation: none; }
+.rg-flow-head h2 { margin: 0 0 .25rem; font-size: clamp(1.35rem, 2vw, 1.7rem); font-weight: 800; }
+.rg-flow-head p { margin: 0; color: #5b6780; max-width: 46rem; }
+.rg-flow-head .btn { margin-left: auto; flex-shrink: 0; }
+.rg-flow-steps {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+}
+.rg-flow-steps li {
+    background: #fff;
+    border: 1px solid rgba(11, 18, 32, .08);
+    border-radius: 16px;
+    padding: 16px;
+}
+.rg-flow-steps span {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 8px;
+    border-radius: 9px;
+    background: var(--raniag-primary, #0b5ed7);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+}
+.rg-flow-steps h3 { margin: 0 0 .35rem; font-size: .95rem; font-weight: 700; }
+.rg-flow-steps p { margin: 0; color: #5b6780; font-size: .84rem; line-height: 1.45; }
 .rg-home-lower {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
-    gap: 24px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, .7fr);
+    gap: 22px;
     align-items: start;
-    margin-top: 2rem;
+    margin-top: 1.75rem;
 }
-.rg-home-lower > .row { margin: 0; }
-.rg-home-lower > .row > [class*="col-"] { width: 100%; padding: 0; }
-.rg-home-lower .rg-page-head { text-align: left !important; margin-bottom: 14px; }
-.rg-home-lower .rg-support-card { margin-top: 32px; }
-.rg-download-cta { padding: 22px 26px; }
-@media(max-width:991.98px) {
-  .rg-how { grid-template-columns:160px 1fr; }
-  .rg-how-steps { grid-template-columns:1fr 1fr; }
-  .rg-home-lower { grid-template-columns:1fr; }
-  .rg-home-lower .rg-support-card { margin-top:0; }
+.rg-home-aside { display: grid; gap: 14px; }
+.rg-home-aside .rg-download-cta {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px;
+    margin: 0;
 }
-@media(max-width:575.98px) {
-  .rg-how { display:block; text-align:center; }
-  .rg-how .rg-how-jo { height:140px; }
-  .rg-how-lead { margin-bottom:14px; }
-  .rg-how-steps { grid-template-columns:1fr; text-align:left; }
-  .rg-how > .btn { margin-top:2px; }
-  .rg-download-cta { padding:20px; }
+.rg-home-aside .rg-support-card { margin: 0; }
+@media (max-width: 991.98px) {
+    .rg-flow-head { flex-wrap: wrap; }
+    .rg-flow-head .btn { margin-left: 0; }
+    .rg-flow-steps { grid-template-columns: 1fr 1fr; }
+    .rg-home-lower { grid-template-columns: 1fr; }
+}
+@media (max-width: 575.98px) {
+    .rg-flow-steps { grid-template-columns: 1fr; }
 }
 </style>
 @endpush
