@@ -225,15 +225,14 @@ class SituationalMapService
                     continue;
                 }
 
+                $agencyName = $assignment->agency?->name;
+                $personName = $user->name ?: null;
                 if ($forPublic) {
-                    $label = $assignment->agency?->name ?: 'Responder';
+                    $label = $agencyName ?: 'Responder';
+                } elseif ($agencyName && $personName) {
+                    $label = $agencyName.' — '.$personName;
                 } else {
-                    $label = $assignment->agency?->name
-                        ?? $user->name
-                        ?? 'Responder';
-                    if ($assignment->assignee && $assignment->agency) {
-                        $label = $assignment->agency->name.' — '.$assignment->assignee->name;
-                    }
+                    $label = $agencyName ?: $personName ?: 'Responder';
                 }
 
                 try {

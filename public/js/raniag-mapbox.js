@@ -116,7 +116,7 @@
                 opacity: opts.opacity ?? 0.85,
             },
         });
-        opts.routeGroup.clearLayers();
+        if (opts.replace !== false) opts.routeGroup.clearLayers();
         layer.addTo(opts.routeGroup);
 
         return {
@@ -146,7 +146,7 @@
                 dashArray: '8 10',
             }
         );
-        opts.routeGroup.clearLayers();
+        if (opts.replace !== false) opts.routeGroup.clearLayers();
         layer.addTo(opts.routeGroup);
         return {
             layer,
