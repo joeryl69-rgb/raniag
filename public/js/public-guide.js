@@ -12,7 +12,7 @@
         { sel: '[data-rg-tour="track"]', pose: 'clipboard', label: 'Track Report', icon: 'bi-search', text: 'Track Report — check status anytime with your tracking or reference code.' },
         { sel: '[data-rg-tour="hazard"]', pose: 'map', label: 'Live Map', icon: 'bi-map', text: 'Live Map — hazard zones, evacuation centers, and barangay risk awareness in Pamplona.' },
         { sel: '[data-rg-tour="dashboard"]', pose: 'clipboard', label: 'Community Dashboard', icon: 'bi-bar-chart-line', text: 'Community Dashboard — a public picture of reports and situational updates.' },
-        { sel: '[data-rg-tour="support"]', pose: 'phone', label: 'Support', icon: 'bi-headset', text: 'Support — contact MDRRMO for help. Use Report an Incident to file a new case.' },
+        { sel: '[data-rg-tour="support"]', pose: 'phone', label: 'Support', icon: 'bi-headset', text: 'Support is the help button — contact MDRRMO there. Use Report an Incident to file a new case.' },
         { sel: '[data-rg-tour="report"]', pose: 'alert', label: 'Report an Incident', icon: 'bi-megaphone-fill', text: 'Report an Incident — file a new report. I can walk you through it the first time.' },
     ];
 
@@ -171,6 +171,9 @@
         const el = document.querySelector(sel);
         if (!navLinkVisible(el)) return;
         el.classList.add('jo-tour-spotlight');
+        if (!document.getElementById('publicNav')?.contains(el)) {
+            el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
     }
 
     let tourIndex = 0;
