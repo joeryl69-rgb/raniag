@@ -6,6 +6,12 @@
     $updateTemplate = route('admin.qr_posters.update', ['qrPoster' => '__ID__']);
 @endphp
 
+<x-kpi-strip :items="[
+    ['label' => 'Posters', 'value' => $posters->count(), 'icon' => 'bi-qr-code', 'tone' => 'primary'],
+    ['label' => 'Active', 'value' => $posters->where('is_active', true)->count(), 'icon' => 'bi-check-circle', 'tone' => 'success', 'sub' => 'Ready to print'],
+    ['label' => 'Barangays still open', 'value' => count($barangays), 'icon' => 'bi-geo-alt', 'tone' => 'warning', 'sub' => 'Without a poster yet'],
+]" />
+
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 no-print">
     <p class="small text-muted mb-0">One poster per barangay. Scanning it opens the public report form with that barangay already filled in.</p>
     <div class="d-flex gap-2">

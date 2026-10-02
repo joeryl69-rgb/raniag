@@ -3,6 +3,10 @@
         {{ __('Printable Document Requests') }}
     </x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Requests', 'value' => $documentRequests->total(), 'icon' => 'bi-file-earmark-pdf', 'tone' => 'primary', 'sub' => 'Matching the filters'],
+    ]" />
+
     @php
         $sectionLabels = [
             'incident_details' => 'Incident details',

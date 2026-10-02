@@ -3,14 +3,13 @@
         {{ __('Feedback & Concerns') }}
     </x-slot>
 
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <p class="small text-muted mb-0">Support Center messages from the public landing page and from signed-in agency/personnel accounts.</p>
-    <div class="d-flex gap-2">
-        <span class="badge bg-danger">{{ $counts['new'] }} New</span>
-        <span class="badge bg-warning text-dark">{{ $counts['reviewed'] }} Reviewed</span>
-        <span class="badge bg-success">{{ $counts['resolved'] }} Resolved</span>
-    </div>
-</div>
+<p class="small text-muted mb-3">Support Center messages from the public landing page and from signed-in agency/personnel accounts.</p>
+<x-kpi-strip :items="[
+    ['label' => 'New', 'value' => $counts['new'], 'icon' => 'bi-envelope', 'tone' => 'danger'],
+    ['label' => 'Reviewed', 'value' => $counts['reviewed'], 'icon' => 'bi-eye', 'tone' => 'warning'],
+    ['label' => 'Resolved', 'value' => $counts['resolved'], 'icon' => 'bi-check-circle', 'tone' => 'success'],
+    ['label' => 'In this list', 'value' => $submissions->total(), 'icon' => 'bi-chat-square-text', 'tone' => 'primary', 'sub' => 'Matching the filters'],
+]" />
 
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">

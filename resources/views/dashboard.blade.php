@@ -46,18 +46,10 @@
                 transition: box-shadow .18s ease, transform .18s ease;
             }
             .map-card .map-toolbar {
-                background: linear-gradient(90deg, #0b5ed7 0%, #0846a6 100%);
-                border-bottom: 0;
+                background: #fff;
+                border-bottom: 1px solid var(--raniag-border);
                 border-radius: 1rem 1rem 0 0;
             }
-            .map-card .map-toolbar h5,
-            .map-card .map-toolbar .live-pulse,
-            .map-card .map-toolbar i.bi-geo-alt-fill { color: #fff !important; }
-            .map-card .map-toolbar .map-mode-switch { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.25); }
-            .map-card .map-toolbar .map-mode-switch button { color: rgba(255,255,255,.85); }
-            .map-card .map-toolbar .map-mode-switch button.active { background: #fff; color: var(--raniag-primary); }
-            .map-card .map-toolbar .btn-outline-secondary { color: #fff; border-color: rgba(255,255,255,.4); }
-            .map-card .map-toolbar .btn-outline-secondary:hover { background: rgba(255,255,255,.15); color: #fff; }
             #map-refresh-btn.is-refreshing i { animation: map-refresh-spin .7s linear infinite; }
             @keyframes map-refresh-spin { to { transform: rotate(360deg); } }
 
@@ -68,28 +60,28 @@
 
             .kpi-card {
                 position: relative;
-                padding: 1.1rem 1.25rem;
+                padding: 1rem 1rem .95rem;
                 display: flex;
-                align-items: center;
-                gap: .9rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: .1rem;
                 text-decoration: none;
                 color: inherit;
-                border-left: 3px solid transparent;
-                transition: border-color .15s ease, background .15s ease;
+                min-width: 0;
             }
-            .kpi-card:hover { background: #fafbfc; color: inherit; transform: translateY(-2px); box-shadow: 0 16px 28px -20px rgba(15,23,42,.5); }
-            .kpi-card.tone-primary { border-left-color: var(--raniag-primary); }
-            .kpi-card.tone-warning { border-left-color: #b45309; }
-            .kpi-card.tone-success { border-left-color: var(--raniag-success); }
-            .kpi-card.tone-danger  { border-left-color: var(--raniag-danger); }
-            .kpi-icon { width: 34px; height: 34px; border-radius: .5rem; display: inline-flex; align-items: center; justify-content: center; font-size: .92rem; flex-shrink: 0; }
+            .kpi-card:hover { background: #f8fafc; color: inherit; }
+            .kpi-icon { position: absolute; top: .85rem; right: .85rem; width: 32px; height: 32px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: .9rem; }
             .kpi-icon.tone-primary { background: var(--raniag-primary-light); color: var(--raniag-primary); }
             .kpi-icon.tone-warning { background: #fff4e0; color: #b45309; }
             .kpi-icon.tone-success { background: #e7f8ee; color: var(--raniag-success); }
             .kpi-icon.tone-danger  { background: #fde8ea; color: var(--raniag-danger); }
-            .kpi-body { min-width: 0; }
-            .kpi-card .kpi-label { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--raniag-muted); }
-            .kpi-card .kpi-value { font-size: 1.65rem; font-weight: 700; color: var(--raniag-ink); line-height: 1.25; }
+            .kpi-body { min-width: 0; display: flex; flex-direction: column; padding-right: 2.4rem; }
+            .kpi-card .kpi-value { order: 1; }
+            .kpi-card .kpi-label { order: 2; }
+            .kpi-card .kpi-trend { order: 3; }
+            .kpi-card .kpi-sub { order: 4; }
+            .kpi-card .kpi-label { font-size: .78rem; font-weight: 600; color: var(--raniag-muted); }
+            .kpi-card .kpi-value { font-size: 1.7rem; font-weight: 750; letter-spacing: -.03em; color: var(--raniag-ink); line-height: 1.1; }
             .kpi-card .kpi-sub { font-size: .74rem; color: var(--raniag-muted); }
             .kpi-trend { display: inline-flex; align-items: center; gap: .1rem; font-size: .72rem; font-weight: 800; margin-top: .15rem; }
             .kpi-trend.up { color: #b45309; }
@@ -139,7 +131,7 @@
                 border: 1px solid rgba(220, 53, 69, .35);
                 background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
                 box-shadow: 0 0 0 0 rgba(220, 53, 69, .35);
-                animation: alert-banner-pulse 1.6s ease-in-out infinite;
+                animation: none;
             }
             .incident-alert-banner.is-visible { display: flex; }
             .incident-alert-banner .alert-pulse-dot {
@@ -156,8 +148,7 @@
             .incident-alert-banner .alert-copy { font-size: .92rem; color: #0f172a; font-weight: 600; }
             .incident-alert-banner .alert-meta { font-size: .78rem; color: #64748b; }
             @keyframes alert-banner-pulse {
-                0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .28); }
-                50% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+                0%, 100% { box-shadow: none; }
             }
             @keyframes alert-dot-pulse {
                 0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .65); }
@@ -353,6 +344,79 @@
         </button>
     </div>
 
+
+    {{-- ===================== KPI STRIP ===================== --}}
+    <div class="kpi-grid mb-4" id="kpi-grid">
+        @if($isAdmin)
+            <a href="{{ route('admin.incidents.index') }}" class="dash-card kpi-card tone-primary">
+                <span class="kpi-icon tone-primary"><i class="bi bi-clipboard2-pulse"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">Total Incidents</div>
+                    <div class="kpi-value" id="kpi-total">—</div>
+                    <div class="kpi-trend flat" id="kpi-reports-trend"></div>
+                    <div class="kpi-sub" id="kpi-total-sub">All recorded cases</div>
+                </div>
+            </a>
+            <a href="{{ route('admin.incidents.index', ['status' => 'in_progress']) }}" class="dash-card kpi-card tone-warning">
+                <span class="kpi-icon tone-warning"><i class="bi bi-hourglass-split"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">In Progress</div>
+                    <div class="kpi-value" id="kpi-in-progress">—</div>
+                    <div class="kpi-sub" id="kpi-active-assignments">Active assignments —</div>
+                </div>
+            </a>
+            <a href="{{ route('admin.incidents.index', ['status' => 'resolved']) }}" class="dash-card kpi-card tone-success">
+                <span class="kpi-icon tone-success"><i class="bi bi-check-circle"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">Resolved</div>
+                    <div class="kpi-value" id="kpi-resolved">—</div>
+                    <div class="kpi-trend flat" id="kpi-resolved-trend"></div>
+                    <div class="kpi-sub" id="kpi-resolved-week">Completed this week —</div>
+                </div>
+            </a>
+            <a href="{{ route('admin.agencies.index') }}" class="dash-card kpi-card tone-danger">
+                <span class="kpi-icon tone-danger"><i class="bi bi-diagram-3"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">Active Agencies</div>
+                    <div class="kpi-value" id="kpi-agencies">—</div>
+                    <div class="kpi-sub" id="kpi-avg-resolution">Avg. resolution —</div>
+                </div>
+            </a>
+        @else
+            <div class="dash-card kpi-card tone-primary">
+                <span class="kpi-icon tone-primary"><i class="bi bi-clipboard2-pulse"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">{{ $isAgency ? 'Assigned Incidents' : 'My Assignments' }}</div>
+                    <div class="kpi-value" id="kpi-assigned">—</div>
+                    <div class="kpi-sub">Currently active</div>
+                </div>
+            </div>
+            <div class="dash-card kpi-card tone-warning">
+                <span class="kpi-icon tone-warning"><i class="bi bi-hourglass-split"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">Pending Resolution</div>
+                    <div class="kpi-value" id="kpi-pending">—</div>
+                    <div class="kpi-sub">In progress / awaiting info</div>
+                </div>
+            </div>
+            <div class="dash-card kpi-card tone-success">
+                <span class="kpi-icon tone-success"><i class="bi bi-activity"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">In Progress</div>
+                    <div class="kpi-value" id="kpi-progress-count">—</div>
+                    <div class="kpi-sub">Being worked right now</div>
+                </div>
+            </div>
+            <div class="dash-card kpi-card tone-danger">
+                <span class="kpi-icon tone-danger"><i class="bi bi-chat-left-text"></i></span>
+                <div class="kpi-body">
+                    <div class="kpi-label">SMS Alerts (7d)</div>
+                    <div class="kpi-value" id="kpi-sms">—</div>
+                    <div class="kpi-sub">Sent this week</div>
+                </div>
+            </div>
+        @endif
+    </div>
     {{-- ===================== LIVE MAP (primary — map-first for command decisions) ===================== --}}
     <div class="row mb-4" id="situational-map-section">
         <div class="col-12">
@@ -465,78 +529,6 @@
         </div>
     </div>
 
-    {{-- ===================== KPI STRIP ===================== --}}
-    <div class="kpi-grid mb-4" id="kpi-grid">
-        @if($isAdmin)
-            <a href="{{ route('admin.incidents.index') }}" class="dash-card kpi-card tone-primary">
-                <span class="kpi-icon tone-primary"><i class="bi bi-clipboard2-pulse"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">Total Incidents</div>
-                    <div class="kpi-value" id="kpi-total">—</div>
-                    <div class="kpi-trend flat" id="kpi-reports-trend"></div>
-                    <div class="kpi-sub" id="kpi-total-sub">All recorded cases</div>
-                </div>
-            </a>
-            <a href="{{ route('admin.incidents.index', ['status' => 'in_progress']) }}" class="dash-card kpi-card tone-warning">
-                <span class="kpi-icon tone-warning"><i class="bi bi-hourglass-split"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">In Progress</div>
-                    <div class="kpi-value" id="kpi-in-progress">—</div>
-                    <div class="kpi-sub" id="kpi-active-assignments">Active assignments —</div>
-                </div>
-            </a>
-            <a href="{{ route('admin.incidents.index', ['status' => 'resolved']) }}" class="dash-card kpi-card tone-success">
-                <span class="kpi-icon tone-success"><i class="bi bi-check-circle"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">Resolved</div>
-                    <div class="kpi-value" id="kpi-resolved">—</div>
-                    <div class="kpi-trend flat" id="kpi-resolved-trend"></div>
-                    <div class="kpi-sub" id="kpi-resolved-week">Completed this week —</div>
-                </div>
-            </a>
-            <a href="{{ route('admin.agencies.index') }}" class="dash-card kpi-card tone-danger">
-                <span class="kpi-icon tone-danger"><i class="bi bi-diagram-3"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">Active Agencies</div>
-                    <div class="kpi-value" id="kpi-agencies">—</div>
-                    <div class="kpi-sub" id="kpi-avg-resolution">Avg. resolution —</div>
-                </div>
-            </a>
-        @else
-            <div class="dash-card kpi-card tone-primary">
-                <span class="kpi-icon tone-primary"><i class="bi bi-clipboard2-pulse"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">{{ $isAgency ? 'Assigned Incidents' : 'My Assignments' }}</div>
-                    <div class="kpi-value" id="kpi-assigned">—</div>
-                    <div class="kpi-sub">Currently active</div>
-                </div>
-            </div>
-            <div class="dash-card kpi-card tone-warning">
-                <span class="kpi-icon tone-warning"><i class="bi bi-hourglass-split"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">Pending Resolution</div>
-                    <div class="kpi-value" id="kpi-pending">—</div>
-                    <div class="kpi-sub">In progress / awaiting info</div>
-                </div>
-            </div>
-            <div class="dash-card kpi-card tone-success">
-                <span class="kpi-icon tone-success"><i class="bi bi-activity"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">In Progress</div>
-                    <div class="kpi-value" id="kpi-progress-count">—</div>
-                    <div class="kpi-sub">Being worked right now</div>
-                </div>
-            </div>
-            <div class="dash-card kpi-card tone-danger">
-                <span class="kpi-icon tone-danger"><i class="bi bi-chat-left-text"></i></span>
-                <div class="kpi-body">
-                    <div class="kpi-label">SMS Alerts (7d)</div>
-                    <div class="kpi-value" id="kpi-sms">—</div>
-                    <div class="kpi-sub">Sent this week</div>
-                </div>
-            </div>
-        @endif
-    </div>
 
     @if($isAdmin)
         {{-- ===================== PERFORMANCE OVERVIEW ===================== --}}

@@ -79,6 +79,7 @@ class HazardEvacController extends Controller
                     'name' => $z->name,
                     'geometry' => $z->geometry,
                     'color' => $z->displayColor(),
+                    'type' => $z->type?->name,
                     'active' => (bool) $z->is_active,
                 ];
             })->values(),

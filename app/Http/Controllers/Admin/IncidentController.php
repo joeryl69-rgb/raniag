@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ValidateIncidentRequest;
 use App\Models\Agency;
+use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\User;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
@@ -53,7 +54,25 @@ class IncidentController extends Controller
         // Provide incident types for filter dropdown
         $incidentTypes = IncidentType::orderBy('name')->get();
 
-        return view('admin.incidents.index', compact('incidents', 'incidentTypes'));
+        $statusCounts = Incident::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+        $countStatus = function (IncidentStatus $status) use ($statusCounts): int {
+            return (int) ($statusCounts[$status->value] ?? 0);
+        };
+        $incidentKpis = [
+            'total' => (int) $statusCounts->sum(),
+            'open' => $countStatus(IncidentStatus::Submitted)
+                + $countStatus(IncidentStatus::Received)
+                + $countStatus(IncidentStatus::Assigned)
+                + $countStatus(IncidentStatus::InProgress)
+                + $countStatus(IncidentStatus::PendingInfo),
+            'in_progress' => $countStatus(IncidentStatus::InProgress),
+            'resolved' => $countStatus(IncidentStatus::Resolved) + $countStatus(IncidentStatus::Closed),
+        ];
+
+        return view('admin.incidents.index', compact('incidents', 'incidentTypes', 'incidentKpis'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse

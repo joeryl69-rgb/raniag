@@ -3,6 +3,12 @@
         {{ __('Personnel Roles') }}
     </x-slot>
 
+<x-kpi-strip :items="[
+    ['label' => 'Role titles', 'value' => $roles->count(), 'icon' => 'bi-diagram-3', 'tone' => 'primary', 'sub' => 'Offered on personnel accounts'],
+    ['label' => 'Active titles', 'value' => $roles->where('is_active', true)->count(), 'icon' => 'bi-check-circle', 'tone' => 'success'],
+    ['label' => 'Assigned to someone', 'value' => $roles->filter(fn ($role) => (int) $role->personnel_count > 0)->count(), 'icon' => 'bi-person-check', 'tone' => 'warning'],
+]" />
+
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <p class="small text-muted mb-0">Role titles offered when registering or editing a Personnel account. Manage them here instead of a fixed list.</p>
     <div class="d-flex gap-2">

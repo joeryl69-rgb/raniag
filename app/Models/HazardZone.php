@@ -27,10 +27,15 @@ class HazardZone extends Model
 
     public function displayColor(): string
     {
+        $typeColor = $this->type?->color;
+        if (is_string($typeColor) && $typeColor !== '') {
+            return $typeColor;
+        }
+
         if (is_string($this->color) && $this->color !== '') {
             return $this->color;
         }
 
-        return $this->type?->color ?: '#b45309';
+        return '#b45309';
     }
 }

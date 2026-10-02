@@ -3,6 +3,11 @@
         {{ __('Incident Types') }}
     </x-slot>
 
+<x-kpi-strip :items="[
+    ['label' => 'Incident types', 'value' => $types->count(), 'icon' => 'bi-tags', 'tone' => 'primary'],
+    ['label' => 'Reports using them', 'value' => $types->sum('incidents_count'), 'icon' => 'bi-clipboard2-pulse', 'tone' => 'warning'],
+]" />
+
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <p class="small text-muted mb-0">Types used for incident reporting, dashboard breakdowns, and map markers.</p>
     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#typeModal" onclick="openCreateModal()">

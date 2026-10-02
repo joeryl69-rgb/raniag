@@ -3,6 +3,13 @@
         {{ __('Incidents') }}
     </x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'All incidents', 'value' => $incidentKpis['total'], 'icon' => 'bi-clipboard2-pulse', 'tone' => 'primary', 'sub' => 'Every recorded case'],
+        ['label' => 'Still open', 'value' => $incidentKpis['open'], 'icon' => 'bi-hourglass-split', 'tone' => 'warning', 'href' => route('admin.incidents.index', ['status' => 'in_progress']), 'sub' => 'Not resolved or closed'],
+        ['label' => 'In progress', 'value' => $incidentKpis['in_progress'], 'icon' => 'bi-activity', 'tone' => 'danger', 'href' => route('admin.incidents.index', ['status' => 'in_progress'])],
+        ['label' => 'Resolved or closed', 'value' => $incidentKpis['resolved'], 'icon' => 'bi-check-circle', 'tone' => 'success', 'href' => route('admin.incidents.index', ['status' => 'resolved'])],
+    ]" />
+
     <div class="row">
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">

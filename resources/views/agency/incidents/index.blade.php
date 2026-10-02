@@ -3,6 +3,10 @@
         {{ __('Assigned Incidents Dispatch') }}
     </x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Dispatches', 'value' => $incidents->total(), 'icon' => 'bi-card-checklist', 'tone' => 'primary', 'sub' => 'Matching this list'],
+    ]" />
+
     <div class="row">
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">

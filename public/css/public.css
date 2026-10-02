@@ -1562,6 +1562,46 @@ body.raniag-public {
     color: #e2e8f0;
 }
 
+/* Shared summary cards used on staff index pages. */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+@media (max-width: 1199.98px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) { .kpi-grid { grid-template-columns: 1fr; } }
+.kpi-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .1rem;
+    padding: 1rem 1rem .95rem;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    border: 1px solid var(--raniag-border, #dde5ea);
+    border-radius: 1rem;
+}
+a.kpi-card:hover { color: inherit; background: #f8fafc; }
+.kpi-icon {
+    position: absolute;
+    top: .85rem;
+    right: .85rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+}
+.kpi-icon.tone-primary { background: var(--raniag-primary-light, #e7f0fd); color: var(--raniag-primary, #0b5ed7); }
+.kpi-icon.tone-warning { background: #fff4e0; color: #b45309; }
+.kpi-icon.tone-success { background: #e7f8ee; color: var(--raniag-success, #16a34a); }
+.kpi-icon.tone-danger { background: #fde8ea; color: var(--raniag-danger, #dc3545); }
+.kpi-body { min-width: 0; display: flex; flex-direction: column; padding-right: 2.4rem; }
+.kpi-card .kpi-value { order: 1; font-size: 1.7rem; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; color: var(--raniag-ink, #0f172a); }
+.kpi-card .kpi-label { order: 2; font-size: .78rem; font-weight: 600; color: var(--raniag-muted, #64748b); }
+.kpi-card .kpi-sub { order: 3; font-size: .74rem; color: var(--raniag-muted, #64748b); }
+
 /* ============================================================
    DASHBOARD (resources/views/dashboard.blade.php) — this page defines its
    own local color system (--raniag-ink/--raniag-muted/tone-* classes) with
@@ -1884,7 +1924,8 @@ body.raniag-public {
   }
 }
 .jo-guide-avatar { flex-shrink: 0; }
-.jo-guide-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 18px; }
+.jo-guide-body { min-width: 0; padding-right: 28px; }
+.jo-guide-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .jo-guide-name { font-size: .72rem; font-weight: 800; letter-spacing: .08em; color: var(--raniag-primary, #0b5ed7); text-transform: uppercase; }
 .jo-guide-count { font-size: .72rem; font-weight: 700; color: #64748b; }
 .jo-guide-focus {
@@ -1902,7 +1943,17 @@ body.raniag-public {
 }
 .jo-guide-text { font-size: .9rem; color: #16203a; margin: 0; line-height: 1.35; }
 .jo-guide-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.jo-guide-close { position: absolute; top: 8px; right: 8px; }
+.jo-guide-avatar { pointer-events: none; }
+.jo-guide-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 4;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  pointer-events: auto;
+}
 .jo-tour-spotlight {
   outline: 2px solid #3d8bfd !important;
   outline-offset: 3px;

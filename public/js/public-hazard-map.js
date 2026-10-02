@@ -713,7 +713,7 @@
         function renderLegend(zones, centers) {
             const el = document.getElementById('hazard-legend');
             if (!el) return;
-            const zoneColors = [...new Set((zones || []).map((z) => z.color || z.type?.color || '#b45309'))].slice(0, 4);
+            const zoneColors = [...new Set((zones || []).map((z) => z.type?.color || z.color || '#b45309'))].slice(0, 4);
             const centerColors = [...new Set((centers || []).map((c) => c.color || '#0f766e'))].slice(0, 3);
             const zoneSwatches = (zoneColors.length ? zoneColors : ['#b45309'])
                 .map((c) => `<i class="rg-hazard-swatch" style="background:${esc(c)}"></i>`).join('');
@@ -760,7 +760,7 @@
             zoneLayers.clear();
             (zones || []).forEach((z) => {
                 if (!z.geometry) return;
-                const color = z.color || z.type?.color || '#b45309';
+                const color = z.type?.color || z.color || '#b45309';
                 const layer = leaflet.geoJSON(z.geometry, {
                     style: {
                         color,

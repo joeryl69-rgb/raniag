@@ -1,6 +1,10 @@
 <x-app-layout>
     <x-slot name="header">{{ __('My Document Requests') }}</x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Document requests', 'value' => $documentRequests->total(), 'icon' => 'bi-file-earmark-pdf', 'tone' => 'primary', 'sub' => 'Matching the filters'],
+    ]" />
+
     <div class="card raniag-card shadow-sm border-0">
         <div class="card-header raniag-card-header border-0 py-3">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 flex-wrap">

@@ -3,6 +3,11 @@
         {{ __('Government Agencies Management') }}
     </x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Agency accounts', 'value' => $agencies->total(), 'icon' => 'bi-building', 'tone' => 'primary', 'sub' => 'Matching this list'],
+        ['label' => 'Personnel accounts', 'value' => $personnelAccounts->total(), 'icon' => 'bi-person-badge', 'tone' => 'success', 'sub' => 'Matching this list'],
+    ]" />
+
     <div class="row">
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">

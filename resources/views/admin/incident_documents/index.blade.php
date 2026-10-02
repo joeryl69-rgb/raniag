@@ -1,6 +1,10 @@
 <x-app-layout>
     <x-slot name="header">{{ __('Case Documents') }}</x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Case files', 'value' => $incidents->total(), 'icon' => 'bi-folder2-open', 'tone' => 'primary', 'sub' => 'Resolved and closed, matching the filters'],
+    ]" />
+
     <p class="small text-muted mb-3">Paper forms for resolved and closed incidents. Opening a row files the photos. It does not open the live incident.</p>
 
     <div class="card border-0 shadow-sm mb-3">

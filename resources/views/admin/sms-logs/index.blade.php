@@ -3,6 +3,10 @@
         {{ __('SMS Communications Logs') }}
     </x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'SMS alerts', 'value' => $logs->total(), 'icon' => 'bi-chat-left-text', 'tone' => 'primary', 'sub' => 'Matching the filters'],
+    ]" />
+
     <div class="row">
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">

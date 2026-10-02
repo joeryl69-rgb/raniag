@@ -3,6 +3,10 @@
         {{ __('Resolved Reports') }}
     </x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Resolved reports', 'value' => $reports->total(), 'icon' => 'bi-clock-history', 'tone' => 'success', 'sub' => 'Matching the filters'],
+    ]" />
+
     <div class="card raniag-card shadow-sm border-0 mb-4">
         <div class="card-header raniag-card-header py-3 border-0">
             <h5 class="mb-1 fw-bold"><i class="bi bi-clock-history text-success me-2"></i>Resolved Reports</h5>

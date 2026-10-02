@@ -85,8 +85,8 @@
                 </div>
                 <div class="hz-map-wrap">
                     <div id="ops-map"></div>
-                    <div class="hz-legend">
-                        <span><i class="hz-swatch" id="legend-swatch"></i> Hazard area</span>
+                    <div class="hz-legend" id="hz-legend">
+                        <span><i class="hz-swatch" id="legend-swatch"></i> Next area</span>
                         <span><i class="hz-shelter-key"></i> Evacuation shelter</span>
                     </div>
                 </div>
@@ -122,7 +122,7 @@
                         </div>
                         <div class="d-flex align-items-center gap-2 mb-3" id="type-preview">
                             <span class="hz-type-chip" id="type-chip"><i class="bi bi-exclamation-triangle-fill" id="type-icon"></i></span>
-                            <span class="small text-muted">This color is what residents see.</span>
+                            <span class="small text-muted" id="type-color-note">Residents see this color on new areas of this type.</span>
                         </div>
                         <div class="mb-2">
                             <label class="form-label" for="zone-name">Area name</label>
@@ -432,10 +432,10 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
 <style>
-.hz-stat { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; background: #fff; }
-.hz-stat .value { font-size: 1.35rem; font-weight: 750; line-height: 1; }
+.hz-stat { border: 1px solid #e5e7eb; border-radius: 1rem; padding: 1rem 1rem .9rem; background: #fff; }
+.hz-stat .value { font-size: 1.7rem; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; }
 .hz-stat-sub { font-size: .85rem; font-weight: 600; color: #6b7280; }
-.hz-stat .label { font-size: .72rem; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+.hz-stat .label { font-size: .78rem; font-weight: 600; color: #6b7280; margin-top: 4px; }
 .stat-trend { display:inline-flex; align-items:center; gap:2px; margin-top:6px; font-size:.75rem; font-weight:700; }
 .stat-trend.up { color:#b45309; }
 .stat-trend.down { color:#0f766e; }
@@ -497,13 +497,41 @@
         const opt = typeSelect?.selectedOptions?.[0];
         const color = opt?.dataset?.color || '#64748b';
         const icon = opt?.dataset?.icon || 'bi-exclamation-triangle-fill';
-        if (legendSwatch) legendSwatch.style.background = color;
+        const note = document.getElementById('type-color-note');
+        const swatch = document.getElementById('legend-swatch');
+        if (swatch) swatch.style.background = color;
         if (typeChip) {
             typeChip.style.background = color + '22';
             typeChip.style.color = color;
         }
         if (typeIcon) typeIcon.className = 'bi ' + icon;
+        if (note) {
+            const name = opt?.textContent?.trim() || 'this type';
+            note.textContent = 'Residents see this color on new ' + name + ' areas. Areas already on the map keep their own type color.';
+        }
         if (drawnLayer && drawnLayer.setStyle) styleDrawn();
+        tintDrawers();
+    }
+
+    function renderSavedLegend() {
+        const legend = document.getElementById('hz-legend');
+        if (!legend) return;
+        const seen = [];
+        existingZones.forEach((z) => {
+            const color = z.color || '#b45309';
+            const label = z.type ? z.name + ' · ' + z.type : z.name;
+            if (!seen.some((row) => row.color === color && row.label === label)) {
+                seen.push({ color, label });
+            }
+        });
+        const saved = seen.slice(0, 3).map((row) => {
+            const safe = String(row.label).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+            const color = /^#[0-9A-Fa-f]{3,8}$/.test(row.color) ? row.color : '#b45309';
+            return '<span><i class="hz-swatch" style="background:' + color + '"></i>' + safe + '</span>';
+        }).join('');
+        legend.innerHTML = saved
+            + '<span><i class="hz-swatch" id="legend-swatch"></i> Next area</span>'
+            + '<span><i class="hz-shelter-key"></i> Evacuation shelter</span>';
     }
 
     const colorInput = document.getElementById('center-color');
@@ -562,6 +590,15 @@
     let polygonDrawer = new L.Draw.Polygon(map, { allowIntersection: false, showArea: true, shapeOptions: shapeOptions() });
     let boxDrawer = new L.Draw.Rectangle(map, { shapeOptions: shapeOptions() });
 
+    function tintDrawers() {
+        [polygonDrawer, boxDrawer].forEach((drawer) => {
+            if (!drawer) return;
+            if (drawer.options) drawer.options.shapeOptions = shapeOptions();
+            const guide = drawer._poly || drawer._shape;
+            if (guide && guide.setStyle) guide.setStyle(shapeOptions());
+        });
+    }
+
     function refreshDrawers() {
         polygonDrawer.disable();
         boxDrawer.disable();
@@ -578,6 +615,8 @@
         geometryInput.value = JSON.stringify(geo.geometry || geo);
         if (geometryHint) geometryHint.textContent = 'Boundary captured. Save the area, or clear it and draw again.';
     }
+
+    map.on('draw:drawstart draw:drawvertex', tintDrawers);
 
     map.on(L.Draw.Event.CREATED, function (e) {
         drawnItems.clearLayers();
@@ -614,6 +653,7 @@
         syncTypePreview();
         refreshDrawers();
     });
+    renderSavedLegend();
     syncTypePreview();
 
     if (geometryInput.value) {

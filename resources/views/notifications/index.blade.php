@@ -3,6 +3,10 @@
 @section('title', 'Notifications')
 
 @section('content')
+<x-kpi-strip :items="[
+    ['label' => 'Notifications', 'value' => $notifications->total(), 'icon' => 'bi-bell', 'tone' => 'primary', 'sub' => 'Matching this list'],
+]" />
+
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-2">
         <button type="button" class="btn btn-light btn-sm border" onclick="if (document.referrer && document.referrer.includes(window.location.host)) { history.back(); } else { window.location.href = '{{ auth()->user()?->homeRoute() ? route(auth()->user()->homeRoute()) : url('/') }}'; }" aria-label="Back">

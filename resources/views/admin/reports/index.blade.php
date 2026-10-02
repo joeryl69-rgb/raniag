@@ -22,6 +22,12 @@
     ];
 @endphp
 
+<x-kpi-strip :items="[
+    ['label' => 'Incident types', 'value' => $incidentTypes->count(), 'icon' => 'bi-tags', 'tone' => 'primary', 'sub' => 'Available in a report'],
+    ['label' => 'Agencies', 'value' => $agencies->count(), 'icon' => 'bi-building', 'tone' => 'warning'],
+    ['label' => 'Barangays', 'value' => count($barangays), 'icon' => 'bi-geo-alt', 'tone' => 'success', 'sub' => 'Places a report can cover'],
+]" />
+
 <p class="small text-muted mb-3">Choose a file, a period, and who it covers. Month, quarter, and year match the dashboards. Outside Pamplona reports and shelter guests are included when you ask for them.</p>
 
 @if(session('warning'))

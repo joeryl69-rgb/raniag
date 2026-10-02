@@ -3,6 +3,11 @@
         {{ __('Audit Trails Log') }}
     </x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Audit entries', 'value' => $logs->total(), 'icon' => 'bi-shield-shaded', 'tone' => 'primary', 'sub' => 'Matching the filters'],
+        ['label' => 'Log names', 'value' => $logNames->count(), 'icon' => 'bi-tags', 'tone' => 'warning'],
+    ]" />
+
     <div class="row">
         <div class="col-12">
             <div class="card raniag-card shadow-sm border-0 mb-4">

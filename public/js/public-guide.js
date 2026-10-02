@@ -83,7 +83,21 @@
             </div>
         `;
         document.body.appendChild(dock);
+        bindGuideClose();
         return dock;
+    }
+
+    let onGuideClose = finishSiteTour;
+
+    function bindGuideClose() {
+        const close = document.getElementById('jo-guide-close');
+        if (!close || close.dataset.bound === '1') return;
+        close.dataset.bound = '1';
+        close.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onGuideClose();
+        });
     }
 
     function setPose(pose) {
@@ -214,6 +228,7 @@
     }
 
     function startSiteTour() {
+        onGuideClose = finishSiteTour;
         tourIndex = 0;
         showDock();
         renderTourStep();
@@ -231,7 +246,7 @@
             btn('Skip', 'btn btn-outline-secondary btn-sm', finishSiteTour),
         ]);
 
-        document.getElementById('jo-guide-close')?.addEventListener('click', finishSiteTour, { once: true });
+        onGuideClose = finishSiteTour;
     }
 
     function replaySiteTour() {
@@ -253,10 +268,10 @@
                 hideDock();
             }),
         ]);
-        document.getElementById('jo-guide-close')?.addEventListener('click', () => {
+        onGuideClose = () => {
             writePrefs({ seenPages: { ...seen, [pageKey]: true } });
             hideDock();
-        }, { once: true });
+        };
     }
 
     /** Report wizard coach API */

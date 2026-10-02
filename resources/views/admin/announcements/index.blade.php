@@ -1,6 +1,10 @@
 <x-app-layout>
     <x-slot name="header">{{ __('Updates and announcements') }}</x-slot>
 
+    <x-kpi-strip :items="[
+        ['label' => 'Announcements', 'value' => $announcements->total(), 'icon' => 'bi-megaphone', 'tone' => 'primary', 'sub' => 'Published and drafts in this list'],
+    ]" />
+
     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
         <p class="small text-muted mb-0">Published items appear in the Updates and announcements section on the public landing page.</p>
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#annModal" onclick="openCreateModal()">
