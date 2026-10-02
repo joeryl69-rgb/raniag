@@ -9,10 +9,12 @@ use App\Models\HazardZone;
 use App\Models\HazardZoneType;
 use App\Models\IncidentType;
 use App\Support\IconLibrary;
+use App\Support\PeriodRange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class HazardEvacController extends Controller
@@ -39,6 +41,30 @@ class HazardEvacController extends Controller
         $evacuees = Schema::hasTable('evacuees')
             ? Evacuee::query()->with('center')->latest()->limit(200)->get()
             : collect();
+
+        $checkedIn = $evacuees->whereNull('checked_out_at');
+        $monthStart = now()->startOfMonth();
+        $previousStart = now()->copy()->subMonthNoOverflow()->startOfMonth();
+        $countSince = function ($rows, $from, $until = null) {
+            return $rows->filter(function ($row) use ($from, $until) {
+                $at = $row->created_at;
+                if (! $at || $at->lt($from)) {
+                    return false;
+                }
+
+                return $until === null || $at->lt($until);
+            })->count();
+        };
+        $checkedSince = function ($from, $until = null) use ($evacuees) {
+            return $evacuees->filter(function ($row) use ($from, $until) {
+                $at = $row->checked_in_at;
+                if (! $at || $at->lt($from)) {
+                    return false;
+                }
+
+                return $until === null || $at->lt($until);
+            })->count();
+        };
 
         return view('admin.hazard.index', [
             'incidentTypes' => $incidentTypes,
@@ -67,6 +93,19 @@ class HazardEvacController extends Controller
                 ];
             })->values(),
             'publicHazardMapUrl' => route('public.hazard.map'),
+            'cardTrends' => [
+                'areas' => PeriodRange::change($countSince($zones, $monthStart), $countSince($zones, $previousStart, $monthStart)),
+                'public' => [
+                    'percent' => $zones->count() > 0 ? (int) round($zones->where('is_active', true)->count() / $zones->count() * 100) : 0,
+                    'direction' => 'flat',
+                ],
+                'shelters' => [
+                    'percent' => $centers->count() > 0 ? (int) round($centers->where('is_open', true)->count() / $centers->count() * 100) : 0,
+                    'direction' => 'flat',
+                ],
+                'checked_in' => PeriodRange::change($checkedSince($monthStart), $checkedSince($previousStart, $monthStart)),
+                'outside' => $checkedIn->where('origin_scope', 'outside')->count(),
+            ],
         ]);
     }
 
@@ -170,18 +209,28 @@ class HazardEvacController extends Controller
 
     public function storeEvacuee(Request $request): RedirectResponse
     {
+        $outside = $request->input('origin_scope') === 'outside';
         $data = $request->validate([
             'evacuation_center_id' => ['required', 'exists:evacuation_centers,id'],
             'full_name' => ['required', 'string', 'max:120'],
             'age' => ['nullable', 'integer', 'min:0', 'max:120'],
             'sex' => ['nullable', 'string', 'max:16'],
-            'barangay' => ['nullable', 'string', 'max:100'],
+            'origin_scope' => ['required', 'in:inside,outside'],
+            'origin_place' => [$outside ? 'required' : 'nullable', 'string', 'max:120'],
+            'barangay' => array_values(array_filter([
+                'nullable',
+                'string',
+                'max:100',
+                $outside ? null : Rule::in(config('raniag.barangays', [])),
+            ])),
             'is_vulnerable' => ['sometimes', 'boolean'],
             'vulnerability_notes' => ['nullable', 'string', 'max:255'],
         ]);
 
         Evacuee::create([
             ...$data,
+            'origin_scope' => $outside ? 'outside' : 'inside',
+            'origin_place' => $outside ? $data['origin_place'] : null,
             'is_vulnerable' => $request->boolean('is_vulnerable'),
             'checked_in_at' => now(),
         ]);

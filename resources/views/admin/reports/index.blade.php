@@ -17,10 +17,12 @@
         'arrivals' => 'When reports arrived',
         'comparison' => 'Compare with another date range',
         'projection' => 'Projection for the next period',
+        'repeats' => 'Repeat areas',
+        'shelters' => 'People in shelters, including guests from outside Pamplona',
     ];
 @endphp
 
-<p class="small text-muted mb-3">Pick one file and set its dates. Charts, a summary, a comparison, and a projection are downloaded in the decision report. They are not shown on this page.</p>
+<p class="small text-muted mb-3">Choose a file, a period, and who it covers. Month, quarter, and year match the dashboards. Outside Pamplona reports and shelter guests are included when you ask for them.</p>
 
 @if(session('warning'))
     <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
@@ -41,28 +43,28 @@
                     <input type="radio" name="report_kind" value="register" @checked(old('report_kind', 'register') === 'register') data-action="{{ $registerUrl }}" data-loading="Building the incident register...">
                     <span>
                         <span class="d-block fw-semibold">Incident register</span>
-                        <span class="small text-muted">The official list: one row per report, with tracking number, type, barangay, office, status, and time. PDF.</span>
+                        <span class="small text-muted">One row per report, plus shelter guests for the same dates. PDF.</span>
                     </span>
                 </label>
                 <label class="report-choice">
                     <input type="radio" name="report_kind" value="sheet" @checked(old('report_kind') === 'sheet') data-action="{{ $excelUrl }}" data-loading="Building the spreadsheet...">
                     <span>
                         <span class="d-block fw-semibold">Working spreadsheet</span>
-                        <span class="small text-muted">The same cases in Excel, so you can sort them. Status, open incidents by type, response time, barangay, and office load sit above the rows.</span>
+                        <span class="small text-muted">Sortable rows, plus who is in a shelter and whether they live outside Pamplona.</span>
                     </span>
                 </label>
                 <label class="report-choice">
                     <input type="radio" name="report_kind" value="brief" @checked(old('report_kind') === 'brief') data-action="{{ $briefUrl }}" data-loading="Building the operations brief...">
                     <span>
                         <span class="d-block fw-semibold">Operations brief</span>
-                        <span class="small text-muted">For the morning briefing: what is still open, how long the first assignment took, which barangay needs which team, and when reports arrived. PDF.</span>
+                        <span class="small text-muted">What is still open, how fast the first team was sent, and where to send people. PDF.</span>
                     </span>
                 </label>
                 <label class="report-choice">
                     <input type="radio" name="report_kind" value="decision" @checked(old('report_kind') === 'decision') data-action="{{ $decisionUrl }}" data-loading="Building the decision report...">
                     <span>
                         <span class="d-block fw-semibold">Decision report</span>
-                        <span class="small text-muted">Choose the summary, charts, a second date range to compare, and a projection for the next period. PDF.</span>
+                        <span class="small text-muted">Pick the tables you need: comparison, repeat areas, and shelter guests. PDF.</span>
                     </span>
                 </label>
             </div>
@@ -72,6 +74,11 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h2 class="h6 fw-bold mb-3">Download</h2>
+                    <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Period">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-report-period="month">This month</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-report-period="quarter">This quarter</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-report-period="year">This year</button>
+                    </div>
                     <div class="row g-3">
                         <div class="col-sm-6">
                             <label for="date_from" class="form-label">From</label>
@@ -90,12 +97,23 @@
                         <select class="form-select @error('view_mode') is-invalid @enderror" id="view_mode" name="view_mode">
                             <option value="weekly" {{ old('view_mode', 'weekly') == 'weekly' ? 'selected' : '' }}>Week</option>
                             <option value="monthly" {{ old('view_mode') == 'monthly' ? 'selected' : '' }}>Month</option>
+                            <option value="quarterly" {{ old('view_mode') == 'quarterly' ? 'selected' : '' }}>Quarter</option>
+                            <option value="yearly" {{ old('view_mode') == 'yearly' ? 'selected' : '' }}>Year</option>
                             <option value="periodic" {{ old('view_mode') == 'periodic' ? 'selected' : '' }}>The whole date range</option>
                         </select>
                     </div>
 
-                    <details class="mt-3" @if(old('barangay') || old('agency_id') || old('incident_type_id') || (old('aor_scope') && old('aor_scope') !== 'aor_only')) open @endif>
-                        <summary class="small fw-semibold">Narrow the file</summary>
+                    <div class="mt-3">
+                        <label for="aor_scope" class="form-label">Which reports</label>
+                        <select class="form-select @error('aor_scope') is-invalid @enderror" id="aor_scope" name="aor_scope">
+                            <option value="aor_only" {{ old('aor_scope', 'aor_only') == 'aor_only' ? 'selected' : '' }}>Inside Pamplona</option>
+                            <option value="outside_aor_only" {{ old('aor_scope') == 'outside_aor_only' ? 'selected' : '' }}>Outside Pamplona only</option>
+                            <option value="all" {{ old('aor_scope') == 'all' ? 'selected' : '' }}>Inside and outside</option>
+                        </select>
+                    </div>
+
+                    <details class="mt-3" @if(old('barangay') || old('agency_id') || old('incident_type_id')) open @endif>
+                        <summary class="small fw-semibold">Narrow further</summary>
                         <div class="row g-3 mt-1">
                             <div class="col-12">
                                 <label for="barangay" class="form-label">Barangay</label>
@@ -122,14 +140,6 @@
                                     @foreach($incidentTypes as $type)
                                         <option value="{{ $type->id }}" {{ old('incident_type_id') == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
                                     @endforeach
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="aor_scope" class="form-label">Area</label>
-                                <select class="form-select @error('aor_scope') is-invalid @enderror" id="aor_scope" name="aor_scope">
-                                    <option value="aor_only" {{ old('aor_scope', 'aor_only') == 'aor_only' ? 'selected' : '' }}>Inside Pamplona</option>
-                                    <option value="outside_aor_only" {{ old('aor_scope') == 'outside_aor_only' ? 'selected' : '' }}>Referred outside Pamplona</option>
-                                    <option value="all" {{ old('aor_scope') == 'all' ? 'selected' : '' }}>Inside and outside</option>
                                 </select>
                             </div>
                         </div>
@@ -222,6 +232,35 @@
     form.querySelectorAll('input[name="report_kind"]').forEach((input) => input.addEventListener('change', sync));
     comparisonBox?.addEventListener('change', syncCompare);
     sync();
+
+    function localDate(date) {
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return date.getFullYear() + '-' + month + '-' + day;
+    }
+    document.querySelectorAll('[data-report-period]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const today = new Date();
+            const key = button.dataset.reportPeriod;
+            let start = new Date(today.getFullYear(), today.getMonth(), 1);
+            let mode = 'monthly';
+            if (key === 'quarter') {
+                start = new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1);
+                mode = 'quarterly';
+            } else if (key === 'year') {
+                start = new Date(today.getFullYear(), 0, 1);
+                mode = 'yearly';
+            }
+            document.getElementById('date_from').value = localDate(start);
+            document.getElementById('date_to').value = localDate(today);
+            const viewMode = document.getElementById('view_mode');
+            if (viewMode) viewMode.value = mode;
+            document.querySelectorAll('[data-report-period]').forEach((item) => {
+                item.classList.toggle('btn-primary', item === button);
+                item.classList.toggle('btn-outline-primary', item !== button);
+            });
+        });
+    });
 })();
 </script>
 @endpush

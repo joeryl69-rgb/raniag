@@ -11,6 +11,8 @@ use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\SmsLog;
 use App\Services\SituationalMapService;
+use App\Support\PeriodRange;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -101,12 +103,15 @@ class DashboardController extends Controller
     {
         // The toolbar refresh asks for a live pull. The short cache is only
         // for the background poll, so a click is not stuck on the last payload.
+        $period = PeriodRange::key($request->query('period'));
+        $cacheKey = $period === 'month' ? 'admin.dashboard.json' : 'admin.dashboard.json.'.$period;
+
         if ($request->boolean('fresh')) {
-            Cache::forget('admin.dashboard.json');
+            Cache::forget($cacheKey);
         }
 
-        $payload = Cache::remember('admin.dashboard.json', 25, function () {
-            return $this->buildDashboardPayload();
+        $payload = Cache::remember($cacheKey, 25, function () use ($period) {
+            return $this->buildDashboardPayload($period);
         });
 
         return response()->json($payload)->header('Cache-Control', 'no-store, private');
@@ -115,7 +120,7 @@ class DashboardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function buildDashboardPayload(): array
+    private function buildDashboardPayload(string $period = 'month'): array
     {
         $statusCountsRaw = Incident::selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
@@ -326,6 +331,77 @@ class DashboardController extends Controller
                 'out_of_jurisdiction_count' => $outOfJurisdictionCount,
                 'redundancy_hotspots' => $redundancyData,
             ],
+            'period' => $this->periodPicture($period),
         ], $this->situational->staffSituationalLayers());
+    }
+
+    /**
+     * Chart window shared with the community dashboard: month, quarter, or year.
+     *
+     * @return array<string, mixed>
+     */
+    private function periodPicture(string $period): array
+    {
+        $range = PeriodRange::resolve($period);
+        $completed = [IncidentStatus::Resolved->value, IncidentStatus::Closed->value];
+        $barangays = config('raniag.barangays', []);
+
+        $between = function (Carbon $from, Carbon $to, bool $resolved = false) use ($barangays, $completed) {
+            $query = Incident::query()
+                ->whereBetween('reported_at', [$from, $to])
+                ->whereIn('barangay', $barangays)
+                ->where('status', '!=', IncidentStatus::OutsideAor->value);
+
+            if ($resolved) {
+                $query->whereIn('status', $completed);
+            }
+
+            return $query;
+        };
+
+        $reports = $between($range['from'], $range['to'])->count();
+        $resolved = $between($range['from'], $range['to'], true)->count();
+        $reportsBefore = $between($range['previous_from'], $range['previous_to'])->count();
+        $resolvedBefore = $between($range['previous_from'], $range['previous_to'], true)->count();
+
+        $trend = collect($range['buckets'])->map(function (array $bucket) use ($between) {
+            return [
+                'label' => $bucket['label'],
+                'count' => $between($bucket['from'], $bucket['to'])->count(),
+                'resolved' => $between($bucket['from'], $bucket['to'], true)->count(),
+            ];
+        })->all();
+
+        $pairs = $between($range['from'], $range['to'])
+            ->join('incident_types', 'incidents.incident_type_id', '=', 'incident_types.id')
+            ->whereNotNull('incidents.barangay')
+            ->selectRaw('incidents.barangay as barangay, incident_types.name as type, COUNT(*) as count')
+            ->groupBy('incidents.barangay', 'incident_types.name')
+            ->orderByDesc('count')
+            ->get();
+
+        $top = $pairs->first();
+        $repeats = $pairs->filter(fn ($row) => (int) $row->count >= 2)->take(6)->map(fn ($row) => [
+            'barangay' => $row->barangay,
+            'type' => $row->type,
+            'count' => (int) $row->count,
+            'band' => PeriodRange::band((int) $row->count),
+        ])->values();
+
+        return [
+            'key' => $range['key'],
+            'label' => $range['label'],
+            'caption' => $range['caption'],
+            'trend' => $trend,
+            'reports_change' => PeriodRange::change($reports, $reportsBefore),
+            'resolved_change' => PeriodRange::change($resolved, $resolvedBefore),
+            'most_active' => $top ? [
+                'barangay' => $top->barangay,
+                'type' => $top->type,
+                'count' => (int) $top->count,
+                'band' => PeriodRange::band((int) $top->count),
+            ] : null,
+            'repeat_areas' => $repeats->all(),
+        ];
     }
 }

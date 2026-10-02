@@ -9,6 +9,7 @@ class Evacuee extends Model
 {
     protected $fillable = [
         'evacuation_center_id', 'full_name', 'age', 'sex', 'barangay',
+        'origin_scope', 'origin_place',
         'is_vulnerable', 'vulnerability_notes', 'checked_in_at', 'checked_out_at',
     ];
 
@@ -24,5 +25,22 @@ class Evacuee extends Model
     public function center(): BelongsTo
     {
         return $this->belongsTo(EvacuationCenter::class, 'evacuation_center_id');
+    }
+
+    public function isOutsideMunicipality(): bool
+    {
+        return $this->origin_scope === 'outside';
+    }
+
+    public function homeLabel(): string
+    {
+        if ($this->isOutsideMunicipality()) {
+            $place = trim((string) $this->origin_place);
+            $barangay = trim((string) $this->barangay);
+
+            return trim($barangay.($barangay && $place ? ', ' : '').$place) ?: 'Outside Pamplona';
+        }
+
+        return $this->barangay ?: 'Pamplona';
     }
 }

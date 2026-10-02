@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agency;
+use App\Models\Evacuee;
 use App\Models\Incident;
 use App\Models\IncidentType;
+use App\Support\PeriodRange;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class ReportController extends Controller
@@ -29,6 +32,8 @@ class ReportController extends Controller
         'arrivals',
         'comparison',
         'projection',
+        'repeats',
+        'shelters',
     ];
 
     private const CHART_KEYS = [
@@ -87,6 +92,8 @@ class ReportController extends Controller
             'filters' => $validated,
             'agencyName' => $agencyName,
             'resolvedAgencyNames' => $resolvedAgencyNames,
+            'shelters' => $this->shelterPicture($validated['date_from'], $validated['date_to']),
+            'repeats' => $this->repeatAreas($incidents),
             'generated_at' => now(),
         ]);
 
@@ -164,6 +171,19 @@ class ReportController extends Controller
         $writer->addRow(['Office', 'Cases', 'Still open'], $writer::STYLE_HEADER);
         foreach ($decision['agency_load']['rows'] as $row) {
             $writer->addRow([$row['label'], $row['count'], $row['open']], $writer::STYLE_BODY);
+        }
+        $writer->addRow([]);
+
+        $shelters = $this->shelterPicture($validated['date_from'], $validated['date_to']);
+        $writer->addRow(['People in shelters'], $writer::STYLE_SECTION);
+        $writer->mergeRow(0, 5);
+        $writer->addRow(['From Pamplona', $shelters['inside'], 'From outside', $shelters['outside'], 'Still inside', $shelters['still_in']], $writer::STYLE_BODY);
+        $writer->addRow(['Name', 'Shelter', 'From', 'Origin', 'Checked in', 'Status'], $writer::STYLE_HEADER);
+        foreach ($shelters['rows'] as $row) {
+            $writer->addRow([$row['name'], $row['shelter'], $row['from'], $row['origin'], $row['checked_in'], $row['status']], $writer::STYLE_BODY);
+        }
+        if ($shelters['rows'] === []) {
+            $writer->addRow(['No evacuees checked in during this range.'], $writer::STYLE_BODY);
         }
         $writer->addRow([]);
 
@@ -323,6 +343,7 @@ class ReportController extends Controller
             'comparison' => $comparison,
             'paired' => $paired,
             'projection' => $projection,
+            'shelters' => $this->shelterPicture($validated['date_from'], $validated['date_to']),
             'generated_at' => now(),
         ]);
 
@@ -435,6 +456,7 @@ class ReportController extends Controller
                 'label' => $period['label'],
                 'count' => $period['count'],
             ], $periods),
+            'repeats' => $this->repeatAreas($incidents),
             'lines' => $this->buildNarrative($incidents, $periods, $viewMode, [
                 'open_workload' => $tables['open_workload'],
                 'response_time' => $tables['response_time'],
@@ -514,7 +536,7 @@ class ReportController extends Controller
         ];
 
         if ($withView) {
-            $rules['view_mode'] = 'nullable|string|in:periodic,weekly,monthly';
+            $rules['view_mode'] = 'nullable|string|in:periodic,weekly,monthly,quarterly,yearly';
             $rules['charts'] = 'nullable|array';
             $rules['charts.*'] = 'string|in:'.implode(',', self::CHART_KEYS);
             $rules['sections'] = 'nullable|array';
@@ -605,25 +627,47 @@ class ReportController extends Controller
         }
 
         $periods = [];
-        $cursor = $viewMode === 'monthly' ? $start->copy()->startOfMonth() : $start->copy()->startOfWeek();
+        $cursor = match ($viewMode) {
+            'monthly' => $start->copy()->startOfMonth(),
+            'quarterly' => $start->copy()->startOfQuarter(),
+            'yearly' => $start->copy()->startOfYear(),
+            default => $start->copy()->startOfWeek(),
+        };
 
         while ($cursor->lte($end)) {
-            $bucketEnd = $viewMode === 'monthly' ? $cursor->copy()->endOfMonth() : $cursor->copy()->endOfWeek();
-            $rangeFrom = $cursor->max($start);
-            $rangeTo = $bucketEnd->min($end);
+            $bucketEnd = match ($viewMode) {
+                'monthly' => $cursor->copy()->endOfMonth(),
+                'quarterly' => $cursor->copy()->endOfQuarter(),
+                'yearly' => $cursor->copy()->endOfYear(),
+                default => $cursor->copy()->endOfWeek(),
+            };
+            $rangeFrom = $cursor->copy()->max($start);
+            $rangeTo = $bucketEnd->copy()->min($end);
 
             $count = $incidents->filter(function ($incident) use ($rangeFrom, $rangeTo) {
                 return $incident->reported_at && $incident->reported_at->between($rangeFrom, $rangeTo, true);
             })->count();
 
+            $label = match ($viewMode) {
+                'monthly' => $cursor->format('F Y'),
+                'quarterly' => 'Q'.$cursor->quarter.' '.$cursor->format('Y'),
+                'yearly' => $cursor->format('Y'),
+                default => 'Week of '.$rangeFrom->format('M d, Y'),
+            };
+
             $periods[] = [
-                'label' => $viewMode === 'monthly' ? $cursor->format('F Y') : 'Week of '.$rangeFrom->format('M d, Y'),
+                'label' => $label,
                 'from' => $rangeFrom,
                 'to' => $rangeTo,
                 'count' => $count,
             ];
 
-            $cursor = $viewMode === 'monthly' ? $cursor->copy()->addMonthNoOverflow() : $cursor->copy()->addWeek();
+            $cursor = match ($viewMode) {
+                'monthly' => $cursor->copy()->addMonthNoOverflow(),
+                'quarterly' => $cursor->copy()->addQuarter(),
+                'yearly' => $cursor->copy()->addYear(),
+                default => $cursor->copy()->addWeek(),
+            };
         }
 
         return $periods;
@@ -900,5 +944,67 @@ class ReportController extends Controller
         return $assignments->sortByDesc('created_at')
             ->first(fn ($a) => $a->agency?->name)
             ?->agency?->name;
+    }
+
+    /**
+     * Places where the same incident type was reported more than once
+     * in the selected range.
+     *
+     * @return list<array{place: string, type: string, count: int, band: string}>
+     */
+    private function repeatAreas($incidents): array
+    {
+        return $incidents
+            ->groupBy(fn ($incident) => ($incident->barangay ?: 'Unspecified')."\n".($incident->incidentType->name ?? 'Incident'))
+            ->map(function ($rows, $key) {
+                [$place, $type] = explode("\n", $key, 2);
+                $count = $rows->count();
+
+                return [
+                    'place' => $place,
+                    'type' => $type,
+                    'count' => $count,
+                    'band' => PeriodRange::band($count),
+                ];
+            })
+            ->filter(fn ($row) => $row['count'] >= 2)
+            ->sortByDesc('count')
+            ->take(8)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Evacuees checked in during the report dates, split by whether they
+     * live in Pamplona or came from another municipality.
+     *
+     * @return array{inside: int, outside: int, still_in: int, rows: list<array<string, string>>}
+     */
+    private function shelterPicture(string $dateFrom, string $dateTo): array
+    {
+        $empty = ['inside' => 0, 'outside' => 0, 'still_in' => 0, 'rows' => []];
+        if (! Schema::hasTable('evacuees')) {
+            return $empty;
+        }
+
+        $people = Evacuee::query()
+            ->with('center')
+            ->whereBetween('checked_in_at', [$dateFrom.' 00:00:00', $dateTo.' 23:59:59'])
+            ->orderBy('full_name')
+            ->get();
+
+        return [
+            'inside' => $people->where('origin_scope', '!=', 'outside')->count(),
+            'outside' => $people->where('origin_scope', 'outside')->count(),
+            'still_in' => $people->whereNull('checked_out_at')->count(),
+            'rows' => $people->map(fn (Evacuee $person) => [
+                'name' => $person->full_name,
+                'shelter' => $person->center?->name ?? '—',
+                'from' => $person->homeLabel(),
+                'origin' => $person->isOutsideMunicipality() ? 'Outside municipality' : 'Pamplona',
+                'checked_in' => $person->checked_in_at?->format('M j, Y g:i a') ?? '—',
+                'status' => $person->checked_out_at ? 'Left '.$person->checked_out_at->format('M j') : 'Inside',
+            ])->all(),
+        ];
     }
 }

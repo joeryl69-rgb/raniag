@@ -21,36 +21,51 @@
     </div>
 
     <div id="pd-content" class="d-none">
-        <section class="rg-community-summary" data-rg-stagger>
-            <div class="rg-community-primary">
+        <div class="rg-period-bar">
+            <span class="rg-community-label" id="pd-period-label">This month</span>
+            <div class="rg-period-switch" role="group" aria-label="Chart period">
+                <button type="button" class="is-on" data-period="month">Month</button>
+                <button type="button" data-period="quarter">Quarter</button>
+                <button type="button" data-period="year">Year</button>
+            </div>
+        </div>
+        <section class="rg-kpi-row" aria-label="Situation totals">
+            <article class="rg-kpi rg-kpi-open">
                 <span class="rg-community-label">Open now</span>
                 <strong id="pd-active">—</strong>
-                <p>Reports still moving through review, assignment, or response.</p>
+                <p id="pd-active-note">Reports still moving through review, assignment, or response.</p>
+            </article>
+            <article class="rg-kpi">
+                <span class="rg-community-label" id="pd-received-label">This month</span>
+                <strong id="pd-total-month">—</strong>
+                <small id="pd-received-change">reports received</small>
+            </article>
+            <article class="rg-kpi">
+                <span class="rg-community-label" id="pd-completed-label">Completed this month</span>
+                <strong id="pd-resolved-month">—</strong>
+                <small id="pd-resolution-note">of this month's reports</small>
+            </article>
+            <article class="rg-kpi">
+                <span class="rg-community-label">Pamplona record</span>
+                <strong id="pd-total-all">—</strong>
+                <small>reports recorded</small>
+            </article>
+        </section>
+
+        <section class="rg-active-callout" id="pd-most-active" hidden>
+            <div>
+                <span class="rg-community-label">Most active right now</span>
+                <strong id="pd-most-active-title">—</strong>
+                <p id="pd-most-active-copy"></p>
             </div>
-            <div class="rg-community-facts">
-                <div>
-                    <span>This month</span>
-                    <strong id="pd-total-month">—</strong>
-                    <small>reports received</small>
-                </div>
-                <div>
-                    <span>Completed this month</span>
-                    <strong id="pd-resolved-month">—</strong>
-                    <small id="pd-resolution-note">of this month's reports</small>
-                </div>
-                <div>
-                    <span>Pamplona record</span>
-                    <strong id="pd-total-all">—</strong>
-                    <small>reports recorded</small>
-                </div>
-            </div>
+            <span class="rg-risk-pill" id="pd-most-active-band">Watch</span>
         </section>
 
         <div class="rg-community-grid">
             <section class="rg-situation-card rg-trend-card">
                 <div class="rg-card-head">
                     <div>
-                        <span class="rg-community-label">Six-month movement</span>
+                        <span class="rg-community-label" id="pd-trend-caption">Six-month movement</span>
                         <h2>Reports and completed cases</h2>
                     </div>
                     <span class="rg-privacy-note"><i class="bi bi-shield-check"></i> Pamplona only</span>
@@ -79,6 +94,22 @@
                 <p class="rg-privacy-copy"><i class="bi bi-shield-lock me-1"></i>Barangay totals only. Exact locations remain private.</p>
             </section>
 
+            <section class="rg-situation-card rg-risk-card">
+                <div class="rg-card-head">
+                    <div>
+                        <span class="rg-community-label">Repeat areas</span>
+                        <h2>Where the same incident keeps returning</h2>
+                    </div>
+                </div>
+                <div class="rg-risk-scale" aria-hidden="true">
+                    <span class="band-low">Low</span>
+                    <span class="band-watch">Watch</span>
+                    <span class="band-elevated">Elevated</span>
+                    <span class="band-high">High</span>
+                </div>
+                <div id="pd-repeat-list" class="rg-repeat-list"></div>
+            </section>
+
             <section class="rg-situation-card">
                 <div class="rg-card-head">
                     <div>
@@ -101,16 +132,15 @@
 .rg-community-head { display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:26px; }
 .rg-community-head h1 { margin:.45rem 0 .4rem; font-size:clamp(2rem,4vw,3.5rem); letter-spacing:-.045em; line-height:1; }
 .rg-community-head p { max-width:700px; margin:0; color:#64748b; }
-.rg-community-summary { display:grid; grid-template-columns:minmax(250px,.8fr) 2fr; background:#0f1c33; color:#fff; border-radius:24px; overflow:hidden; margin-bottom:18px; }
-.rg-community-primary { padding:28px; background:linear-gradient(145deg,#0f766e,#115e59); }
-.rg-community-primary strong { display:block; font-size:4rem; line-height:1; margin:.45rem 0; }
-.rg-community-primary p { margin:0; color:rgba(255,255,255,.72); font-size:.86rem; }
-.rg-community-label { text-transform:uppercase; letter-spacing:.14em; font-size:.68rem; font-weight:800; color:#0f766e; }
-.rg-community-primary .rg-community-label { color:#99f6e4; }
-.rg-community-facts { display:grid; grid-template-columns:repeat(3,1fr); align-items:center; }
-.rg-community-facts > div { padding:22px 24px; border-left:1px solid rgba(255,255,255,.1); }
-.rg-community-facts span,.rg-community-facts small { display:block; color:rgba(255,255,255,.58); font-size:.74rem; }
-.rg-community-facts strong { display:block; font-size:2rem; margin:.2rem 0; }
+.rg-kpi-row { display:grid; grid-template-columns:1.2fr repeat(3,1fr); gap:14px; margin-bottom:18px; }
+.rg-kpi { background:#fff; border:1px solid rgba(15,28,51,.08); border-radius:18px; padding:18px 18px 16px; min-width:0; box-shadow:0 18px 40px -34px rgba(15,28,51,.55); }
+.rg-kpi strong { display:block; margin:.35rem 0 .45rem; color:#0f1c33; font-size:2.35rem; line-height:1; letter-spacing:-.04em; }
+.rg-kpi small, .rg-kpi p { display:block; margin:0; color:#64748b; font-size:.78rem; line-height:1.35; }
+.rg-kpi-open { background:linear-gradient(160deg,#0f766e,#115e59); border:0; color:#fff; }
+.rg-kpi-open strong { color:#fff; font-size:3rem; }
+.rg-kpi-open p { color:rgba(255,255,255,.78); }
+.rg-community-label { text-transform:uppercase; letter-spacing:.12em; font-size:.68rem; font-weight:800; color:#0f766e; }
+.rg-kpi-open .rg-community-label { color:#99f6e4; }
 .rg-community-grid { display:grid; grid-template-columns:1.35fr .85fr; gap:18px; }
 .rg-situation-card { background:#fff; border:1px solid rgba(15,28,51,.09); border-radius:20px; padding:22px; min-width:0; box-shadow:0 16px 40px -35px rgba(15,28,51,.45); }
 .rg-card-head { display:flex; justify-content:space-between; align-items:start; gap:12px; margin-bottom:18px; }
@@ -131,16 +161,41 @@
 .rg-activity-item strong { font-size:.83rem; }
 .rg-activity-item small { display:block; color:#64748b; margin-top:2px; }
 .rg-community-updated { text-align:right; margin:14px 3px 0; color:#64748b; font-size:.75rem; }
+.rg-period-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+.rg-period-switch { display:inline-flex; background:#fff; border:1px solid rgba(15,28,51,.12); border-radius:999px; padding:3px; }
+.rg-period-switch button { border:0; background:transparent; border-radius:999px; padding:6px 14px; font-size:.78rem; font-weight:700; color:#475569; }
+.rg-period-switch button.is-on { background:#0f766e; color:#fff; }
+.rg-trend { display:inline-flex; align-items:center; gap:2px; font-weight:800; }
+.rg-trend.up { color:#b45309; }
+.rg-trend.down { color:#0f766e; }
+.rg-trend.flat { color:#64748b; }
+.rg-active-callout { display:flex; justify-content:space-between; align-items:center; gap:16px; background:#fff; border:1px solid rgba(15,28,51,.09); border-radius:20px; padding:18px 22px; margin-bottom:18px; }
+.rg-active-callout strong { display:block; font-size:1.15rem; margin:.2rem 0; }
+.rg-active-callout p { margin:0; color:#64748b; font-size:.84rem; }
+.rg-risk-pill, .rg-repeat-band { font-size:.72rem; font-weight:800; border-radius:999px; padding:4px 10px; text-transform:uppercase; letter-spacing:.04em; }
+.band-low, .rg-risk-pill.low { background:#dcfce7; color:#166534; }
+.band-watch, .rg-risk-pill.watch { background:#fef9c3; color:#854d0e; }
+.band-elevated, .rg-risk-pill.elevated { background:#ffedd5; color:#9a3412; }
+.band-high, .rg-risk-pill.high { background:#fee2e2; color:#991b1b; }
+.rg-risk-scale { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px; }
+.rg-risk-scale span { text-align:center; font-size:.68rem; font-weight:800; border-radius:8px; padding:4px 0; }
+.rg-repeat-row { display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #edf0f4; }
+.rg-repeat-row:last-child { border-bottom:0; }
+.rg-repeat-row strong { font-size:.86rem; }
+.rg-repeat-row small { display:block; color:#64748b; }
+[data-theme="dark"] .rg-kpi { background:#16213a; border-color:#2a3a5c; }
+[data-theme="dark"] .rg-kpi strong { color:#f8fafc; }
+[data-theme="dark"] .rg-kpi-open strong, [data-theme="dark"] .rg-kpi-open { color:#fff; }
 [data-theme="dark"] .rg-situation-card { background:#16213a; border-color:#2a3a5c; }
 [data-theme="dark"] .rg-rank-track,[data-theme="dark"] .rg-activity-icon { background:#1e2d4a; }
 [data-theme="dark"] .rg-activity-item { border-color:#2a3a5c; }
 @media(max-width:767.98px) {
   .rg-community-head { align-items:start; flex-direction:column; }
-  .rg-community-summary { grid-template-columns:1fr; }
-  .rg-community-facts { grid-template-columns:repeat(3,1fr); }
-  .rg-community-facts > div { padding:16px 12px; border-left:0; text-align:center; }
-  .rg-community-facts strong { font-size:1.55rem; }
+  .rg-kpi-row { grid-template-columns:1fr 1fr; }
+  .rg-kpi-open { grid-column:1 / -1; }
+  .rg-kpi-open strong { font-size:2.4rem; }
   .rg-community-grid { grid-template-columns:1fr; }
+  .rg-period-bar, .rg-active-callout { align-items:flex-start; flex-direction:column; }
   .rg-chart-stage { height:235px; }
 }
 </style>
@@ -151,6 +206,8 @@
 <script>
 (function () {
     const DATA_URL = document.querySelector('.rg-community')?.dataset.dashboardUrl;
+    let trendChart = null;
+    let currentPeriod = 'month';
 
     const statusLabels = {
         submitted: 'Submitted', received: 'Received', assigned: 'Assigned',
@@ -158,13 +215,36 @@
         resolved: 'Resolved', closed: 'Closed', rejected: 'Rejected', outside_aor: 'Outside AOR',
     };
 
-    fetch(DATA_URL, { headers: { Accept: 'application/json' } })
-        .then(r => r.json())
-        .then(render)
-        .catch(() => {
-            document.getElementById('pd-loading').innerHTML =
-                '<div class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Unable to load statistics right now. Please try again later.</div>';
+    document.querySelectorAll('.rg-period-switch button').forEach((button) => {
+        button.addEventListener('click', () => {
+            currentPeriod = button.dataset.period || 'month';
+            document.querySelectorAll('.rg-period-switch button').forEach((item) => {
+                item.classList.toggle('is-on', item === button);
+            });
+            load();
         });
+    });
+
+    load();
+
+    function load() {
+        const glue = DATA_URL.includes('?') ? '&' : '?';
+        fetch(DATA_URL + glue + 'period=' + encodeURIComponent(currentPeriod), { headers: { Accept: 'application/json' } })
+            .then(r => r.json())
+            .then(render)
+            .catch(() => {
+                document.getElementById('pd-loading').classList.remove('d-none');
+                document.getElementById('pd-loading').innerHTML =
+                    '<div class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Unable to load statistics right now. Please try again later.</div>';
+            });
+    }
+
+    function trendMarkup(change) {
+        if (!change) return '';
+        const arrow = change.direction === 'up' ? 'bi-arrow-up-short' : (change.direction === 'down' ? 'bi-arrow-down-short' : 'bi-dash');
+        const word = change.direction === 'up' ? 'up' : (change.direction === 'down' ? 'down' : 'flat');
+        return `<span class="rg-trend ${word}"><i class="bi ${arrow}"></i>${Math.abs(change.percent)}% vs previous</span>`;
+    }
 
     function render(data) {
         document.getElementById('pd-loading').classList.add('d-none');
@@ -174,19 +254,55 @@
         // now that the container is actually visible.
         window.rgRevealNow && window.rgRevealNow('#pd-content');
 
+        const period = data.period || { label: 'This month', caption: 'Last 6 months' };
+        document.getElementById('pd-period-label').textContent = period.label;
+        document.getElementById('pd-received-label').textContent = period.label;
+        document.getElementById('pd-completed-label').textContent = 'Completed';
+        document.getElementById('pd-trend-caption').textContent = period.caption;
         document.getElementById('pd-total-month').textContent = data.total_this_month;
         document.getElementById('pd-resolved-month').textContent = data.resolved_this_month;
         document.getElementById('pd-total-all').textContent = data.total_all_time;
-        document.getElementById('pd-resolution-note').textContent = data.total_this_month
-            ? `${Math.round((data.resolved_this_month / data.total_this_month) * 100)}% of reports this month`
-            : 'No reports this month';
+        document.getElementById('pd-received-change').innerHTML = data.total_this_month
+            ? `${trendMarkup(data.reports_change)}`
+            : 'No reports in this period';
+        const doneShare = data.total_this_month
+            ? Math.round((data.resolved_this_month / data.total_this_month) * 100)
+            : 0;
+        document.getElementById('pd-resolution-note').innerHTML = data.total_this_month
+            ? `${doneShare}% completed · ${trendMarkup(data.resolved_change)}`
+            : 'No reports in this period';
 
         const active = (data.status_counts.submitted || 0) + (data.status_counts.received || 0)
             + (data.status_counts.assigned || 0) + (data.status_counts.in_progress || 0)
             + (data.status_counts.pending_info || 0);
         document.getElementById('pd-active').textContent = active;
 
-        new Chart(document.getElementById('pd-trend-chart'), {
+        const most = data.most_active;
+        const mostBox = document.getElementById('pd-most-active');
+        if (most) {
+            mostBox.hidden = false;
+            document.getElementById('pd-most-active-title').textContent = `${most.type} in ${most.barangay}`;
+            document.getElementById('pd-most-active-copy').textContent = `${most.count} report${most.count === 1 ? '' : 's'} in ${period.label}. Same window as the chart and the downloaded reports.`;
+            const band = document.getElementById('pd-most-active-band');
+            band.textContent = most.band;
+            band.className = 'rg-risk-pill ' + String(most.band || '').toLowerCase();
+        } else {
+            mostBox.hidden = true;
+        }
+
+        const repeats = document.getElementById('pd-repeat-list');
+        repeats.innerHTML = (data.repeat_areas || []).length
+            ? data.repeat_areas.map((row) => `
+                <div class="rg-repeat-row">
+                    <div><strong>${esc(row.barangay)}</strong><small>${esc(row.type)}</small></div>
+                    <span class="rg-rank-count">${Number(row.count) || 0}</span>
+                    <span class="rg-repeat-band ${esc(String(row.band || '').toLowerCase())}">${esc(row.band)}</span>
+                </div>
+            `).join('')
+            : '<div class="text-muted small">No barangay has the same incident more than once in this period.</div>';
+
+        if (trendChart) trendChart.destroy();
+        trendChart = new Chart(document.getElementById('pd-trend-chart'), {
             type: 'line',
             data: {
                 labels: data.monthly_trend.map(m => m.label),

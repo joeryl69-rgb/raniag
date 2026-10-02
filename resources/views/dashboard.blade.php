@@ -91,6 +91,15 @@
             .kpi-card .kpi-label { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--raniag-muted); }
             .kpi-card .kpi-value { font-size: 1.65rem; font-weight: 700; color: var(--raniag-ink); line-height: 1.25; }
             .kpi-card .kpi-sub { font-size: .74rem; color: var(--raniag-muted); }
+            .kpi-trend { display: inline-flex; align-items: center; gap: .1rem; font-size: .72rem; font-weight: 800; margin-top: .15rem; }
+            .kpi-trend.up { color: #b45309; }
+            .kpi-trend.down { color: #0f766e; }
+            .kpi-trend.flat { color: var(--raniag-muted); }
+            .risk-pill { font-size: .68rem; font-weight: 800; border-radius: 999px; padding: .15rem .5rem; text-transform: uppercase; }
+            .risk-pill.low { background: #dcfce7; color: #166534; }
+            .risk-pill.watch { background: #fef9c3; color: #854d0e; }
+            .risk-pill.elevated { background: #ffedd5; color: #9a3412; }
+            .risk-pill.high { background: #fee2e2; color: #991b1b; }
 
             /* ---- Performance rings ---- */
             .perf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
@@ -464,6 +473,7 @@
                 <div class="kpi-body">
                     <div class="kpi-label">Total Incidents</div>
                     <div class="kpi-value" id="kpi-total">—</div>
+                    <div class="kpi-trend flat" id="kpi-reports-trend"></div>
                     <div class="kpi-sub" id="kpi-total-sub">All recorded cases</div>
                 </div>
             </a>
@@ -480,6 +490,7 @@
                 <div class="kpi-body">
                     <div class="kpi-label">Resolved</div>
                     <div class="kpi-value" id="kpi-resolved">—</div>
+                    <div class="kpi-trend flat" id="kpi-resolved-trend"></div>
                     <div class="kpi-sub" id="kpi-resolved-week">Completed this week —</div>
                 </div>
             </a>
@@ -612,7 +623,14 @@
         </div>
         <div class="section-head">
             <h5><i class="bi bi-clipboard2-pulse text-primary"></i> Incident picture</h5>
-            <p class="section-sub">Status and priority of recorded incidents, and which types residents are reporting</p>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <p class="section-sub mb-0" id="dash-period-label">This month</p>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Chart period">
+                    <button type="button" class="btn btn-primary" data-dash-period="month">Month</button>
+                    <button type="button" class="btn btn-outline-primary" data-dash-period="quarter">Quarter</button>
+                    <button type="button" class="btn btn-outline-primary" data-dash-period="year">Year</button>
+                </div>
+            </div>
         </div>
         <div class="row g-3 mb-4">
             <div class="col-12 col-xl-7">
@@ -625,8 +643,12 @@
             </div>
             <div class="col-12 col-xl-5">
                 <div class="dash-card analytics-card mb-3">
-                    <strong class="small text-uppercase text-muted d-block mb-2">Reports, last 6 weeks</strong>
+                    <strong class="small text-uppercase text-muted d-block mb-2" id="trend-caption">Reports, last 6 months</strong>
                     <div class="chart-wrap short"><canvas id="chart-trend"></canvas></div>
+                </div>
+                <div class="dash-card analytics-card mb-3">
+                    <strong class="small text-uppercase text-muted d-block mb-2">Repeat areas</strong>
+                    <div id="repeat-areas"><div class="empty-note">Loading repeat areas…</div></div>
                 </div>
                 <div class="dash-card analytics-card">
                     <strong class="small text-uppercase text-muted d-block mb-2">Open incidents by type</strong>
@@ -697,9 +719,20 @@
             let barangayCounts = {};
             let hotspotByBarangay = {};
             let alertPrimed = false;
+            let dashPeriod = 'month';
 
             document.addEventListener('DOMContentLoaded', function () {
                 initMap();
+                document.querySelectorAll('[data-dash-period]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        dashPeriod = button.dataset.dashPeriod || 'month';
+                        document.querySelectorAll('[data-dash-period]').forEach((item) => {
+                            item.classList.toggle('btn-primary', item === button);
+                            item.classList.toggle('btn-outline-primary', item !== button);
+                        });
+                        loadData({ manual: true });
+                    });
+                });
                 loadData();
                 setInterval(loadData, REFRESH_MS);
                 bindToolbar();
@@ -1195,7 +1228,9 @@
                 }
 
                 const glue = API_URL.includes('?') ? '&' : '?';
-                const url = API_URL + glue + '_=' + Date.now() + (manual ? '&fresh=1' : '');
+                const url = API_URL + glue + '_=' + Date.now()
+                    + (IS_ADMIN ? '&period=' + encodeURIComponent(dashPeriod) : '')
+                    + (manual ? '&fresh=1' : '');
 
                 fetch(url, {
                     headers: { 'Accept': 'application/json' },
@@ -1267,6 +1302,12 @@
                 setText('kpi-total-sub', `Submitted ${sb.submitted ?? 0} · Closed ${sb.closed ?? 0}`);
                 setText('kpi-active-assignments', `Active assignments ${data.active_assignments ?? 0}`);
                 setText('kpi-resolved-week', `Completed this week ${data.assignments_completed_this_week ?? 0}`);
+                const picture = data.period || {};
+                setTrend('kpi-reports-trend', picture.reports_change, picture.label);
+                setTrend('kpi-resolved-trend', picture.resolved_change, picture.label);
+                setText('dash-period-label', picture.label || '');
+                setText('trend-caption', picture.caption ? ('Reports, ' + picture.caption.toLowerCase()) : 'Reports');
+                renderRepeatAreas(picture);
 
                 const analytics = data.analytics || {};
                 setText('kpi-avg-resolution', `Avg. resolution ${analytics.avg_resolution_hours ?? 0}h`);
@@ -1295,7 +1336,7 @@
                 setText('out-of-jurisdiction', analytics.out_of_jurisdiction_count ?? 0);
 
                 renderOpsBoard(rawPoints);
-                renderTrendChart(analytics.weekly_trends || []);
+                renderTrendChart((data.period && data.period.trend) || analytics.weekly_trends || []);
                 const statusOrder = ['submitted', 'in_progress', 'resolved', 'closed'];
                 const statusLabels = { submitted: 'Submitted', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' };
                 renderMeters('status-meters', statusOrder.map((key) => ({
@@ -1340,6 +1381,33 @@
                 if (el) el.textContent = val;
             }
 
+            function setTrend(id, change, label) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (!change) {
+                    el.textContent = '';
+                    return;
+                }
+                const direction = change.direction || 'flat';
+                const icon = direction === 'up' ? 'bi-arrow-up-short' : (direction === 'down' ? 'bi-arrow-down-short' : 'bi-dash');
+                el.className = 'kpi-trend ' + direction;
+                el.innerHTML = `<i class="bi ${icon}"></i>${Math.abs(change.percent)}% vs previous ${label || 'period'}`;
+            }
+
+            function renderRepeatAreas(picture) {
+                const el = document.getElementById('repeat-areas');
+                if (!el) return;
+                const most = picture.most_active;
+                const rows = picture.repeat_areas || [];
+                const lead = most
+                    ? `<div class="hotspot-row"><span><strong>${escapeHtml(most.type)}</strong> in ${escapeHtml(most.barangay)}</span><span class="risk-pill ${escapeHtml(String(most.band || '').toLowerCase())}">${escapeHtml(most.band || '')} · ${most.count}</span></div>`
+                    : '<div class="empty-note">No reports in this period.</div>';
+                const list = rows.length
+                    ? rows.map((row) => `<div class="hotspot-row"><span>${escapeHtml(row.barangay)} · ${escapeHtml(row.type)}</span><span class="risk-pill ${escapeHtml(String(row.band || '').toLowerCase())}">${row.count}×</span></div>`).join('')
+                    : '<div class="empty-note">No barangay has the same incident more than once in this period.</div>';
+                el.innerHTML = lead + list;
+            }
+
             // r=52 circle circumference, matches the CSS stroke-dasharray above
             const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
             function setRing(fillId, valueId, percent) {
@@ -1366,14 +1434,19 @@
                     data: {
                         labels: rows.map(r => r.label),
                         datasets: [{
-                            label: 'Incidents',
+                            label: 'Reports',
                             data: rows.map(r => r.count),
                             borderColor: '#0b5ed7',
                             backgroundColor: 'rgba(11,94,215,0.08)',
                             fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: '#0b5ed7'
+                        }, {
+                            label: 'Completed',
+                            data: rows.map(r => r.resolved || 0),
+                            borderColor: '#0f766e',
+                            tension: 0.35, pointRadius: 3
                         }]
                     },
-                    options: { ...baseOpts({ legend: false }), animation: { duration: 1100, easing: 'easeOutQuart' } }
+                    options: { ...baseOpts({ legend: true }), animation: { duration: 1100, easing: 'easeOutQuart' } }
                 });
             }
 

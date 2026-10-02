@@ -165,6 +165,25 @@
         <p style="text-align: center; color: #666; padding: 20px;">No incidents found matching the specified filters.</p>
     @endif
 
+    @if(!empty($repeats))
+        <div class="section-title">Repeat areas</div>
+        <table>
+            <thead><tr><th>Place</th><th>Incident</th><th>Reports</th><th>Level</th></tr></thead>
+            <tbody>
+                @foreach($repeats as $row)
+                    <tr>
+                        <td>{{ $row['place'] }}</td>
+                        <td>{{ $row['type'] }}</td>
+                        <td>{{ $row['count'] }}</td>
+                        <td>{{ $row['band'] }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
+    @include('admin.reports.partials._shelters', ['shelters' => $shelters ?? null])
+
     <div style="margin-top:30px; padding-top:15px; border-top:1px solid #e2e8f0; text-align:center; color:#666; font-size:9pt;">
         <p style="margin:0 0 4px;">This report was generated automatically by {{ config('raniag.name') }} — {{ config('raniag.organization') }}</p>
         <p style="margin:0;">For inquiries, contact MDRRMO Pamplona.</p>

@@ -23,16 +23,35 @@
 
 <div class="row g-2 mb-3">
     <div class="col-6 col-lg-3">
-        <div class="hz-stat"><div class="value">{{ $zones->count() }}</div><div class="label">Hazard areas</div></div>
+        <div class="hz-stat">
+            <div class="value">{{ $zones->count() }}</div>
+            <div class="label">Hazard areas</div>
+            <x-stat-trend :change="$cardTrends['areas']" note="vs last month" />
+        </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="hz-stat"><div class="value">{{ $zones->where('is_active', true)->count() }}</div><div class="label">Shown to the public</div></div>
+        <div class="hz-stat">
+            <div class="value">{{ $zones->where('is_active', true)->count() }}</div>
+            <div class="label">Shown to the public</div>
+            <span class="stat-trend flat">{{ $cardTrends['public']['percent'] }}% of areas</span>
+        </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="hz-stat"><div class="value">{{ $centers->where('is_open', true)->count() }}<span class="hz-stat-sub">/{{ $centers->count() }}</span></div><div class="label">Shelters open</div></div>
+        <div class="hz-stat">
+            <div class="value">{{ $centers->where('is_open', true)->count() }}<span class="hz-stat-sub">/{{ $centers->count() }}</span></div>
+            <div class="label">Shelters open</div>
+            <span class="stat-trend flat">{{ $cardTrends['shelters']['percent'] }}% open</span>
+        </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="hz-stat"><div class="value">{{ $checkedIn->count() }}</div><div class="label">People checked in</div></div>
+        <div class="hz-stat">
+            <div class="value">{{ $checkedIn->count() }}</div>
+            <div class="label">People checked in</div>
+            <x-stat-trend :change="$cardTrends['checked_in']" note="vs last month" />
+            @if ($cardTrends['outside'])
+                <div class="small text-muted mt-1">{{ $cardTrends['outside'] }} from outside Pamplona</div>
+            @endif
+        </div>
     </div>
 </div>
 
@@ -239,7 +258,14 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
                 <div class="fw-semibold">{{ $checkedIn->count() }} checked in · {{ $evacuees->count() }} listed</div>
-                <input type="search" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter" style="max-width: 240px;">
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="btn-group btn-group-sm" id="evac-origin-filter" role="group" aria-label="Evacuee origin">
+                        <button type="button" class="btn btn-primary" data-origin="all">All</button>
+                        <button type="button" class="btn btn-outline-secondary" data-origin="inside">Pamplona</button>
+                        <button type="button" class="btn btn-outline-secondary" data-origin="outside">Outside</button>
+                    </div>
+                    <input type="search" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter" style="max-width: 240px;">
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="evacuee-table">
@@ -256,15 +282,18 @@
                     </thead>
                     <tbody>
                         @forelse ($evacuees as $evacuee)
-                            <tr data-search="{{ strtolower($evacuee->full_name.' '.($evacuee->center?->name ?? '').' '.($evacuee->barangay ?? '')) }}">
+                            <tr data-origin="{{ $evacuee->origin_scope === 'outside' ? 'outside' : 'inside' }}" data-search="{{ strtolower($evacuee->full_name.' '.($evacuee->center?->name ?? '').' '.$evacuee->homeLabel()) }}">
                                 <td>
                                     <div class="fw-semibold">{{ $evacuee->full_name }}</div>
+                                    @if ($evacuee->isOutsideMunicipality())
+                                        <span class="badge text-bg-info">Outside municipality</span>
+                                    @endif
                                     @if ($evacuee->is_vulnerable)
                                         <span class="badge text-bg-warning">Needs extra care{{ $evacuee->vulnerability_notes ? ': '.$evacuee->vulnerability_notes : '' }}</span>
                                     @endif
                                 </td>
                                 <td>{{ $evacuee->center?->name ?? '—' }}</td>
-                                <td class="text-muted">{{ $evacuee->barangay ?: '—' }}</td>
+                                <td class="text-muted">{{ $evacuee->homeLabel() }}</td>
                                 <td class="text-muted">{{ $evacuee->age ?? '—' }}{{ $evacuee->sex ? ' / '.$evacuee->sex : '' }}</td>
                                 <td class="text-muted small">{{ $evacuee->checked_in_at?->format('M j, g:i a') ?? '—' }}</td>
                                 <td>
@@ -345,13 +374,28 @@
                     <input name="full_name" id="full_name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'registry' ? old('full_name') : '' }}">
                 </div>
                 <div class="mb-3">
+                    <span class="form-label d-block">Where they live</span>
+                    <div class="btn-group w-100" role="group" aria-label="Evacuee origin">
+                        <input class="btn-check" type="radio" name="origin_scope" id="origin-inside" value="inside" @checked(old('origin_scope', 'inside') !== 'outside')>
+                        <label class="btn btn-outline-primary" for="origin-inside">Pamplona</label>
+                        <input class="btn-check" type="radio" name="origin_scope" id="origin-outside" value="outside" @checked(old('origin_scope') === 'outside')>
+                        <label class="btn btn-outline-primary" for="origin-outside">Outside the municipality</label>
+                    </div>
+                </div>
+                <div class="mb-3" id="origin-inside-fields">
                     <label class="form-label" for="evac-barangay">Home barangay</label>
                     <select name="barangay" id="evac-barangay" class="form-select">
                         <option value="">—</option>
                         @foreach ($barangays as $b)
-                            <option value="{{ $b }}" @selected(old('workspace') === 'registry' && old('barangay') === $b)>{{ $b }}</option>
+                            <option value="{{ $b }}" @selected(old('workspace') === 'registry' && old('origin_scope', 'inside') !== 'outside' && old('barangay') === $b)>{{ $b }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div class="mb-3 {{ old('origin_scope') === 'outside' ? '' : 'd-none' }}" id="origin-outside-fields">
+                    <label class="form-label" for="origin_place">Municipality or city</label>
+                    <input name="origin_place" id="origin_place" class="form-control mb-2" maxlength="120" value="{{ old('origin_place') }}" placeholder="e.g. Abulug">
+                    <label class="form-label" for="evac-barangay-out">Barangay or sitio there</label>
+                    <input id="evac-barangay-out" class="form-control" maxlength="100" value="{{ old('origin_scope') === 'outside' ? old('barangay') : '' }}" placeholder="Optional">
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col">
@@ -392,6 +436,10 @@
 .hz-stat .value { font-size: 1.35rem; font-weight: 750; line-height: 1; }
 .hz-stat-sub { font-size: .85rem; font-weight: 600; color: #6b7280; }
 .hz-stat .label { font-size: .72rem; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+.stat-trend { display:inline-flex; align-items:center; gap:2px; margin-top:6px; font-size:.75rem; font-weight:700; }
+.stat-trend.up { color:#b45309; }
+.stat-trend.down { color:#0f766e; }
+.stat-trend.flat { color:#6b7280; }
 .hz-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .hz-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .hz-map-wrap { position: relative; height: calc(100vh - 280px); min-height: 520px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #e8eef2; }
@@ -651,12 +699,45 @@
         });
     });
 
-    document.getElementById('evacuee-search')?.addEventListener('input', (e) => {
-        const q = e.target.value.trim().toLowerCase();
+    let evacOrigin = 'all';
+    function applyEvacueeFilter() {
+        const q = (document.getElementById('evacuee-search')?.value || '').trim().toLowerCase();
         document.querySelectorAll('#evacuee-table tbody tr[data-search]').forEach((row) => {
-            row.classList.toggle('d-none', q !== '' && !row.dataset.search.includes(q));
+            const originOk = evacOrigin === 'all' || row.dataset.origin === evacOrigin;
+            const textOk = q === '' || row.dataset.search.includes(q);
+            row.classList.toggle('d-none', !(originOk && textOk));
+        });
+    }
+    document.getElementById('evacuee-search')?.addEventListener('input', applyEvacueeFilter);
+    document.querySelectorAll('#evac-origin-filter button').forEach((button) => {
+        button.addEventListener('click', () => {
+            evacOrigin = button.dataset.origin || 'all';
+            document.querySelectorAll('#evac-origin-filter button').forEach((item) => {
+                item.classList.toggle('btn-primary', item === button);
+                item.classList.toggle('btn-outline-secondary', item !== button);
+            });
+            applyEvacueeFilter();
         });
     });
+
+    const insideFields = document.getElementById('origin-inside-fields');
+    const outsideFields = document.getElementById('origin-outside-fields');
+    const insideBarangay = document.getElementById('evac-barangay');
+    const outsideBarangay = document.getElementById('evac-barangay-out');
+    const originPlace = document.getElementById('origin_place');
+    function syncOrigin() {
+        const outside = document.getElementById('origin-outside')?.checked;
+        insideFields?.classList.toggle('d-none', outside);
+        outsideFields?.classList.toggle('d-none', !outside);
+        if (insideBarangay) insideBarangay.disabled = !!outside;
+        if (outsideBarangay) {
+            outsideBarangay.disabled = !outside;
+            outsideBarangay.name = outside ? 'barangay' : '';
+        }
+        if (originPlace) originPlace.disabled = !outside;
+    }
+    document.querySelectorAll('input[name="origin_scope"]').forEach((input) => input.addEventListener('change', syncOrigin));
+    syncOrigin();
 
     function fitMap() {
         map.invalidateSize();

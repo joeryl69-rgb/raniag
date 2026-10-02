@@ -26,9 +26,12 @@ test('community dashboard only counts incidents inside Pamplona', function () {
         'barangay' => 'Langagan',
     ]);
 
-    $response = $this->getJson(route('public.dashboard.data'))
+    $response = $this->getJson(route('public.dashboard.data', ['period' => 'quarter']))
         ->assertOk()
+        ->assertJsonPath('period.key', 'quarter')
         ->assertJsonPath('total_all_time', 1)
+        ->assertJsonPath('most_active.barangay', 'Bidduang')
+        ->assertJsonPath('most_active.type', 'Fire')
         ->assertJsonPath('barangay_counts.0.barangay', 'Bidduang');
 
     expect(collect($response->json('recent_activity'))->pluck('barangay'))

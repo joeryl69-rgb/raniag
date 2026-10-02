@@ -131,6 +131,30 @@
         @include('admin.reports.partials._columns', ['rows' => $comparison['arrivals'], 'color' => '#64748b'])
     @endif
 
+    @if(in_array('repeats', $sections, true))
+        <div class="section-title">Repeat areas</div>
+        <p class="no-data">Places where the same incident was reported more than once in this range.</p>
+        <table>
+            <thead><tr><th>Place</th><th>Incident</th><th>Reports</th><th>Level</th></tr></thead>
+            <tbody>
+                @forelse($current['repeats'] as $row)
+                    <tr>
+                        <td>{{ $row['place'] }}</td>
+                        <td>{{ $row['type'] }}</td>
+                        <td>{{ $row['count'] }}</td>
+                        <td>{{ $row['band'] }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="4">No repeat area in this range.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    @endif
+
+    @if(in_array('shelters', $sections, true))
+        @include('admin.reports.partials._shelters', ['shelters' => $shelters ?? null])
+    @endif
+
     @if(in_array('projection', $sections, true) && $projection)
         <div class="section-title">Projection for the next period</div>
         <div class="narrative">
