@@ -63,6 +63,8 @@ class PrintableReportRequestController extends Controller
 
     public function approve(ApproveDocumentRequestRequest $request, DocumentRequest $documentRequest): RedirectResponse|JsonResponse
     {
+        abort_unless($documentRequest->status === 'pending', 422, 'This request is no longer pending.');
+
         $result = $this->printableReportService->approveAndGenerate(
             documentRequest: $documentRequest,
             admin: $request->user(),
@@ -83,6 +85,8 @@ class PrintableReportRequestController extends Controller
 
     public function reject(ApproveDocumentRequestRequest $request, DocumentRequest $documentRequest): RedirectResponse|JsonResponse
     {
+        abort_unless($documentRequest->status === 'pending', 422, 'This request is no longer pending.');
+
         $comment = $request->validated('admin_comment');
         if ($comment === null || trim($comment) === '') {
             $comment = 'Rejected by admin';

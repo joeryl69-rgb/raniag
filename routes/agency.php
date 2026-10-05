@@ -18,6 +18,7 @@ Route::prefix('agency')
 
         Route::get('/document-requests', [DocumentRequestController::class, 'index'])->name('document_requests.index');
         Route::post('/document-requests/bulk', [DocumentRequestController::class, 'storeBulk'])->name('document_requests.bulk_store');
+        Route::patch('/document-requests/{documentRequest}/cancel', [DocumentRequestController::class, 'cancel'])->name('document_requests.cancel');
         Route::patch('/document-requests/{documentRequest}/archive', [DocumentRequestController::class, 'archive'])->name('document_requests.archive');
         Route::patch('/document-requests/{documentRequest}/unarchive', [DocumentRequestController::class, 'unarchive'])->name('document_requests.unarchive');
         Route::post('/incidents/{incident}/print-requests', [DocumentRequestController::class, 'store'])->name('incidents.print_requests.store');

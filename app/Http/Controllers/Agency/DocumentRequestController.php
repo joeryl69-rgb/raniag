@@ -59,7 +59,7 @@ class DocumentRequestController extends Controller
 
         $requestedIncidentIds = DocumentRequest::query()
             ->where('requesting_agency_id', $agencyId)
-            ->whereIn('status', ['pending', 'approved', 'sent'])
+            ->whereIn('status', DocumentRequestService::BLOCKING_STATUSES)
             ->pluck('incident_id');
 
         $eligibleIncidents = Incident::query()
@@ -113,6 +113,10 @@ class DocumentRequestController extends Controller
             abort(422, $error.' Please wait until it is on file, or submit without selecting it.');
         }
 
+        if ($blocked = $this->documentRequests->requestBlockReason($record, (int) $agencyId)) {
+            return $this->blockedRequestResponse($request, $blocked);
+        }
+
         $requestModel = $this->documentRequests->createPendingRequest(
             incident: $record,
             requestingAgencyId: $request->user()->agency_id,
@@ -155,6 +159,14 @@ class DocumentRequestController extends Controller
 
         abort_if($incidents->isEmpty(), 422, 'None of the selected reports are eligible for a printable request.');
 
+        $blocked = $incidents
+            ->map(fn ($incident) => $this->documentRequests->requestBlockReason($incident, (int) $agencyId))
+            ->filter();
+
+        if ($blocked->isNotEmpty()) {
+            return $this->blockedRequestResponse($request, $blocked->join(' '));
+        }
+
         $unavailable = $incidents
             ->map(fn ($incident) => $this->documentRequests->assertSectionsAvailable($incident, $data['requested_sections'] ?? null))
             ->filter();
@@ -185,6 +197,15 @@ class DocumentRequestController extends Controller
             ->with('success', count($incidents).' printable copies requested. Please wait for admin approval.');
     }
 
+    public function cancel(Request $request, DocumentRequest $documentRequest): RedirectResponse
+    {
+        abort_if($documentRequest->requesting_agency_id !== $request->user()->agency_id, 403);
+
+        $this->documentRequests->cancelPending($documentRequest);
+
+        return back()->with('success', 'Document request cancelled. You can submit a new one for that incident.');
+    }
+
     public function archive(Request $request, DocumentRequest $documentRequest): RedirectResponse
     {
         abort_if($documentRequest->requesting_agency_id !== $request->user()->agency_id, 403);
@@ -201,5 +222,14 @@ class DocumentRequestController extends Controller
         $documentRequest->update(['archived_at' => null]);
 
         return back()->with('success', 'Document request restored from archive.');
+    }
+
+    private function blockedRequestResponse(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->wantsJson()) {
+            return response()->json(['message' => $message], 422);
+        }
+
+        return back()->with('error', $message);
     }
 }

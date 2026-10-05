@@ -363,6 +363,19 @@ class NotificationService
         );
     }
 
+    public function notifyAdminsDocumentRequestCancelled(DocumentRequest $documentRequest): void
+    {
+        $incident = $documentRequest->incident;
+
+        $this->notifyRole(
+            UserRole::Administrator,
+            'document_request.cancelled',
+            'Document request cancelled',
+            "The agency cancelled the document request for [{$incident->tracking_number}].",
+            $incident,
+        );
+    }
+
     public function notifyRequesterDocumentReady(DocumentRequest $documentRequest): void
     {
         $requester = $documentRequest->requestedByUser;

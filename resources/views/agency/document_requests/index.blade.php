@@ -30,6 +30,7 @@
                             <option value="sent" @selected($currentStatus === 'sent')>Sent</option>
                             <option value="failed" @selected($currentStatus === 'failed')>Failed</option>
                             <option value="rejected" @selected($currentStatus === 'rejected')>Rejected</option>
+                            <option value="cancelled" @selected($currentStatus === 'cancelled')>Cancelled</option>
                             <option value="archived" @selected($currentStatus === 'archived')>Archived</option>
                         </select>
                     </div>
@@ -362,6 +363,17 @@
                                                         <i class="bi bi-arrow-repeat me-1"></i>Resubmit
                                                     </button>
                                                 @endif
+                                            @elseif($dr->status === 'pending')
+                                                <span class="text-muted small align-self-center">Pending review</span>
+                                                <form method="POST" action="{{ route('agency.document_requests.cancel', $dr) }}" onsubmit="return confirm('Cancel this document request? You can submit a new one afterwards.');">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-x-circle me-1"></i>Cancel request
+                                                    </button>
+                                                </form>
+                                            @elseif($dr->status === 'cancelled')
+                                                <span class="text-muted small align-self-center">Cancelled</span>
                                             @elseif(!$dr->generated_path)
                                                 <span class="text-muted small align-self-center">Pending review</span>
                                             @endif
