@@ -111,41 +111,75 @@
         return subscription.unsubscribe();
     }
 
+    let alertSound = true;
+    let alertVibrate = true;
+
+    function playAlertTone() {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.06;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.stop(ctx.currentTime + 0.4);
+        osc.onended = function () { ctx.close(); };
+    }
+
+    function saveAlertOptions() {
+        return fetch('/push-subscriptions/options', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
+            body: JSON.stringify({ sound: alertSound, vibrate: alertVibrate }),
+        });
+    }
+
     async function refreshToggleLabel() {
         const label = document.getElementById('pushNotifToggleLabel');
-        const enableBtn = document.getElementById('pushEnableBtn');
-        const disableBtn = document.getElementById('pushDisableBtn');
+        const toggle = document.getElementById('pushPermissionSwitch');
         const status = document.getElementById('pushNotifStatus');
-        if (!enableBtn && !document.getElementById('pushPermissionSwitch')) return;
+        const options = document.getElementById('pushAlertOptions');
+        if (!toggle) return;
 
         const subscribed = await isSubscribed();
         const permission = Notification.permission || 'default';
         const blocked = permission === 'denied';
 
-        if (enableBtn) enableBtn.classList.toggle('d-none', subscribed);
-        if (disableBtn) disableBtn.classList.toggle('d-none', !subscribed);
+        toggle.checked = subscribed;
+        toggle.disabled = blocked && !subscribed;
 
         if (status) {
             status.textContent = blocked
-                ? 'Notifications are blocked in your browser. Allow them in site settings.'
-                : subscribed ? 'Push notifications are on for this browser.' : 'Notifications are currently off.';
-            status.classList.toggle('text-muted', !subscribed);
+                ? 'Notifications are blocked in this browser. Allow them in the address-bar lock, then turn this on again.'
+                : subscribed ? 'Push notifications are on.' : 'Notifications are currently off.';
+            status.classList.toggle('text-muted', !subscribed && !blocked);
             status.classList.toggle('text-success', subscribed);
             status.classList.toggle('text-warning', blocked);
         }
 
+        if (options) options.classList.toggle('d-none', !subscribed);
         const testBtn = document.getElementById('pushTestBtn');
         if (testBtn) testBtn.classList.toggle('d-none', !subscribed);
 
+        const soundSwitch = document.getElementById('pushSoundSwitch');
+        const vibrateSwitch = document.getElementById('pushVibrateSwitch');
+        if (soundSwitch) soundSwitch.checked = alertSound;
+        if (vibrateSwitch) vibrateSwitch.checked = alertVibrate;
+
         if (label) {
             label.dataset.subscribed = subscribed ? '1' : '0';
-            label.textContent = blocked ? 'Notifications blocked in browser' : subscribed ? 'Disable Push Notifications' : 'Enable Push Notifications';
+            label.textContent = subscribed ? 'Push notifications' : 'Push notifications';
         }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=18')
+            navigator.serviceWorker.register('/sw.js?v=19')
                 .then(() => navigator.serviceWorker.ready)
                 .then((reg) => {
                     swRegistration = reg;
@@ -155,62 +189,68 @@
 
             navigator.serviceWorker.addEventListener('message', function (event) {
                 if (!event.data || event.data.type !== 'raniag-push') return;
+                if (event.data.sound && alertSound) playAlertTone();
                 document.dispatchEvent(new CustomEvent('rg:request-live-refresh'));
                 document.dispatchEvent(new CustomEvent('rg:poll-notifications'));
             });
         }
 
-        const enableBtn = document.getElementById('pushEnableBtn');
-        const disableBtn = document.getElementById('pushDisableBtn');
-        const label = document.getElementById('pushNotifToggleLabel');
+        const toggle = document.getElementById('pushPermissionSwitch');
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const wantOn = this.checked;
 
-        if (enableBtn) {
-            enableBtn.addEventListener('click', function () {
+                if (!wantOn) {
+                    unsubscribe().finally(refreshToggleLabel);
+                    return;
+                }
+
                 if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                     alert('This browser does not support push notifications.');
+                    this.checked = false;
                     return;
                 }
                 if (!isSecureContext()) {
-                    alert('Push notifications require HTTPS. This page was loaded over an insecure connection.');
+                    alert('Push notifications require HTTPS.');
+                    this.checked = false;
                     return;
                 }
                 if (Notification.permission === 'denied') {
-                    alert('Notifications are blocked for this site in Edge. Click the lock icon in the address bar, set Notifications to Allow, then click Enable on this browser again.');
+                    alert('Notifications are blocked for this site. Click the lock icon in the address bar, set Notifications to Allow, then turn Push notifications on again.');
+                    this.checked = false;
                     return;
                 }
-                if (!swRegistration || !swRegistration.active || !swRegistration.pushManager) {
-                    alert('The notification service is still starting. Wait a moment, then click Enable on this browser again.');
+                if (!swRegistration || !swRegistration.pushManager) {
+                    alert('Notifications are still starting. Wait a moment, then turn Push notifications on again.');
+                    this.checked = false;
                     return;
                 }
 
                 if (Notification.permission !== 'granted') {
+                    const box = this;
                     Notification.requestPermission().then(function (permission) {
+                        box.checked = false;
                         if (permission === 'granted') {
-                            alert('Edge allowed notifications. Click Enable on this browser once more.');
+                            alert('Notifications are allowed. Turn Push notifications on again.');
                         }
                         refreshToggleLabel();
                     });
                     return;
                 }
 
-                const pending = subscribeNow(swRegistration);
-                enableBtn.disabled = true;
-                pending.finally(function () {
-                    enableBtn.disabled = false;
-                    refreshToggleLabel();
-                });
+                subscribeNow(swRegistration).finally(refreshToggleLabel);
             });
         }
 
-        if (disableBtn) {
-            disableBtn.addEventListener('click', function () {
-                disableBtn.disabled = true;
-                unsubscribe().finally(function () {
-                    disableBtn.disabled = false;
-                    refreshToggleLabel();
-                });
+        ['pushSoundSwitch', 'pushVibrateSwitch'].forEach(function (id) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.addEventListener('change', function () {
+                alertSound = document.getElementById('pushSoundSwitch').checked;
+                alertVibrate = document.getElementById('pushVibrateSwitch').checked;
+                saveAlertOptions();
             });
-        }
+        });
 
         const testBtn = document.getElementById('pushTestBtn');
         if (testBtn) {

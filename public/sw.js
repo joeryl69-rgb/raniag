@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v18';
+const CACHE_NAME = 'raniag-cache-dev-v19';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [
@@ -94,16 +94,27 @@ self.addEventListener('push', (event) => {
         }
     }
 
+    const options = {
+        body: payload.body,
+        icon: payload.icon || '/images/icons/icon-192.png',
+        badge: payload.badge || '/images/icons/icon-72.png',
+        silent: payload.silent === true,
+        data: { url: payload.url || '/', sound: payload.sound !== false },
+    };
+    if (Array.isArray(payload.vibrate) && payload.vibrate.length) {
+        options.vibrate = payload.vibrate;
+    }
+
     event.waitUntil(
-        self.registration.showNotification(payload.title, {
-            body: payload.body,
-            icon: payload.icon || '/images/icons/icon-192.png',
-            badge: payload.badge || '/images/icons/icon-72.png',
-            data: { url: payload.url || '/' },
-        }).then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+        self.registration.showNotification(payload.title, options)
+            .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
             .then((clientList) => {
                 clientList.forEach((client) => {
-                    client.postMessage({ type: 'raniag-push', url: payload.url || '/' });
+                    client.postMessage({
+                        type: 'raniag-push',
+                        url: payload.url || '/',
+                        sound: payload.sound !== false,
+                    });
                 });
             })
     );

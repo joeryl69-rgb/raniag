@@ -114,12 +114,26 @@
                         <div class="fw-semibold">Push notifications</div>
                         <div class="small text-muted">Allow the app to send browser notifications even when the tab is closed.</div>
                     </div>
-                    <div class="ms-md-auto flex-shrink-0 d-flex gap-2">
-                        <button type="button" class="btn btn-primary btn-sm" id="pushEnableBtn">Enable on this browser</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="pushDisableBtn">Turn off</button>
+                    <div class="ms-md-auto flex-shrink-0">
+                        <input class="settings-toggle" id="pushPermissionSwitch" type="checkbox" role="switch" aria-label="Push notifications">
                     </div>
                 </div>
                 <div id="pushNotifStatus" class="small mt-3 mb-0 text-muted">Notifications are currently off.</div>
+                <div id="pushAlertOptions" class="dropdown mt-3 d-none">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        Alert options
+                    </button>
+                    <div class="dropdown-menu p-3 shadow-sm" style="min-width: 220px;">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="pushSoundSwitch" checked>
+                            <label class="form-check-label" for="pushSoundSwitch">Sound</label>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="pushVibrateSwitch" checked>
+                            <label class="form-check-label" for="pushVibrateSwitch">Vibrate</label>
+                        </div>
+                    </div>
+                </div>
                 <button type="button" class="btn btn-outline-primary btn-sm mt-3 d-none" id="pushTestBtn">Send test notification</button>
             </div>
         </div>

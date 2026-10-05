@@ -14,7 +14,17 @@ class PushSubscription extends Model
         'auth_token',
         'content_encoding',
         'user_agent',
+        'sound_enabled',
+        'vibrate_enabled',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'sound_enabled' => 'boolean',
+            'vibrate_enabled' => 'boolean',
+        ];
+    }
 
     public function user(): BelongsTo
     {

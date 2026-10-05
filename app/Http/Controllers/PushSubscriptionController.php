@@ -32,7 +32,30 @@ class PushSubscriptionController extends Controller
             ]
         );
 
-        return response()->json(['status' => 'subscribed']);
+        return response()->json([
+            'status' => 'subscribed',
+            'sound' => true,
+            'vibrate' => true,
+        ]);
+    }
+
+    public function updateOptions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'sound' => ['required', 'boolean'],
+            'vibrate' => ['required', 'boolean'],
+        ]);
+
+        $updated = PushSubscription::where('user_id', $request->user()->id)->update([
+            'sound_enabled' => $data['sound'],
+            'vibrate_enabled' => $data['vibrate'],
+        ]);
+
+        if ($updated === 0) {
+            return response()->json(['status' => 'none'], 422);
+        }
+
+        return response()->json(['status' => 'saved', 'sound' => $data['sound'], 'vibrate' => $data['vibrate']]);
     }
 
     public function destroy(Request $request): JsonResponse

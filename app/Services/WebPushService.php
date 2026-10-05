@@ -62,15 +62,20 @@ class WebPushService
             return;
         }
 
-        $payload = json_encode(array_merge([
-            'title' => $title,
-            'body' => $body,
-            'url' => $url ?? '/',
-            'icon' => '/images/icons/icon-192.png',
-            'badge' => '/images/icons/icon-72.png',
-        ], $extra));
-
         foreach ($subscriptions as $subscription) {
+            $sound = $subscription->sound_enabled !== false;
+            $vibrate = $subscription->vibrate_enabled !== false;
+            $payload = json_encode(array_merge([
+                'title' => $title,
+                'body' => $body,
+                'url' => $url ?? '/',
+                'icon' => '/images/icons/icon-192.png',
+                'badge' => '/images/icons/icon-72.png',
+                'silent' => ! $sound,
+                'vibrate' => $vibrate ? [220, 90, 220, 90, 320] : [],
+                'sound' => $sound,
+            ], $extra));
+
             $client->queueNotification(
                 Subscription::create([
                     'endpoint' => $subscription->endpoint,
