@@ -597,8 +597,8 @@
                     <div id="ops-queue"><div class="empty-note">Loading open cases…</div></div>
                 </div>
             </div>
-            <div class="col-12 col-lg-5">
-                <div class="dash-card analytics-card h-100 mb-3">
+            <div class="col-12 col-lg-5 d-flex flex-column">
+                <div class="dash-card analytics-card flex-grow-1 mb-3">
                     <strong class="small text-uppercase text-muted d-block mb-2">Open reports by barangay</strong>
                     <div id="ops-places"><div class="empty-note">Loading places…</div></div>
                 </div>
