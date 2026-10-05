@@ -34,7 +34,7 @@
 
         <aside class="rg-hazard-panel">
             <div class="rg-hazard-panel-head">
-                <img src="/images/guide/jo-map.jpg?v=4" alt="" width="56" height="70" class="jo-mascot" id="hazard-jo-avatar">
+                <span class="rg-hazard-mark" aria-hidden="true"><i class="bi bi-geo-alt-fill"></i></span>
                 <div class="min-w-0">
                     <div class="small fw-bold" style="color:var(--rg-brand);">Pamplona live map</div>
                     <div class="small text-muted" id="hazard-jo-tip">See open reports by barangay, then open Places for hazard zones and evacuation centers.</div>

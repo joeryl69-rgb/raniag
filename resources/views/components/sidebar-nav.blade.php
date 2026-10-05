@@ -101,6 +101,11 @@
                     <i class="bi bi-megaphone-fill"></i><span>Updates and announcements</span>
                 </a>
             </li>
+            <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.public_desk.*') ? 'active' : '' }}" href="{{ route('admin.public_desk.index') }}">
+                    <i class="bi bi-broadcast"></i><span>Public alert and hotlines</span>
+                </a>
+            </li>
         @endif
         {{-- System Settings now lives in the profile avatar dropdown
              (top navbar, Facebook-style account menu) — see

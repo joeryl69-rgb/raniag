@@ -141,22 +141,32 @@
             color: var(--rg-brand-soft);
         }
 
-        /* ---------- ambient page top ---------- */
-        .rg-shell { position: relative; overflow: clip; }
-        .rg-shell::before,
-        .rg-shell::after {
-            content: ''; position: absolute; border-radius: 50%; filter: blur(70px);
-            pointer-events: none; z-index: 0;
+        /* ---------- official masthead ---------- */
+        .rg-mast { background: #0b1220; color: #fff; border-bottom: 1px solid rgba(255,255,255,.08); }
+        .rg-mast-row { display: flex; align-items: center; gap: 16px; padding: 14px 0; }
+        .rg-mast img { width: 64px; height: 64px; object-fit: contain; flex-shrink: 0; background: #fff; border-radius: 50%; }
+        .rg-mast-copy { flex: 1; min-width: 0; text-align: center; }
+        .rg-mast-kicker { margin: 0 0 2px; font-size: .68rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #f5c451; }
+        .rg-mast-title { margin: 0; font-size: clamp(1.45rem, 2.4vw, 2rem); font-weight: 800; letter-spacing: .04em; line-height: 1.05; }
+        .rg-mast-org { margin: 2px 0 0; color: rgba(255,255,255,.78); font-size: .92rem; }
+        .rg-mast-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; margin: 8px 0 0; color: rgba(255,255,255,.62); font-size: .78rem; }
+        .rg-posture { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: #14532d; color: #dcfce7; }
+        .rg-posture-watch { background: #92400e; color: #ffedd5; }
+        .rg-posture-blue { background: #1d4ed8; color: #dbeafe; }
+        .rg-posture-red { background: #b91c1c; color: #fee2e2; }
+        .rg-shell { position: relative; }
+
+        .rg-hotline-card { background: #fff; border: 1px solid var(--rg-line); border-radius: 16px; padding: 16px; }
+        .rg-hotline-card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 800; }
+        .rg-hotline-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--rg-line); color: inherit; text-decoration: none; }
+        .rg-hotline-row strong, .rg-hotline-row small { display: block; }
+        .rg-hotline-row small { color: var(--rg-muted); font-size: .78rem; }
+        .rg-hotline-row em { font-style: normal; font-weight: 800; color: var(--rg-brand); white-space: nowrap; }
+        .rg-hotline-empty { margin: 0; color: var(--rg-muted); font-size: .88rem; }
+        .rg-hotline-map { display: inline-block; margin-top: 10px; font-size: .86rem; font-weight: 700; }
+        @media (max-width: 575.98px) {
+            .rg-mast img { width: 48px; height: 48px; }
         }
-        .rg-shell::before {
-            width: 460px; height: 460px; top: -220px; left: -140px;
-            background: rgba(11,94,215,.28);
-        }
-        .rg-shell::after {
-            width: 380px; height: 380px; top: -160px; right: -120px;
-            background: rgba(217,85,43,.18);
-        }
-        .rg-shell > * { position: relative; z-index: 1; }
 
         /* ---------- status strip ---------- */
         .rg-strip {
@@ -466,16 +476,23 @@
 
     <a href="#rg-main" class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-light btn-sm">Skip to content</a>
 
-    {{-- ================= top strip ================= --}}
-    <div class="rg-strip py-2 d-none d-md-block">
-        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span><span class="rg-dot"></span>Reporting channel online — 24/7 intake</span>
-            <span class="d-flex align-items-center gap-3">
-                <span><i class="bi bi-shield-lock me-1"></i>Confidential &amp; anonymous option</span>
-                <span class="d-none d-lg-inline"><i class="bi bi-clock-history me-1"></i>Track any report with your reference code</span>
-            </span>
+    <header class="rg-mast">
+        <div class="container rg-mast-row">
+            <img src="/images/letterhead/bayan-logo.png" alt="Seal of the Municipality of {{ config('raniag.address.municipality') }}" width="64" height="64">
+            <div class="rg-mast-copy">
+                <p class="rg-mast-kicker">Official LGU emergency portal</p>
+                <p class="rg-mast-title">{{ config('raniag.address.municipality') }}</p>
+                <p class="rg-mast-org">{{ config('raniag.organization') }} · Incident reporting and public safety</p>
+                <p class="rg-mast-meta">
+                    <span>{{ config('raniag.address.municipality') }}, {{ config('raniag.address.province') }}</span>
+                    <span>24/7 intake</span>
+                    <time datetime="{{ now()->toIso8601String() }}">{{ now()->format('M j, Y g:i A') }}</time>
+                    <span class="rg-posture rg-posture-{{ $alertPosture['tone'] }}">{{ $alertPosture['label'] }}</span>
+                </p>
+            </div>
+            <img src="/images/letterhead/mdrrmo-logo.png" alt="{{ config('raniag.organization') }} seal" width="64" height="64">
         </div>
-    </div>
+    </header>
 
     {{-- ================= navbar ================= --}}
     <nav class="navbar navbar-expand-lg navbar-dark raniag-navbar" id="rg-nav">
@@ -500,6 +517,12 @@
                            data-rg-tour="home"
                            href="{{ route('public.home') }}">
                             <i class="bi bi-house-door me-1 d-lg-none"></i>{{ __('Home') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('public.advisories') ? 'active' : '' }}"
+                           href="{{ route('public.advisories') }}">
+                            <i class="bi bi-megaphone me-1 d-lg-none"></i>{{ __('Advisories') }}
                         </a>
                     </li>
                     <li class="nav-item">
@@ -594,6 +617,7 @@
                     <ul class="list-unstyled small mb-0 d-grid gap-2">
                         <li><a href="{{ route('public.report.create') }}">File an incident</a></li>
                         <li><a href="{{ route('public.track') }}">Track a report</a></li>
+                        <li><a href="{{ route('public.advisories') }}">Advisories and hotlines</a></li>
                         <li><a href="{{ route('public.home') }}">How it works</a></li>
                     </ul>
                 </div>

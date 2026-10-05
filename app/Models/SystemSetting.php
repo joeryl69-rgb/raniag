@@ -14,6 +14,8 @@ class SystemSetting extends Model
         'follow_system',
         'font_key',
         'font_size',
+        'alert_level',
+        'alert_note',
         'updated_by',
     ];
 
