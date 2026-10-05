@@ -4,15 +4,12 @@ namespace App\Providers;
 
 use App\Models\Assignment;
 use App\Models\Incident;
-use App\Models\SystemSetting;
 use App\Policies\AssignmentPolicy;
 use App\Policies\IncidentPolicy;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Repositories\IncidentRepository;
-use App\Support\AlertPosture;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -33,12 +30,6 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
-
-        View::composer(['layouts.public', 'public.*'], function ($view) {
-            $settings = SystemSetting::current();
-            $view->with('alertPosture', AlertPosture::resolve($settings->alert_level));
-            $view->with('alertNote', $settings->alert_note);
-        });
     }
 
     protected function registerPolicies(): void

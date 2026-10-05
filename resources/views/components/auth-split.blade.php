@@ -26,10 +26,6 @@
     <div class="auth-shell">
         <div class="auth-panel">
             <div class="auth-panel__glow"></div>
-            <div class="auth-seals">
-                <img src="/images/letterhead/bayan-logo.png" alt="Municipality of {{ config('raniag.address.municipality') }}" width="52" height="52">
-                <img src="/images/letterhead/mdrrmo-logo.png" alt="{{ config('raniag.organization') }}" width="52" height="52">
-            </div>
             <img src="/images/icons/raniag-master.svg" alt="RANIAG" class="auth-panel__mark">
             <h1 class="auth-panel__title">RANIAG</h1>
             <p class="auth-panel__org">{{ config('raniag.organization') }}</p>

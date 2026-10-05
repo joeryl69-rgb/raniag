@@ -4,58 +4,43 @@
 
 @section('content')
 <div class="container">
-    <section class="rg-portal mb-4">
-        <div class="rg-portal-copy">
-            <p class="rg-desk-kicker">{{ config('raniag.organization') }}</p>
-            <h1 data-rg-hero-title>{{ config('raniag.name') }}</h1>
-            <p class="rg-portal-tag">{{ config('raniag.tagline') }}</p>
-            <p class="rg-portal-lead">
-                File an incident, keep the tracking number, and read official advisories for {{ config('raniag.address.municipality') }}.
-            </p>
-            @if($alertNote)
-                <p class="rg-portal-note">{{ $alertNote }}</p>
-            @endif
-            <div class="d-flex flex-wrap gap-2" data-rg-hero-btns>
-                <a href="{{ route('public.report.create') }}" class="btn btn-primary btn-lg px-4">
-                    <i class="bi bi-megaphone me-2"></i>{{ __('Report an Incident') }}
-                </a>
-                <a href="{{ route('public.track') }}" class="btn btn-outline-primary btn-lg px-4">
-                    <i class="bi bi-search me-2"></i>{{ __('Track a Report') }}
-                </a>
+    <div class="raniag-hero mb-4">
+        <div class="row g-0 align-items-stretch">
+            <div class="col-lg-7 p-4 p-lg-5">
+                <p class="text-uppercase small fw-semibold text-white-50 mb-2" data-rg-hero-eyebrow>{{ config('raniag.organization') }}</p>
+                <h1 class="display-5 fw-bold mb-2" data-rg-hero-title>{{ config('raniag.name') }}</h1>
+                <p class="rg-tagline mb-3" data-rg-hero-tag>{{ config('raniag.tagline') }}</p>
+                <p class="lead mb-4 text-white-50" data-rg-hero-desc>
+                    {{ __('Report incidents quickly and track their status securely. Your report helps keep our community safe and responsive.') }}
+                </p>
+                <div class="d-flex flex-wrap gap-3" data-rg-hero-btns>
+                    <a href="{{ route('public.report.create') }}" class="btn btn-light btn-lg px-4">
+                        <i class="bi bi-megaphone me-2"></i>{{ __('Report an Incident') }}
+                    </a>
+                    <a href="{{ route('public.track') }}" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-search me-2"></i>{{ __('Track a Report') }}
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5 raniag-hero-photo">
+                <img src="/images/pamplona-landmark.jpg" alt="The I love Pamplona sign in front of the Pamplona Cultural and Sports Center" width="1024" height="640" fetchpriority="high">
             </div>
         </div>
-        <div class="rg-portal-side">
-            <img src="/images/pamplona-landmark.jpg" alt="The I love Pamplona sign in front of the Pamplona Cultural and Sports Center" width="1024" height="640">
-            <aside class="rg-hotline-card">
-                <h2>Emergency lines</h2>
-                @forelse($hotlines as $hotline)
-                    <a class="rg-hotline-row" href="{{ $hotline->dialHref() }}">
-                        <span>
-                            <strong>{{ $hotline->name }}</strong>
-                            @if($hotline->detail)<small>{{ $hotline->detail }}</small>@endif
-                        </span>
-                        <em>{{ $hotline->number }}</em>
-                    </a>
-                @empty
-                    <p class="rg-hotline-empty">Call numbers will show here after {{ config('raniag.organization') }} publishes them.</p>
-                @endforelse
-                <a class="rg-hotline-map" href="{{ route('public.advisories') }}">All advisories{{ $openCenters ? ' · '.$openCenters.' evacuation center'.($openCenters === 1 ? '' : 's').' open' : '' }}</a>
-            </aside>
-        </div>
-    </section>
+    </div>
 
-    <section class="rg-steps" aria-labelledby="rg-how-title">
-        <div class="rg-steps-top">
+    <section class="rg-desk" data-rg-hero-card aria-labelledby="rg-how-title">
+        <div class="rg-desk-top">
+            <img class="jo-mascot rg-desk-jo" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="88" height="110">
             <div>
                 <p class="rg-desk-kicker">Incident desk</p>
                 <h2 id="rg-how-title">{{ __('How a report moves') }}</h2>
-                <p>You file it, the desk gives you a number, a responder is assigned, and you watch the status.</p>
+                <p>One path. You file it, the desk gives you a number, a responder is assigned, and you watch the status.</p>
             </div>
-            <button type="button" class="btn btn-outline-primary" id="jo-start-tour-home">
-                <i class="bi bi-compass me-1"></i>Guided tour
+            <button type="button" class="btn btn-primary" id="jo-start-tour-home">
+                <i class="bi bi-compass me-1"></i>Start guided tour
             </button>
         </div>
-        <ol class="rg-steps-rail">
+        <ol class="rg-desk-rail">
             <li>
                 <i class="bi bi-megaphone"></i>
                 <strong>1 · File</strong>
@@ -86,7 +71,6 @@
                 <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>UPDATES</span>
                 <h2 class="h4 fw-bold mb-0">{{ __('Updates and announcements') }}</h2>
             </div>
-            <a href="{{ route('public.advisories') }}" class="small fw-semibold">All advisories</a>
         </div>
 
         <div data-live-refresh data-live-refresh-target="#rg-public-announcements" data-live-refresh-interval="4000">
@@ -204,51 +188,82 @@
 
 @push('styles')
 <style>
-.rg-portal {
-    display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(280px, .95fr);
-    gap: 18px;
-    align-items: stretch;
+.rg-desk {
+    margin: .25rem 0 1.75rem;
+    padding: 22px 22px 8px;
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg, rgba(11, 94, 215, .08), transparent 90px),
+        #0f1c33;
+    color: #e8eef8;
+    box-shadow: 0 18px 40px -28px rgba(8, 15, 28, .8);
 }
-.rg-portal-copy, .rg-steps {
+.rg-desk-top { display: flex; align-items: center; gap: 16px; }
+.rg-desk-jo {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 18px;
     background: #fff;
-    border: 1px solid var(--rg-line);
-    border-radius: 16px;
-    padding: 24px;
+    flex-shrink: 0;
 }
-.rg-portal-copy h1 { margin: 0; font-size: clamp(2rem, 3vw, 2.6rem); font-weight: 800; letter-spacing: -.03em; }
-.rg-portal-tag { margin: 8px 0 0; color: var(--rg-brand); font-weight: 700; }
-.rg-portal-lead { margin: 10px 0 14px; color: var(--rg-muted); max-width: 38rem; }
-.rg-portal-note { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: #f4f7fb; }
-.rg-portal-side { display: flex; flex-direction: column; gap: 12px; }
-.rg-portal-side img { width: 100%; height: 210px; object-fit: cover; border-radius: 16px; }
-.rg-desk-kicker { margin: 0 0 4px; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--rg-brand); font-weight: 800; }
-.rg-steps { margin: 0 0 1.5rem; }
-.rg-steps-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.rg-steps-top h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
-.rg-steps-top p { margin: 4px 0 0; color: var(--rg-muted); }
-.rg-steps-rail {
+.rg-desk-kicker {
+    margin: 0 0 2px;
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #93c5fd;
+    font-weight: 700;
+}
+.rg-desk-top h2 { margin: 0 0 .2rem; font-size: clamp(1.35rem, 2vw, 1.75rem); font-weight: 800; color: #fff; }
+.rg-desk-top p { margin: 0; color: #b7c3d6; max-width: 40rem; }
+.rg-desk-top .btn { margin-left: auto; flex-shrink: 0; }
+.rg-desk-rail {
     list-style: none;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    margin: 16px 0 0;
-    padding: 0;
+    gap: 0;
+    margin: 18px 0 8px;
+    padding: 18px 0 10px;
+    position: relative;
 }
-.rg-steps-rail li { padding: 0; }
-.rg-steps-rail i {
+.rg-desk-rail::before {
+    content: "";
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 40px;
+    height: 2px;
+    background: rgba(147, 197, 253, .25);
+}
+.rg-desk-rail::after {
+    content: "";
+    position: absolute;
+    left: 8%;
+    top: 40px;
+    height: 2px;
+    width: 18%;
+    background: #60a5fa;
+    box-shadow: 0 0 12px #60a5fa;
+    animation: rg-desk-run 4.8s ease-in-out infinite;
+}
+.rg-desk-rail li { position: relative; padding: 0 12px; text-align: center; }
+.rg-desk-rail i {
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
-    margin-bottom: 8px;
-    border-radius: 10px;
-    background: #e7f1ff;
-    color: var(--rg-brand);
-    font-size: 1rem;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 10px;
+    border-radius: 14px;
+    background: #173055;
+    border: 1px solid rgba(147, 197, 253, .35);
+    color: #bfdbfe;
+    font-size: 1.15rem;
+    position: relative;
+    z-index: 1;
 }
-.rg-steps-rail strong { display: block; font-size: .92rem; }
-.rg-steps-rail span { display: block; margin-top: 4px; color: var(--rg-muted); font-size: .82rem; line-height: 1.4; }
+.rg-desk-rail strong { display: block; color: #fff; font-size: .92rem; }
+.rg-desk-rail span { display: block; margin-top: 4px; color: #9aabc2; font-size: .8rem; line-height: 1.4; }
 .rg-log { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
 .rg-log-item.rg-announce-card {
     display: grid;
@@ -279,9 +294,25 @@
 .rg-home-aside .rg-download-cta,
 .rg-home-aside .rg-support-card { margin: 0; flex: 1; }
 .rg-home-aside .rg-download-cta { display: flex; align-items: center; gap: 14px; padding: 20px; }
+@keyframes rg-desk-run {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(420%); }
+}
 @media (max-width: 991.98px) {
-    .rg-portal, .rg-steps-rail, .rg-home-lower { grid-template-columns: 1fr; }
-    .rg-steps-top { flex-wrap: wrap; }
+    .rg-desk-top { flex-wrap: wrap; }
+    .rg-desk-top .btn { margin-left: 0; }
+    .rg-desk-rail { grid-template-columns: 1fr 1fr; gap: 16px; }
+    .rg-desk-rail::before, .rg-desk-rail::after { display: none; }
+    .rg-desk-rail li { text-align: left; display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 10px; }
+    .rg-desk-rail i { margin: 0; }
+    .rg-desk-rail strong, .rg-desk-rail span { grid-column: 2; }
+    .rg-home-lower { grid-template-columns: 1fr; }
+}
+@media (max-width: 575.98px) {
+    .rg-desk-rail { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .rg-desk-rail::after { animation: none; width: 84%; }
 }
 </style>
 @endpush

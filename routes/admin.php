@@ -12,7 +12,6 @@ use App\Http\Controllers\Admin\IncidentTypeController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PersonnelRoleController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
-use App\Http\Controllers\Admin\PublicDeskController;
 use App\Http\Controllers\Admin\QrPosterController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResolutionController;
@@ -50,12 +49,6 @@ Route::prefix('admin')
             Route::put('/{feedback}', [FeedbackController::class, 'update'])->name('update');
             Route::post('/{feedback}/reply', [FeedbackController::class, 'reply'])->name('reply');
         });
-
-        Route::get('/public-desk', [PublicDeskController::class, 'index'])->name('public_desk.index');
-        Route::put('/public-desk/posture', [PublicDeskController::class, 'updatePosture'])->name('public_desk.posture');
-        Route::post('/public-desk/hotlines', [PublicDeskController::class, 'storeHotline'])->name('public_desk.hotlines.store');
-        Route::put('/public-desk/hotlines/{hotline}', [PublicDeskController::class, 'updateHotline'])->name('public_desk.hotlines.update');
-        Route::delete('/public-desk/hotlines/{hotline}', [PublicDeskController::class, 'destroyHotline'])->name('public_desk.hotlines.destroy');
 
         Route::prefix('announcements')->name('announcements.')->group(function () {
             Route::get('/', [AnnouncementController::class, 'index'])->name('index');

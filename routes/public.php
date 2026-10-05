@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Public\AdvisoryController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\IncidentReportController;
 use App\Http\Controllers\Public\IncidentTrackController;
@@ -10,7 +9,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::name('public.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
-    Route::get('/advisories', [AdvisoryController::class, 'index'])->name('advisories');
     Route::view('/offline', 'public.offline')->name('offline');
 
     Route::get('/hazard-map', [\App\Http\Controllers\Public\HazardMapController::class, 'index'])->name('hazard.map');

@@ -2256,16 +2256,10 @@ a.kpi-card:hover { color: inherit; background: #f8fafc; }
   gap: 8px;
   flex: 0 0 auto;
 }
-.rg-hazard-panel-head .rg-hazard-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  background: #e7f1ff;
-  color: var(--raniag-primary, #0b5ed7);
+.rg-hazard-panel-head .jo-mascot {
+  width: 48px;
+  height: auto;
   flex: 0 0 auto;
-  font-size: 1.1rem;
 }
 .rg-hazard-tabs {
   display: flex;
