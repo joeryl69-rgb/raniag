@@ -113,19 +113,17 @@
 
     async function refreshToggleLabel() {
         const label = document.getElementById('pushNotifToggleLabel');
-        const toggle = document.getElementById('pushPermissionSwitch');
+        const enableBtn = document.getElementById('pushEnableBtn');
+        const disableBtn = document.getElementById('pushDisableBtn');
         const status = document.getElementById('pushNotifStatus');
-        if (!toggle) return;
+        if (!enableBtn && !document.getElementById('pushPermissionSwitch')) return;
 
         const subscribed = await isSubscribed();
         const permission = Notification.permission || 'default';
         const blocked = permission === 'denied';
 
-        toggle.checked = subscribed;
-        toggle.disabled = blocked && !subscribed;
-        toggle.title = blocked
-            ? 'Allow notifications in Edge site settings.'
-            : subscribed ? 'Push notifications are enabled.' : 'Enable browser notifications.';
+        if (enableBtn) enableBtn.classList.toggle('d-none', subscribed);
+        if (disableBtn) disableBtn.classList.toggle('d-none', !subscribed);
 
         if (status) {
             status.textContent = blocked
@@ -147,7 +145,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('/sw.js?v=18')
                 .then(() => navigator.serviceWorker.ready)
                 .then((reg) => {
                     swRegistration = reg;
@@ -162,58 +160,53 @@
             });
         }
 
-        const toggle = document.getElementById('pushPermissionSwitch');
+        const enableBtn = document.getElementById('pushEnableBtn');
+        const disableBtn = document.getElementById('pushDisableBtn');
         const label = document.getElementById('pushNotifToggleLabel');
-        if (toggle) {
-            toggle.addEventListener('change', function () {
-                const wantOn = this.checked;
 
-                if (!wantOn) {
-                    toggle.disabled = true;
-                    unsubscribe().finally(function () {
-                        toggle.disabled = false;
-                        refreshToggleLabel();
-                    });
-                    return;
-                }
-
+        if (enableBtn) {
+            enableBtn.addEventListener('click', function () {
                 if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                     alert('This browser does not support push notifications.');
-                    this.checked = false;
                     return;
                 }
                 if (!isSecureContext()) {
                     alert('Push notifications require HTTPS. This page was loaded over an insecure connection.');
-                    this.checked = false;
                     return;
                 }
                 if (Notification.permission === 'denied') {
-                    alert('Notifications are blocked in Microsoft Edge. Click the lock icon in the address bar, set Notifications to Allow, then turn this switch on again.');
-                    this.checked = false;
+                    alert('Notifications are blocked for this site in Edge. Click the lock icon in the address bar, set Notifications to Allow, then click Enable on this browser again.');
                     return;
                 }
-                if (!swRegistration || !swRegistration.pushManager) {
-                    alert('The notification service is still starting. Wait a moment, then turn the switch on again.');
-                    this.checked = false;
+                if (!swRegistration || !swRegistration.active || !swRegistration.pushManager) {
+                    alert('The notification service is still starting. Wait a moment, then click Enable on this browser again.');
                     return;
                 }
 
                 if (Notification.permission !== 'granted') {
-                    toggle.disabled = true;
                     Notification.requestPermission().then(function (permission) {
-                        toggle.disabled = false;
-                        toggle.checked = false;
                         if (permission === 'granted') {
-                            alert('Edge allowed notifications. Turn the switch on again to connect this browser.');
+                            alert('Edge allowed notifications. Click Enable on this browser once more.');
                         }
                         refreshToggleLabel();
                     });
                     return;
                 }
 
-                toggle.disabled = true;
-                subscribeNow(swRegistration).finally(function () {
-                    toggle.disabled = false;
+                const pending = subscribeNow(swRegistration);
+                enableBtn.disabled = true;
+                pending.finally(function () {
+                    enableBtn.disabled = false;
+                    refreshToggleLabel();
+                });
+            });
+        }
+
+        if (disableBtn) {
+            disableBtn.addEventListener('click', function () {
+                disableBtn.disabled = true;
+                unsubscribe().finally(function () {
+                    disableBtn.disabled = false;
                     refreshToggleLabel();
                 });
             });

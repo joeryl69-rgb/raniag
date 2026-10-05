@@ -114,8 +114,9 @@
                         <div class="fw-semibold">Push notifications</div>
                         <div class="small text-muted">Allow the app to send browser notifications even when the tab is closed.</div>
                     </div>
-                    <div class="ms-md-auto flex-shrink-0">
-                        <input class="settings-toggle" id="pushPermissionSwitch" type="checkbox" role="switch" aria-label="Toggle push notifications">
+                    <div class="ms-md-auto flex-shrink-0 d-flex gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" id="pushEnableBtn">Enable on this browser</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="pushDisableBtn">Turn off</button>
                     </div>
                 </div>
                 <div id="pushNotifStatus" class="small mt-3 mb-0 text-muted">Notifications are currently off.</div>
