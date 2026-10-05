@@ -389,8 +389,9 @@
         }).finally(poll);
     });
 
+    document.addEventListener('rg:poll-notifications', poll);
     poll();
-    setInterval(poll, 20000);
+    setInterval(poll, 5000);
 })();
 </script>
 @endpush

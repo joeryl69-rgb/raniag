@@ -36,7 +36,7 @@ class SecurityHeaders
             // Map tiles load as images (img-src). Driving/walking routes are a
             // fetch() to the Mapbox Directions API, which connect-src must allow
             // or the browser blocks it and every live route fails silently.
-            "connect-src 'self' https://api.mapbox.com https://events.mapbox.com",
+            "connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://fcm.googleapis.com https://updates.push.services.mozilla.com https://*.push.services.mozilla.com https://wns.windows.com https://*.notify.windows.com",
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'self'",

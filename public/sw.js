@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v16';
+const CACHE_NAME = 'raniag-cache-dev-v17';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [
@@ -100,7 +100,12 @@ self.addEventListener('push', (event) => {
             icon: payload.icon || '/images/icons/icon-192.png',
             badge: payload.badge || '/images/icons/icon-72.png',
             data: { url: payload.url || '/' },
-        })
+        }).then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+            .then((clientList) => {
+                clientList.forEach((client) => {
+                    client.postMessage({ type: 'raniag-push', url: payload.url || '/' });
+                });
+            })
     );
 });
 

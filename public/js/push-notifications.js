@@ -24,9 +24,20 @@
         return meta ? meta.content : '';
     }
 
+    let swRegistration = null;
+
     async function getRegistration() {
+        if (swRegistration && swRegistration.active) return swRegistration;
         if (!('serviceWorker' in navigator)) return null;
         return navigator.serviceWorker.ready;
+    }
+
+    function validVapidPublicKey(vapidKey) {
+        try {
+            return urlBase64ToUint8Array(String(vapidKey).trim()).length === 65;
+        } catch (e) {
+            return false;
+        }
     }
 
     async function isSubscribed() {
@@ -55,14 +66,25 @@
         }
 
         const vapidMeta = document.querySelector('meta[name="vapid-public-key"]');
-        const vapidKey = vapidMeta ? vapidMeta.content : '';
-        if (!vapidKey) {
-            alert('Push notifications are not configured on this server yet (missing VAPID key).');
+        const vapidKey = vapidMeta ? vapidMeta.content.trim() : '';
+        if (!validVapidPublicKey(vapidKey)) {
+            alert('Push notifications are not configured on this server yet (missing or invalid VAPID key).');
             return false;
         }
 
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return false;
+        // Ask only when the browser has not decided yet. Awaiting the
+        // prompt spends the click, and Edge then rejects subscribe() with
+        // NotAllowedError even though permission is "granted". When it is
+        // already granted, subscribe on this same click.
+        let permission = Notification.permission;
+        if (permission === 'denied') {
+            alert('Notifications are blocked in Microsoft Edge. Click the lock icon in the address bar, set Notifications to Allow, then turn this switch on again.');
+            return false;
+        }
+        if (permission !== 'granted') {
+            permission = await Notification.requestPermission();
+            if (permission !== 'granted') return false;
+        }
 
         // getRegistration() waits on navigator.serviceWorker.ready, which
         // never resolves if service worker installation failed (see sw.js —
@@ -78,30 +100,44 @@
             return false;
         }
 
-        let subscription;
+        const subscribeOptions = {
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        };
+
+        let subscription = null;
+        let lastError = null;
         try {
-            subscription = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidKey),
-            });
+            subscription = await reg.pushManager.subscribe(subscribeOptions);
         } catch (err) {
-            console.error('Push subscribe failed', err);
-            // "Registration failed - permission denied" (NotAllowedError) is a
-            // known Chromium/Edge behavior: it can fire even after the in-page
-            // permission prompt says "granted," because the browser's own
-            // site-level notification setting (or Windows' notification
-            // settings for the browser) is separately blocking it. The raw
-            // browser message doesn't tell the person that, so replace it
-            // with actual next steps instead of just echoing the error text.
-            if (err && err.name === 'NotAllowedError') {
+            lastError = err;
+        }
+
+        // Edge often throws NotAllowedError on the same click that just
+        // granted permission. One short retry succeeds once that grant
+        // has settled. A second failure really is a browser or Windows block.
+        if (!subscription && lastError && lastError.name === 'NotAllowedError' && Notification.permission === 'granted') {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            try {
+                subscription = await reg.pushManager.subscribe(subscribeOptions);
+                lastError = null;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+
+        if (!subscription) {
+            console.error('Push subscribe failed', lastError);
+            if (lastError && lastError.name === 'NotAllowedError') {
                 alert(
                     'Notifications are blocked at the browser or system level, even though you just allowed the prompt. ' +
                     'In Edge: click the lock icon in the address bar → Notifications → Allow, and check ' +
                     'edge://settings/content/notifications that this site isn\'t listed under Block. ' +
-                    'Also check Windows Settings → System → Notifications that notifications are on for your browser.'
+                    'Also check Windows Settings → System → Notifications that notifications are on for your browser. ' +
+                    'Then turn this switch on once more.'
                 );
             } else {
-                alert('Could not enable push notifications: ' + (err && err.message ? err.message : 'unknown error') + '.');
+                alert('Could not enable push notifications: ' + (lastError && lastError.message ? lastError.message : 'unknown error') + '.');
             }
             return false;
         }
@@ -176,8 +212,18 @@
     document.addEventListener('DOMContentLoaded', function () {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
-                .then(() => refreshToggleLabel())
+                .then(() => navigator.serviceWorker.ready)
+                .then((reg) => {
+                    swRegistration = reg;
+                    refreshToggleLabel();
+                })
                 .catch((err) => console.error('SW Registration Failed', err));
+
+            navigator.serviceWorker.addEventListener('message', function (event) {
+                if (!event.data || event.data.type !== 'raniag-push') return;
+                document.dispatchEvent(new CustomEvent('rg:request-live-refresh'));
+                document.dispatchEvent(new CustomEvent('rg:poll-notifications'));
+            });
         }
 
         const toggle = document.getElementById('pushPermissionSwitch');
