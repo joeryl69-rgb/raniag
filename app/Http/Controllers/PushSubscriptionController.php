@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PushSubscription;
+use App\Services\WebPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -45,5 +46,32 @@ class PushSubscriptionController extends Controller
             ->delete();
 
         return response()->json(['status' => 'unsubscribed']);
+    }
+
+    public function test(Request $request, WebPushService $webPush): JsonResponse
+    {
+        if (! config('services.webpush.public_key') || ! config('services.webpush.private_key')) {
+            return response()->json([
+                'status' => 'unconfigured',
+                'message' => 'VAPID keys are missing on the server.',
+            ], 503);
+        }
+
+        $devices = PushSubscription::where('user_id', $request->user()->id)->count();
+        if ($devices === 0) {
+            return response()->json([
+                'status' => 'none',
+                'message' => 'This account has no saved browser yet. Turn Push notifications on first.',
+            ], 422);
+        }
+
+        $webPush->sendToUser(
+            $request->user(),
+            'RANIAG test',
+            'Push reached this browser. VAPID delivery is working.',
+            route('settings.appearance.index'),
+        );
+
+        return response()->json(['status' => 'sent', 'devices' => $devices]);
     }
 }

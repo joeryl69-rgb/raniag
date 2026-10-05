@@ -44,6 +44,7 @@ Route::middleware(['auth', 'active', 'no-cache'])->group(function () {
 
     Route::prefix('push-subscriptions')->name('push_subscriptions.')->group(function () {
         Route::post('/', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('store');
+        Route::post('/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->name('test');
         Route::delete('/', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('destroy');
     });
 

@@ -119,6 +119,7 @@
                     </div>
                 </div>
                 <div id="pushNotifStatus" class="small mt-3 mb-0 text-muted">Notifications are currently off.</div>
+                <button type="button" class="btn btn-outline-primary btn-sm mt-3 d-none" id="pushTestBtn">Send test notification</button>
             </div>
         </div>
 

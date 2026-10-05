@@ -54,113 +54,46 @@
         return window.isSecureContext || location.hostname === 'localhost';
     }
 
-    async function subscribe() {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            alert('This browser does not support push notifications.');
-            return false;
-        }
-
-        if (!isSecureContext()) {
-            alert('Push notifications require HTTPS. This page was loaded over an insecure connection.');
-            return false;
-        }
-
+    function vapidApplicationKey() {
         const vapidMeta = document.querySelector('meta[name="vapid-public-key"]');
         const vapidKey = vapidMeta ? vapidMeta.content.trim() : '';
-        if (!validVapidPublicKey(vapidKey)) {
+        if (!validVapidPublicKey(vapidKey)) return null;
+        return urlBase64ToUint8Array(vapidKey);
+    }
+
+    // Must be called directly from the switch click, with no await before
+    // pushManager.subscribe. Edge drops the click as soon as the script
+    // waits, then refuses the subscription with NotAllowedError.
+    function subscribeNow(reg) {
+        const applicationServerKey = vapidApplicationKey();
+        if (!applicationServerKey) {
             alert('Push notifications are not configured on this server yet (missing or invalid VAPID key).');
-            return false;
+            return Promise.resolve(false);
         }
 
-        // Ask only when the browser has not decided yet. Awaiting the
-        // prompt spends the click, and Edge then rejects subscribe() with
-        // NotAllowedError even though permission is "granted". When it is
-        // already granted, subscribe on this same click.
-        let permission = Notification.permission;
-        if (permission === 'denied') {
-            alert('Notifications are blocked in Microsoft Edge. Click the lock icon in the address bar, set Notifications to Allow, then turn this switch on again.');
-            return false;
-        }
-        if (permission !== 'granted') {
-            permission = await Notification.requestPermission();
-            if (permission !== 'granted') return false;
-        }
-
-        // getRegistration() waits on navigator.serviceWorker.ready, which
-        // never resolves if service worker installation failed (see sw.js —
-        // install previously used an atomic cache.addAll() where one bad
-        // asset silently killed the whole worker). Give it a timeout instead
-        // of hanging forever with the toggle stuck mid-way.
-        const reg = await Promise.race([
-            getRegistration(),
-            new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
-        ]);
-        if (!reg) {
-            alert('Could not reach the notification service worker. Please refresh the page and try again.');
-            return false;
-        }
-
-        const subscribeOptions = {
+        return reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        };
-
-        let subscription = null;
-        let lastError = null;
-        try {
-            subscription = await reg.pushManager.subscribe(subscribeOptions);
-        } catch (err) {
-            lastError = err;
-        }
-
-        // Edge often throws NotAllowedError on the same click that just
-        // granted permission. One short retry succeeds once that grant
-        // has settled. A second failure really is a browser or Windows block.
-        if (!subscription && lastError && lastError.name === 'NotAllowedError' && Notification.permission === 'granted') {
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            try {
-                subscription = await reg.pushManager.subscribe(subscribeOptions);
-                lastError = null;
-            } catch (err) {
-                lastError = err;
-            }
-        }
-
-        if (!subscription) {
-            console.error('Push subscribe failed', lastError);
-            if (lastError && lastError.name === 'NotAllowedError') {
-                alert(
-                    'Notifications are blocked at the browser or system level, even though you just allowed the prompt. ' +
-                    'In Edge: click the lock icon in the address bar → Notifications → Allow, and check ' +
-                    'edge://settings/content/notifications that this site isn\'t listed under Block. ' +
-                    'Also check Windows Settings → System → Notifications that notifications are on for your browser. ' +
-                    'Then turn this switch on once more.'
-                );
-            } else {
-                alert('Could not enable push notifications: ' + (lastError && lastError.message ? lastError.message : 'unknown error') + '.');
-            }
-            return false;
-        }
-
-        try {
-            const res = await fetch('/push-subscriptions', {
+            applicationServerKey: applicationServerKey,
+        }).then(function (subscription) {
+            return fetch('/push-subscriptions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
                 body: JSON.stringify(subscription.toJSON()),
+            }).then(function (res) {
+                if (!res.ok) throw new Error('Server responded with ' + res.status);
+                return true;
+            }).catch(function (err) {
+                console.error('Saving push subscription failed', err);
+                alert('Notifications were allowed, but saving the subscription to the server failed. Please try again.');
+                subscription.unsubscribe().catch(function () {});
+                return false;
             });
-            if (!res.ok) {
-                throw new Error('Server responded with ' + res.status);
-            }
-        } catch (err) {
-            console.error('Saving push subscription failed', err);
-            alert('Notifications were allowed, but saving the subscription to the server failed. Please try again.');
-            // Undo the browser-side subscription so the toggle state and
-            // actual subscription status stay in sync on retry.
-            await subscription.unsubscribe().catch(() => {});
+        }).catch(function (err) {
+            console.error('Push subscribe failed', err);
+            const detail = (err && err.name ? err.name : 'Error') + (err && err.message ? ': ' + err.message : '');
+            alert('Could not enable push notifications. ' + detail);
             return false;
-        }
-
-        return true;
+        });
     }
 
     async function unsubscribe() {
@@ -197,11 +130,14 @@
         if (status) {
             status.textContent = blocked
                 ? 'Notifications are blocked in your browser. Allow them in site settings.'
-                : subscribed ? 'Push notifications are on.' : 'Notifications are currently off.';
+                : subscribed ? 'Push notifications are on for this browser.' : 'Notifications are currently off.';
             status.classList.toggle('text-muted', !subscribed);
             status.classList.toggle('text-success', subscribed);
             status.classList.toggle('text-warning', blocked);
         }
+
+        const testBtn = document.getElementById('pushTestBtn');
+        if (testBtn) testBtn.classList.toggle('d-none', !subscribed);
 
         if (label) {
             label.dataset.subscribed = subscribed ? '1' : '0';
@@ -229,24 +165,82 @@
         const toggle = document.getElementById('pushPermissionSwitch');
         const label = document.getElementById('pushNotifToggleLabel');
         if (toggle) {
-            toggle.addEventListener('change', async function () {
-                const subscribed = this.checked;
-                toggle.disabled = true;
-                try {
-                    if (subscribed) {
-                        if (Notification.permission === 'denied') {
-                            alert('Notifications are blocked in Microsoft Edge. Please allow them in the site settings and try again.');
-                            this.checked = false;
-                            return;
+            toggle.addEventListener('change', function () {
+                const wantOn = this.checked;
+
+                if (!wantOn) {
+                    toggle.disabled = true;
+                    unsubscribe().finally(function () {
+                        toggle.disabled = false;
+                        refreshToggleLabel();
+                    });
+                    return;
+                }
+
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    alert('This browser does not support push notifications.');
+                    this.checked = false;
+                    return;
+                }
+                if (!isSecureContext()) {
+                    alert('Push notifications require HTTPS. This page was loaded over an insecure connection.');
+                    this.checked = false;
+                    return;
+                }
+                if (Notification.permission === 'denied') {
+                    alert('Notifications are blocked in Microsoft Edge. Click the lock icon in the address bar, set Notifications to Allow, then turn this switch on again.');
+                    this.checked = false;
+                    return;
+                }
+                if (!swRegistration || !swRegistration.pushManager) {
+                    alert('The notification service is still starting. Wait a moment, then turn the switch on again.');
+                    this.checked = false;
+                    return;
+                }
+
+                if (Notification.permission !== 'granted') {
+                    toggle.disabled = true;
+                    Notification.requestPermission().then(function (permission) {
+                        toggle.disabled = false;
+                        toggle.checked = false;
+                        if (permission === 'granted') {
+                            alert('Edge allowed notifications. Turn the switch on again to connect this browser.');
                         }
-                        await subscribe();
-                    } else {
-                        await unsubscribe();
-                    }
-                } finally {
+                        refreshToggleLabel();
+                    });
+                    return;
+                }
+
+                toggle.disabled = true;
+                subscribeNow(swRegistration).finally(function () {
                     toggle.disabled = false;
                     refreshToggleLabel();
-                }
+                });
+            });
+        }
+
+        const testBtn = document.getElementById('pushTestBtn');
+        if (testBtn) {
+            testBtn.addEventListener('click', function () {
+                testBtn.disabled = true;
+                fetch('/push-subscriptions/test', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
+                }).then(function (res) {
+                    return res.json().then(function (data) {
+                        return { ok: res.ok, data: data };
+                    });
+                }).then(function (result) {
+                    if (result.ok) {
+                        alert('Test sent to ' + result.data.devices + ' browser(s). A Windows notification titled RANIAG test should appear.');
+                    } else {
+                        alert(result.data.message || 'The test could not be sent.');
+                    }
+                }).catch(function () {
+                    alert('The test could not be sent.');
+                }).finally(function () {
+                    testBtn.disabled = false;
+                });
             });
         }
 
