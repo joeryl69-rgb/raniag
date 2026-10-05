@@ -10,36 +10,54 @@ use App\Models\User;
 class DocumentRequestService
 {
     /**
-     * Statuses that already reserve an incident for this agency.
-     * Rejected and cancelled requests do not, so the agency can ask again.
+     * Only a request still waiting on the administrator holds the incident.
+     * An approved copy does not. The agency can ask for another copy later.
      */
-    public const BLOCKING_STATUSES = ['pending', 'approved', 'sent', 'failed'];
+    public const BLOCKING_STATUSES = ['pending'];
+
+    /** A copy was already produced. A later request must say why. */
+    public const ISSUED_STATUSES = ['approved', 'sent', 'failed'];
 
     public function __construct(
         private readonly NotificationService $notifications,
     ) {}
 
     /**
-     * An approved (or still pending) request locks that incident for this
-     * agency, whether the next attempt is a single request or part of a bulk one.
+     * A pending request is the only hard stop, for both single and bulk.
+     * Cancel it, or wait for the decision, before sending another.
      */
     public function requestBlockReason(Incident $incident, int $agencyId): ?string
     {
-        $existing = DocumentRequest::query()
+        $pending = DocumentRequest::query()
             ->where('incident_id', $incident->id)
             ->where('requesting_agency_id', $agencyId)
             ->whereIn('status', self::BLOCKING_STATUSES)
-            ->first();
+            ->exists();
 
-        if (! $existing) {
+        if (! $pending) {
             return null;
         }
 
-        $tracking = $incident->tracking_number;
+        return "{$incident->tracking_number} already has a pending document request. Cancel it first if you need to submit a new one.";
+    }
 
-        return $existing->status === 'pending'
-            ? "{$tracking} already has a pending document request. Cancel it first if you need to submit a new one."
-            : "{$tracking} already has an approved document request and cannot be requested again.";
+    /**
+     * After a copy has been issued, another request is allowed, but the
+     * agency has to say what the new copy is for.
+     */
+    public function followUpNoteReason(Incident $incident, int $agencyId, ?string $note): ?string
+    {
+        $issued = DocumentRequest::query()
+            ->where('incident_id', $incident->id)
+            ->where('requesting_agency_id', $agencyId)
+            ->whereIn('status', self::ISSUED_STATUSES)
+            ->exists();
+
+        if (! $issued || trim((string) $note) !== '') {
+            return null;
+        }
+
+        return "{$incident->tracking_number} already has an approved copy. Add a note explaining why another copy is needed.";
     }
 
     public function cancelPending(DocumentRequest $documentRequest): void

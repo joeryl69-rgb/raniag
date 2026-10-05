@@ -375,50 +375,51 @@
                         @endphp
 
                         @php
-                            // Scope the lookup to the current agency so agencies only see their own requests.
-                            // Any pending or approved request locks this incident for both single and bulk requests.
                             $agencyId = auth()->user()->agency_id;
-                            $documentRequest = $incident->documentRequests()
+                            $pendingRequest = $incident->documentRequests()
                                 ->where('requesting_agency_id', $agencyId)
-                                ->whereIn('status', \App\Services\DocumentRequestService::BLOCKING_STATUSES)
+                                ->where('status', 'pending')
                                 ->latest('created_at')
                                 ->first();
-                            $canRequestPrintable = $documentRequest === null;
+                            $issuedRequest = $incident->documentRequests()
+                                ->where('requesting_agency_id', $agencyId)
+                                ->whereIn('status', \App\Services\DocumentRequestService::ISSUED_STATUSES)
+                                ->latest('created_at')
+                                ->first();
                         @endphp
 
-                        @if($documentRequest && $documentRequest->status === 'pending')
+                        @if($issuedRequest)
+                            @if($issuedRequest->generated_path)
+                                <a href="{{ Storage::url($issuedRequest->generated_path) }}" target="_blank" class="btn btn-success w-100 mb-3">
+                                    <i class="bi bi-file-earmark-pdf me-2"></i>View Printable PDF
+                                </a>
+                            @endif
+                            @if($issuedRequest->status === 'sent')
+                                <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" class="btn btn-outline-primary w-100 mb-3">
+                                    <i class="bi bi-envelope me-2"></i>Check Gmail for Approved Report
+                                </a>
+                            @endif
+                        @endif
+
+                        @if($pendingRequest)
                             <p class="small text-muted mb-2">A printable request for this incident is waiting for approval.</p>
-                            <form method="POST" action="{{ route('agency.document_requests.cancel', $documentRequest) }}" class="mb-3" onsubmit="return confirm('Cancel this document request?');">
+                            <form method="POST" action="{{ route('agency.document_requests.cancel', $pendingRequest) }}" class="mb-3" onsubmit="return confirm('Cancel this document request?');">
                                 @csrf
                                 @method('PATCH')
                                 <button type="submit" class="btn btn-outline-danger w-100">
                                     <i class="bi bi-x-circle me-2"></i>Cancel request
                                 </button>
                             </form>
-                        @elseif($documentRequest)
-                            @if($documentRequest->generated_path)
-                                <a href="{{ Storage::url($documentRequest->generated_path) }}" target="_blank" class="btn btn-success w-100 mb-3">
-                                    <i class="bi bi-file-earmark-pdf me-2"></i>View Printable PDF
-                                </a>
-                            @endif
-                            @if($documentRequest->status === 'sent')
-                                <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" class="btn btn-outline-primary w-100 mb-3">
-                                    <i class="bi bi-envelope me-2"></i>Check Gmail for Approved Report
-                                </a>
-                            @endif
-                            <p class="small text-muted mb-3">This incident already has an approved document request, so another single or bulk request is not available.</p>
-                        @endif
-
-                        @if($canRequestPrintable)
+                        @else
                             <form method="POST" action="{{ route('agency.incidents.print_requests.store', $incident->id) }}" class="mb-3">
                                 @csrf
                                 <input type="hidden" name="request_type" value="single">
                                 <div class="mb-3">
-                                    <label for="request_note" class="form-label">Request Details</label>
-                                    <textarea class="form-control" id="request_note" name="request_note" rows="3" placeholder="Describe what you need in the printable copy (optional)"></textarea>
+                                    <label for="request_note" class="form-label">{{ $issuedRequest ? 'Why do you need another copy?' : 'Request Details' }}</label>
+                                    <textarea class="form-control" id="request_note" name="request_note" rows="3" @if($issuedRequest) required @endif placeholder="{{ $issuedRequest ? 'Explain what the new copy is for' : 'Describe what you need in the printable copy (optional)' }}"></textarea>
                                 </div>
                                 <button type="submit" class="btn btn-outline-primary w-100">
-                                    <i class="bi bi-file-earmark-text me-2"></i>Request Printable Copy
+                                    <i class="bi bi-file-earmark-text me-2"></i>{{ $issuedRequest ? 'Request another copy' : 'Request Printable Copy' }}
                                 </button>
                             </form>
                         @endif

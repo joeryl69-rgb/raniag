@@ -88,7 +88,14 @@ class DocumentRequestController extends Controller
             ->mapWithKeys(fn ($inc) => [$inc->id => $inc->documentAvailability()])
             ->all();
 
-        return view('agency.document_requests.index', compact('documentRequests', 'eligibleIncidents', 'incompleteIncidents', 'documentAvailability'));
+        $issuedIncidentIds = DocumentRequest::query()
+            ->where('requesting_agency_id', $agencyId)
+            ->whereIn('status', DocumentRequestService::ISSUED_STATUSES)
+            ->pluck('incident_id')
+            ->unique()
+            ->all();
+
+        return view('agency.document_requests.index', compact('documentRequests', 'eligibleIncidents', 'incompleteIncidents', 'documentAvailability', 'issuedIncidentIds'));
     }
 
     public function store(StoreDocumentRequestRequest $request, int $incident): RedirectResponse|JsonResponse
@@ -115,6 +122,10 @@ class DocumentRequestController extends Controller
 
         if ($blocked = $this->documentRequests->requestBlockReason($record, (int) $agencyId)) {
             return $this->blockedRequestResponse($request, $blocked);
+        }
+
+        if ($followUp = $this->documentRequests->followUpNoteReason($record, (int) $agencyId, $data['request_note'] ?? null)) {
+            return $this->blockedRequestResponse($request, $followUp);
         }
 
         $requestModel = $this->documentRequests->createPendingRequest(
@@ -165,6 +176,14 @@ class DocumentRequestController extends Controller
 
         if ($blocked->isNotEmpty()) {
             return $this->blockedRequestResponse($request, $blocked->join(' '));
+        }
+
+        $followUps = $incidents
+            ->map(fn ($incident) => $this->documentRequests->followUpNoteReason($incident, (int) $agencyId, $data['request_note'] ?? null))
+            ->filter();
+
+        if ($followUps->isNotEmpty()) {
+            return $this->blockedRequestResponse($request, $followUps->join(' '));
         }
 
         $unavailable = $incidents

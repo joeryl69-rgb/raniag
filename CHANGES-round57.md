@@ -1,8 +1,9 @@
 # RANIAG — Round 57 Changes
 
 Push alerts can sound and vibrate, the command center cards no longer
-overlap, and an agency cannot request the same incident's printable
-documents twice after approval. A pending request can be cancelled.
+overlap. A pending document request holds that incident. After a
+copy is approved, the agency can request another copy if they say
+why. A pending request can be cancelled.
 
 =====================================================================
 1. Push notifications
@@ -37,10 +38,13 @@ Files:
 =====================================================================
 3. Agency document requests
 =====================================================================
-After a request is approved, sent, or the PDF has already been
-generated, that incident is left out of Single Request and Bulk
-Request, and the incident page will not accept another request.
-A rejected request can still be resubmitted.
+Only a pending request holds an incident. After a copy is approved,
+sent, or the PDF has been generated, the agency can request another
+copy from Single Request, Bulk Request, or the incident page. That
+follow-up needs a note saying what the new copy is for, and an
+administrator still approves it. The earlier PDF stays available.
+A rejected request can still be resubmitted. A pending request can
+be cancelled, and an approved one cannot.
 
 A pending row has Cancel request. Cancelling releases the incident
 so the agency can submit a new single or bulk request. An approved
@@ -65,6 +69,7 @@ Verify after Hostinger deploy
   reaches the phone.
 - Command Center: Signal Health sits above Reports, last 6 months,
   and the period buttons are on their own row.
-- Agency document requests: an approved tracking number is not in
-  Single Request or Bulk Request. A pending row has Cancel request.
-  After cancel, that incident can be requested again.
+- Agency document requests: a pending row has Cancel request.
+  An approved tracking number stays in Single Request and Bulk
+  Request, marked "copy already issued". Requesting it again asks
+  for a note. The earlier PDF remains on the row.

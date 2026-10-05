@@ -47,7 +47,7 @@ function documentRequestFixture(): array
     return [$user, $incident, $agency];
 }
 
-test('an approved document request cannot be requested again as a single or bulk request', function () {
+test('an approved copy can be requested again when the agency explains why', function () {
     [$user, $incident] = documentRequestFixture();
 
     DocumentRequest::query()->create([
@@ -66,19 +66,19 @@ test('an approved document request cannot be requested again as a single or bulk
         ->assertSessionHas('error');
 
     $this->actingAs($user)
-        ->post(route('agency.document_requests.bulk_store'), [
-            'incident_ids' => [$incident->id],
-        ])
-        ->assertRedirect()
-        ->assertSessionHas('error');
-
-    expect(DocumentRequest::query()->where('incident_id', $incident->id)->count())->toBe(1);
-
-    $this->actingAs($user)
         ->get(route('agency.document_requests.index'))
         ->assertOk()
-        ->assertDontSee($incident->tracking_number.'</option>', false)
-        ->assertSee('No resolved reports awaiting a printable request right now.');
+        ->assertSee($incident->tracking_number.' — copy already issued', false);
+
+    $this->actingAs($user)
+        ->post(route('agency.document_requests.bulk_store'), [
+            'incident_ids' => [$incident->id],
+            'request_note' => 'Need the endorsement sheet for the municipal file.',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect(DocumentRequest::query()->where('incident_id', $incident->id)->count())->toBe(2);
 });
 
 test('a pending document request can be cancelled and then requested again', function () {

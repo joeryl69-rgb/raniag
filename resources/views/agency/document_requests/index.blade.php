@@ -64,13 +64,14 @@
                         <select id="quickPrintIncident" class="form-select form-select-sm" required>
                             <option value="">Select a resolved report…</option>
                             @foreach($eligibleIncidents as $inc)
-                                <option value="{{ route('agency.incidents.print_requests.store', $inc->id) }}" data-incident-id="{{ $inc->id }}">{{ $inc->tracking_number }}</option>
+                                @php $alreadyIssued = in_array($inc->id, $issuedIncidentIds ?? [], true); @endphp
+                                <option value="{{ route('agency.incidents.print_requests.store', $inc->id) }}" data-incident-id="{{ $inc->id }}" @if($alreadyIssued) data-issued="1" @endif>{{ $inc->tracking_number }}{{ $alreadyIssued ? ' — copy already issued' : '' }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label small mb-1">Note (optional)</label>
-                        <input type="text" name="request_note" class="form-control form-control-sm" maxlength="1000" placeholder="What do you need in the printable copy?">
+                        <label class="form-label small mb-1" id="singleNoteLabel">Note (optional)</label>
+                        <input type="text" name="request_note" id="singleRequestNote" class="form-control form-control-sm" maxlength="1000" placeholder="What do you need in the printable copy?">
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-sm btn-primary w-100" id="quickPrintSubmit" disabled>
@@ -92,14 +93,15 @@
                         </div>
                         <div class="border rounded p-2 d-flex flex-wrap gap-2" style="max-height: 140px; overflow-y: auto;">
                             @foreach($eligibleIncidents as $inc)
-                                <input type="checkbox" class="btn-check bulk-incident-checkbox" name="incident_ids[]" value="{{ $inc->id }}" id="bulk_inc_{{ $inc->id }}" autocomplete="off">
-                                <label class="btn btn-outline-secondary btn-sm rounded-pill px-3" for="bulk_inc_{{ $inc->id }}">{{ $inc->tracking_number }}</label>
+                                @php $alreadyIssued = in_array($inc->id, $issuedIncidentIds ?? [], true); @endphp
+                                <input type="checkbox" class="btn-check bulk-incident-checkbox" name="incident_ids[]" value="{{ $inc->id }}" id="bulk_inc_{{ $inc->id }}" autocomplete="off" @if($alreadyIssued) data-issued="1" @endif>
+                                <label class="btn btn-outline-secondary btn-sm rounded-pill px-3" for="bulk_inc_{{ $inc->id }}">{{ $inc->tracking_number }}{{ $alreadyIssued ? ' — copy already issued' : '' }}</label>
                             @endforeach
                         </div>
                     </div>
                     <div class="col-md-8">
-                        <label class="form-label small mb-1">Note (optional, applies to all selected)</label>
-                        <input type="text" name="request_note" class="form-control form-control-sm" maxlength="1000" placeholder="What do you need in the printable copies?">
+                        <label class="form-label small mb-1" id="bulkNoteLabel">Note (optional, applies to all selected)</label>
+                        <input type="text" name="request_note" id="bulkRequestNote" class="form-control form-control-sm" maxlength="1000" placeholder="What do you need in the printable copies?">
                     </div>
                     <div class="col-md-4">
                         <button type="submit" class="btn btn-sm btn-primary w-100" id="bulkPrintSubmit" disabled>
@@ -236,12 +238,23 @@
                         var singleForm = document.getElementById('quickPrintForm');
                         var singleBtn = document.getElementById('quickPrintSubmit');
 
+                        var singleNote = document.getElementById('singleRequestNote');
+                        var singleNoteLabel = document.getElementById('singleNoteLabel');
+
+                        function markFollowUpNote(input, label, needed, bulk) {
+                            input.required = needed;
+                            label.textContent = needed
+                                ? (bulk ? 'Note (required — a selected report already has a copy)' : 'Note (required — this report already has a copy)')
+                                : (bulk ? 'Note (optional, applies to all selected)' : 'Note (optional)');
+                        }
+
                         sel.addEventListener('change', function () {
                             singleForm.action = sel.value;
                             singleBtn.disabled = !sel.value;
                             document.getElementById('singleSectionPicker').classList.toggle('d-none', !sel.value);
                             var opt = sel.options[sel.selectedIndex];
                             var id = opt ? opt.getAttribute('data-incident-id') : null;
+                            markFollowUpNote(singleNote, singleNoteLabel, !!(opt && opt.getAttribute('data-issued')), false);
                             applyAvailability('single', id ? [id] : []);
                         });
 
@@ -255,14 +268,17 @@
                         var bulkBtn = document.getElementById('bulkPrintSubmit');
                         var bulkCounter = document.getElementById('bulkCounter');
 
+                        var bulkNote = document.getElementById('bulkRequestNote');
+                        var bulkNoteLabel = document.getElementById('bulkNoteLabel');
+
                         function refreshBulkBtn() {
-                            var ids = Array.prototype.map.call(
-                                document.querySelectorAll('.bulk-incident-checkbox:checked'),
-                                function (cb) { return cb.value; }
-                            );
+                            var checked = document.querySelectorAll('.bulk-incident-checkbox:checked');
+                            var ids = Array.prototype.map.call(checked, function (cb) { return cb.value; });
+                            var needsNote = Array.prototype.some.call(checked, function (cb) { return cb.getAttribute('data-issued'); });
                             bulkCounter.textContent = ids.length + ' selected';
                             bulkBtn.disabled = ids.length === 0;
                             document.getElementById('bulkSectionPicker').classList.toggle('d-none', ids.length === 0);
+                            markFollowUpNote(bulkNote, bulkNoteLabel, needsNote, true);
                             applyAvailability('bulk', ids);
                         }
 
