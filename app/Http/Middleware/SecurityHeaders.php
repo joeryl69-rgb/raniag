@@ -33,10 +33,10 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://fonts.bunny.net",
             "font-src 'self' https://fonts.bunny.net data:",
             "img-src 'self' data: blob: https:",
-            // Map tiles load as images (img-src). Driving/walking routes are a
-            // fetch() to the Mapbox Directions API, which connect-src must allow
-            // or the browser blocks it and every live route fails silently.
-            "connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://fcm.googleapis.com https://updates.push.services.mozilla.com https://*.push.services.mozilla.com https://wns.windows.com https://*.notify.windows.com",
+            // Map tiles load as images (img-src). Directions and reverse
+            // geocoding are fetch() requests, so their hosts must be allowed
+            // here or the browser blocks them before they reach the API.
+            "connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://fcm.googleapis.com https://updates.push.services.mozilla.com https://*.push.services.mozilla.com https://wns.windows.com https://*.notify.windows.com",
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'self'",

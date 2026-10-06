@@ -4,10 +4,38 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+.rg-track-detail-page { max-width:1120px; }
+.rg-track-detail-banner { position:relative;isolation:isolate;display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:162px;overflow:hidden;margin:0 0 20px;padding:24px 28px;border:1px solid #2f515d;border-radius:6px;background:radial-gradient(ellipse at 86% 50%,rgba(12,109,105,.38),transparent 38%),linear-gradient(rgba(145,193,197,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(145,193,197,.055) 1px,transparent 1px),#0b1c28;background-size:auto,28px 28px,28px 28px,auto;color:#eaf3f1; }
+.rg-track-detail-banner::before { content:"";position:absolute;z-index:-1;right:70px;top:-74px;width:260px;aspect-ratio:1;border:1px solid rgba(93,211,186,.23);border-radius:50%;box-shadow:0 0 0 26px rgba(93,211,186,.045),0 0 0 58px rgba(93,211,186,.025); }
+.rg-track-detail-banner-copy { position:relative;z-index:1;max-width:700px; }
+.rg-track-detail-kicker { display:block;margin-bottom:9px;color:#76d7c1;font:700 .62rem/1.2 ui-monospace,monospace;letter-spacing:.14em; }
+.rg-track-detail-banner strong { display:block;color:#f0f6f3;font-size:clamp(1.15rem,2.5vw,1.8rem);font-weight:750;line-height:1.2;letter-spacing:-.025em; }
+.rg-track-detail-banner p { max-width:62ch;margin:8px 0 0;color:#b7cbd0;font-size:.86rem;line-height:1.5; }
+.rg-track-detail-banner img { align-self:flex-end;width:auto;height:155px;max-width:32%;object-fit:contain;filter:drop-shadow(0 12px 16px rgba(0,0,0,.3));animation:rg-track-guide-float 5s ease-in-out infinite; }
+#rg-track-status .rg-app-card { border:1px solid #d3dfe0;border-radius:6px;box-shadow:0 14px 42px -34px rgba(10,33,43,.55); }
+#rg-track-status .raniag-card-header { border-bottom:1px solid #d4e0e0;background:#edf4f2;color:#183643;font-weight:750; }
+#rg-track-status .card-body { color:#243d48; }
+#rg-track-status .progress-step.completed .step-dot { border-color:#54c8ad;background:#0c7a75;color:#fff; }
+#rg-track-status .progress-fill { background:#19a58f; }
+.rg-track-detail-page .track-agency-sheet,.rg-track-detail-page .rg-app-card { overflow:hidden; }
+html[data-public-theme="dark"] #rg-track-status .rg-app-card { border-color:#304955!important;background:#142630!important;color:#e3ecee; }
+html[data-public-theme="dark"] #rg-track-status .raniag-card-header { border-color:#38525e!important;background:#1b333f!important;color:#e8f0f0!important; }
+html[data-public-theme="dark"] #rg-track-status .raniag-card-header * { color:inherit; }
+html[data-public-theme="dark"] #rg-track-status .card-body { color:#dce8e8; }
+html[data-public-theme="dark"] #rg-track-status .card-footer { border-color:#304955!important;background:#10232d!important;color:#b8cbd0!important; }
+@keyframes rg-track-guide-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+@media(max-width:575.98px) {
+    .rg-track-detail-banner { min-height:138px;padding:20px 18px; }
+    .rg-track-detail-banner img { height:122px;max-width:35%; }
+    .rg-track-detail-banner::before { right:-45px; }
+}
+@media(prefers-reduced-motion:reduce) { .rg-track-detail-banner img { animation:none; } }
+</style>
 @endpush
 
 @section('content')
-<div class="container">
+<div class="container rg-track-detail-page">
 
     <div class="rg-page-head d-flex flex-wrap justify-content-between align-items-start gap-3" data-rg-reveal>
         <div>
@@ -60,6 +88,14 @@
     @endphp
 
     <div id="rg-track-status">
+    <section class="rg-track-detail-banner" aria-live="polite" data-rg-reveal>
+        <div class="rg-track-detail-banner-copy">
+            <span class="rg-track-detail-kicker">CASE MOVEMENT / {{ strtoupper(str_replace('_', ' ', $statusValue)) }}</span>
+            <strong>{{ $plainLanguage[$statusValue] ?? 'Your report status is available below.' }}</strong>
+            <p>Updates are private to this tracking reference. The map and details on this page are not shown on the public community dashboard.</p>
+        </div>
+        <img src="/images/guide/{{ $isRejected || $isOutsideAor ? 'jo-alert' : ($effectiveStatus === 'resolved' ? 'jo-resolved' : 'jo-map') }}.png?v=1" alt="" width="132" height="176">
+    </section>
     <div class="card raniag-card rg-app-card mb-4">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
             <span class="raniag-step-badge"><i class="bi bi-signpost-2"></i></span>

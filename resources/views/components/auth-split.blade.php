@@ -15,6 +15,7 @@
     <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg?v=8">
     <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png?v=8">
+    <script src="{{ asset('js/public-theme.js') }}?v={{ @filemtime(public_path('js/public-theme.js')) }}"></script>
     <link href="{{ asset('css/auth.css') }}?v={{ @filemtime(public_path('css/auth.css')) }}" rel="stylesheet">
     <script>
         window.addEventListener('pageshow', function (event) {
@@ -38,7 +39,9 @@
         </div>
         <div class="auth-form-side">
             <div class="auth-form-wrap">
-                <a href="{{ route('public.home') }}" class="auth-back-link"><i class="bi bi-arrow-left me-1"></i>Back to Landing Page</a>
+                <div class="auth-topline">
+                    <a href="{{ route('public.home') }}" class="auth-back-link"><i class="bi bi-arrow-left me-1"></i>Back to Landing Page</a>
+                </div>
                 <p class="auth-eyebrow">{{ $eyebrow }}</p>
                 <h2 class="auth-title">{{ $title }}</h2>
                 @if($subtitle)

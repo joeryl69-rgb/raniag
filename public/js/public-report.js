@@ -36,11 +36,6 @@
 
     // Clear a field's error state live as soon as the user corrects it,
     // instead of leaving the red outline until the next full page reload.
-    document.querySelectorAll('.is-invalid').forEach((field) => {
-        const clear = () => field.classList.remove('is-invalid');
-        field.addEventListener('input', clear);
-        field.addEventListener('change', clear);
-    });
     typeCards.forEach((card) => {
         card.addEventListener('click', () => {
             document.querySelector('.text-danger.small.mt-2')?.remove();
@@ -261,7 +256,7 @@
         if (!outsideBannerEl) return;
         if (isOutside) {
             if (outsideBannerTextEl) {
-                outsideBannerTextEl.textContent = `This location is outside Pamplona (in ${municipality || 'a neighboring area'}). You can still submit — MDRRMO Pamplona will forward it to the correct city/municipality or agency.`;
+                outsideBannerTextEl.textContent = `This pin appears to be in ${municipality || 'a neighboring area'}, outside Pamplona. You can still send your report; MDRRMO Pamplona will forward it to the right agency.`;
             }
             outsideBannerEl.classList.remove('d-none');
         } else {
@@ -600,6 +595,16 @@
 
     const form = document.getElementById('incident-report-form');
     const submitButton = document.getElementById('wizard-submit');
+    form?.addEventListener('input', clearEditedReportField);
+    form?.addEventListener('change', clearEditedReportField);
+
+    function clearEditedReportField(event) {
+        const field = event.target;
+        if (!(field instanceof HTMLElement) || !field.matches('.is-invalid')) return;
+        field.classList.remove('is-invalid');
+        field.removeAttribute('aria-invalid');
+        clearReportFieldError(field);
+    }
 
     function resetSubmitButton() {
         if (!submitButton) return;
@@ -608,51 +613,95 @@
         window.hideLoadingOverlay?.();
     }
 
-    function showSubmitErrors(payload) {
-        const messages = [];
-        if (payload?.errors && typeof payload.errors === 'object') {
-            Object.values(payload.errors).forEach((list) => {
-                (Array.isArray(list) ? list : [list]).forEach((msg) => {
-                    if (msg) messages.push(String(msg));
-                });
-            });
-        } else if (payload?.message) {
-            messages.push(String(payload.message));
+    function clearReportFieldError(control) {
+        const anchor = control.closest('.input-group') || control;
+        let feedback = anchor.nextElementSibling;
+        while (feedback?.matches('.invalid-feedback, [data-report-field-error]')) {
+            const next = feedback.nextElementSibling;
+            feedback.remove();
+            feedback = next;
         }
-        if (!messages.length) {
-            messages.push('Please check the form and try again.');
-        }
-        const uniqueMessages = [...new Set(messages)];
+        const describedBy = (control.getAttribute('aria-describedby') || '')
+            .split(/\s+/)
+            .filter((id) => id && id !== control.dataset.reportErrorId);
+        if (describedBy.length) control.setAttribute('aria-describedby', describedBy.join(' '));
+        else control.removeAttribute('aria-describedby');
+        delete control.dataset.reportErrorId;
+    }
 
+    function addReportFieldError(control, message) {
+        clearReportFieldError(control);
+        control.classList.add('is-invalid');
+        control.setAttribute('aria-invalid', 'true');
+        const anchor = control.closest('.input-group') || control;
+        const feedback = document.createElement('div');
+        feedback.className = 'invalid-feedback d-block';
+        feedback.dataset.reportFieldError = 'true';
+        feedback.textContent = message;
+        anchor.insertAdjacentElement('afterend', feedback);
+
+        const errorId = `report-field-error-${control.id || control.name.replace(/[^a-z0-9_-]/gi, '-')}`;
+        feedback.id = errorId;
+        control.dataset.reportErrorId = errorId;
+        const describedBy = new Set((control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+        describedBy.add(errorId);
+        control.setAttribute('aria-describedby', [...describedBy].join(' '));
+    }
+
+    function showSubmitErrors(payload) {
+        const errors = payload?.errors && typeof payload.errors === 'object' ? payload.errors : {};
+        const details = Object.entries(errors).flatMap(([name, value]) =>
+            (Array.isArray(value) ? value : [value]).filter(Boolean).map((message) => [name, String(message)])
+        );
+        const fields = Array.from(form?.elements || []);
+        const unmatched = [];
+
+        details.forEach(([name, message]) => {
+            const fieldName = name.replace(/\.\d+$/, '').replace(/\[\]$/, '');
+            const control = fields.find((field) => field.name === fieldName || field.name === `${fieldName}[]`);
+            if (fieldName === 'incident_type_id') {
+                const grid = document.getElementById('incident-type-grid');
+                const feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback d-block mt-2';
+                feedback.dataset.reportFieldError = 'true';
+                feedback.textContent = message;
+                grid?.insertAdjacentElement('afterend', feedback);
+            } else if (control) {
+                addReportFieldError(control, message);
+            } else {
+                unmatched.push(message);
+            }
+        });
+
+        const message = details.length
+            ? 'Review the highlighted fields. Your entries and attachments are still here.'
+            : String(payload?.message || 'We could not send this report. Check your connection and try again.');
         let banner = document.getElementById('report-submit-errors');
         if (!banner) {
             banner = document.createElement('div');
             banner.id = 'report-submit-errors';
             banner.className = 'alert alert-danger';
             banner.setAttribute('role', 'alert');
+            banner.setAttribute('aria-live', 'assertive');
             form?.prepend(banner);
         }
-        banner.innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Please correct the following:</strong><ul class="mb-0 mt-2">${
-            uniqueMessages.map((msg) => {
-                const safe = String(msg)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;');
-                return `<li>${safe}</li>`;
-            }).join('')
-        }</ul>`;
-        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        banner.replaceChildren();
+        const heading = document.createElement('strong');
+        heading.textContent = message;
+        banner.append(heading);
+        if (unmatched.length) {
+            const list = document.createElement('ul');
+            list.className = 'mb-0 mt-2';
+            [...new Set(unmatched)].forEach((text) => {
+                const item = document.createElement('li');
+                item.textContent = text;
+                list.append(item);
+            });
+            banner.append(list);
+        }
 
-        // Highlight contact fields when those are the problem, without a
-        // full page reload that would wipe GPS camera FileList evidence.
-        ['reporter_name', 'reporter_phone', 'reporter_email'].forEach((name) => {
-            const input = document.getElementById(name);
-            if (!input) return;
-            const failed = !!(payload?.errors && payload.errors[name]);
-            input.classList.toggle('is-invalid', failed);
-        });
         applyEvidenceGate();
-            if (wizardPanes.length) {
+        if (wizardPanes.length) {
             const stepFor = {
                 incident_type_id: 0,
                 description: 0,
@@ -666,18 +715,17 @@
                 reporter_phone: 3,
                 reporter_email: 3,
             };
-            const errorNames = Object.keys(payload?.errors || {});
-            const steps = errorNames
-                .map((name) => stepFor[name])
-                .filter((step) => step !== undefined);
+            const errorNames = Object.keys(errors).map((name) => name.replace(/\.\d+$/, '').replace(/\[\]$/, ''));
+            const steps = errorNames.map((name) => stepFor[name]).filter((step) => step !== undefined);
             showWizardStep(steps.length ? Math.min(...steps) : wizardStep);
-            const spots = errorNames.map((name) => `#${name}, [name="${name}"], [name="${name}[]"]`);
+            const spots = errorNames.flatMap((name) => [`#${name}`, `[name="${name}"]`, `[name="${name}[]"]`]);
             if (errorNames.includes('incident_type_id')) spots.push('#incident-type-grid');
             if (errorNames.some((name) => ['latitude', 'longitude', 'location_address', 'barangay'].includes(name))) {
                 spots.push('#use-current-location', '#incident-map', '#location-resolve-status');
             }
-            setWizardError(uniqueMessages[0], spots);
+            setWizardError(details[0]?.[1] || message, spots);
         }
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     if (form && submitButton) {
@@ -763,6 +811,7 @@
     const LOCATION_ERROR_SPOTS = ['#use-current-location', '#incident-map', '#latitude', '#longitude', '#location-resolve-status'];
     let wizardStep = 0;
     let errorSpots = [];
+    let wizardFieldErrors = [];
 
     function captureHasCoordinates() {
         if (!captureLogInput?.value) return false;
@@ -853,10 +902,35 @@
     }
 
     function clearFieldErrors() {
+        wizardFieldErrors.forEach(({ field, feedback, describedBy }) => {
+            feedback.remove();
+            field.classList.remove('is-invalid');
+            field.removeAttribute('aria-invalid');
+            if (describedBy) field.setAttribute('aria-describedby', describedBy);
+            else field.removeAttribute('aria-describedby');
+        });
+        wizardFieldErrors = [];
         errorSpots.forEach((el) => el.classList.remove('is-invalid', 'rg-error-spot'));
         errorSpots = [];
         document.querySelector('.report-wizard-pane.is-active')?.classList.remove('rg-shake');
         document.getElementById('jo-report-coach')?.classList.remove('is-alerting', 'rg-shake');
+    }
+
+    function addWizardFieldError(selector, message) {
+        const field = document.querySelector(selector);
+        if (!field) return;
+        const anchor = field.matches('#incident-type-grid') ? field : (field.closest('.input-group') || field);
+        const feedback = document.createElement('div');
+        feedback.className = 'invalid-feedback d-block';
+        feedback.textContent = message;
+        const describedBy = field.getAttribute('aria-describedby') || '';
+        const errorId = `wizard-error-${wizardFieldErrors.length}`;
+        feedback.id = errorId;
+        anchor.insertAdjacentElement('afterend', feedback);
+        field.classList.add('is-invalid');
+        field.setAttribute('aria-invalid', 'true');
+        field.setAttribute('aria-describedby', [describedBy, errorId].filter(Boolean).join(' '));
+        wizardFieldErrors.push({ field, feedback, describedBy });
     }
 
     function playValidation(selectors) {
@@ -880,7 +954,7 @@
         (errorSpots[0] || pane)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    function setWizardError(message, selectors) {
+    function setWizardError(message, selectors, fieldErrors = []) {
         if (!wizardError) {
             if (message) alert(message);
             return;
@@ -895,13 +969,16 @@
         wizardError.textContent = message;
         wizardError.classList.remove('d-none');
         playValidation(selectors);
+        fieldErrors.forEach(({ selector, text }) => addWizardFieldError(selector, text));
         window.RANIAG_JO?.syncReportCoach(wizardStep, { force: true, pose: 'alert', text: message });
     }
 
     function guardReportBeforeSubmit() {
         if (!locationIsReady()) {
             showWizardStep(LOCATION_STEP);
-            setWizardError('Share your current location before sending this report.', LOCATION_ERROR_SPOTS);
+            setWizardError('Add an incident location before sending this report.', LOCATION_ERROR_SPOTS, [
+                { selector: '#use-current-location', text: 'Use your location button or place a pin on the map.' },
+            ]);
             return false;
         }
         if (!contactIsReady()) {
@@ -910,7 +987,14 @@
             const email = document.getElementById('reporter_email')?.value.trim();
             if (!phone && !email) spots.push('#reporter_phone', '#reporter_email');
             showWizardStep(CONTACT_STEP);
-            setWizardError('Leave your name and a phone number or email so MDRRMO can verify this report.', spots);
+            const fieldErrors = [];
+            if (!document.getElementById('reporter_name')?.value.trim()) {
+                fieldErrors.push({ selector: '#reporter_name', text: 'Enter your name so MDRRMO can follow up.' });
+            }
+            if (!phone && !email) {
+                fieldErrors.push({ selector: '#reporter_phone', text: 'Enter a phone number or an email address.' });
+            }
+            setWizardError('Add your name and one way for MDRRMO to reach you.', spots, fieldErrors);
             return false;
         }
         return true;
@@ -969,7 +1053,7 @@
         if (wizardBack) wizardBack.disabled = wizardStep === 0;
         if (wizardNext) {
             wizardNext.classList.toggle('d-none', last);
-            wizardNext.disabled = false;
+            wizardNext.disabled = wizardStep === 0 && typeCards.length === 0;
         }
         const wizardSubmit = document.getElementById('wizard-submit');
         if (wizardSubmit) wizardSubmit.classList.toggle('d-none', !last);
@@ -994,12 +1078,16 @@
         if (step === 0) {
             const typeChecked = form?.querySelector('input[name="incident_type_id"]:checked');
             if (!typeChecked) {
-                setWizardError('Please select an incident type before continuing.', ['#incident-type-grid']);
+                setWizardError('Choose the incident type that best describes what is happening.', ['#incident-type-grid'], [
+                    { selector: '#incident-type-grid', text: 'Select one incident type to continue.' },
+                ]);
                 return false;
             }
         }
         if (step === LOCATION_STEP && !locationIsReady()) {
-            setWizardError('Share your current location before continuing.', LOCATION_ERROR_SPOTS);
+            setWizardError('Add an incident location to continue.', LOCATION_ERROR_SPOTS, [
+                { selector: '#use-current-location', text: 'Use your location button or place a pin on the map.' },
+            ]);
             return false;
         }
         return true;
@@ -1074,4 +1162,3 @@
         );
     });
 })();
-

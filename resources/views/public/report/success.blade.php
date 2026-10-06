@@ -8,7 +8,7 @@
         <div class="col-lg-8">
             <div class="card raniag-card text-center p-4 p-lg-5" data-rg-reveal>
                 <div class="rg-success-jo mx-auto mb-3" data-rg-pop>
-                    <img class="jo-mascot" src="/images/guide/jo-resolved.jpg?v=4" alt="JO" width="180" height="220">
+                    <img class="jo-mascot" src="/images/guide/jo-resolved.png?v=1" alt="JO" width="180" height="240">
                     <div class="rg-stepper-jo-name mt-1">JO</div>
                 </div>
                 <h1 class="h3 fw-bold mb-2">Report Submitted Successfully</h1>

@@ -156,6 +156,7 @@ body {
 @media (max-width: 576px) {
     .auth-form-side { padding: 30px 18px; }
 }
+/*
    the auth pages load that stylesheet instead of this one; keep both in
    sync if this ever changes. */
 .rg-pw-meter-wrap {
@@ -226,3 +227,127 @@ body {
 
 .rg-pw-match.rg-pw-weak { color: #dc3545; }
 .rg-pw-match.rg-pw-strong { color: #198754; }
+
+/* Staff access carries the public emergency-operations identity without
+   changing any internal dashboard surfaces. */
+.auth-shell { background: #eaf0f2; gap: 0; }
+.auth-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+        linear-gradient(rgba(141,197,203,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(141,197,203,.055) 1px, transparent 1px),
+        radial-gradient(circle at 75% 18%, rgba(28,123,125,.3), transparent 34%),
+        #0b1726;
+    background-size: 30px 30px, 30px 30px, auto, auto;
+    color: #edf4f5;
+}
+.auth-panel::after {
+    content: "PAMPLONA  /  MDRRMO";
+    position: absolute;
+    right: 28px;
+    bottom: 24px;
+    color: rgba(197,220,225,.72);
+    font: 700 .65rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .16em;
+    z-index:1;
+}
+.auth-panel::before {
+    content: "";
+    position: absolute;
+    right: -110px;
+    top: 12%;
+    width: min(38vw, 410px);
+    aspect-ratio: 1;
+    border: 1px solid rgba(94,211,187,.26);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, transparent 0 28%, rgba(94,211,187,.18) 28.2% 28.5%, transparent 28.7% 49%, rgba(94,211,187,.14) 49.2% 49.5%, transparent 49.7%),
+        conic-gradient(from 20deg, transparent 0 72%, rgba(73,216,172,.28) 83%, transparent 91%);
+    animation: auth-radar-turn 28s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+.auth-panel__glow { background: radial-gradient(circle at 20% 82%, rgba(233,189,92,.14), transparent 58%); }
+.auth-panel__mark { padding: 8px; border-radius: 10px; background: #e3f1ed; }
+.auth-panel__org { color: #9ec5cb; }
+.auth-panel__tagline { color: #e9bd5c; }
+.auth-panel__points i { color: #5bd0a7; }
+.auth-form-side { background: #f2f5f5; }
+.auth-form-wrap {
+    max-width: 440px;
+    padding: 32px;
+    border: 1px solid #d1dcdf;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 24px 56px -38px rgba(11,23,38,.62);
+}
+.auth-back-link { color: #536a78; }
+.auth-back-link:hover { color: #075b64; }
+.auth-eyebrow { color: #086b78; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; }
+.auth-title { color: #102638; letter-spacing: -.045em; }
+.auth-title::after { width: 46px; height: 3px; border-radius: 1px; background: #e9bd5c; }
+.auth-subtitle { color: #52677a; line-height: 1.55; }
+.auth-form-wrap .form-label { color: #203749; }
+.auth-form-wrap .form-control, .auth-form-wrap .form-control:focus {
+    min-height: 44px;
+    border-color: #cbd8dc;
+    border-radius: 5px;
+}
+.auth-form-wrap .input-group-text { border-color: #cbd8dc; border-radius: 5px 0 0 5px; background: #f0f5f4; color: #3e6570; }
+.auth-form-wrap .input-group .form-control { border-radius: 0 5px 5px 0; }
+.auth-form-wrap .auth-submit { min-height: 46px; border-radius: 5px; background: #086b78; box-shadow: none; }
+.auth-form-wrap .auth-submit:hover { background: #075761; opacity: 1; }
+.auth-footer { border-color: #d8e1e3; color: #52677a; }
+.auth-footer a { color: #075b64; }
+.auth-alert { border-radius: 5px; }
+.rg-account-switcher { border-color: #d3dfe1; border-radius: 6px; }
+.rg-account-item { border-radius: 5px; }
+.auth-topline { display:flex;align-items:flex-start;justify-content:space-between;gap:12px; }
+.auth-topline { align-items:center; }
+@media (max-width: 860px) {
+    .auth-shell, .auth-form-side { background: #0b1726; }
+    .auth-panel { display:flex;min-height:198px;padding:25px 28px; }
+    .auth-panel__mark { width:54px;height:54px;margin-bottom:8px; }
+    .auth-panel__title { font-size:1.55rem; }
+    .auth-panel__org { margin-bottom:8px;font-size:.84rem; }
+    .auth-panel__tagline { max-width:400px;margin:0 0 12px;font-size:.9rem; }
+    .auth-panel__points { flex-direction:row;flex-wrap:wrap;gap:8px 18px; }
+    .auth-panel__points li { font-size:.72rem; }
+    .auth-panel::after { right:18px;bottom:12px;font-size:.5rem; }
+    .auth-form-wrap { padding: 25px 21px; }
+}
+@media (max-width:680px) {
+    .auth-panel { display:none; }
+}
+@keyframes auth-radar-turn { to { transform:rotate(360deg); } }
+html[data-public-theme="dark"] { color-scheme:dark; }
+html[data-public-theme="dark"] .auth-form-side { background:#0c1923; }
+html[data-public-theme="dark"] .auth-form-wrap { background:#142630;border-color:#304955; }
+html[data-public-theme="dark"] .auth-form-wrap .form-control,
+html[data-public-theme="dark"] .auth-form-wrap .form-control:focus { color-scheme:dark; }
+html[data-public-theme="dark"] .auth-title { color:#edf4f3; }
+html[data-public-theme="dark"] .auth-subtitle,
+html[data-public-theme="dark"] .auth-back-link,
+html[data-public-theme="dark"] .auth-footer { color:#adc0c5; }
+html[data-public-theme="dark"] .auth-back-link:hover,
+html[data-public-theme="dark"] .auth-footer a { color:#78dfcf; }
+html[data-public-theme="dark"] .auth-form-wrap .form-label { color:#dce8e8; }
+html[data-public-theme="dark"] .auth-form-wrap .form-control,
+html[data-public-theme="dark"] .auth-form-wrap .form-control:focus { background:#10232d;color:#edf4f4;border-color:#47606b; }
+html[data-public-theme="dark"] .auth-form-wrap .input-group-text { background:#1b333f;color:#dce8e8;border-color:#47606b; }
+html[data-public-theme="dark"] .auth-alert--info { background:#173541;color:#bee0e4;border-color:#315564; }
+html[data-public-theme="dark"] .auth-alert--danger { background:#462a2c;color:#ffd9d8;border-color:#764044; }
+html[data-public-theme="dark"] .rg-account-switcher,
+html[data-public-theme="dark"] .rg-account-item { background:#10232d;border-color:#47606b;color:#e3ecee; }
+html[data-public-theme="dark"] .rg-account-name,
+html[data-public-theme="dark"] .rg-account-switcher-title { color:#e3ecee; }
+html[data-public-theme="dark"] .rg-account-email { color:#adc0c5; }
+html[data-public-theme="dark"] .auth-eyebrow { color:#72d9c4; }
+html[data-public-theme="dark"] .auth-title::after { background:#e9bd5c; }
+html[data-public-theme="dark"] .rg-account-avatar-add { background:#1b333f;color:#9be6d6;border-color:#52777a; }
+html[data-public-theme="dark"] .auth-form-wrap .form-control::placeholder { color:#9aacb2; }
+@media (prefers-reduced-motion:reduce) {
+    .auth-panel::before { animation:none; }
+}

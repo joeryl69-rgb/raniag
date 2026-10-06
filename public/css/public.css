@@ -1863,20 +1863,22 @@ a.kpi-card:hover { color: inherit; background: #f8fafc; }
 .jo-guide-dock {
   position: fixed;
   left: 50%;
-  bottom: 20px;
+  bottom: max(88px, calc(env(safe-area-inset-bottom, 0px) + 76px));
   transform: translateX(-50%);
   z-index: 1080;
-  width: min(440px, calc(100vw - 24px));
+  width: min(560px, calc(100vw - 24px));
 }
 .jo-guide-card {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  background: #fff;
-  border: 1px solid var(--raniag-border, #dde5ea);
-  border-radius: 16px;
-  padding: 14px 16px 12px;
-  box-shadow: 0 16px 40px -18px rgba(11,18,32,.45);
+  gap: 16px;
+  align-items: center;
+  background: linear-gradient(145deg, #f3f6f2, #e5eeeb);
+  border: 1px solid #afc4c2;
+  border-top: 3px solid #087b78;
+  border-radius: 10px;
+  padding: 12px 18px 12px 12px;
+  color: #18323d;
+  box-shadow: 0 24px 65px rgba(0,10,18,.5);
   position: relative;
 }
 .jo-mascot {
@@ -1900,10 +1902,7 @@ a.kpi-card:hover { color: inherit; background: #f8fafc; }
   max-width: 240px;
   margin-inline: auto;
   animation: none;
-  /* Studio white is lighter than the page gray, so darken drops the
-     rectangle and leaves the character. The float runs on the frame so
-     the picture does not slide out of that blend while it moves. */
-  mix-blend-mode: darken;
+  mix-blend-mode: normal;
 }
 .jo-mascot.jo-pose-in {
   animation: jo-pose-in .42s ease-out;
@@ -1924,48 +1923,79 @@ a.kpi-card:hover { color: inherit; background: #f8fafc; }
   }
 }
 .jo-guide-avatar { flex-shrink: 0; }
-.jo-guide-body { min-width: 0; padding-right: 28px; }
+.jo-guide-body { min-width: 0; flex: 1; padding: 2px 22px 2px 0; }
 .jo-guide-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.jo-guide-name { font-size: .72rem; font-weight: 800; letter-spacing: .08em; color: var(--raniag-primary, #0b5ed7); text-transform: uppercase; }
-.jo-guide-count { font-size: .72rem; font-weight: 700; color: #64748b; }
+.jo-guide-name { font: 800 .68rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .13em; color: #075f60; text-transform: uppercase; }
+.jo-guide-count { font: 700 .68rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; color: #52677a; }
 .jo-guide-focus {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 6px 0 8px;
+  margin: 9px 0 8px;
   padding: 4px 10px;
   border-radius: 999px;
   font-size: .82rem;
   font-weight: 700;
-  color: #0b5ed7;
-  background: #e7f0fd;
-  box-shadow: 0 0 0 3px rgba(61,139,253,.28);
+  color: #075f60;
+  background: #d9eee7;
+  border: 1px solid #a8cdc1;
+  letter-spacing: .01em;
 }
-.jo-guide-text { font-size: .9rem; color: #16203a; margin: 0; line-height: 1.35; }
-.jo-guide-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.jo-guide-text { font-size: .92rem; color: #203749; margin: 0 0 13px; line-height: 1.48; }
+.jo-guide-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.jo-guide-action { min-height: 39px; padding: 0 14px; border-radius: 5px; font-size: .78rem; font-weight: 800; }
+.jo-guide-primary { border: 1px solid #087b78; background: #087b78; color: #fff; }
+.jo-guide-primary:hover { border-color: #075f60; background: #075f60; color: #fff; }
+.jo-guide-secondary { border: 1px solid #9aafb2; background: transparent; color: #344f5a; }
+.jo-guide-secondary:hover { border-color: #55747c; background: #d9e7e3; color: #18323d; }
 .jo-guide-avatar { pointer-events: none; }
 .jo-guide-close {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 8px;
+  right: 8px;
   z-index: 4;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   pointer-events: auto;
 }
 .jo-tour-spotlight {
-  outline: 2px solid #3d8bfd !important;
-  outline-offset: 3px;
-  border-radius: 8px;
-  box-shadow: 0 0 0 6px rgba(61,139,253,.25);
+  outline: 2px solid #67d7c1 !important;
+  outline-offset: 4px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 6px rgba(46,181,158,.2);
 }
+html[data-public-theme="dark"] .jo-guide-card {
+  background: linear-gradient(145deg, #10222e, #142d38);
+  border-color: #42616a;
+  border-top-color: #4bc5ad;
+  color: #e8f1f1;
+}
+html[data-public-theme="dark"] .jo-guide-name { color: #65d6c1; }
+html[data-public-theme="dark"] .jo-guide-count { color: #aec3c9; }
+html[data-public-theme="dark"] .jo-guide-focus { color: #a3eddf; background: #1d4648; border-color: #39776f; }
+html[data-public-theme="dark"] .jo-guide-text { color: #e1ebeb; }
+html[data-public-theme="dark"] .jo-guide-secondary { border-color: #58717a; color: #d3e0e2; }
+html[data-public-theme="dark"] .jo-guide-secondary:hover { border-color: #9bb7bd; background: #203c47; color: #fff; }
+html[data-public-theme="dark"] .jo-guide-close { filter: invert(1) grayscale(1) brightness(1.7); }
 @media (max-width: 991.98px) {
-  .jo-guide-dock { bottom: 84px; width: min(440px, calc(100vw - 16px)); }
+  .jo-guide-dock { bottom: max(88px, calc(env(safe-area-inset-bottom, 0px) + 76px)); width: min(560px, calc(100vw - 16px)); }
   .jo-guide-avatar,
   .rg-stepper-jo-avatar,
   #hazard-jo-avatar {
     height: clamp(112px, 30vw, 148px);
+  }
+  @media (max-width: 575.98px) {
+    .jo-guide-dock { width: calc(100vw - 20px); }
+    .jo-guide-card { align-items: center; gap: 9px; padding: 10px 12px 10px 8px; }
+    .jo-guide-avatar { height: 98px; max-width: 76px; }
+    .jo-guide-body { padding: 1px 18px 1px 0; }
+    .jo-guide-focus { margin: 6px 0; padding: 3px 8px; font-size: .72rem; }
+    .jo-guide-text { margin-bottom: 9px; font-size: .81rem; line-height: 1.4; }
+    .jo-guide-action { min-height: 35px; padding: 0 11px; font-size: .73rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .jo-tour-spotlight { scroll-behavior: auto; }
   }
 }
 
@@ -2257,7 +2287,7 @@ a.kpi-card:hover { color: inherit; background: #f8fafc; }
   flex: 0 0 auto;
 }
 .rg-hazard-panel-head .jo-mascot {
-  width: 48px;
+  width: 68px;
   height: auto;
   flex: 0 0 auto;
 }

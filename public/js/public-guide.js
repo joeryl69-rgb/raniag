@@ -6,13 +6,13 @@
     const STORAGE_KEY = 'raniag_guide';
     const ASSET = '/images/guide';
 
-    const POSE_VERSION = '4';
+    const POSE_VERSION = '1';
     const NAV_TOUR = [
         { sel: '[data-rg-tour="home"]', pose: 'greeting', label: 'Home', icon: 'bi-house-door', text: 'Home is where you start — overview, announcements, and how reporting works.' },
         { sel: '[data-rg-tour="track"]', pose: 'clipboard', label: 'Track Report', icon: 'bi-search', text: 'Track Report — check status anytime with your tracking or reference code.' },
         { sel: '[data-rg-tour="hazard"]', pose: 'map', label: 'Live Map', icon: 'bi-map', text: 'Live Map — hazard zones, evacuation centers, and barangay risk awareness in Pamplona.' },
         { sel: '[data-rg-tour="dashboard"]', pose: 'clipboard', label: 'Community Dashboard', icon: 'bi-bar-chart-line', text: 'Community Dashboard — a public picture of reports and situational updates.' },
-        { sel: '[data-rg-tour="support"]', pose: 'phone', label: 'Support', icon: 'bi-headset', text: 'Support is the help button — contact MDRRMO there. Use Report an Incident to file a new case.' },
+        { sel: '[data-rg-tour="support"]', pose: 'phone', label: 'Get help', icon: 'bi-headset', text: 'Use the floating help button or Support Center link whenever you need assistance.' },
         { sel: '[data-rg-tour="report"]', pose: 'alert', label: 'Report an Incident', icon: 'bi-megaphone-fill', text: 'Report an Incident — file a new report. I can walk you through it the first time.' },
     ];
 
@@ -43,7 +43,7 @@
     }
 
     function poseUrl(pose) {
-        return `${ASSET}/jo-${pose || 'greeting'}.jpg?v=${POSE_VERSION}`;
+        return `${ASSET}/jo-${pose || 'greeting'}.png?v=${POSE_VERSION}`;
     }
 
     function markPoseChange(img) {
@@ -64,6 +64,7 @@
         dock.className = 'jo-guide-dock d-none';
         dock.setAttribute('role', 'dialog');
         dock.setAttribute('aria-label', 'JO guide');
+        dock.setAttribute('aria-modal', 'false');
         dock.innerHTML = `
             <div class="jo-guide-card">
                 <img class="jo-mascot jo-guide-avatar" id="jo-guide-avatar" src="${poseUrl('greeting')}" alt="JO" width="160" height="200">
@@ -88,6 +89,7 @@
     }
 
     let onGuideClose = finishSiteTour;
+    let openedNavForTour = false;
 
     function bindGuideClose() {
         const close = document.getElementById('jo-guide-close');
@@ -173,8 +175,13 @@
     function navLinkVisible(el) {
         if (!el) return false;
         const menu = document.getElementById('publicNav');
-        if (menu && menu.contains(el) && window.getComputedStyle(menu).display === 'none') {
-            return false;
+        if (menu && menu.contains(el) && window.matchMedia('(max-width: 1199.98px)').matches
+            && !menu.classList.contains('show') && !menu.classList.contains('collapsing')) {
+            const collapse = window.bootstrap?.Collapse.getOrCreateInstance(menu, { toggle: false });
+            if (collapse) {
+                openedNavForTour = true;
+                collapse.show();
+            }
         }
         const box = el.getBoundingClientRect();
         return box.width > 0 && box.height > 0;
@@ -196,6 +203,11 @@
         writePrefs({ siteTourDone: true });
         clearNavHighlight();
         hideDock();
+        if (openedNavForTour) {
+            const menu = document.getElementById('publicNav');
+            window.bootstrap?.Collapse.getOrCreateInstance(menu, { toggle: false }).hide();
+            openedNavForTour = false;
+        }
     }
 
     function renderTourStep() {
@@ -206,11 +218,11 @@
             clearNavHighlight();
             setText('You’re set. Report an incident or track an existing one whenever you need.');
             setActions([
-                btn('Report an Incident', 'btn btn-primary btn-sm', () => {
+                btn('Report an Incident', 'jo-guide-action jo-guide-primary', () => {
                     finishSiteTour();
                     window.location.href = document.querySelector('[data-rg-tour="report"]')?.href || '/report';
                 }),
-                btn('Got it', 'btn btn-outline-secondary btn-sm', finishSiteTour),
+                btn('Got it', 'jo-guide-action jo-guide-secondary', finishSiteTour),
             ]);
             return;
         }
@@ -219,11 +231,11 @@
         setText(step.text);
         highlight(step.sel);
         setActions([
-            btn(tourIndex === 0 ? 'Next' : 'Next', 'btn btn-primary btn-sm', () => {
+            btn('Next', 'jo-guide-action jo-guide-primary', () => {
                 tourIndex += 1;
                 renderTourStep();
             }),
-            btn('Skip', 'btn btn-link btn-sm', finishSiteTour),
+            btn('Skip tour', 'jo-guide-action jo-guide-secondary', finishSiteTour),
         ]);
     }
 
@@ -242,8 +254,8 @@
         setPose('greeting');
         setText('Hi, I’m JO. New here? I’ll show you what each menu does.');
         setActions([
-            btn('Show me', 'btn btn-primary btn-sm', startSiteTour),
-            btn('Skip', 'btn btn-outline-secondary btn-sm', finishSiteTour),
+            btn('Show me around', 'jo-guide-action jo-guide-primary', startSiteTour),
+            btn('Not now', 'jo-guide-action jo-guide-secondary', finishSiteTour),
         ]);
 
         onGuideClose = finishSiteTour;
@@ -263,7 +275,7 @@
         setPose(pose);
         setText(text);
         setActions([
-            btn('Got it', 'btn btn-primary btn-sm', () => {
+            btn('Got it', 'jo-guide-action jo-guide-primary', () => {
                 writePrefs({ seenPages: { ...seen, [pageKey]: true } });
                 hideDock();
             }),
@@ -355,6 +367,11 @@
 
     function boot() {
         ensureDock();
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !document.getElementById('jo-guide-dock')?.classList.contains('d-none')) {
+                onGuideClose();
+            }
+        });
         document.getElementById('jo-replay-tour')?.addEventListener('click', (e) => {
             e.preventDefault();
             replaySiteTour();
@@ -374,13 +391,12 @@
             offerSiteTour();
             pageTip('track', 'clipboard', 'Enter your tracking number here to see status updates.');
         } else if (page === 'support') {
-            offerSiteTour();
-            pageTip('support', 'phone', 'Send a support message here — for a new incident, use Report an Incident instead.');
+            // The redesigned support page already presents JO and the
+            // incident-report route in context; avoid covering the form with
+            // a second automatic prompt.
         } else if (page === 'dashboard') {
             offerSiteTour();
             pageTip('dashboard', 'clipboard', 'This dashboard shows community-facing incident activity at a glance.');
-        } else {
-            offerSiteTour();
         }
     }
 

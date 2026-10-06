@@ -65,6 +65,44 @@
         background: rgba(11, 94, 215, .06);
         border: 1px solid rgba(11, 94, 215, .16);
     }
+    .rg-jurisdiction-notice {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: .25rem .8rem;
+        align-items: start;
+        padding: 1rem 1.1rem;
+        border: 1px solid #9c7028;
+        border-left: 4px solid #d9a406;
+        border-radius: 10px;
+        background: #fff5dc;
+        color: #503d1c;
+    }
+    .rg-jurisdiction-notice > .bi { grid-row: span 2; color: #8a5c08; font-size: 1.15rem; }
+    .rg-jurisdiction-kicker { color: #654915; font: 800 .68rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; }
+    .rg-jurisdiction-copy { margin: 0; font-size: .88rem; line-height: 1.5; }
+    html[data-public-theme="dark"] .rg-jurisdiction-notice { background: #322b1e; border-color: #866a34; color: #eee2c5; }
+    html[data-public-theme="dark"] .rg-jurisdiction-notice > .bi,
+    html[data-public-theme="dark"] .rg-jurisdiction-kicker { color: #f0c96d; }
+    .rg-no-incident-types {
+        display:flex;
+        align-items:flex-start;
+        gap:13px;
+        margin-bottom:18px;
+        padding:15px 17px;
+        border:1px solid #e4bb69;
+        border-left:4px solid #d08c19;
+        border-radius:5px;
+        background:#fff8e7;
+        color:#4c3a18;
+    }
+    .rg-no-incident-types>.bi { color:#9b6412;font-size:1.2rem; }
+    .rg-no-incident-types strong { display:block;font-size:.88rem; }
+    .rg-no-incident-types p { margin:4px 0 7px;font-size:.81rem;line-height:1.5; }
+    .rg-no-incident-types a { color:#075b64;font-size:.79rem;font-weight:750;text-decoration:none; }
+    .rg-no-incident-types a:hover { text-decoration:underline; }
+    html[data-public-theme="dark"] .rg-no-incident-types { border-color:#745b2c;background:#382e19;color:#f4e7bb; }
+    html[data-public-theme="dark"] .rg-no-incident-types>.bi { color:#f1c86d; }
+    html[data-public-theme="dark"] .rg-no-incident-types a { color:#80dfca; }
     @media (prefers-reduced-motion: reduce) {
         .rg-shake, .rg-error-spot, #jo-report-coach.is-alerting { animation: none; }
         .rg-error-spot, #jo-report-coach.is-alerting { box-shadow: 0 0 0 3px rgba(217, 85, 43, .55); }
@@ -73,18 +111,53 @@
     .report-wizard-pane:not(.d-none) { display: block !important; }
     .report-wizard-pane.is-active .card { opacity: 1 !important; transform: none !important; visibility: visible !important; }
 
-    /* Evidence-gate popup — same alert-warning accent language used across
-       the app (border-left accent, --rg-radius corners) instead of a
-       generic Bootstrap modal, with a guaranteed full-page dim behind it. */
-    #evidence-gate-modal .modal-content {
-        border: none;
-        border-left: 4px solid #d9852b;
-        border-radius: var(--rg-radius);
-        box-shadow: var(--rg-shadow-lg, 0 24px 48px -20px rgba(0,0,0,.45));
+    .rg-wizard-dock .rg-wizard-nav-btn {
+        min-width: 112px;
+        min-height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .55rem;
+        border-radius: 8px;
+        font-weight: 750;
+        letter-spacing: .01em;
     }
-    #evidence-gate-modal .modal-header { border-bottom: none; padding-bottom: .5rem; }
-    #evidence-gate-modal .modal-title { color: #7a4a10; font-size: 1.05rem; }
-    #evidence-gate-modal .modal-body { color: var(--rg-ink); padding-top: 0; }
+    .rg-wizard-dock #wizard-back { color: var(--rg-text); border-color: var(--rg-line); }
+    .rg-wizard-dock #wizard-next,
+    .rg-wizard-dock #wizard-submit {
+        background: #087b78;
+        border-color: #087b78;
+        box-shadow: 0 5px 14px rgba(8, 123, 120, .18);
+    }
+    .rg-wizard-dock #wizard-next:hover,
+    .rg-wizard-dock #wizard-submit:hover { background: #075f60; border-color: #075f60; }
+    html[data-public-theme="dark"] .rg-wizard-dock #wizard-back { color: #e3ecee; border-color: #58717a; }
+    html[data-public-theme="dark"] .rg-wizard-dock #wizard-next,
+    html[data-public-theme="dark"] .rg-wizard-dock #wizard-submit { background: #168d83; border-color: #168d83; color: #041d1c; }
+    #evidence-gate-modal .modal-dialog { width: min(100% - 1.5rem, 520px); }
+    #evidence-gate-modal .modal-content {
+        overflow: hidden;
+        border: 1px solid var(--rg-line);
+        border-top: 3px solid #d9a406;
+        border-radius: 12px;
+        background: var(--rg-card);
+        color: var(--rg-text);
+        box-shadow: 0 24px 65px rgba(0,0,0,.32);
+    }
+    #evidence-gate-modal .modal-header { align-items: flex-start; gap: .75rem; border-bottom: 1px solid var(--rg-line); padding: 1.1rem 1.2rem; }
+    #evidence-gate-modal .modal-title { color: var(--rg-text); font-size: 1rem; font-weight: 800; }
+    #evidence-gate-modal .rg-evidence-kicker { display: block; margin-bottom: .4rem; color: var(--rg-muted); font: 800 .65rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .11em; }
+    #evidence-gate-modal .modal-body { color: var(--rg-text); padding: 1rem 1.2rem; line-height: 1.55; }
+    #evidence-gate-modal .modal-footer { border-top: 1px solid var(--rg-line); padding: .8rem 1.2rem; }
+    #evidence-gate-modal .rg-evidence-action { background: #087b78; border-color: #087b78; }
+    html[data-public-theme="dark"] #evidence-gate-modal .modal-content { background: #142630 !important; border-color: #38525e !important; color: #e3ecee; }
+    html[data-public-theme="dark"] #evidence-gate-modal .modal-title,
+    html[data-public-theme="dark"] #evidence-gate-modal .modal-body { color: #e3ecee !important; }
+    html[data-public-theme="dark"] #evidence-gate-modal .rg-evidence-kicker { color: #afc3c8; }
+    @media (max-width: 575.98px) {
+        .rg-wizard-dock .rg-wizard-nav-btn { min-width: 0; flex: 1 1 0; padding-inline: .65rem; }
+        .rg-jurisdiction-notice { padding: .85rem; }
+    }
 </style>
 @endpush
 
@@ -121,7 +194,7 @@
             <div class="rg-stepper-head">
                 <div class="small text-muted" id="wizard-step-label">Step 1 of 4 — Type</div>
                 <div class="rg-stepper-jo" id="jo-report-coach" aria-label="JO report guide">
-                    <img class="jo-mascot rg-stepper-jo-avatar jo-report-coach-avatar" src="/images/guide/jo-greeting.jpg?v=4" alt="JO" width="140" height="176">
+                    <img class="jo-mascot rg-stepper-jo-avatar jo-report-coach-avatar" src="/images/guide/jo-greeting.png?v=1" alt="JO" width="140" height="187">
                     <div class="rg-stepper-jo-body min-w-0">
                         <div class="rg-stepper-jo-name">JO</div>
                         <p class="rg-stepper-jo-text jo-report-coach-text mb-0">Pick the incident type. Written details are optional.</p>
@@ -157,7 +230,7 @@
                 </li>
             </ol>
 
-            <div id="wizard-step-error" class="alert alert-warning py-2 px-3 mt-2 mb-0 d-none" role="alert"></div>
+            <div id="wizard-step-error" class="alert alert-warning py-2 px-3 mt-2 mb-0 d-none" role="alert" aria-live="assertive"></div>
         </div>
 
         <div class="report-wizard-pane is-active" data-wizard-step="0">
@@ -167,6 +240,16 @@
                 <span>{{ __('Incident Type') }}</span>
             </div>
             <div class="card-body p-4">
+                @if ($incidentTypes->isEmpty())
+                    <div class="rg-no-incident-types" id="incident-type-unavailable" role="alert">
+                        <span class="bi bi-exclamation-triangle" aria-hidden="true"></span>
+                        <div>
+                            <strong>Incident categories are temporarily unavailable.</strong>
+                            <p>The reporting form is safe, but the response desk has no active categories configured. Please contact the team; existing reports are not affected.</p>
+                            <a href="{{ route('public.support') }}">Contact the Support Center <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+                        </div>
+                    </div>
+                @endif
                 <div class="row g-3" id="incident-type-grid">
                     @foreach ($incidentTypes as $type)
                         <div class="col-sm-6 col-lg-4">
@@ -273,9 +356,10 @@
                 <p class="small mb-3" id="location-resolve-status">
                     <i class="bi bi-geo-alt text-muted me-1"></i><span class="text-muted">Waiting for location…</span>
                 </p>
-                <div class="alert alert-warning d-none py-2 px-3 mb-3" id="outside-jurisdiction-banner" role="alert" style="border-left: 4px solid #d9a406;">
+                <div class="rg-jurisdiction-notice d-none mb-3" id="outside-jurisdiction-banner" role="status" aria-live="polite">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                    <span id="outside-jurisdiction-text"></span>
+                    <span class="rg-jurisdiction-kicker">OUTSIDE PAMPLONA RESPONSE AREA</span>
+                    <p class="rg-jurisdiction-copy" id="outside-jurisdiction-text"></p>
                 </div>
                 <div class="row g-3" id="location-fields">
                     <div class="col-md-4">
@@ -463,12 +547,12 @@
                 <input type="file" class="form-control @error('evidence') is-invalid @enderror @error('evidence.*') is-invalid @enderror"
                        id="evidence" name="evidence[]" multiple
                        accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
+                @error('evidence')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                @error('evidence.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 <div class="form-text">
                     Up to {{ $evidenceConfig['max_files'] }} files total (camera + uploads),
                     {{ number_format($evidenceConfig['max_size_kb'] / 1024, 1) }} MB each.
                 </div>
-                @error('evidence')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-                @error('evidence.*')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
             </div>
         </div>
         </div>{{-- wizard step 1 — GPS camera --}}
@@ -524,28 +608,26 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="evidence-gate-modal-label">
-                            <i class="bi bi-exclamation-triangle-fill" style="color:#d9852b;"></i>No evidence attached
-                        </h5>
+                        <div>
+                            <span class="rg-evidence-kicker">REPORT INTAKE / EVIDENCE</span>
+                            <h5 class="modal-title mb-0" id="evidence-gate-modal-label">No photo or file attached</h5>
+                        </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-0">
-                            You haven't taken a GPS photo or uploaded a file, so this report can't be sent anonymously.
-                            Next, share your location. Before you submit, leave a phone number or email so MDRRMO can verify and follow up.
-                        </p>
+                        <p class="mb-0">To submit anonymously, attach a GPS photo, video, or file. Without evidence, continue and provide at least one way MDRRMO can contact you.</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                        <button type="button" class="btn btn-primary rg-evidence-action" data-bs-dismiss="modal">Continue to location <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></button>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="rg-wizard-dock" id="wizard-actions">
-            <button type="button" class="btn btn-outline-secondary" id="wizard-back" disabled>Back</button>
-            <button type="button" class="btn btn-primary" id="wizard-next">Next</button>
-            <button type="submit" class="btn btn-primary d-none" id="wizard-submit">Submit Report</button>
+            <button type="button" class="btn btn-outline-secondary rg-wizard-nav-btn" id="wizard-back" disabled><i class="bi bi-arrow-left" aria-hidden="true"></i>Back</button>
+            <button type="button" class="btn btn-primary rg-wizard-nav-btn" id="wizard-next" @disabled($incidentTypes->isEmpty()) @if($incidentTypes->isEmpty()) aria-describedby="incident-type-unavailable" @endif>Next<i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+            <button type="submit" class="btn btn-primary rg-wizard-nav-btn d-none" id="wizard-submit">Submit Report<i class="bi bi-send" aria-hidden="true"></i></button>
         </div>
     </form>
 </div>
