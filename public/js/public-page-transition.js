@@ -6,7 +6,7 @@
 
     if (!reducedMotion.matches) {
         root.classList.add('rg-page-arriving');
-        window.setTimeout(() => root.classList.remove('rg-page-arriving'), 500);
+        window.setTimeout(() => root.classList.remove('rg-page-arriving'), 180);
     }
 
     document.addEventListener('click', (event) => {
@@ -26,7 +26,7 @@
 
         root.classList.remove('rg-page-arriving');
         root.classList.add('rg-page-leaving');
-        window.setTimeout(() => window.location.assign(destination.href), 250);
+        window.setTimeout(() => window.location.assign(destination.href), 80);
     });
 
     window.addEventListener('pageshow', () => root.classList.remove('rg-page-leaving', 'rg-page-arriving'));

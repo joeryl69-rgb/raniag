@@ -860,11 +860,11 @@
         .rg-nav-actions { display:flex;align-items:center;gap:.55rem; }
         .rg-strip-separator { padding: 0 .35rem; color: #e9bd5c; }
         .rg-strip-location { color: #cfdee2; }
-        body.raniag-public #rg-main { transition: opacity .26s cubic-bezier(.2,.75,.25,1), transform .26s cubic-bezier(.2,.75,.25,1), filter .26s ease; }
-        body.rg-page-arriving #rg-main { animation: rg-page-arrive .42s cubic-bezier(.2,.75,.25,1) both; }
-        body.rg-page-leaving #rg-main { opacity:.38; transform:translateY(7px); filter:blur(1px); }
+        body.raniag-public #rg-main { transition: opacity .16s cubic-bezier(.2,.75,.25,1), transform .16s cubic-bezier(.2,.75,.25,1); }
+        body.rg-page-arriving #rg-main { animation: rg-page-arrive .18s cubic-bezier(.2,.75,.25,1) both; }
+        body.rg-page-leaving #rg-main { opacity:.72; transform:translateY(2px); }
         @keyframes rg-page-arrive {
-            from { opacity:0; transform:translateY(12px); filter:blur(2px); }
+            from { opacity:0; transform:translateY(5px); }
             to { opacity:1; transform:translateY(0); }
         }
         body.rg-page-leaving::after {
@@ -875,14 +875,14 @@
             height:3px;
             background:linear-gradient(90deg,#e9bd5c,#4bc5ad);
             transform-origin:left;
-            animation:rg-page-progress .24s ease-out both;
+            animation:rg-page-progress .12s ease-out both;
             pointer-events:none;
         }
         @keyframes rg-page-progress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
         @media (prefers-reduced-motion: reduce) {
             body.raniag-public #rg-main { transition:none; }
             body.rg-page-arriving #rg-main { animation:none; }
-            body.rg-page-leaving #rg-main { opacity:1; transform:none; filter:none; }
+            body.rg-page-leaving #rg-main { opacity:1; transform:none; }
             body.rg-page-leaving::after { animation:none; }
         }
         .rg-help-fab {

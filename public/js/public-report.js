@@ -754,6 +754,10 @@
                     || (`idem-${Date.now()}-${Math.random().toString(16).slice(2)}`);
             }
 
+            const slowSubmissionNotice = window.setTimeout(() => {
+                window.showLoadingOverlay?.('Still processing your report. Keep this page open and do not submit again.');
+            }, 15000);
+
             try {
                 const res = await fetch(form.action, {
                     method: 'POST',
@@ -793,6 +797,8 @@
                     message: 'Network error while submitting. Check your connection and try again.',
                 });
                 resetSubmitButton();
+            } finally {
+                window.clearTimeout(slowSubmissionNotice);
             }
         });
     }

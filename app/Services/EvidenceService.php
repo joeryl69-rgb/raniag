@@ -15,7 +15,9 @@ class EvidenceService
 {
     /**
      * Attach files to an incident, checking for GPS metadata (either from the Web app capture or EXIF data)
-     * and watermarking geotagged photos using PHP GD.
+     * and watermarking geotagged photos using PHP GD. Watermarks use the
+     * report's supplied address or local Pamplona address data so uploads
+     * never wait on an external reverse-geocoding request.
      *
      * @param  list<UploadedFile>  $files
      * @param  list<UploadedFile>  $files
@@ -71,7 +73,14 @@ class EvidenceService
 
             // 3. Watermark the photo if it has coordinates
             if ($isGpsCapture && $latitude !== null && $longitude !== null && $fileType === EvidenceType::Photo) {
-                $place = $this->watermarkPhoto($absolutePath, $latitude, $longitude, $incident->barangay, $timestamp);
+                $place = $this->watermarkPhoto(
+                    $absolutePath,
+                    $latitude,
+                    $longitude,
+                    $incident->barangay,
+                    $timestamp,
+                    $incident->location_address,
+                );
 
                 // Dynamically assign incident coordinates if not already set
                 if (empty($incident->latitude) || empty($incident->longitude)) {
@@ -123,7 +132,14 @@ class EvidenceService
             $timestamp = $capture['captured_at'] ?? now()->toDateTimeString();
 
             if ($latitude !== null && $longitude !== null) {
-                $place = $this->watermarkPhoto($absolutePath, $latitude, $longitude, $incident->barangay, $timestamp);
+                $place = $this->watermarkPhoto(
+                    $absolutePath,
+                    $latitude,
+                    $longitude,
+                    $incident->barangay,
+                    $timestamp,
+                    $incident->location_address,
+                );
 
                 if (empty($incident->latitude) || empty($incident->longitude)) {
                     $incident->update([
@@ -233,11 +249,17 @@ class EvidenceService
     /**
      * Watermarks a photo using PHP GD: title, coordinates, full address
      * (barangay/municipality/province/country), formatted date/time, and a
-     * small map preview thumbnail with a pin. Always reverse-geocodes via
-     * OpenStreetMap (Nominatim) to complete the address, falling back to
-     * config('raniag.address') defaults for anything it can't resolve.
+     * small map preview thumbnail with a pin. Uses the submitted location
+     * address or locally configured municipality details for the watermark.
      */
-    private function watermarkPhoto(string $absolutePath, float $latitude, float $longitude, ?string $barangay, string $timestamp): ?string
+    private function watermarkPhoto(
+        string $absolutePath,
+        float $latitude,
+        float $longitude,
+        ?string $barangay,
+        string $timestamp,
+        ?string $locationAddress = null,
+    ): ?string
     {
         if (! function_exists('imagecreatefromjpeg')) {
             return null;
@@ -272,7 +294,7 @@ class EvidenceService
             $width = imagesx($image);
             $height = imagesy($image);
 
-            $place = $this->resolveFullAddress($latitude, $longitude, $barangay);
+            $place = $this->resolveFullAddress($barangay, $locationAddress);
 
             $coordsText = sprintf('%f, %f', $latitude, $longitude);
             $locationText = $place;
@@ -311,63 +333,21 @@ class EvidenceService
     }
 
     /**
-     * Resolves the full address — barangay, municipality, province, country —
-     * shown in the watermark. Reverse-geocodes via Nominatim to fill in
-     * whichever parts aren't already known, and always falls back to the
-     * configured defaults (config('raniag.address')) for any part that
-     * can't be resolved, so the address is never left incomplete even if
-     * the network call fails.
+     * Uses the address collected with the report when available. Otherwise,
+     * compose a local address from the resolved barangay and configured
+     * municipality; report submission must not depend on an external lookup.
      */
-    private function resolveFullAddress(float $latitude, float $longitude, ?string $barangay): string
+    private function resolveFullAddress(?string $barangay, ?string $locationAddress): string
     {
+        $locationAddress = trim((string) $locationAddress);
+        if ($locationAddress !== '') {
+            return $locationAddress;
+        }
+
         $defaults = config('raniag.address', []);
         $municipality = $defaults['municipality'] ?? 'Pamplona';
         $province = $defaults['province'] ?? 'Cagayan';
         $country = $defaults['country'] ?? 'Philippines';
-
-        try {
-            $url = sprintf('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%F&lon=%F&zoom=16&addressdetails=1', $latitude, $longitude);
-            $opts = [
-                'http' => [
-                    'method' => 'GET',
-                    'header' => "User-Agent: RANIAG/1.0\r\nAccept: application/json\r\n",
-                    'timeout' => 5,
-                ],
-            ];
-            $resp = @file_get_contents($url, false, stream_context_create($opts));
-            if ($resp) {
-                $json = json_decode($resp, true);
-                $addr = $json['address'] ?? [];
-
-                if (empty($barangay)) {
-                    foreach (['village', 'suburb', 'hamlet', 'neighbourhood'] as $key) {
-                        if (! empty($addr[$key])) {
-                            $barangay = $addr[$key];
-                            break;
-                        }
-                    }
-                }
-
-                foreach (['city', 'town', 'municipality'] as $key) {
-                    if (! empty($addr[$key])) {
-                        $municipality = $addr[$key];
-                        break;
-                    }
-                }
-
-                if (! empty($addr['state'])) {
-                    $province = $addr['state'];
-                } elseif (! empty($addr['province'])) {
-                    $province = $addr['province'];
-                }
-
-                if (! empty($addr['country'])) {
-                    $country = $addr['country'];
-                }
-            }
-        } catch (\Throwable $t) {
-            Log::warning('Reverse geocode failed: '.$t->getMessage());
-        }
 
         $parts = [];
         if (! empty($barangay)) {

@@ -21,7 +21,7 @@
             const icon = button.querySelector('.bi');
             const label = button.querySelector('[data-rg-theme-label]');
             if (icon) icon.className = `bi ${theme === 'dark' ? 'bi-moon-stars' : 'bi-sun'}`;
-            if (label) label.textContent = `${theme === 'dark' ? 'Dark' : 'Light'} mode`;
+            if (label) label.textContent = 'Theme';
         });
         if (buttons.length) root.classList.add('rg-theme-controls-ready');
     }
@@ -37,7 +37,11 @@
     }
 
     applyTheme(readTheme());
-    document.addEventListener('DOMContentLoaded', () => updateControls(readTheme()), { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+        const theme = readTheme();
+        if (theme === root.dataset.publicTheme) updateControls(theme);
+        else applyTheme(theme);
+    }, { once: true });
     document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-rg-theme-toggle]');
         if (!button) return;
