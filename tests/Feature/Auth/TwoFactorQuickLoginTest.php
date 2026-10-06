@@ -98,6 +98,24 @@ test('a remembered device signs in from the account icon without a password', fu
     $this->assertAuthenticatedAs($user);
 });
 
+test('remembered accounts use the current profile name and photo', function () {
+    $user = User::factory()->administrator()->create(['name' => 'Current Staff Name']);
+    $user->avatar_path = 'avatars/current-staff.png';
+    $user->save();
+
+    $request = Request::create('/', 'GET', [], [
+        TwoFactorService::RECOGNIZED_COOKIE => base64_encode(json_encode([
+            ['name' => 'Old Staff Name', 'email' => $user->email],
+        ])),
+    ]);
+
+    $account = app(TwoFactorService::class)->recognizedUsers($request)[0];
+
+    expect($account['name'])->toBe('Current Staff Name')
+        ->and($account['initials'])->toBe($user->initials)
+        ->and($account['avatar_url'])->toBe($user->avatar_url);
+});
+
 test('agency and personnel are sent to the email code, and removing them requires it again', function (string $role, string $home) {
     Mail::fake();
     config(['raniag.two_factor.enabled' => true]);

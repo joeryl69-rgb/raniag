@@ -9,15 +9,16 @@
             <span class="rg-eyebrow"><i class="bi bi-broadcast-pin"></i>Pamplona situation</span>
             <h1>What the community is reporting</h1>
             <p>Current incident patterns inside Pamplona. Counts are anonymous and never show a home, reporter, or exact address.</p>
+            <a href="{{ route('public.report.create') }}" class="btn btn-primary rg-community-report">
+                <i class="bi bi-megaphone me-2" aria-hidden="true"></i>Report an incident
+            </a>
         </div>
         <figure class="rg-community-guide" aria-hidden="true">
             <div class="rg-community-guide-map"></div>
+            <span class="rg-community-guide-coordinate">PAMPLONA / CAGAYAN</span>
             <img src="/images/guide/jo-map.png?v=1" alt="" width="168" height="224">
-            <figcaption><span>FIELD GUIDE / PAMPLONA</span><strong>One community. Shared awareness.</strong></figcaption>
+            <figcaption><span>COMMUNITY FIELD GUIDE</span><strong>One report can reveal a pattern.</strong><small>Private reports. Shared awareness.</small></figcaption>
         </figure>
-        <a href="{{ route('public.report.create') }}" class="btn btn-primary">
-            <i class="bi bi-megaphone me-2"></i>Report an incident
-        </a>
     </header>
 
     <div id="pd-loading" class="text-center text-muted py-5">
@@ -29,9 +30,9 @@
         <div class="rg-period-bar">
             <span class="rg-community-label" id="pd-period-label">This month</span>
             <div class="rg-period-switch" role="group" aria-label="Chart period">
-                <button type="button" class="is-on" data-period="month">Month</button>
-                <button type="button" data-period="quarter">Quarter</button>
-                <button type="button" data-period="year">Year</button>
+                <button type="button" class="is-on" data-period="month" aria-pressed="true">Month to date</button>
+                <button type="button" data-period="quarter" aria-pressed="false">Quarter to date</button>
+                <button type="button" data-period="year" aria-pressed="false">Year to date</button>
             </div>
         </div>
         <section class="rg-kpi-row" aria-label="Situation totals">
@@ -133,17 +134,22 @@
 
 @push('styles')
 <style>
-.rg-community { max-width: 1120px; }
-.rg-community-head { position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.48fr) auto;align-items:center;gap:24px;margin-bottom:26px;padding:20px 24px 20px 0; }
+.rg-community { max-width: 1240px; }
+.rg-community-head { position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,.58fr);align-items:center;gap:clamp(22px,4vw,54px);margin-bottom:26px;padding:20px 0; }
 .rg-community-copy { position:relative;z-index:1; }
 .rg-community-head h1 { max-width:17ch;margin:.45rem 0 .4rem;font-size:clamp(2rem,4vw,3.5rem);letter-spacing:-.045em;line-height:1; }
 .rg-community-head p { max-width:700px;margin:0;color:#64748b; }
-.rg-community-guide { position:relative;isolation:isolate;display:grid;place-items:center;min-height:230px;overflow:hidden;margin:0;border:1px solid #31505d;border-radius:6px;background:linear-gradient(145deg,#0d2430,#133845); }
-.rg-community-guide-map { position:absolute;inset:0;z-index:-1;opacity:.65;background:radial-gradient(ellipse at 50% 60%,rgba(35,149,137,.3),transparent 55%),linear-gradient(rgba(144,194,198,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(144,194,198,.11) 1px,transparent 1px);background-size:auto,24px 24px,24px 24px; }
-.rg-community-guide img { position:absolute;right:3px;bottom:-13px;width:auto;height:214px;max-width:78%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.3));animation:rg-community-jo-float 5s ease-in-out infinite; }
-.rg-community-guide figcaption { position:absolute;z-index:1;left:12px;top:12px;display:grid;gap:5px;max-width:112px; }
-.rg-community-guide figcaption span { color:#72d9c3;font:700 .52rem/1.2 ui-monospace,monospace;letter-spacing:.11em; }
-.rg-community-guide figcaption strong { color:#e9f3f1;font-size:.73rem;line-height:1.25; }
+.rg-community-report { display:inline-flex;align-items:center;min-height:46px;margin-top:20px;padding-inline:20px;color:#fff!important;font-weight:800; }
+html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!important; }
+.rg-community-guide { position:relative;isolation:isolate;display:block;min-height:246px;overflow:hidden;margin:0;border:1px solid #31505d;border-radius:7px;background:radial-gradient(ellipse at 76% 66%,rgba(35,149,137,.32),transparent 52%),linear-gradient(145deg,#0d2430,#133845); }
+.rg-community-guide::after { content:"";position:absolute;right:26px;top:44px;width:138px;aspect-ratio:1;border:1px solid rgba(105,222,194,.25);border-radius:50%;box-shadow:0 0 0 18px rgba(105,222,194,.05),0 0 0 39px rgba(105,222,194,.035); }
+.rg-community-guide-map { position:absolute;inset:0;z-index:-1;opacity:.65;background:linear-gradient(rgba(144,194,198,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(144,194,198,.11) 1px,transparent 1px);background-size:24px 24px; }
+.rg-community-guide-coordinate { position:absolute;top:13px;left:15px;color:#87a9ae;font:700 .56rem/1.2 ui-monospace,monospace;letter-spacing:.1em; }
+.rg-community-guide img { position:absolute;right:4px;bottom:-15px;width:auto;height:246px;max-width:68%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.3));animation:rg-community-jo-float 5s ease-in-out infinite; }
+.rg-community-guide figcaption { position:absolute;z-index:1;left:16px;bottom:17px;display:grid;gap:6px;max-width:14ch; }
+.rg-community-guide figcaption span { color:#72d9c3;font:700 .56rem/1.2 ui-monospace,monospace;letter-spacing:.1em; }
+.rg-community-guide figcaption strong { color:#e9f3f1;font-size:.92rem;line-height:1.18; }
+.rg-community-guide figcaption small { color:#b5cbcd;font-size:.68rem;line-height:1.35; }
 @keyframes rg-community-jo-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
 .rg-kpi-row { display:grid; grid-template-columns:1.2fr repeat(3,1fr); gap:14px; margin-bottom:18px; }
 .rg-kpi { background:#fff; border:1px solid rgba(15,28,51,.08); border-radius:18px; padding:18px 18px 16px; min-width:0; box-shadow:0 18px 40px -34px rgba(15,28,51,.55); }
@@ -176,7 +182,7 @@
 .rg-community-updated { text-align:right; margin:14px 3px 0; color:#64748b; font-size:.75rem; }
 .rg-period-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
 .rg-period-switch { display:inline-flex; background:#fff; border:1px solid rgba(15,28,51,.12); border-radius:999px; padding:3px; }
-.rg-period-switch button { border:0; background:transparent; border-radius:999px; padding:6px 14px; font-size:.78rem; font-weight:700; color:#475569; }
+.rg-period-switch button { border:0; background:transparent; border-radius:999px; padding:7px 12px; font-size:.72rem; font-weight:750; color:#475569;white-space:nowrap; }
 .rg-period-switch button.is-on { background:#0f766e; color:#fff; }
 .rg-trend { display:inline-flex; align-items:center; gap:2px; font-weight:800; }
 .rg-trend.up { color:#b45309; }
@@ -203,23 +209,27 @@
 [data-theme="dark"] .rg-rank-track,[data-theme="dark"] .rg-activity-icon { background:#203640; }
 [data-theme="dark"] .rg-activity-item,[data-theme="dark"] .rg-repeat-row { border-color:#304955; }
 [data-theme="dark"] .rg-community-head p,[data-theme="dark"] .rg-privacy-copy,[data-theme="dark"] .rg-active-callout p { color:#adc0c5; }
+[data-theme="dark"] .rg-kpi small,[data-theme="dark"] .rg-kpi p,[data-theme="dark"] .rg-rank-name,[data-theme="dark"] .rg-place-name,[data-theme="dark"] .rg-activity-item small,[data-theme="dark"] .rg-repeat-row small,[data-theme="dark"] .rg-community-updated { color:#b6c8cc; }
+[data-theme="dark"] .rg-rank-count,[data-theme="dark"] .rg-repeat-row strong { color:#e8f0f0; }
+[data-theme="dark"] .rg-period-bar > .rg-community-label { color:#c0d1d4; }
 [data-theme="dark"] .rg-community-head h1,[data-theme="dark"] .rg-situation-card h2,[data-theme="dark"] .rg-active-callout strong { color:#e8f0f0; }
 [data-theme="dark"] .rg-period-switch { background:#203640;border-color:#405862; }
 [data-theme="dark"] .rg-period-switch button { color:#ccdcdf; }
 [data-theme="dark"] .rg-period-switch button.is-on { color:#fff; }
 @media(max-width:767.98px) {
-  .rg-community-head { grid-template-columns:minmax(0,1fr) 120px;align-items:start;gap:12px;padding:10px 0 0; }
-  .rg-community-copy { grid-column:1 / -1; }
-  .rg-community-guide { grid-column:1 / -1;min-height:190px; }
-  .rg-community-guide img { right:8%;height:184px;max-width:55%; }
-  .rg-community-guide figcaption { left:14px;top:14px;max-width:140px; }
-  .rg-community-guide figcaption strong { max-width:13ch;font-size:.78rem; }
-  .rg-community-head>.btn { grid-column:1 / -1;justify-self:start; }
+  .rg-community-head { grid-template-columns:minmax(0,1fr);gap:18px;padding:10px 0 0; }
+  .rg-community-guide { min-height:190px; }
+  .rg-community-guide img { right:6%;height:196px;max-width:53%; }
+  .rg-community-guide::after { right:16%;top:32px;width:118px; }
+  .rg-community-guide figcaption { left:14px;bottom:14px;max-width:15ch; }
+  .rg-community-guide figcaption strong { font-size:.82rem; }
+  .rg-community-report { margin-top:16px; }
   .rg-kpi-row { grid-template-columns:1fr 1fr; }
   .rg-kpi-open { grid-column:1 / -1; }
   .rg-kpi-open strong { font-size:2.4rem; }
   .rg-community-grid { grid-template-columns:1fr; }
   .rg-period-bar, .rg-active-callout { align-items:flex-start; flex-direction:column; }
+  .rg-period-switch { max-width:100%;overflow-x:auto; }
   .rg-chart-stage { height:235px; }
 }
 @media(prefers-reduced-motion:reduce) { .rg-community-guide img { animation:none; } }
@@ -234,6 +244,25 @@
     let trendChart = null;
     let currentPeriod = 'month';
 
+    function applyTrendChartTheme() {
+        if (!trendChart) return;
+        const dark = document.documentElement.dataset.publicTheme === 'dark';
+        const text = dark ? '#c7d6d9' : '#52677a';
+        const grid = dark ? 'rgba(190,216,219,.14)' : 'rgba(82,103,122,.14)';
+        trendChart.data.datasets[0].borderColor = dark ? '#68c9f1' : '#0e4a6b';
+        trendChart.data.datasets[0].backgroundColor = dark ? 'rgba(104,201,241,.12)' : 'rgba(14,74,107,.12)';
+        trendChart.data.datasets[1].borderColor = dark ? '#72d9c3' : '#0f766e';
+        trendChart.options.plugins.legend.labels.color = text;
+        Object.values(trendChart.options.scales).forEach((scale) => {
+            scale.ticks.color = text;
+            scale.grid.color = grid;
+            scale.border.color = grid;
+        });
+        trendChart.update('none');
+    }
+
+    window.addEventListener('raniag:public-theme-change', applyTrendChartTheme);
+
     const statusLabels = {
         submitted: 'Submitted', received: 'Received', assigned: 'Assigned',
         in_progress: 'In Progress', pending_info: 'Pending Info',
@@ -245,6 +274,7 @@
             currentPeriod = button.dataset.period || 'month';
             document.querySelectorAll('.rg-period-switch button').forEach((item) => {
                 item.classList.toggle('is-on', item === button);
+                item.setAttribute('aria-pressed', String(item === button));
             });
             load();
         });
@@ -336,8 +366,15 @@
                     { label: 'Completed', data: data.monthly_trend.map(m => m.resolved), borderColor: '#0f766e', tension: .35, pointRadius: 3 },
                 ],
             },
-            options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' }, plugins: { legend: { position: 'bottom', align: 'start' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: { legend: { position: 'bottom', align: 'start', labels: { color: '#52677a' } } },
+                scales: { x: { ticks: { color: '#52677a' }, grid: { color: 'rgba(82,103,122,.14)' } }, y: { beginAtZero: true, ticks: { precision: 0, color: '#52677a' }, grid: { color: 'rgba(82,103,122,.14)' } } },
+            },
         });
+        applyTrendChartTheme();
 
         const typeEl = document.getElementById('pd-type-list');
         const typeMax = Math.max(1, ...data.type_counts.map(t => t.count));

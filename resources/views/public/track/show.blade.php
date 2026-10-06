@@ -18,17 +18,38 @@
 #rg-track-status .card-body { color:#243d48; }
 #rg-track-status .progress-step.completed .step-dot { border-color:#54c8ad;background:#0c7a75;color:#fff; }
 #rg-track-status .progress-fill { background:#19a58f; }
+#rg-track-status .progress-step .step-name { color:#667b84;font-size:.72rem; }
+#rg-track-status .progress-step.completed .step-name { color:#183643;font-weight:800; }
+#rg-track-status .progress-track { background:#d5e2e3; }
 .rg-track-detail-page .track-agency-sheet,.rg-track-detail-page .rg-app-card { overflow:hidden; }
 html[data-public-theme="dark"] #rg-track-status .rg-app-card { border-color:#304955!important;background:#142630!important;color:#e3ecee; }
 html[data-public-theme="dark"] #rg-track-status .raniag-card-header { border-color:#38525e!important;background:#1b333f!important;color:#e8f0f0!important; }
 html[data-public-theme="dark"] #rg-track-status .raniag-card-header * { color:inherit; }
 html[data-public-theme="dark"] #rg-track-status .card-body { color:#dce8e8; }
 html[data-public-theme="dark"] #rg-track-status .card-footer { border-color:#304955!important;background:#10232d!important;color:#b8cbd0!important; }
+html[data-public-theme="dark"] #rg-track-status .progress-step .step-name { color:#b8cbd0; }
+html[data-public-theme="dark"] #rg-track-status .progress-step.completed .step-name { color:#edf5f4; }
+html[data-public-theme="dark"] #rg-track-status .progress-track { background:#304955; }
+.rg-track-nearest { display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;margin-bottom:20px;padding:15px 18px;border:1px solid #bad9d5;border-left:4px solid #168576;border-radius:6px;background:#eaf5f2;color:#173b3a; }
+.rg-track-nearest-icon { display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#d4ece5;color:#11675e;font-size:1.1rem; }
+.rg-track-nearest-copy { display:grid;gap:3px;min-width:0; }
+.rg-track-nearest-kicker { color:#17675e;font:800 .62rem/1.2 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase; }
+.rg-track-nearest-copy strong { color:#153c3a;font-size:.96rem; }
+.rg-track-nearest-copy span:last-child { color:#526f70;font-size:.8rem; }
+.rg-track-nearest .btn { white-space:nowrap;font-weight:750; }
+html[data-public-theme="dark"] .rg-track-nearest { border-color:#3f6764;border-left-color:#61d0b4;background:#17332f;color:#e2f0eb; }
+html[data-public-theme="dark"] .rg-track-nearest-icon { background:#244940;color:#9ce5ce; }
+html[data-public-theme="dark"] .rg-track-nearest-kicker { color:#8bdfca; }
+html[data-public-theme="dark"] .rg-track-nearest-copy strong { color:#eff8f4; }
+html[data-public-theme="dark"] .rg-track-nearest-copy span:last-child { color:#b5cfca; }
+html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-color:#5d9f8f; }
 @keyframes rg-track-guide-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
 @media(max-width:575.98px) {
     .rg-track-detail-banner { min-height:138px;padding:20px 18px; }
     .rg-track-detail-banner img { height:122px;max-width:35%; }
     .rg-track-detail-banner::before { right:-45px; }
+    .rg-track-nearest { grid-template-columns:auto minmax(0,1fr);gap:10px;padding:13px; }
+    .rg-track-nearest .btn { grid-column:1 / -1;justify-self:stretch; }
 }
 @media(prefers-reduced-motion:reduce) { .rg-track-detail-banner img { animation:none; } }
 </style>
@@ -157,10 +178,14 @@ html[data-public-theme="dark"] #rg-track-status .card-footer { border-color:#304
     @endif
 
     @if ($nearestCenter)
-        <div class="alert alert-info mb-4">
-            Nearest open evacuation center: <strong>{{ $nearestCenter['name'] }}</strong>
-            (~{{ number_format($nearestCenter['distance_m']) }} m).
-            <a href="{{ route('public.hazard.map') }}">View live map</a>
+        <div class="rg-track-nearest" role="note">
+            <span class="rg-track-nearest-icon" aria-hidden="true"><i class="bi bi-geo-alt-fill"></i></span>
+            <div class="rg-track-nearest-copy">
+                <span class="rg-track-nearest-kicker">Nearest open evacuation center</span>
+                <strong>{{ $nearestCenter['name'] }}</strong>
+                <span>Approximately {{ number_format($nearestCenter['distance_m']) }} m from the reported location.</span>
+            </div>
+            <a href="{{ route('public.hazard.map') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-map me-1" aria-hidden="true"></i>Open live map</a>
         </div>
     @endif
 

@@ -31,7 +31,11 @@
             <div class="rg-account-list">
                 @foreach ($recognizedUsers as $account)
                     <div class="rg-account-item" data-email="{{ $account['email'] }}" data-quick="{{ ! empty($account['quick']) ? '1' : '0' }}" role="button" tabindex="0">
-                        <div class="rg-account-avatar">{{ Str::upper(Str::substr($account['name'], 0, 1)) }}</div>
+                        @if (! empty($account['avatar_url']))
+                            <img class="rg-account-avatar" src="{{ $account['avatar_url'] }}" alt="" width="38" height="38" loading="lazy">
+                        @else
+                            <div class="rg-account-avatar">{{ $account['initials'] ?? Str::upper(Str::substr($account['name'], 0, 1)) }}</div>
+                        @endif
                         <div class="rg-account-info">
                             <div class="rg-account-name">{{ $account['name'] }}</div>
                             <div class="rg-account-email">{{ $account['email'] }}</div>

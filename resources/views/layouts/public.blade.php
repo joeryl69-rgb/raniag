@@ -206,6 +206,59 @@
             color: rgba(255,255,255,.42); font-weight: 600;
         }
         .rg-foot-rule { border-color: rgba(255,255,255,.09); }
+        .raniag-footer {
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(ellipse at 88% 18%, rgba(31,112,111,.2), transparent 34%),
+                linear-gradient(135deg, #0b1726, #102432 62%, #0b1726) !important;
+            color: #c4d1d4;
+        }
+        .raniag-footer::after {
+            content: "";
+            position: absolute;
+            width: 340px;
+            aspect-ratio: 1;
+            right: -190px;
+            top: 60px;
+            border: 1px solid rgba(94,211,187,.12);
+            border-radius: 50%;
+            box-shadow: 0 0 0 28px rgba(94,211,187,.025), 0 0 0 62px rgba(94,211,187,.02);
+            pointer-events: none;
+        }
+        .raniag-footer > .container { position: relative; z-index: 1; }
+        .rg-footer-commandline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 0;
+            border-bottom: 1px solid rgba(190,216,219,.14);
+            color: #b9cbce;
+            font: 700 .66rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+        .rg-footer-commandline > span { display: inline-flex; align-items: center; gap: 9px; }
+        .rg-footer-commandline .rg-dot { width: 7px; height: 7px; border-radius: 50%; background: #53d3a7; box-shadow: 0 0 0 4px rgba(83,211,167,.1); }
+        .rg-footer-mark { display: inline-flex; align-items: center; gap: 11px; }
+        .rg-footer-mark .bi { color: #7de0c3; font-size: 1rem; }
+        .rg-footer-location { color: #9db3ba; letter-spacing: .04em; text-transform: none; }
+        .rg-footer-caption {
+            display: grid;
+            gap: 5px;
+            max-width: 44ch;
+            margin-top: 16px;
+            color: #9db3ba;
+            font-size: .8rem;
+            line-height: 1.5;
+        }
+        .rg-footer-caption strong { color: #e7f0f0; font: 700 .64rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; }
+        .raniag-footer .rg-foot-title { color: #7fd6c3; }
+        .raniag-footer a { color: #d0dddf; }
+        .raniag-footer a:hover,
+        .raniag-footer a:focus-visible { color: #82e0c8; }
+        .raniag-footer .rg-foot-rule { border-color: rgba(190,216,219,.14); }
 
         body.rg-scroll-locked { overflow: hidden; position: fixed; left: 0; right: 0; width: 100%; }
 
@@ -802,15 +855,16 @@
         }
         .rg-theme-toggle:hover { border-color: #65cdb3; color: #7de0c3; }
         .rg-theme-toggle .bi { font-size: .9rem; }
+        html:not(.rg-theme-controls-ready) .rg-theme-toggle [data-rg-theme-label] { visibility: hidden; }
         .rg-theme-toggle--mobile { display:none; flex:0 0 auto; white-space:nowrap; }
         .rg-nav-actions { display:flex;align-items:center;gap:.55rem; }
         .rg-strip-separator { padding: 0 .35rem; color: #e9bd5c; }
         .rg-strip-location { color: #cfdee2; }
-        body.raniag-public #rg-main { transition: opacity .14s ease, transform .14s ease; }
-        body.rg-page-arriving #rg-main { animation: rg-page-arrive .3s cubic-bezier(.2,.75,.25,1) both; }
-        body.rg-page-leaving #rg-main { opacity:.12; transform:translateY(5px); }
+        body.raniag-public #rg-main { transition: opacity .26s cubic-bezier(.2,.75,.25,1), transform .26s cubic-bezier(.2,.75,.25,1), filter .26s ease; }
+        body.rg-page-arriving #rg-main { animation: rg-page-arrive .42s cubic-bezier(.2,.75,.25,1) both; }
+        body.rg-page-leaving #rg-main { opacity:.38; transform:translateY(7px); filter:blur(1px); }
         @keyframes rg-page-arrive {
-            from { opacity:0; transform:translateY(8px); }
+            from { opacity:0; transform:translateY(12px); filter:blur(2px); }
             to { opacity:1; transform:translateY(0); }
         }
         body.rg-page-leaving::after {
@@ -821,14 +875,14 @@
             height:3px;
             background:linear-gradient(90deg,#e9bd5c,#4bc5ad);
             transform-origin:left;
-            animation:rg-page-progress .14s ease-out both;
+            animation:rg-page-progress .24s ease-out both;
             pointer-events:none;
         }
         @keyframes rg-page-progress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
         @media (prefers-reduced-motion: reduce) {
             body.raniag-public #rg-main { transition:none; }
             body.rg-page-arriving #rg-main { animation:none; }
-            body.rg-page-leaving #rg-main { opacity:1; transform:none; }
+            body.rg-page-leaving #rg-main { opacity:1; transform:none; filter:none; }
             body.rg-page-leaving::after { animation:none; }
         }
         .rg-help-fab {
@@ -842,11 +896,14 @@
             border: 1px solid rgba(255,255,255,.6);
             border-radius: 999px;
             background: #087b78;
-            color: #fff;
+            color: #fff !important;
+            font-weight: 800;
+            text-decoration: none;
             box-shadow: 0 10px 30px rgba(7,31,40,.3);
             animation: none;
         }
-        .rg-help-fab:hover { background: #075f60; color: #fff; }
+        .rg-help-fab:hover,
+        .rg-help-fab:focus-visible { background: #075f60; color: #fff !important; }
         .rg-help-fab__label { position:static;right:auto;opacity:1;background:transparent;border-radius:0;padding:0;color:inherit; }
         body[data-jo-page="report"] .rg-help-fab {
             bottom: max(92px, calc(env(safe-area-inset-bottom, 0px) + 82px)) !important;
@@ -1059,6 +1116,21 @@
         }
         html[data-public-theme="dark"] .rg-info-box { background: #382e19; border-color: #745b2c; color: #f4e7bb; }
         html[data-public-theme="dark"] .rg-lock-note { background: #382e19; border-color: #745b2c; color: #f4e7bb; }
+        html[data-public-theme="dark"] .rg-wizard-dock .rg-wizard-nav-btn:focus-visible,
+        html[data-public-theme="light"] .rg-wizard-dock .rg-wizard-nav-btn:focus-visible {
+            outline: 3px solid #e9bd5c;
+            outline-offset: 3px;
+        }
+        @media (max-width: 575.98px) {
+            html[data-public-theme="dark"] body[data-jo-page="report"] .rg-wizard-dock {
+                background: linear-gradient(180deg, rgba(20,38,48,0), #142630 28%) !important;
+            }
+            body[data-jo-page="report"] .rg-wizard-dock .rg-wizard-nav-btn { min-height: 48px; }
+        }
+        @media (max-width: 575.98px) {
+            .rg-footer-commandline { align-items: flex-start; flex-direction: column; }
+            .rg-footer-caption { margin-top: 12px; }
+        }
         @media (max-width: 1199.98px) {
             .raniag-navbar .navbar-collapse { padding: .6rem 0 1rem; }
             .rg-theme-toggle--mobile { display:inline-flex; width:auto; justify-content:center; margin:0; }
@@ -1111,8 +1183,8 @@
             </a>
 
             <div class="rg-nav-actions">
-                <button type="button" class="rg-theme-toggle rg-theme-toggle--mobile" data-rg-theme-toggle aria-label="Switch to dark mode" aria-pressed="false">
-                    <i class="bi bi-moon-stars" aria-hidden="true"></i><span data-rg-theme-label>Light mode</span>
+                <button type="button" class="rg-theme-toggle rg-theme-toggle--mobile" data-rg-theme-toggle aria-label="Change color theme" aria-pressed="false">
+                    <i class="bi bi-circle-half" aria-hidden="true"></i><span data-rg-theme-label>Theme</span>
                 </button>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav"
                         aria-controls="publicNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -1164,8 +1236,8 @@
                         </li>
                     @endauth
                     <li class="nav-item">
-                        <button type="button" class="rg-theme-toggle" data-rg-theme-toggle aria-label="Switch to dark mode" aria-pressed="false">
-                            <i class="bi bi-moon-stars" aria-hidden="true"></i><span data-rg-theme-label>Light mode</span>
+                        <button type="button" class="rg-theme-toggle" data-rg-theme-toggle aria-label="Change color theme" aria-pressed="false">
+                            <i class="bi bi-circle-half" aria-hidden="true"></i><span data-rg-theme-label>Theme</span>
                         </button>
                     </li>
                     <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
@@ -1209,6 +1281,10 @@
     {{-- ================= footer ================= --}}
     <footer class="raniag-footer pt-5 pb-4 mt-auto">
         <div class="container">
+            <div class="rg-footer-commandline">
+                <span class="rg-footer-mark"><i class="bi bi-broadcast-pin" aria-hidden="true"></i>Public information desk <span class="rg-dot" aria-hidden="true"></span>Community channel</span>
+                <span class="rg-footer-location"><i class="bi bi-geo-alt" aria-hidden="true"></i>Pamplona, Cagayan</span>
+            </div>
             <div class="row g-4">
                 <div class="col-lg-5">
                     <div class="d-flex align-items-center gap-2 mb-2">
@@ -1219,6 +1295,10 @@
                         Incident Reporting and Analytics System for {{ config('raniag.organization') }}.
                         Every report is logged, routed, and auditable.
                     </p>
+                    <div class="rg-footer-caption">
+                        <strong>PUBLIC REPORTING CHANNEL</strong>
+                        <span>Share a clear location and incident details so responders can review and route reports.</span>
+                    </div>
                 </div>
 
                 <div class="col-6 col-lg-3">

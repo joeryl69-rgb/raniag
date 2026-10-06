@@ -16,7 +16,7 @@ class TwoFactorService
 {
     public const TRUSTED_COOKIE = 'raniag_trusted_device';
 
-    // Purely cosmetic — name/email only, never used for authorization.
+    // Purely cosmetic — account identity/avatar only, never used for authorization.
     // Lets the login page greet a returning user by name and pre-fill
     // their email ("quick login"), independent of and unaffected by the
     // security-bearing trusted-device cookie above.
@@ -280,7 +280,7 @@ class TwoFactorService
      * per-account "remove" action (never by logging out — that would
      * defeat the point of remembering the device).
      *
-     * @return list<array{name: string, email: string}>
+     * @return list<array{name: string, email: string, initials: string, avatar_url: ?string, quick: bool}>
      */
     public function recognizedUsers(Request $request): array
     {
@@ -299,9 +299,12 @@ class TwoFactorService
             if (is_array($entry) && ! empty($entry['email']) && ! empty($entry['name'])) {
                 $email = (string) $entry['email'];
                 $user = User::query()->where('email', $email)->where('is_active', true)->first();
+                $name = $user?->name ?? (string) $entry['name'];
                 $accounts[] = [
-                    'name' => (string) $entry['name'],
+                    'name' => $name,
                     'email' => $email,
+                    'initials' => $user?->initials ?? Str::upper(Str::substr($name, 0, 1)),
+                    'avatar_url' => $user?->avatar_url,
                     'quick' => $user ? $this->hasTrustedDevice($request, $user) : false,
                 ];
             }
