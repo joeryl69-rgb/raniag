@@ -105,10 +105,8 @@ class TwoFactorChallengeController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        $response = redirect()->intended(route($user->homeRoute(), absolute: false))
-            ->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
-
-        $rememberDevice = $request->boolean('remember_device', true);
+        $response = redirect()->intended(route($user->homeRoute(), absolute: false));
+        $rememberDevice = $request->boolean('remember_device');
 
         // Trust is explicit on the challenge screen, and it is stored per user so
         // the same browser can remember multiple accounts (admin + non-admin)
@@ -116,7 +114,11 @@ class TwoFactorChallengeController extends Controller
         // account-switcher pattern, while still allowing kiosk/shared devices to
         // force OTP on every login with trusted_device_days = 0.
         if ($rememberDevice && $twoFactor->trustedDeviceEnabled()) {
+            $response->withCookie($twoFactor->issueRecognizedUserCookie($request, $user));
             $response->withCookie($twoFactor->issueTrustedDeviceCookie($user));
+        } else {
+            $response->withCookie($twoFactor->forgetRecognizedUser($request, $user->email));
+            $response->withCookie($twoFactor->forgetTrustedDevice($request, $user));
         }
 
         return $response;

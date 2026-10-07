@@ -1,4 +1,4 @@
-<x-mail-shell title="Report received">
+<x-mail-shell title="Report received" :message="$message">
 <h2 style="margin:0 0 12px; font-size:19px; color:#10203a;">We received your report</h2>
 <p style="margin:0 0 20px; color:#475569; font-size:14px; line-height:1.6;">
 Thank you for reporting to {{ config('raniag.organization') }}. Your tracking number is

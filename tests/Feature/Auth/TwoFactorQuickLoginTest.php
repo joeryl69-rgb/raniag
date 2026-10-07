@@ -1,5 +1,6 @@
 <?php
 
+use App\Mail\LoginOtpMail;
 use App\Models\User;
 use App\Services\TwoFactorService;
 use Illuminate\Http\Request;
@@ -63,6 +64,105 @@ test('back to sign in clears pending two factor challenge', function () {
         ->assertRedirect(route('login'));
 
     expect(session()->has('pending_2fa_id'))->toBeFalse();
+});
+
+test('successful otp verification can remember a device with database cache', function () {
+    Mail::fake();
+    config([
+        'cache.default' => 'database',
+        'raniag.two_factor.enabled' => true,
+        'raniag.two_factor.trusted_device_days' => -1,
+    ]);
+
+    $user = User::factory()->administrator()->create([
+        'password' => bcrypt('secret123'),
+    ]);
+
+    $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertRedirect(route('two-factor.challenge'));
+
+    $code = null;
+    Mail::assertSent(LoginOtpMail::class, function (LoginOtpMail $mail) use (&$code) {
+        $mail->assertSeeInHtml('src="data:image/png;base64,', false);
+        $mail->assertSeeInHtml('alt="RANIAG"', false);
+        $code = $mail->code;
+
+        return true;
+    });
+
+    $verifiedResponse = $this->post(route('two-factor.store'), [
+        'code' => $code,
+        'remember_device' => '1',
+    ])
+        ->assertRedirect(route('admin.dashboard', absolute: false))
+        ->assertCookie(TwoFactorService::TRUSTED_COOKIE)
+        ->assertCookie(TwoFactorService::RECOGNIZED_COOKIE);
+
+    $this->assertAuthenticatedAs($user);
+
+    $trustedCookie = $verifiedResponse->getCookie(TwoFactorService::TRUSTED_COOKIE);
+    $recognizedCookie = $verifiedResponse->getCookie(TwoFactorService::RECOGNIZED_COOKIE);
+
+    $this->withCookie($trustedCookie->getName(), $trustedCookie->getValue())
+        ->withCookie($recognizedCookie->getName(), $recognizedCookie->getValue())
+        ->post('/logout')
+        ->assertRedirect('/');
+
+    $this->assertGuest();
+
+    $this->get('/login')->assertOk()->assertSee('data-quick="1"', false);
+
+    $this->post(route('login.quick'), ['email' => $user->email])
+        ->assertRedirect(route('admin.dashboard', absolute: false));
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('successful otp verification does not remember a device when unchecked', function () {
+    Mail::fake();
+    config([
+        'cache.default' => 'database',
+        'raniag.two_factor.enabled' => true,
+        'raniag.two_factor.trusted_device_days' => -1,
+    ]);
+
+    $user = User::factory()->administrator()->create([
+        'password' => bcrypt('secret123'),
+    ]);
+
+    $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertRedirect(route('two-factor.challenge'));
+
+    $code = null;
+    Mail::assertSent(LoginOtpMail::class, function (LoginOtpMail $mail) use (&$code) {
+        $code = $mail->code;
+
+        return true;
+    });
+
+    $this->post(route('two-factor.store'), [
+        'code' => $code,
+    ])
+        ->assertRedirect(route('admin.dashboard', absolute: false))
+        ->assertCookieExpired(TwoFactorService::TRUSTED_COOKIE)
+        ->assertCookieExpired(TwoFactorService::RECOGNIZED_COOKIE);
+
+    $this->assertAuthenticatedAs($user);
+    $this->post('/logout')->assertRedirect('/');
+    $this->assertGuest();
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertDontSee('data-email="'.$user->email.'"', false);
+
+    $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertRedirect(route('two-factor.challenge'));
 });
 
 test('forget trusted device clears hasTrustedDevice for that user', function () {

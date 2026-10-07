@@ -1,4 +1,4 @@
-<x-mail-shell title="Incident report update">
+<x-mail-shell title="Incident report update" :message="$message">
 <h2 style="margin:0 0 12px; font-size:19px; color:#10203a;">Your Incident Report Has an Update</h2>
 <p style="margin:0 0 20px; color:#475569; font-size:14px; line-height:1.6;">There is a new update for report <strong>{{ $incident->tracking_number }}</strong>.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9; border-radius:10px; margin:0 0 20px;">

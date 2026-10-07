@@ -1,4 +1,4 @@
-<x-mail-shell title="Printable PDF Approved">
+<x-mail-shell title="Printable PDF Approved" :message="$message">
 <h2 style="margin:0 0 12px; font-size:19px; color:#10203a;">Printable PDF Approved</h2>
 <p style="margin:0 0 20px; color:#475569; font-size:14px; line-height:1.6;">
 Hello, your requested printable PDF has been approved and is ready for download — attached to this email.

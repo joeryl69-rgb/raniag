@@ -1,4 +1,4 @@
-<x-mail-shell title="Response to your feedback">
+<x-mail-shell title="Response to your feedback" :message="$message">
 <h2 style="margin:0 0 12px; font-size:19px; color:#10203a;">Response to Your {{ $feedback->categoryLabel() }}</h2>
 <p style="margin:0 0 6px; color:#475569; font-size:14px;">Hello {{ $feedback->submitter_name ?: 'there' }},</p>
 <p style="margin:0 0 20px; color:#475569; font-size:14px; line-height:1.6;">Thank you for reaching out. Here is our response regarding your submission:</p>

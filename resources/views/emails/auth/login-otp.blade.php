@@ -1,4 +1,4 @@
-<x-mail-shell title="Your login verification code">
+<x-mail-shell title="Your login verification code" :message="$message">
 <h2 style="margin:0 0 12px; font-size:19px; color:#10203a;">Sign-in verification</h2>
 <p style="margin:0 0 18px; color:#475569; font-size:14px; line-height:1.6;">
 Hi {{ $name }}, use this code to finish signing in to the RANIAG staff portal.

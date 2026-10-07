@@ -25,6 +25,7 @@
                     Remember this device
                 </label>
             </div>
+            <p class="small text-muted mb-3">Uncheck this to remove this account from this browser and require an email code next time.</p>
             <div class="auth-alert auth-alert--info">
                 <i class="bi bi-shield-check"></i>
                 <div>

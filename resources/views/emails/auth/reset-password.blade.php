@@ -1,4 +1,4 @@
-<x-mail-shell title="Reset your password">
+<x-mail-shell title="Reset your password" :message="$message">
 <h2 style="margin:0 0 12px; font-size:19px; color:#10203a;">Reset your password</h2>
 <p style="margin:0 0 20px; color:#475569; font-size:14px; line-height:1.6;">
 We received a request to reset the password for your RANIAG staff account. Click the button below to choose a new one.

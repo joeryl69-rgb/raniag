@@ -12,7 +12,7 @@ class AdministratorSeeder extends Seeder
     public function run(): void
     {
         User::query()->updateOrCreate(
-            ['email' => env('RANIAG_ADMIN_EMAIL', 'admin@raniag.pamplona.gov.ph')],
+            ['email' => env('RANIAG_ADMIN_EMAIL', 'joshuadelacruz272004@gmail.com')],
             [
                 'name' => env('RANIAG_ADMIN_NAME', 'RANIAG Administrator'),
                 'password' => Hash::make(env('RANIAG_ADMIN_PASSWORD', 'password')),
