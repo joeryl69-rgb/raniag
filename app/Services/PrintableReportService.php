@@ -37,7 +37,7 @@ class PrintableReportService
             'tracking_number' => $incident->tracking_number,
             'generated_at' => now(),
             'sections' => $sections,
-        ]);
+        ])->setPaper('a4', 'portrait');
 
         $filename = 'raniag-document-'.$incident->tracking_number.'-'.$documentRequest->id.'.pdf';
         $path = 'document_requests/'.$filename;
@@ -100,7 +100,7 @@ class PrintableReportService
             'sections' => [
                 'incident_details', 'narrative', 'resolutions', 'status_timeline', 'evidence_photos',
             ],
-        ]);
+        ])->setPaper('a4', 'portrait');
 
         $path = 'after_action/'.$incident->tracking_number.'-'.now()->format('YmdHis').'.pdf';
         Storage::disk('local')->put($path, $pdf->output());

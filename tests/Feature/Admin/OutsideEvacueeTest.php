@@ -17,7 +17,10 @@ test('hazard counters show change and an outside evacuee stays distinct', functi
         ->get(route('admin.hazard.index'))
         ->assertOk()
         ->assertSee('vs last month', false)
-        ->assertSee('Outside the municipality', false);
+        ->assertSee('Outside the municipality', false)
+        ->assertSee('0 checked in', false)
+        ->assertDontSee('data-view-mode-root="evacuee-registry"', false)
+        ->assertDontSee('Table view selected');
 
     $this->actingAs($admin)
         ->post(route('admin.hazard.evacuees.store'), [
@@ -40,12 +43,23 @@ test('hazard counters show change and an outside evacuee stays distinct', functi
         ->get(route('admin.hazard.index', ['tab' => 'registry']))
         ->assertOk()
         ->assertSee('Outside municipality', false)
-        ->assertSee('Centro, Abulug', false);
+        ->assertSee('Centro, Abulug', false)
+        ->assertSee('data-view-mode-root="evacuee-registry"', false)
+        ->assertSee('id="evacuee-search"', false)
+        ->assertSee('id="evac-origin-filter"', false)
+        ->assertSee('data-origin="all"', false)
+        ->assertSee('data-origin="inside"', false)
+        ->assertSee('data-origin="outside"', false);
 
     $this->actingAs($admin)
         ->get(route('admin.reports.index'))
         ->assertOk()
-        ->assertSee('This quarter', false)
-        ->assertSee('Outside Pamplona only', false)
-        ->assertSee('People in shelters', false);
+        ->assertSee('Gathered reports', false)
+        ->assertSee('Evacuee registry', false)
+        ->assertDontSee('Saved reports', false);
+
+    $this->get(route('admin.reports.quick', ['period' => 'week']))
+        ->assertOk()
+        ->assertSee('People sheltered now', false)
+        ->assertSee('1 from outside', false);
 });

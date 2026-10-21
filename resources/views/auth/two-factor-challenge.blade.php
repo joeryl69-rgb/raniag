@@ -12,11 +12,27 @@
     @endif
     <form method="POST" action="{{ route('two-factor.store') }}">
         @csrf
-        <div class="mb-3">
-            <label for="code" class="form-label">Authentication code</label>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="form-control @error('code') is-invalid @enderror" id="code" name="code" required autofocus autocomplete="one-time-code">
+        <fieldset class="auth-otp-fieldset mb-3" data-otp-entry>
+            <legend class="form-label">Authentication code</legend>
+            <div class="auth-otp-boxes" role="group" aria-label="Six-digit authentication code">
+                @for ($digit = 1; $digit <= 6; $digit++)
+                    <input
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        maxlength="{{ $digit === 1 ? 6 : 1 }}"
+                        class="form-control auth-otp-digit @error('code') is-invalid @enderror"
+                        aria-label="Digit {{ $digit }} of 6"
+                        aria-invalid="{{ $errors->has('code') ? 'true' : 'false' }}"
+                        @if ($digit === 1) autocomplete="one-time-code" autofocus @else autocomplete="off" @endif
+                        required
+                    >
+                @endfor
+            </div>
+            <input type="hidden" id="code" name="code" value="">
+            <p class="auth-otp-hint mb-0">Enter the 6-digit code from your email.</p>
             @error('code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-        </div>
+        </fieldset>
         @php($trustedDays = (int) config('raniag.two_factor.trusted_device_days', -1))
         @if ($trustedDays !== 0)
             <div class="form-check form-switch mb-3">
@@ -37,7 +53,7 @@
                 </div>
             </div>
         @endif
-        <button type="submit" class="btn btn-primary w-100">Verify and continue</button>
+        <button type="submit" class="btn btn-primary auth-submit w-100">Verify and continue</button>
     </form>
     <form method="POST" action="{{ route('two-factor.resend') }}" id="resend-otp-form" class="mt-3">
         @csrf
@@ -49,6 +65,68 @@
     </form>
     <x-slot name="scripts">
         <script>
+        (function () {
+            const entry = document.querySelector('[data-otp-entry]');
+            if (!entry) return;
+
+            const form = entry.closest('form');
+            const digits = Array.from(entry.querySelectorAll('.auth-otp-digit'));
+            const code = entry.querySelector('#code');
+
+            function synchronize() {
+                code.value = digits.map((input) => input.value).join('');
+            }
+
+            function fillFrom(start, value) {
+                const numbers = value.replace(/\D/g, '').slice(0, digits.length - start);
+                numbers.split('').forEach((number, offset) => {
+                    digits[start + offset].value = number;
+                });
+                synchronize();
+                const next = Math.min(start + numbers.length, digits.length - 1);
+                digits[next].focus();
+                if (numbers.length && next < digits.length - 1) digits[next].select();
+            }
+
+            digits.forEach((input, index) => {
+                input.addEventListener('input', () => {
+                    const value = input.value.replace(/\D/g, '');
+                    if (value.length > 1) {
+                        fillFrom(index, value);
+                        return;
+                    }
+                    input.value = value.slice(0, 1);
+                    synchronize();
+                    if (input.value && index < digits.length - 1) digits[index + 1].focus();
+                });
+
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Backspace' && !input.value && index > 0) {
+                        digits[index - 1].focus();
+                    } else if (event.key === 'ArrowLeft' && index > 0) {
+                        event.preventDefault();
+                        digits[index - 1].focus();
+                    } else if (event.key === 'ArrowRight' && index < digits.length - 1) {
+                        event.preventDefault();
+                        digits[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('paste', (event) => {
+                    event.preventDefault();
+                    fillFrom(index, event.clipboardData.getData('text'));
+                });
+            });
+
+            form.addEventListener('submit', (event) => {
+                synchronize();
+                if (code.value.length !== digits.length) {
+                    event.preventDefault();
+                    digits.find((input) => !input.value)?.focus();
+                }
+            });
+        })();
+
         document.addEventListener('DOMContentLoaded', function () {
             const button = document.getElementById('resend-otp-button');
             if (!button) return;

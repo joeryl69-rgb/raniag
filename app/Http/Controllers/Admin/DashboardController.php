@@ -10,6 +10,7 @@ use App\Models\Agency;
 use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\SmsLog;
+use App\Services\DashboardAlertFeed;
 use App\Services\SituationalMapService;
 use App\Support\PeriodRange;
 use Carbon\Carbon;
@@ -23,12 +24,14 @@ class DashboardController extends Controller
 {
     public function __construct(
         private readonly SituationalMapService $situational,
+        private readonly DashboardAlertFeed $dashboardAlerts,
     ) {}
 
     public function index(Request $request): View
     {
         return view('dashboard', [
             'mapConfig' => config('raniag.map'),
+            'alertCursor' => $this->dashboardAlerts->cursorFor($request->user()),
         ]);
     }
 
@@ -70,7 +73,16 @@ class DashboardController extends Controller
         \App\Support\Filters::search($query, ['recipient_phone', 'message', 'status'], $filters);
         \App\Support\Filters::dateRange($query, 'created_at', $filters);
 
-        $logs = $query->latest()->paginate(15)->withQueryString();
+        $sort = $request->string('sort')->value() ?: 'created_at';
+        $direction = $request->string('direction')->value() === 'asc' ? 'asc' : 'desc';
+        $sortable = ['created_at', 'recipient_phone', 'provider', 'status'];
+        $sortColumn = in_array($sort, $sortable, true) ? $sort : 'created_at';
+        if ($sortColumn === 'created_at') {
+            $query->orderByRaw("COALESCE(sent_at, failed_at, created_at) {$direction}");
+        } else {
+            $query->orderBy($sortColumn, $direction);
+        }
+        $logs = $query->orderByDesc('id')->paginate(15)->withQueryString();
 
         return view('admin.sms-logs.index', compact('logs'));
     }
@@ -88,7 +100,13 @@ class DashboardController extends Controller
             $query->where('log_name', $logName);
         }
 
-        $logs = $query->latest()->paginate(15)->withQueryString();
+        $sort = $request->string('sort')->value() ?: 'created_at';
+        $direction = $request->string('direction')->value() === 'asc' ? 'asc' : 'desc';
+        $sortable = ['created_at', 'event', 'log_name'];
+        $logs = $query->orderBy(in_array($sort, $sortable, true) ? $sort : 'created_at', $direction)
+            ->orderByDesc('id')
+            ->paginate(15)
+            ->withQueryString();
 
         $logNames = ActivityLog::query()
             ->whereNotNull('log_name')
@@ -336,7 +354,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Chart window shared with the community dashboard: month, quarter, or year.
+     * Chart window shared with the community dashboard: week, month, or year.
      *
      * @return array<string, mixed>
      */

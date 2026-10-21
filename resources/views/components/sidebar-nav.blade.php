@@ -40,11 +40,6 @@
                 </a>
             </li>
             <li class="nav-item" data-role="administrator">
-                <a class="nav-link {{ request()->routeIs('admin.qr_posters.*') ? 'active' : '' }}" href="{{ route('admin.qr_posters.index') }}">
-                    <i class="bi bi-qr-code"></i><span>QR Posters</span>
-                </a>
-            </li>
-            <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
                     <i class="bi bi-file-earmark-text"></i><span>Reports</span>
                 </a>
@@ -52,18 +47,23 @@
 
             <li class="nav-section-label" data-role="administrator">Coordination</li>
             <li class="nav-item" data-role="administrator">
-                <a class="nav-link d-flex align-items-center {{ request()->routeIs('admin.agencies.*', 'admin.personnel.*', 'admin.personnel_roles.*') ? 'active' : '' }}"
-                   href="#coordinationSubmenu" data-bs-toggle="collapse" role="button"
-                   aria-expanded="{{ request()->routeIs('admin.agencies.*', 'admin.personnel.*', 'admin.personnel_roles.*') ? 'true' : 'false' }}"
-                   aria-controls="coordinationSubmenu">
-                    <i class="bi bi-building"></i><span class="flex-grow-1">Agencies &amp; Personnel</span>
+                <a class="nav-link {{ request()->routeIs('admin.agencies.*') && request('directory', 'agencies') !== 'personnel' ? 'active' : '' }}" href="{{ route('admin.agencies.index', ['directory' => 'agencies']) }}">
+                    <i class="bi bi-building"></i><span>Agency directory</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
+                <a class="nav-link d-flex align-items-center {{ request()->routeIs('admin.personnel.*') || (request()->routeIs('admin.agencies.*') && request('directory') === 'personnel') || request()->routeIs('admin.personnel_roles.*') ? 'active' : '' }}"
+                   href="#personnelCoordinationSubmenu" data-bs-toggle="collapse" role="button"
+                   aria-expanded="{{ request()->routeIs('admin.personnel.*') || (request()->routeIs('admin.agencies.*') && request('directory') === 'personnel') || request()->routeIs('admin.personnel_roles.*') ? 'true' : 'false' }}"
+                   aria-controls="personnelCoordinationSubmenu">
+                    <i class="bi bi-person-badge"></i><span class="flex-grow-1">Personnel</span>
                     <i class="bi bi-chevron-down small nav-caret"></i>
                 </a>
-                <div class="collapse {{ request()->routeIs('admin.agencies.*', 'admin.personnel.*', 'admin.personnel_roles.*') ? 'show' : '' }}" id="coordinationSubmenu">
+                <div class="collapse {{ request()->routeIs('admin.personnel.*') || (request()->routeIs('admin.agencies.*') && request('directory') === 'personnel') || request()->routeIs('admin.personnel_roles.*') ? 'show' : '' }}" id="personnelCoordinationSubmenu">
                     <ul class="nav flex-column nav-submenu">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.agencies.*', 'admin.personnel.*') ? 'active' : '' }}" href="{{ route('admin.agencies.index') }}">
-                                <i class="bi bi-person-badge"></i><span>Accounts List</span>
+                            <a class="nav-link {{ request()->routeIs('admin.personnel.*') || (request()->routeIs('admin.agencies.*') && request('directory') === 'personnel') ? 'active' : '' }}" href="{{ route('admin.agencies.index', ['directory' => 'personnel']) }}">
+                                <i class="bi bi-people"></i><span>Personnel directory</span>
                             </a>
                         </li>
                         <li class="nav-item">

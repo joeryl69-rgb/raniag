@@ -1,144 +1,37 @@
 <x-app-layout>
+    @push('styles')
+        <link rel="stylesheet" href="{{ asset('css/incidents.css') }}?v={{ @filemtime(public_path('css/incidents.css')) }}">
+    @endpush
+
     <x-slot name="header">
         {{ __('Assigned Incident Dispatches') }}
     </x-slot>
 
-    <x-kpi-strip :items="[
-        ['label' => 'My dispatches', 'value' => $incidents->total(), 'icon' => 'bi-card-checklist', 'tone' => 'primary', 'sub' => 'Matching this list'],
-    ]" />
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header raniag-card-header bg-white py-3">
-                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-                        <div>
-                            <h5 class="mb-0 fw-bold"><i class="bi bi-card-checklist me-2 text-primary"></i>Assigned Emergency Responses</h5>
-                            <p class="small text-muted mb-0 mt-1">Dispatches currently assigned to your account</p>
-                        </div>
-                    </div>
-                    <x-filters.toolbar
-                        :action="route('personnel.incidents.index')"
-                        search-placeholder="Search tracking # or title"
-                        :clear-url="route('personnel.incidents.index')"
-                    >
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status" class="form-select" data-filter-default="all">
-                                <option value="all">All Statuses</option>
-                                @foreach (\App\Enums\IncidentStatus::cases() as $s)
-                                    @continue(in_array($s->value, ['resolved', 'closed']))
-                                    <option value="{{ $s->value }}" @selected(request('status') === $s->value)>{{ $s->label() }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted mb-1">Priority</label>
-                            <select name="priority" class="form-select" data-filter-default="all">
-                                <option value="all">All Priorities</option>
-                                @foreach (\App\Enums\IncidentPriority::cases() as $p)
-                                    <option value="{{ $p->value }}" @selected(request('priority') === $p->value)>{{ $p->label() }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted mb-1">Barangay</label>
-                            <select name="barangay" class="form-select" data-filter-default="all">
-                                <option value="all">All Barangays</option>
-                                @foreach ($barangays as $b)
-                                    <option value="{{ $b }}" @selected(request('barangay') === $b)>{{ $b }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </x-filters.toolbar>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-personnel-incidents-tbody" data-live-refresh-interval="4000">
-                        <table class="table table-hover table-striped mb-0 align-middle">
-                            <thead class="table-light text-muted">
-                                <tr>
-                                    <th class="px-4 py-3">Tracking #</th>
-                                    <th class="py-3">Type</th>
-                                    @php
-                                        $sortLink = function (string $col, string $label) use ($filters) {
-                                            $dir = (($filters['sort'] ?? '') === $col && ($filters['direction'] ?? 'desc') === 'asc') ? 'desc' : 'asc';
-                                            $icon = ($filters['sort'] ?? '') === $col ? ($dir === 'asc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-down-up text-muted';
-                                            $qs = array_merge($filters ?? [], ['sort' => $col, 'direction' => $dir]);
-                                            return '<a href="'.route('personnel.incidents.index', $qs).'" class="text-dark text-decoration-none">'.$label.' <i class="bi '.$icon.'" style="font-size:0.7rem;"></i></a>';
-                                        };
-                                    @endphp
-                                    <th class="py-3">{!! $sortLink('status', 'Status') !!}</th>
-                                    <th class="py-3">{!! $sortLink('priority', 'Priority') !!}</th>
-                                    <th class="py-3">{!! $sortLink('barangay', 'Barangay') !!}</th>
-                                    <th class="py-3">{!! $sortLink('reported_at', 'Assigned At') !!}</th>
-                                    <th class="px-4 py-3 text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rg-personnel-incidents-tbody">
-                                @forelse ($incidents as $inc)
-                                    @php
-                                        $assignment = $inc->currentAssignments()->where('assigned_to', auth()->user()->id)->where('is_active', true)->first();
-                                    @endphp
-                                    <tr class="{{ $inc->status->value === 'assigned' ? 'table-light' : '' }}">
-                                        <td class="px-4 py-3 fw-bold text-primary">
-                                            {{ $inc->tracking_number }}
-                                            @if($inc->status->value === 'assigned')
-                                                <span class="badge bg-primary-subtle text-primary ms-1" style="font-size: 0.65rem;">NEW</span>
-                                            @endif
-                                        </td>
-                                        <td class="py-3">
-                                            <span class="badge rounded-pill text-white px-2 py-1 shadow-sm" style="background-color: {{ $inc->incidentType?->color ?? '#6c757d' }}">
-                                                {{ $inc->incidentType?->name ?? 'Incident' }}
-                                            </span>
-                                        </td>
-                                        <td class="py-3">
-                                            <x-public.status-badge :status="$inc->status" />
-                                        </td>
-                                        <td class="py-3">
-                                            <x-priority-badge :priority="$inc->priority" class="shadow-sm" />
-                                        </td>
-                                        <td class="py-3">{{ $inc->barangay ?? 'N/A' }}</td>
-                                        <td class="py-3 text-muted">
-                                            <i class="bi bi-clock me-1"></i>
-                                            {{ $assignment ? $assignment->created_at->format('M d, Y h:i A') : 'N/A' }}
-                                            @if($assignment && $assignment->created_at->isToday())
-                                                <span class="text-success ms-1" style="font-size: 0.75rem;">(Today)</span>
-                                            @endif
-                                            @if($assignment && in_array($inc->status->value, ['assigned', 'in_progress', 'pending_info']) && $assignment->created_at->diffInHours(now()) >= 4)
-                                                <span class="badge bg-danger-subtle text-danger ms-1" style="font-size: 0.65rem;" title="No update in {{ $assignment->created_at->diffForHumans(null, true) }}">
-                                                    <i class="bi bi-alarm"></i> Stale
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-end">
-                                            <a href="{{ route('personnel.incidents.show', $inc->id) }}" class="btn btn-sm btn-primary shadow-sm">
-                                                <i class="bi bi-folder2-open me-1"></i>Process Case
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="bi bi-shield-slash display-4"></i>
-                                            <p class="mt-2 mb-0">No active incidents assigned to your account.</p>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                @if ($incidents->hasPages() || $incidents->total() > 0)
-                    <div class="card-footer bg-white border-0 py-3">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3">
-                            <small class="text-muted">Showing {{ $incidents->firstItem() }} to {{ $incidents->lastItem() }} of {{ $incidents->total() }} results</small>
-                            <div>
-                                {!! $incidents->links('pagination::bootstrap-5') !!}
-                            </div>
-                        </div>
-                    </div>
-                @endif
+    <div class="rg-incident-index">
+    <section class="rg-command-board" aria-labelledby="rg-queue-heading">
+        <header class="rg-command-board-head">
+            <div>
+                <span class="rg-section-kicker">FIELD OPERATIONS / MY ACTIVE TASKING · DISPATCH DOCKET</span>
+                <h1 id="rg-queue-heading">My active dispatches <span>{{ $incidents->total() }}</span></h1>
+                <p>New calls surface first. Open a case to acknowledge, log progress or submit a resolution.</p>
             </div>
+            <span class="rg-refresh-note"><span aria-hidden="true"></span>Live queue</span>
+        </header>
+        <x-incidents.queue-controls :action="route('personnel.incidents.index')" :barangays="$barangays" />
+        <div class="rg-docket-region" data-live-refresh data-live-refresh-target="#rg-personnel-incident-docket" data-live-refresh-interval="4000">
+            <ol class="rg-docket-list" id="rg-personnel-incident-docket" aria-label="Assigned incidents ordered by {{ request('sort', 'reported_at') === 'priority' ? 'priority rank, critical then high, medium and low; report time '.(request('direction', 'desc') === 'asc' ? 'ascending' : 'descending') : (request('sort', 'reported_at') === 'reported_at' ? 'report time ' : request('sort').' ').(request('direction', 'desc') === 'asc' ? 'ascending' : 'descending') }}">
+                @forelse ($incidents as $inc)
+                    @php $assignment = $inc->currentAssignments->firstWhere('assigned_to', auth()->user()->id) ?? $inc->currentAssignments->first(); @endphp
+                    <x-incidents.queue-item :incident="$inc" :detail-url="route('personnel.incidents.show', $inc->id)" action-label="{{ $inc->status->value === 'assigned' ? 'Acknowledge' : 'Open response' }}" :assigned-at="$assignment?->created_at" />
+                @empty
+                    <li class="rg-docket-empty"><i class="bi bi-inbox" aria-hidden="true"></i><strong>No active dispatches</strong><span>Your personal queue is clear.</span></li>
+                @endforelse
+            </ol>
         </div>
+        <footer class="rg-command-board-foot">
+            <span>Showing {{ $incidents->firstItem() ?? 0 }}–{{ $incidents->lastItem() ?? 0 }} of {{ $incidents->total() }} dispatches</span>
+            @if ($incidents->hasPages()){!! $incidents->links('pagination::bootstrap-5') !!}@endif
+        </footer>
+    </section>
     </div>
 </x-app-layout>

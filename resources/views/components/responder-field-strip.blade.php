@@ -82,10 +82,10 @@
 
     <div class="rg-field-actions">
         @if ($nextKey)
-            <form method="POST" action="{{ $phaseRoute }}" class="field-phase-form flex-grow-1">
+            <form method="POST" action="{{ $phaseRoute }}" class="field-phase-form">
                 @csrf
                 <input type="hidden" name="field_phase" value="{{ $nextKey }}">
-                <button type="submit" class="btn btn-primary w-100 rg-field-cta">
+                <button type="submit" class="btn btn-primary rg-field-cta">
                     <i class="bi {{ $steps[$nextKey]['icon'] }} me-1"></i>Mark "{{ $steps[$nextKey]['label'] }}"
                 </button>
             </form>

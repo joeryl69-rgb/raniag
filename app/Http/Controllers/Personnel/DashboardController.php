@@ -11,15 +11,22 @@ use App\Models\SmsLog;
 use App\Models\StatusUpdate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\DashboardAlertFeed;
 use App\Services\SituationalMapService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly DashboardAlertFeed $dashboardAlerts,
+    ) {}
+
     public function index(Request $request): View
     {
-        return view('dashboard');
+        return view('dashboard', [
+            'alertCursor' => $this->dashboardAlerts->cursorFor($request->user()),
+        ]);
     }
 
     /**
@@ -189,6 +196,7 @@ class DashboardController extends Controller
             'recent_status_updates' => $recentUpdates ?? $recentUpdates,
             'sms_alerts_this_week' => $smsReceived,
             'active_dispatches' => $activeDispatches,
+            'situational_incidents' => app(SituationalMapService::class)->openIncidentsPayload($agencyId, $personnelId),
             'referred_outside' => $request->user()?->agency_id
                 ? app(SituationalMapService::class)->referredOutsidePayload($request->user()->agency_id)
                 : [],

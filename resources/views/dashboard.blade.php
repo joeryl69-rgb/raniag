@@ -27,6 +27,14 @@
         </div>
     </x-slot>
 
+    <x-workspace-intro
+        eyebrow="{{ $isAdmin ? 'COMMAND / SITUATIONAL AWARENESS' : ($isAgency ? 'AGENCY / RESPONSE OPERATIONS' : 'FIELD / RESPONSE OPERATIONS') }}"
+        title="{{ $isAdmin ? 'Command dashboard' : ($isAgency ? 'Agency operations' : 'Field dashboard') }}"
+        description="{{ $isAdmin ? 'A live overview of incidents, hazards, and response activity across Pamplona.' : ($isAgency ? 'Your active dispatches and the current operating picture for your agency.' : 'Your assigned cases and the latest field response picture.') }}"
+        icon="{{ $isAdmin ? 'bi-speedometer2' : ($isAgency ? 'bi-building-gear' : 'bi-person-workspace') }}"
+        variant="dashboard"
+    />
+
     @push('styles')
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
         <style>
@@ -34,19 +42,17 @@
                 --raniag-danger: #dc3545;
                 --raniag-warning: #f59e0b;
                 --raniag-success: #16a34a;
-                --raniag-ink: #0f172a;
-                --raniag-muted: #64748b;
             }
 
             .dash-card {
                 border: 1px solid var(--raniag-border);
                 border-radius: 1rem;
-                background: #fff;
+                background: var(--raniag-card);
                 box-shadow: 0 14px 30px -22px rgba(15, 23, 42, 0.45);
                 transition: box-shadow .18s ease, transform .18s ease;
             }
             .map-card .map-toolbar {
-                background: #fff;
+                background: var(--raniag-card);
                 border-bottom: 1px solid var(--raniag-border);
                 border-radius: 1rem 1rem 0 0;
             }
@@ -69,7 +75,7 @@
                 color: inherit;
                 min-width: 0;
             }
-            .kpi-card:hover { background: #f8fafc; color: inherit; }
+            .kpi-card:hover { background: var(--raniag-card-raised); color: inherit; }
             .kpi-icon { position: absolute; top: .85rem; right: .85rem; width: 32px; height: 32px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: .9rem; }
             .kpi-icon.tone-primary { background: var(--raniag-primary-light); color: var(--raniag-primary); }
             .kpi-icon.tone-warning { background: #fff4e0; color: #b45309; }
@@ -119,41 +125,185 @@
             .live-pulse .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--raniag-success); box-shadow: 0 0 0 0 rgba(22,163,74,.6); animation: pulse-dot 1.8s infinite; }
             @keyframes pulse-dot { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.55);} 70% { box-shadow: 0 0 0 8px rgba(22,163,74,0);} 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0);} }
 
-            /* ---- New-incident alert banner ---- */
+            /* ---- Live incident notification toast ---- */
             .incident-alert-banner {
                 display: none;
-                align-items: center;
-                gap: .85rem;
-                flex-wrap: wrap;
-                padding: .85rem 1.1rem;
-                margin-bottom: 1rem;
+                position: fixed;
+                z-index: 1100;
+                top: max(5.25rem, env(safe-area-inset-top, 0px));
+                right: 1.25rem;
+                width: min(470px, calc(100vw - 2rem));
+                align-items: stretch;
+                gap: .8rem;
+                padding: 1rem;
+                overflow: hidden;
+                border: 1px solid rgba(255, 107, 114, .65);
                 border-radius: 1rem;
-                border: 1px solid rgba(220, 53, 69, .35);
-                background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, .35);
-                animation: none;
+                background:
+                    radial-gradient(ellipse at 100% 0%, rgba(220, 38, 48, .24), transparent 45%),
+                    linear-gradient(135deg, #111a2b 0%, #172238 60%, #241c2c 100%);
+                color: #fff;
+                box-shadow: 0 22px 62px -18px rgba(14, 23, 39, .75), 0 0 0 1px rgba(255, 255, 255, .08) inset;
+                isolation: isolate;
             }
-            .incident-alert-banner.is-visible { display: flex; }
+            .incident-alert-banner::before {
+                content: "";
+                position: absolute;
+                z-index: -1;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: 5px;
+                background: linear-gradient(180deg, #ff7777, #ef233c 52%, #a80f2d);
+                box-shadow: 0 0 18px rgba(239, 35, 60, .9);
+            }
+            .incident-alert-banner::after {
+                content: "";
+                position: absolute;
+                z-index: -1;
+                inset: 0 auto 0 -55%;
+                width: 38%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .1), transparent);
+                transform: skewX(-20deg);
+            }
+            .incident-alert-banner.is-visible { display: flex; animation: incident-toast-enter .42s cubic-bezier(.16, 1, .3, 1) both; }
+            .incident-alert-banner.is-visible::after { animation: incident-toast-sweep 1.15s .15s ease-out both; }
+            .incident-alert-banner.is-alarming { animation: incident-toast-enter .42s cubic-bezier(.16, 1, .3, 1) both, incident-toast-glow 2.2s .45s ease-in-out 2; }
             .incident-alert-banner .alert-pulse-dot {
-                width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
-                background: #dc3545;
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, .7);
-                animation: alert-dot-pulse 1.4s infinite;
+                position: relative;
+                display: grid;
+                width: 3.5rem;
+                height: 3.5rem;
+                flex: 0 0 3.5rem;
+                place-items: center;
+                align-self: center;
+                border: 1px solid rgba(255, 143, 143, .65);
+                border-radius: 1rem;
+                background: linear-gradient(145deg, #ff5662, #c91835);
+                color: #fff;
+                font-size: 1.45rem;
+                box-shadow: 0 8px 24px rgba(220, 38, 48, .36), inset 0 1px 0 rgba(255,255,255,.28);
             }
-            .incident-alert-banner .alert-body { flex: 1; min-width: 0; }
+            .incident-alert-banner.is-alarming .alert-pulse-dot::after {
+                content: "";
+                position: absolute;
+                inset: -6px;
+                border: 1px solid rgba(255, 98, 108, .65);
+                border-radius: 1.15rem;
+                animation: incident-alert-ring 1.5s ease-out 2;
+            }
+            .incident-alert-banner .alert-body { flex: 1; min-width: 0; align-self: center; }
+            .incident-alert-banner .alert-kicker {
+                display: flex;
+                align-items: center;
+                gap: .4rem;
+                margin-bottom: .35rem;
+                color: #ff949b;
+                font-size: .64rem;
+                font-weight: 900;
+                letter-spacing: .14em;
+                text-transform: uppercase;
+            }
+            .incident-alert-banner .alert-kicker-dot {
+                width: .45rem;
+                height: .45rem;
+                border-radius: 50%;
+                background: #ff555f;
+                box-shadow: 0 0 0 3px rgba(255, 85, 95, .16), 0 0 12px rgba(255, 85, 95, .8);
+            }
             .incident-alert-banner .alert-title {
-                font-size: .78rem; font-weight: 800; letter-spacing: .04em;
-                text-transform: uppercase; color: #b91c1c; margin-bottom: .15rem;
+                font-size: .98rem;
+                font-weight: 850;
+                letter-spacing: -.015em;
+                color: #fff;
+                margin-bottom: .2rem;
             }
-            .incident-alert-banner .alert-copy { font-size: .92rem; color: #0f172a; font-weight: 600; }
-            .incident-alert-banner .alert-meta { font-size: .78rem; color: #64748b; }
-            @keyframes alert-banner-pulse {
-                0%, 100% { box-shadow: none; }
+            .incident-alert-banner .alert-copy {
+                color: #f4f6fb;
+                font-size: .86rem;
+                font-weight: 750;
+                line-height: 1.35;
+                overflow-wrap: anywhere;
             }
-            @keyframes alert-dot-pulse {
-                0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .65); }
-                70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+            .incident-alert-banner .alert-meta { margin-top: .25rem; color: #b7c3d3; font-size: .73rem; text-transform: capitalize; }
+            .incident-alert-banner .alert-backlog {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            margin-top: .5rem;
+            padding: .2rem .48rem;
+            border: 1px solid rgba(255, 157, 165, .35);
+            border-radius: 999px;
+            background: rgba(220, 38, 48, .17);
+            color: #ffb9bd;
+            font-size: .67rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            }
+            .incident-alert-banner .alert-read-error {
+            margin-top: .4rem;
+            color: #ffc2a8;
+            font-size: .72rem;
+            font-weight: 700;
+            }
+            .incident-alert-banner .alert-actions { display: flex; align-items: center; gap: .4rem; }
+            .incident-alert-banner .alert-open {
+                border: 1px solid #ff7a82;
+                border-radius: .65rem;
+                background: linear-gradient(135deg, #f04452, #cb1e38);
+                color: #fff;
+                font-weight: 800;
+                white-space: nowrap;
+                box-shadow: 0 5px 16px rgba(220, 38, 48, .25);
+            }
+            .incident-alert-banner .alert-open:hover { border-color: #ffabb0; background: #e72f43; color: #fff; transform: translateY(-1px); }
+            .incident-alert-banner .alert-dismiss {
+                display: grid;
+                width: 2.25rem;
+                height: 2.25rem;
+                flex: 0 0 2.25rem;
+                place-items: center;
+                border: 1px solid rgba(215, 226, 242, .28);
+                border-radius: .65rem;
+                background: rgba(255, 255, 255, .07);
+                color: #dbe6f5;
+            }
+            .incident-alert-banner .alert-dismiss:hover { background: rgba(255, 255, 255, .17); color: #fff; }
+            @keyframes incident-toast-enter {
+                0% { opacity: 0; transform: translate3d(1.4rem, -1rem, 0) scale(.94); }
+                65% { opacity: 1; transform: translate3d(-.25rem, 0, 0) scale(1.01); }
+                100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+            }
+            @keyframes incident-toast-sweep {
+                from { left: -55%; }
+                to { left: 130%; }
+            }
+            @keyframes incident-toast-glow {
+                0%, 100% { box-shadow: 0 22px 62px -18px rgba(14, 23, 39, .75), 0 0 0 1px rgba(255, 255, 255, .08) inset; }
+                50% { box-shadow: 0 22px 62px -18px rgba(14, 23, 39, .75), 0 0 24px rgba(239, 35, 60, .38), 0 0 0 1px rgba(255, 255, 255, .08) inset; }
+            }
+            @keyframes incident-alert-ring {
+                0% { opacity: .8; transform: scale(.92); }
+                100% { opacity: 0; transform: scale(1.45); }
+            }
+            @media (max-width: 575.98px) {
+                .incident-alert-banner {
+                    top: max(4.75rem, env(safe-area-inset-top, 0px));
+                    right: .65rem;
+                    width: calc(100vw - 1.3rem);
+                    gap: .55rem;
+                    padding: .8rem .7rem .8rem .85rem;
+                }
+                .incident-alert-banner .alert-pulse-dot { width: 2.75rem; height: 2.75rem; flex-basis: 2.75rem; font-size: 1.2rem; }
+                .incident-alert-banner .alert-actions { gap: .25rem; }
+                .incident-alert-banner .alert-open { padding-inline: .55rem; font-size: .76rem; }
+                .incident-alert-banner .alert-dismiss { width: 2rem; height: 2rem; flex-basis: 2rem; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .incident-alert-banner.is-visible,
+                .incident-alert-banner.is-alarming,
+                .incident-alert-banner.is-visible::after,
+                .incident-alert-banner.is-alarming .alert-pulse-dot::after { animation: none; }
             }
 
             /* ---- Map card ---- */
@@ -184,9 +334,9 @@
             .map-referred .ref-track { font-weight: 800; }
 
             #dashboard-map { width: 100%; z-index: 1; }
-            #dashboard-map.h-admin { height: 460px; }
-            #dashboard-map.h-role { height: 420px; }
-            @media (max-width: 767.98px) { #dashboard-map.h-admin, #dashboard-map.h-role { height: 320px; } }
+            #dashboard-map.h-admin { height: 380px; }
+            #dashboard-map.h-role { height: 360px; }
+            @media (max-width: 767.98px) { #dashboard-map.h-admin, #dashboard-map.h-role { height: 300px; } }
 
             .layer-panel {
                 position: absolute; top: 12px; right: 12px; z-index: 500; background: #fff; border-radius: .75rem;
@@ -209,14 +359,22 @@
 
             .map-wrap { position: relative; }
             .map-filters {
-                display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
-                padding: .55rem 1.1rem; border-bottom: 1px solid var(--raniag-border);
-                background: #f8fafc;
+                display: flex; flex-wrap: nowrap; gap: .45rem; align-items: center;
+                overflow-x: auto; overscroll-behavior-x: contain;
+                padding: .45rem .85rem; border-bottom: 1px solid var(--raniag-border);
+                background: var(--raniag-card);
             }
+            .map-filters > span,
+            .map-filters > button { flex: 0 0 auto; white-space: nowrap; }
             .map-filters select {
-                font-size: .78rem; font-weight: 600; border-radius: .5rem;
-                border: 1px solid var(--raniag-border); padding: .3rem .55rem;
-                background: #fff; color: var(--raniag-ink); max-width: 9.5rem;
+                min-height: 2.15rem; font-size: .74rem; font-weight: 600; border-radius: .5rem;
+                border: 1px solid var(--raniag-border); padding: .28rem .55rem;
+                background: var(--raniag-card); color: var(--raniag-ink); max-width: 9.5rem;
+            }
+            .map-filters > .rg-select-control { width: 7rem; flex: 0 0 7rem; }
+            .map-filters > .rg-select-control .rg-select-trigger {
+                min-height: 2.15rem; padding: .28rem .55rem; border-radius: .5rem;
+                font-size: .74rem; font-weight: 600;
             }
             .map-insight-panel {
                 position: absolute; left: 12px; top: 12px; z-index: 500;
@@ -314,34 +472,44 @@
 
             [data-theme="dark"] .dash-card,
             [data-theme="dark"] .map-insight-panel {
-                background: var(--raniag-surface, #16213a);
+                background: var(--raniag-card, #121a2c);
                 color: #e2e8f0;
             }
             [data-theme="dark"] .map-filters,
             [data-theme="dark"] .map-filters select,
-            [data-theme="dark"] .map-toolbar,
+            [data-theme="dark"] .map-toolbar {
+                background: var(--raniag-card, #121a2c);
+                color: var(--raniag-ink, #e8eef6);
+            }
+            [data-theme="dark"] .kpi-card {
+                background: var(--raniag-card, #121a2c);
+                color: var(--raniag-ink, #e8eef6);
+            }
             [data-theme="dark"] .kpi-card:hover {
-                background: #1c2b47;
-                color: #e2e8f0;
+                background: var(--raniag-card-raised, #182338);
+                color: var(--raniag-ink, #e8eef6);
             }
             [data-theme="dark"] .map-filters select { border-color: #334155; }
         </style>
     @endpush
 
-    {{-- New-incident alert (shown when poll detects a newer report) --}}
-    <div id="incident-alert-banner" class="incident-alert-banner" role="alert" aria-live="assertive">
-        <span class="alert-pulse-dot" aria-hidden="true"></span>
+    {{-- Live notifications are loaded from each user's authorized backend feed. --}}
+    <div id="incident-alert-banner" class="incident-alert-banner" role="alert" aria-live="assertive" aria-atomic="true">
+        <span class="alert-pulse-dot" aria-hidden="true"><i class="bi bi-exclamation-lg"></i></span>
         <div class="alert-body">
-            <div class="alert-title">New Incident Alert</div>
+            <div class="alert-kicker"><span class="alert-kicker-dot"></span>Live command alert</div>
+            <div class="alert-title" id="incident-alert-title">New incident reported</div>
             <div class="alert-copy" id="incident-alert-copy">—</div>
             <div class="alert-meta" id="incident-alert-meta"></div>
+            <div class="alert-backlog" id="incident-alert-backlog" aria-live="polite"></div>
+            <div class="alert-read-error d-none" id="incident-alert-read-error" role="status"></div>
         </div>
-        <a href="#" id="incident-alert-link" class="btn btn-sm btn-danger">
-            <i class="bi bi-box-arrow-up-right me-1"></i>Open Case
-        </a>
-        <button type="button" class="btn btn-sm btn-outline-danger" id="incident-alert-dismiss" aria-label="Dismiss">
-            <i class="bi bi-x-lg"></i>
-        </button>
+        <div class="alert-actions">
+            <a href="#" id="incident-alert-link" class="btn btn-sm alert-open">Open</a>
+            <button type="button" class="alert-dismiss" id="incident-alert-dismiss" aria-label="Dismiss alert">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
     </div>
 
 
@@ -483,11 +651,11 @@
                     <div class="layer-panel" id="layer-panel">
                         <div class="layer-panel-title">Base Map</div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="basemap" id="base-street" checked>
+                            <input class="form-check-input" type="radio" name="basemap" id="base-street">
                             <label class="form-check-label" for="base-street">Street</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="basemap" id="base-satellite">
+                            <input class="form-check-input" type="radio" name="basemap" id="base-satellite" checked>
                             <label class="form-check-label" for="base-satellite">Satellite</label>
                         </div>
                         <hr class="my-2">
@@ -618,8 +786,8 @@
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <p class="section-sub mb-0" id="dash-period-label">This month</p>
                 <div class="btn-group btn-group-sm" role="group" aria-label="Chart period">
+                    <button type="button" class="btn btn-outline-primary" data-dash-period="week">Week</button>
                     <button type="button" class="btn btn-primary" data-dash-period="month">Month</button>
-                    <button type="button" class="btn btn-outline-primary" data-dash-period="quarter">Quarter</button>
                     <button type="button" class="btn btn-outline-primary" data-dash-period="year">Year</button>
                 </div>
             </div>
@@ -692,25 +860,29 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
         <script>
         (function () {
-            const ROLE = @json($role);
             const IS_ADMIN = @json($isAdmin);
             const API_URL = "{{ route($routePrefix . '.dashboard.api') }}";
+            const ALERTS_URL = "{{ route($routePrefix . '.dashboard.alerts') }}";
+            const ALERT_READ_URL_TEMPLATE = "{{ route('notifications.mark_read', ['notification' => '__ID__']) }}";
             const BOUNDARY_URL = "{{ route($routePrefix . '.dashboard.boundary') }}";
             const BARANGAYS_URL = "{{ route($routePrefix . '.dashboard.barangays') }}";
             const INCIDENT_URL_BASE = "{{ route($routePrefix . '.incidents.show', ['incident' => '__ID__']) }}".replace('/__ID__', '');
             const CENTER = [{{ config('raniag.map.default_lat') }}, {{ config('raniag.map.default_lng') }}];
             const MAP_CONFIG = @json(config('raniag.map'));
             const REFRESH_MS = 30000;
-            const SEEN_KEY = 'raniag.dashboard.seen_incident_id.v2.' + ROLE;
-            let alertShownFor = 0;
+            let alertCursor = Number(@json($alertCursor ?? 0)) || 0;
 
-            let map, streetLayer, satLayer, boundaryLayer, barangayLayer, markerLayer, hazardLayer, evacLayer, jurisdictionBounds;
+            let map, streetLayer, satLayer, mapBasemap, boundaryLayer, barangayLayer, markerLayer, hazardLayer, evacLayer, jurisdictionBounds;
             let charts = {};
             let currentPoints = [];
             let rawPoints = [];
             let barangayCounts = {};
             let hotspotByBarangay = {};
-            let alertPrimed = false;
+            const alertQueue = [];
+            const queuedAlertIds = new Set();
+            let currentIncidentAlert = null;
+            let pendingAlertCount = 0;
+            let alertReminderTimer = 0;
             let dashPeriod = 'month';
 
             document.addEventListener('DOMContentLoaded', function () {
@@ -726,7 +898,9 @@
                     });
                 });
                 loadData();
+                loadAlertFeed();
                 setInterval(loadData, REFRESH_MS);
+                setInterval(loadAlertFeed, 10000);
                 bindToolbar();
                 bindIncidentAlert();
                 bindMapFilters();
@@ -806,76 +980,200 @@
                 document.getElementById('map-insight-panel')?.classList.remove('is-open');
             }
 
+            function prepareAlertAudio() {
+                return window.RANIAGAlertSound?.unlock() || Promise.resolve(false);
+            }
+
             function bindIncidentAlert() {
+                const banner = document.getElementById('incident-alert-banner');
                 const dismiss = document.getElementById('incident-alert-dismiss');
-                if (dismiss) {
-                    dismiss.addEventListener('click', function () {
-                        const banner = document.getElementById('incident-alert-banner');
-                        if (!banner) return;
-                        const id = parseInt(banner.dataset.incidentId || '0', 10) || 0;
-                        if (id) localStorage.setItem(SEEN_KEY, String(id));
-                        banner.classList.remove('is-visible');
+                const open = document.getElementById('incident-alert-link');
+                dismiss?.addEventListener('click', function () {
+                    acknowledgeIncidentAlert(false);
+                });
+                open?.addEventListener('click', function (event) {
+                    if (!currentIncidentAlert) return;
+                    event.preventDefault();
+                    acknowledgeIncidentAlert(true);
+                });
+                if (!banner) return;
+                const unlockAudio = () => {
+                    prepareAlertAudio().then((ready) => {
+                        if (ready && currentIncidentAlert) playAlertTone();
                     });
-                }
+                };
+                document.addEventListener('pointerdown', unlockAudio, { passive: true });
+                document.addEventListener('keydown', unlockAudio);
             }
 
             function playAlertTone() {
-                try {
-                    const Ctx = window.AudioContext || window.webkitAudioContext;
-                    if (!Ctx) return;
-                    const ctx = new Ctx();
-                    const now = ctx.currentTime;
-                    [880, 1174].forEach((freq, i) => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.value = freq;
-                        gain.gain.setValueAtTime(0.0001, now);
-                        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02 + i * 0.12);
-                        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22 + i * 0.14);
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.start(now + i * 0.14);
-                        osc.stop(now + 0.28 + i * 0.14);
-                    });
-                    setTimeout(() => ctx.close().catch(() => {}), 800);
-                } catch (e) { /* autoplay policies may block — banner still shows */ }
+                if (document.hidden || !document.hasFocus()) return;
+                window.RANIAGAlertSound?.play();
             }
 
-            function maybeShowIncidentAlert(latest) {
-                if (!latest || !latest.id) return;
+            function updateAlertBacklog() {
+                const backlog = document.getElementById('incident-alert-backlog');
+                const title = document.getElementById('incident-alert-title');
+                if (!backlog || !title || !currentIncidentAlert) return;
 
-                const stored = parseInt(localStorage.getItem(SEEN_KEY) || '0', 10) || 0;
-                const latestId = parseInt(latest.id, 10);
-                alertPrimed = true;
+                const waiting = Math.max(alertQueue.length, pendingAlertCount - 1);
+                const count = Math.max(1, pendingAlertCount);
+                title.textContent = count > 1
+                    ? `${count} incident alerts need attention`
+                    : (currentIncidentAlert.type === 'incident.assigned' ? 'New dispatch assigned' : 'New incident reported');
+                backlog.textContent = waiting > 0
+                    ? `${waiting} more alert${waiting === 1 ? '' : 's'} waiting`
+                    : 'Unacknowledged · stays here until opened or dismissed';
+            }
 
-                // Stay up until the dispatcher dismisses it. A newer id always
-                // shows again. Do not mark an incident seen just because the
-                // page loaded.
-                if (latestId <= stored) return;
-
+            function restartAlertAnimation() {
                 const banner = document.getElementById('incident-alert-banner');
+                if (!banner) return;
+                banner.classList.remove('is-alarming');
+                void banner.offsetWidth;
+                banner.classList.add('is-alarming');
+            }
+
+            function remindIncidentAlert() {
+                if (!currentIncidentAlert || document.hidden || !document.hasFocus()) return;
+                restartAlertAnimation();
+                playAlertTone();
+            }
+
+            function startAlertReminders() {
+                clearInterval(alertReminderTimer);
+                if (!currentIncidentAlert) return;
+                alertReminderTimer = window.setInterval(remindIncidentAlert, 30000);
+            }
+
+            function showNextIncidentAlert() {
+                const banner = document.getElementById('incident-alert-banner');
+                if (!banner || currentIncidentAlert || !alertQueue.length) return;
+                const alert = alertQueue.shift();
                 const copy = document.getElementById('incident-alert-copy');
                 const meta = document.getElementById('incident-alert-meta');
                 const link = document.getElementById('incident-alert-link');
-                if (!banner || !copy || !link) return;
+                const title = document.getElementById('incident-alert-title');
+                if (!copy || !link || !title) return;
 
-                const typeLabel = latest.type || 'Incident';
-                const place = latest.barangay ? ` in ${latest.barangay}` : '';
-                copy.textContent = `${typeLabel}${place} · #${latest.tracking_number || latest.id}`;
+                const incidentId = Number(alert.incident_id);
+                if (!incidentId) return showNextIncidentAlert();
+                currentIncidentAlert = alert;
+                const typeLabel = alert.incident_type || 'Incident';
+                const place = alert.barangay ? ` · ${alert.barangay}` : '';
+                copy.textContent = `${typeLabel}${place} · #${alert.tracking_number || incidentId}`;
                 if (meta) {
                     const bits = [];
-                    if (latest.priority) bits.push(String(latest.priority).replace(/_/g, ' '));
-                    if (latest.status) bits.push(String(latest.status).replace(/_/g, ' '));
+                    if (alert.priority) bits.push(String(alert.priority).replace(/_/g, ' '));
+                    if (alert.status) bits.push(String(alert.status).replace(/_/g, ' '));
                     meta.textContent = bits.join(' · ');
                 }
-                link.href = INCIDENT_URL_BASE + '/' + latestId;
-                banner.dataset.incidentId = String(latestId);
+                link.href = alert.target_url || INCIDENT_URL_BASE + '/' + incidentId;
+                banner.dataset.notificationId = String(alert.id);
+                document.getElementById('incident-alert-read-error')?.classList.add('d-none');
+                updateAlertBacklog();
                 banner.classList.add('is-visible');
-                if (alertShownFor !== latestId) {
-                    alertShownFor = latestId;
-                    playAlertTone();
+                restartAlertAnimation();
+                playAlertTone();
+                startAlertReminders();
+            }
+
+            function acknowledgeIncidentAlert(openIncident) {
+                if (!currentIncidentAlert) return;
+                const notificationId = Number(currentIncidentAlert.id);
+                const readUrl = ALERT_READ_URL_TEMPLATE.replace('__ID__', encodeURIComponent(notificationId));
+                const dismiss = document.getElementById('incident-alert-dismiss');
+                const open = document.getElementById('incident-alert-link');
+                const errorEl = document.getElementById('incident-alert-read-error');
+                [dismiss, open].forEach((button) => {
+                    if (button) button.setAttribute('aria-disabled', 'true');
+                });
+                fetch(readUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    },
+                    credentials: 'same-origin',
+                })
+                    .then((response) => {
+                        if (!response.ok) throw new Error('Alert acknowledgement failed (' + response.status + ')');
+                        return response.json();
+                    })
+                    .then(() => {
+                        const incidentId = Number(currentIncidentAlert?.incident_id);
+                        currentIncidentAlert = null;
+                        clearInterval(alertReminderTimer);
+                        const banner = document.getElementById('incident-alert-banner');
+                        banner?.classList.remove('is-visible', 'is-alarming');
+                        pendingAlertCount = Math.max(0, pendingAlertCount - 1);
+                        if (openIncident && incidentId) {
+                            window.location.assign(INCIDENT_URL_BASE + '/' + incidentId);
+                            return;
+                        }
+                        updateAlertBacklog();
+                        window.setTimeout(showNextIncidentAlert, 180);
+                    })
+                    .catch((error) => {
+                        console.error('Dashboard alert acknowledgement error:', error);
+                        if (errorEl) {
+                            errorEl.textContent = 'Could not acknowledge this alert. It will stay visible; try again.';
+                            errorEl.classList.remove('d-none');
+                        }
+                    })
+                    .finally(() => {
+                        [dismiss, open].forEach((button) => {
+                            if (button) button.removeAttribute('aria-disabled');
+                        });
+                    });
+            }
+
+            function consumeAlertFeed(feed) {
+                if (!feed || !Array.isArray(feed.items) || !Array.isArray(feed.pending)) return;
+                const nextCursor = Number(feed.cursor);
+                if (Number.isFinite(nextCursor) && nextCursor >= alertCursor) {
+                    alertCursor = nextCursor;
                 }
+                [...feed.pending, ...feed.items]
+                    .sort((first, second) => Number(first.id) - Number(second.id))
+                    .forEach((item) => {
+                    const id = Number(item.id);
+                    if (!id || queuedAlertIds.has(id)) return;
+                    queuedAlertIds.add(id);
+                    alertQueue.push(item);
+                });
+                const count = Number(feed.pending_count);
+                if (Number.isFinite(count) && count >= 0) {
+                    pendingAlertCount = count;
+                } else {
+                    pendingAlertCount = Math.max(pendingAlertCount, alertQueue.length + (currentIncidentAlert ? 1 : 0));
+                }
+                if (currentIncidentAlert) updateAlertBacklog();
+                showNextIncidentAlert();
+            }
+
+            let alertFeedInFlight = false;
+
+            function loadAlertFeed() {
+                if (alertFeedInFlight) return;
+                alertFeedInFlight = true;
+                const glue = ALERTS_URL.includes('?') ? '&' : '?';
+                fetch(ALERTS_URL + glue + 'after=' + encodeURIComponent(alertCursor) + '&_=' + Date.now(), {
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                })
+                    .then((response) => {
+                        if (!response.ok) throw new Error('Dashboard alert refresh failed (' + response.status + ')');
+                        return response.json();
+                    })
+                    .then(consumeAlertFeed)
+                    .catch((error) => {
+                        console.error('Dashboard alert feed error:', error);
+                    })
+                    .finally(() => {
+                        alertFeedInFlight = false;
+                    });
             }
 
             function bindToolbar() {
@@ -937,6 +1235,10 @@
 
             function setBasemap(kind) {
                 if (!map) return;
+                if (mapBasemap?.setStyle) {
+                    mapBasemap.setStyle(kind);
+                    return;
+                }
                 if (kind === 'satellite') {
                     if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
                     satLayer.addTo(map);
@@ -951,14 +1253,16 @@
                 if (!el) return;
 
                 map = L.map(el, { zoomControl: false }).setView(CENTER, 13);
+                window.RaniagMapScroll?.guard(map);
 
                 if (window.RANIAG_Mapbox) {
-                    const basemap = window.RANIAG_Mapbox.addBasemap(map, MAP_CONFIG);
-                    streetLayer = basemap.layer;
+                    mapBasemap = window.RANIAG_Mapbox.addBasemap(map, MAP_CONFIG, { control: false });
+                    streetLayer = mapBasemap.streetLayer;
+                    satLayer = mapBasemap.satelliteLayer;
                 } else {
-                    streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '' }).addTo(map);
+                    streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '' });
+                    satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '' }).addTo(map);
                 }
-                satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '' });
 
                 markerLayer = L.layerGroup().addTo(map);
                 barangayLayer = L.layerGroup();
@@ -1319,7 +1623,6 @@
                 renderReferred(data.referred_outside);
                 applyMapFilters();
                 plotHazardLayers(data);
-                maybeShowIncidentAlert(data.latest_incident);
 
                 const sms = data.sms_stats || {};
                 setText('sms-sent', sms.sent ?? 0);
@@ -1552,7 +1855,7 @@
                 setText('kpi-progress-count', sb.in_progress ?? 0);
                 setText('kpi-sms', data.sms_alerts_this_week ?? 0);
 
-                plotPoints(data.active_dispatches || []);
+                plotPoints(data.situational_incidents || data.active_dispatches || []);
                 renderReferred(data.referred_outside);
                 renderDispatchTable(data.active_dispatches || []);
                 renderMeters('role-status-meters', Object.entries(sb).map(([label, value]) => ({
@@ -1561,7 +1864,6 @@
                     color: '#0b5ed7',
                 })));
                 renderStatusFeed(data.recent_status_updates || []);
-                maybeShowIncidentAlert(data.latest_incident);
             }
 
             function renderDispatchTable(rows) {

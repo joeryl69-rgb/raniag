@@ -14,6 +14,24 @@ use Illuminate\Http\Request;
  */
 class PushSubscriptionController extends Controller
 {
+    public function status(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'endpoint' => ['required', 'string', 'max:500'],
+        ]);
+
+        $row = PushSubscription::query()
+            ->where('user_id', $request->user()->id)
+            ->where('endpoint', $data['endpoint'])
+            ->first();
+
+        return response()->json([
+            'subscribed' => $row !== null,
+            'sound' => $row?->sound_enabled ?? true,
+            'vibrate' => $row?->vibrate_enabled ?? true,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -68,7 +86,12 @@ class PushSubscriptionController extends Controller
             ->where('endpoint', $data['endpoint'])
             ->delete();
 
-        return response()->json(['status' => 'unsubscribed']);
+        $stillShared = PushSubscription::where('endpoint', $data['endpoint'])->exists();
+
+        return response()->json([
+            'status' => 'unsubscribed',
+            'release' => ! $stillShared,
+        ]);
     }
 
     public function test(Request $request, WebPushService $webPush): JsonResponse

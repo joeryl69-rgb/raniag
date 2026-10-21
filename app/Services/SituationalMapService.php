@@ -142,12 +142,29 @@ class SituationalMapService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function openIncidentsPayload(): Collection
+    public function openIncidentsPayload(?int $agencyId = null, ?int $personnelId = null): Collection
     {
         $openValues = array_map(fn (IncidentStatus $s) => $s->value, self::OPEN_STATUSES);
 
-        return $this->insidePamplona(Incident::with(['incidentType', 'agency']))
-            ->whereIn('status', $openValues)
+        $query = $this->insidePamplona(Incident::with(['incidentType', 'agency']))
+            ->whereIn('status', $openValues);
+
+        if ($agencyId !== null || $personnelId !== null) {
+            $query->whereHas('assignments', function ($assignment) use ($agencyId, $personnelId) {
+                $assignment->where('is_active', true)
+                    ->where(function ($owners) use ($agencyId, $personnelId) {
+                        if ($agencyId !== null) {
+                            $owners->where('agency_id', $agencyId);
+                        }
+                        if ($personnelId !== null) {
+                            $method = $agencyId !== null ? 'orWhere' : 'where';
+                            $owners->{$method}('assigned_to', $personnelId);
+                        }
+                    });
+            });
+        }
+
+        return $query
             ->orderByDesc('reported_at')
             ->get()
             ->map(function (Incident $inc) {
@@ -191,6 +208,14 @@ class SituationalMapService
         $units = [];
 
         foreach ($assignments as $assignment) {
+            // GPS lives on the user, not the case. Drawing every agency
+            // member who has a last fix would show them en route on cases
+            // they have not accepted or marked en route.
+            $phase = (string) ($assignment->field_phase ?? '');
+            if (! in_array($phase, ['en_route', 'on_scene'], true)) {
+                continue;
+            }
+
             $users = collect();
 
             // Agency dispatch used to look up GPS only when assigned_to was
@@ -202,18 +227,14 @@ class SituationalMapService
                 $users->push($assignment->assignee);
             }
             if ($assignment->agency_id) {
-                try {
-                    $users = $users->merge(
-                        User::query()
-                            ->where('agency_id', $assignment->agency_id)
-                            ->where('is_active', true)
-                            ->whereNotNull('last_lat')
-                            ->whereNotNull('last_lng')
-                            ->get()
-                    )->unique('id');
-                } catch (\Throwable $e) {
-                    report($e);
-                }
+                $users = $users->merge(
+                    User::query()
+                        ->where('agency_id', $assignment->agency_id)
+                        ->where('is_active', true)
+                        ->whereNotNull('last_lat')
+                        ->whereNotNull('last_lng')
+                        ->get()
+                )->unique('id');
             }
 
             foreach ($users as $user) {
@@ -235,20 +256,16 @@ class SituationalMapService
                     $label = $agencyName ?: $personName ?: 'Responder';
                 }
 
-                try {
-                    $units[] = [
-                        'id' => $assignment->id.'-'.$user->id,
-                        'assignment_id' => $assignment->id,
-                        'label' => $label,
-                        'field_phase' => $assignment->field_phase ?: 'assigned',
-                        'latitude' => (float) $user->last_lat,
-                        'longitude' => (float) $user->last_lng,
-                        'updated_at' => $seenAt->toIso8601String(),
-                        'stale' => $seenAt->lt(now()->subMinutes(self::UNIT_STALE_MINUTES)),
-                    ];
-                } catch (\Throwable $e) {
-                    report($e);
-                }
+                $units[] = [
+                    'id' => $assignment->id.'-'.$user->id,
+                    'assignment_id' => $assignment->id,
+                    'label' => $label,
+                    'field_phase' => $assignment->field_phase ?: 'assigned',
+                    'latitude' => (float) $user->last_lat,
+                    'longitude' => (float) $user->last_lng,
+                    'updated_at' => $seenAt->toIso8601String(),
+                    'stale' => $seenAt->lt(now()->subMinutes(self::UNIT_STALE_MINUTES)),
+                ];
             }
         }
 

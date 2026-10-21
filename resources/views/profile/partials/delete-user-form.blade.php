@@ -1,10 +1,4 @@
 <section>
-    <header class="mb-4">
-        <p class="text-muted small mb-0">
-            {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.') }}
-        </p>
-    </header>
-
     <!-- Trigger Button -->
     <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmUserDeletionModal">
         {{ __('Delete Account') }}

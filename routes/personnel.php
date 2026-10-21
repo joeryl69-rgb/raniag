@@ -12,6 +12,7 @@ Route::prefix('personnel')
     ->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
+        Route::get('/dashboard/alerts.json', \App\Http\Controllers\Shared\DashboardAlertFeedController::class)->name('dashboard.alerts');
         Route::get('/dashboard/boundary.json', [DashboardController::class, 'boundary'])->name('dashboard.boundary');
         Route::get('/dashboard/barangays.json', [DashboardController::class, 'barangays'])->name('dashboard.barangays');
 

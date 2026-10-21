@@ -2,15 +2,10 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
 
-class ResetPasswordMail extends Mailable implements ShouldQueue
+class ResetPasswordMail extends Mailable
 {
-    use Queueable, SerializesModels;
-
     public function __construct(
         public readonly string $resetUrl,
     ) {}
@@ -19,6 +14,7 @@ class ResetPasswordMail extends Mailable implements ShouldQueue
     {
         return $this->subject('RANIAG: Reset your password')
             ->view('emails.auth.reset-password')
+            ->text('emails.auth.reset-password-text')
             ->with(['resetUrl' => $this->resetUrl]);
     }
 }

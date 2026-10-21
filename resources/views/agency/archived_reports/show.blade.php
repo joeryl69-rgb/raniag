@@ -63,20 +63,22 @@
         @if($incident->evidence->isEmpty())
             <p class="text-muted p-3 mb-0">No evidence attached.</p>
         @else
-            <div class="row g-2 p-3">
+            <div class="row g-2 p-3 rg-archived-evidence-grid">
                 @foreach($incident->evidence as $ev)
                     <div class="col-6 col-md-3">
                         <div class="card h-100 border">
-                            @if(str_starts_with($ev->mime_type, 'image/'))
-                                <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-archived-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
-                                    <img src="{{ $ev->url() }}" class="card-img-top" style="height:140px;object-fit:cover;" alt="Evidence">
+                            @if(str_starts_with((string) $ev->mime_type, 'image/'))
+                                <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-archived-{{ $incident->id }}" data-caption="{{ str_starts_with((string) $ev->mime_type, 'image/') ? ($ev->is_gps_capture ? 'GPS Photo' : 'Attached photo') : ($ev->is_gps_capture ? 'GPS Video' : $ev->original_filename) }}">
+                                    <img src="{{ $ev->url() }}" class="card-img-top rg-evidence-thumbnail" alt="Evidence">
                                 </a>
+                            @elseif(str_starts_with((string) $ev->mime_type, 'video/'))
+                                <x-evidence-video-player :src="$ev->url()" :label="$ev->original_filename" variant="compact" />
                             @else
                                 <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top" style="height:140px;">
                                     <i class="bi bi-file-earmark fs-1"></i>
                                 </div>
                             @endif
-                            <div class="card-body p-2 small text-truncate" title="{{ $ev->original_filename }}">{{ $ev->original_filename }}</div>
+                            <div class="card-body p-2 small text-truncate" title="{{ str_starts_with((string) $ev->mime_type, 'image/') ? ($ev->is_gps_capture ? 'GPS Photo' : 'Attached photo') : ($ev->is_gps_capture ? 'GPS Video' : $ev->original_filename) }}">{{ str_starts_with((string) $ev->mime_type, 'image/') ? ($ev->is_gps_capture ? 'GPS Photo' : 'Attached photo') : ($ev->is_gps_capture ? 'GPS Video' : $ev->original_filename) }}</div>
                         </div>
                     </div>
                 @endforeach

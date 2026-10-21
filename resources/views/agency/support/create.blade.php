@@ -1,12 +1,11 @@
 <x-app-layout>
     <x-slot name="header">{{ __('Support Center') }}</x-slot>
 
-    <div class="rg-support-hero">
-        <span class="rg-support-hero__badge"><i class="bi bi-headset me-1"></i>SUPPORT CENTER</span>
-        <h1 class="rg-support-hero__title">Contact Support</h1>
-        <p class="rg-support-hero__sub mb-0">Report an issue or send feedback to the RANIAG / {{ config('raniag.organization') }} team. Your message is linked to your staff account.</p>
-    </div>
-
+    <div class="rg-support-page">
+        <div class="rg-support-form-intro">
+            <span><i class="bi bi-chat-square-text" aria-hidden="true"></i> MESSAGE THE TEAM</span>
+            <p>Choose a topic and give us enough detail to route your message.</p>
+        </div>
     <x-support-form
         :action="route('agency.support.store')"
         :categories="$categories"
@@ -16,4 +15,5 @@
         :back-url="route('dashboard')"
         org-label="RANIAG Support"
     />
+    </div>
 </x-app-layout>

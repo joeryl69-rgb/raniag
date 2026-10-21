@@ -150,6 +150,20 @@
     #evidence-gate-modal .modal-body { color: var(--rg-text); padding: 1rem 1.2rem; line-height: 1.55; }
     #evidence-gate-modal .modal-footer { border-top: 1px solid var(--rg-line); padding: .8rem 1.2rem; }
     #evidence-gate-modal .rg-evidence-action { background: #087b78; border-color: #087b78; }
+    #report-offline-modal .modal-dialog { width: min(100% - 1.5rem, 480px); }
+    #report-offline-modal .modal-content { border: 1px solid var(--rg-line); border-radius: 8px; background: #fff; box-shadow: 0 24px 48px -20px rgba(7, 23, 34, .45); }
+    #report-offline-modal .modal-body { padding: 1.35rem 1.3rem 1.15rem; text-align: center; color: var(--rg-text); }
+    #report-offline-modal .rg-offline-mark { width: 58px; height: 58px; margin: 0 auto .85rem; border-radius: 50%; display: grid; place-items: center; background: #e7f6f4; color: #087b78; font-size: 1.55rem; }
+    #report-offline-modal .rg-offline-mark.is-failed { background: #fde8e8; color: #b42318; }
+    #report-offline-modal h2 { margin: 0 0 .45rem; font-size: 1.15rem; font-weight: 800; color: var(--rg-text); }
+    #report-offline-modal p { margin: 0; line-height: 1.55; color: var(--rg-muted, #52677a); }
+    #report-offline-modal .modal-footer { justify-content: center; border-top: 0; padding: 0 1.3rem 1.25rem; }
+    #report-offline-modal .btn { min-width: 8.5rem; background: #087b78; border-color: #087b78; }
+    html[data-public-theme="dark"] #report-offline-modal .modal-content { background: #142630 !important; border-color: #38525e !important; }
+    html[data-public-theme="dark"] #report-offline-modal h2 { color: #e3ecee; }
+    html[data-public-theme="dark"] #report-offline-modal p { color: #b7c9ce; }
+    html[data-public-theme="dark"] #report-offline-modal .rg-offline-mark { background: #163f43; color: #7ddecb; }
+    html[data-public-theme="dark"] #report-offline-modal .rg-offline-mark.is-failed { background: #3a1c1c; color: #f3b4b4; }
     html[data-public-theme="dark"] #evidence-gate-modal .modal-content { background: #142630 !important; border-color: #38525e !important; color: #e3ecee; }
     html[data-public-theme="dark"] #evidence-gate-modal .modal-title,
     html[data-public-theme="dark"] #evidence-gate-modal .modal-body { color: #e3ecee !important; }
@@ -187,7 +201,7 @@
         </div>
     @endif
 
-    <form action="{{ route('public.report.store') }}" method="POST" enctype="multipart/form-data" id="incident-report-form" novalidate>
+    <form action="{{ route('public.report.store', [], false) }}" method="POST" enctype="multipart/form-data" id="incident-report-form" novalidate>
         @csrf
 
         <div class="rg-stepper mb-3" id="report-wizard-nav" data-rg-reveal>
@@ -412,6 +426,7 @@
                 </p>
                 <input type="hidden" name="meta[gps_captures]" id="gps-capture-log" value="">
                 <input type="hidden" name="idempotency_key" id="idempotency_key" value="">
+                <input type="hidden" name="push_client_token" id="push_client_token" value="">
 
                 <div id="gps-camera-module" class="mb-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
@@ -419,7 +434,7 @@
                             <span class="rg-icon-tile"><i class="bi bi-camera-video"></i></span>
                             <div>
                                 <h3 class="h6 fw-bold mb-1">GPS Camera</h3>
-                                <p class="text-muted small mb-0">Swipe between photo and a 1-minute video. Both are tagged with your GPS.</p>
+                                <p class="text-muted small mb-0">Swipe between photo and a 1-minute video. Both show your GPS, place, and time. Allow microphone access to include audio in video.</p>
                             </div>
                         </div>
                         <span class="badge rounded-pill bg-secondary" id="gps-camera-status">Camera off</span>
@@ -428,7 +443,7 @@
                     <div id="gps-camera-error" class="alert alert-warning d-none small" role="alert"></div>
 
                     <button type="button" class="btn btn-primary" id="gps-camera-start">
-                        <i class="bi bi-camera me-1"></i>Start Camera
+                        <i class="bi bi-camera me-1" aria-hidden="true"></i>Start Camera
                     </button>
 
                     <!-- Full-screen camera modal: live shot + review/retake before it's added to Evidence -->
@@ -453,6 +468,7 @@
                                             </div>
                                         </div>
                                         <span class="badge bg-light text-dark gps-accuracy-pill" id="gps-camera-accuracy">Waiting for signal…</span>
+                                        <div class="gps-camera-readiness d-none" id="gps-camera-readiness" role="status" aria-live="polite"></div>
                                     </div>
 
                                     <!-- Review step: shown after a shot, before it's committed. Mirrors
@@ -485,7 +501,7 @@
                                         <button type="button" class="btn btn-outline-light" id="gps-camera-switch" title="Switch camera">
                                             <i class="bi bi-arrow-repeat"></i>
                                         </button>
-                                        <button type="button" class="btn btn-success px-4" id="gps-camera-capture">
+                                        <button type="button" class="btn btn-outline-light px-4 gps-capture-pending" id="gps-camera-capture" disabled>
                                             <i class="bi bi-camera-fill me-1"></i>Capture Photo
                                         </button>
                                         <button type="button" class="btn btn-outline-danger" id="gps-camera-stop" data-bs-dismiss="modal">
@@ -507,7 +523,7 @@
                     </div>
 
                     <p class="small text-muted mt-2 mb-0">
-                        Photo and video both carry the live coordinates, place, and time. A video stops at 1 minute.
+                        Photos and videos carry the coordinates, place, and time. Video includes microphone audio when permission is allowed and stops at 1 minute.
                     </p>
 
                     <div class="row g-2 mt-2" id="gps-camera-preview"></div>
@@ -546,13 +562,17 @@
                 <label for="evidence" class="form-label fw-semibold">Upload files</label>
                 <input type="file" class="form-control @error('evidence') is-invalid @enderror @error('evidence.*') is-invalid @enderror"
                        id="evidence" name="evidence[]" multiple
+                       data-max-files="{{ $evidenceConfig['max_files'] }}"
+                       data-max-size-bytes="{{ $evidenceConfig['max_size_kb'] * 1024 }}"
                        accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
                 @error('evidence')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 @error('evidence.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                <div class="form-text">
+                <div class="form-text" id="evidence-upload-help">
                     Up to {{ $evidenceConfig['max_files'] }} files total (camera + uploads),
-                    {{ number_format($evidenceConfig['max_size_kb'] / 1024, 1) }} MB each.
+                    {{ number_format($evidenceConfig['max_size_kb'] / 1024, 1) }} MB each. Add files in multiple selections; earlier selections stay attached.
                 </div>
+                <div class="small mt-2" id="evidence-upload-status" role="status" aria-live="polite">No upload files selected yet.</div>
+                <div class="rg-evidence-upload-list" id="evidence-upload-list" role="list" aria-label="Selected upload files"></div>
             </div>
         </div>
         </div>{{-- wizard step 1 — GPS camera --}}
@@ -624,6 +644,21 @@
             </div>
         </div>
 
+        <div class="modal fade" id="report-offline-modal" tabindex="-1" aria-hidden="true" aria-labelledby="report-offline-title">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="rg-offline-mark" id="report-offline-mark"><i class="bi bi-wifi-off" id="report-offline-icon"></i></div>
+                        <h2 id="report-offline-title">Saved on this phone</h2>
+                        <p id="report-offline-copy">You are offline. This report stays on this device, photos included, and sends itself when the connection returns. Use this same browser.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="rg-wizard-dock" id="wizard-actions">
             <button type="button" class="btn btn-outline-secondary rg-wizard-nav-btn" id="wizard-back" disabled><i class="bi bi-arrow-left" aria-hidden="true"></i>Back</button>
             <button type="button" class="btn btn-primary rg-wizard-nav-btn" id="wizard-next" @disabled($incidentTypes->isEmpty()) @if($incidentTypes->isEmpty()) aria-describedby="incident-type-unavailable" @endif>Next<i class="bi bi-arrow-right" aria-hidden="true"></i></button>
@@ -635,6 +670,7 @@
 
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
 @php
     $incidentTypeMarkers = $incidentTypes->mapWithKeys(function ($type) {
         return [$type->id => [

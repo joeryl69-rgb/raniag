@@ -3,7 +3,9 @@
  */
 (function () {
     const config = window.RANIAG_GPS || {};
-    const maxCaptures = config.max_captures || 5;
+    const maxCaptures = Number(document.getElementById('evidence')?.dataset.maxFiles)
+        || Number(config.max_captures)
+        || 5;
     const geoOptions = config.geolocation || {
         enableHighAccuracy: true,
         timeout: 15000,
@@ -20,10 +22,30 @@
     let recordStartedAt = 0;
     let paintFrameId = 0;
     let recordTrack = null;
+    let micStream = null;
+    let micRequestPromise = null;
+    let audioStatusEl = null;
+    let cameraOpen = false;
+    let startingRecording = false;
+    let locationSource = 'gps';
+    let mapTileVersion = 0;
+    let mapThumbState = 'idle';
+    let mapThumbPromise = Promise.resolve(false);
+    let lastMapThumbCoordinates = null;
+    let pendingMapThumbCoordinates = null;
+    let latestMapThumbCoordinates = null;
+    const mapTileRequests = new Map();
 
     const moduleEl = document.getElementById('gps-camera-module');
     if (!moduleEl) {
         return;
+    }
+
+    function setAudioStatus(message, variant = 'secondary') {
+        if (!audioStatusEl) return;
+        audioStatusEl.textContent = message;
+        audioStatusEl.className = `gps-camera-audio-status${message ? '' : ' d-none'} text-${variant}`;
+        audioStatusEl.setAttribute('aria-live', message ? 'polite' : 'off');
     }
 
     const videoEl = document.getElementById('gps-camera-video');
@@ -42,8 +64,11 @@
     const mapThumbImg = document.getElementById('gps-watermark-map-img');
     const mapThumbPin = document.getElementById('gps-watermark-map-pin');
     const accuracyEl = document.getElementById('gps-camera-accuracy');
+    const readinessEl = document.getElementById('gps-camera-readiness');
     const errorEl = document.getElementById('gps-camera-error');
     const evidenceInput = document.getElementById('evidence');
+    const uploadListEl = document.getElementById('evidence-upload-list');
+    const uploadStatusEl = document.getElementById('evidence-upload-status');
     const captureLogInput = document.getElementById('gps-capture-log');
     const panelEl = document.getElementById('gps-camera-panel');
     const useLocationBtn = document.getElementById('use-current-location');
@@ -106,19 +131,22 @@
 
     let mediaStream = null;
     let watchId = null;
-    let bestAccuracy = Infinity;
     let clockTimer = null;
+    let readinessTimer = null;
     let facingMode = 'environment';
     let torchOn = false;
     let lastPosition = null;
     let lastResolved = null;
+    let placeResolutionPending = true;
+    let resolvedPlaceCoordinates = null;
     let pendingCapture = null;
     let lastGeocodedAt = 0;
     const captures = [];
     const manualFiles = [];
 
     const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const MAP_THUMB_ZOOM = 16;
+    const MAP_THUMB_ZOOM = 17;
+    const MAP_THUMB_LOCATION_TOLERANCE_METERS = 50;
 
     // Formats as: "Monday, 27/07/2026 08:23 PM GMT +08:00" using the
     // device's local time/offset, so the timestamp always matches what
@@ -147,72 +175,252 @@
         }
     }
 
-    // Renders a single OpenStreetMap tile as a small preview thumbnail
-    // and drops a pin at the exact fractional pixel position of the fix
-    // within that tile (standard slippy-map tile math). This is a
-    // lightweight preview only — the authoritative, pixel-matched
-    // thumbnail is baked server-side into the submitted photo.
-    function updateMapThumbnail(latitude, longitude) {
+    function loadMapTile(url) {
+        if (mapTileRequests.has(url)) return mapTileRequests.get(url);
+
+        const request = new Promise((resolve) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => {
+                mapTileRequests.delete(url);
+                resolve(null);
+            };
+            image.src = url;
+        });
+        mapTileRequests.set(url, request);
+        return request;
+    }
+
+    function distanceBetweenCoordinates(first, second) {
+        if (!first || !second) return Infinity;
+        const radians = Math.PI / 180;
+        const dLat = (second.latitude - first.latitude) * radians;
+        const dLng = (second.longitude - first.longitude) * radians;
+        const lat1 = first.latitude * radians;
+        const lat2 = second.latitude * radians;
+        const h = Math.sin(dLat / 2) ** 2
+            + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        const boundedH = Math.min(1, Math.max(0, h));
+        return 6371000 * 2 * Math.atan2(Math.sqrt(boundedH), Math.sqrt(1 - boundedH));
+    }
+
+    // Build a square map crop around the fix from adjacent same-origin tiles,
+    // matching the server-watermarked photo and keeping the pin away from tile
+    // edges even when the coordinates fall near a tile boundary.
+    async function updateMapThumbnail(latitude, longitude) {
+        latestMapThumbCoordinates = { latitude, longitude };
         if (!mapThumbImg) {
-            return;
+            mapThumbState = 'ready';
+            updateCaptureReadiness();
+            return true;
         }
 
+        if (mapThumbState === 'loading' && pendingMapThumbCoordinates) {
+            return mapThumbPromise;
+        }
+        if (mapThumbState === 'ready' && lastMapThumbCoordinates) {
+            if (distanceBetweenCoordinates(lastMapThumbCoordinates, latestMapThumbCoordinates) < MAP_THUMB_LOCATION_TOLERANCE_METERS) return true;
+        }
+
+        mapThumbState = 'loading';
+        pendingMapThumbCoordinates = { latitude, longitude };
+        mapThumbImg.classList.remove('is-loaded');
+        updateCaptureReadiness();
         const n = 2 ** MAP_THUMB_ZOOM;
         const latRad = (latitude * Math.PI) / 180;
         const xFloat = ((longitude + 180) / 360) * n;
         const yFloat = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
         const xTile = Math.floor(xFloat);
         const yTile = Math.floor(yFloat);
+        const pinX = (xFloat - xTile) * 256;
+        const pinY = (yFloat - yTile) * 256;
+        const version = ++mapTileVersion;
+        const tileUrl = (dx, dy) => {
+            const tileX = ((xTile + dx) % n + n) % n;
+            const tileY = yTile + dy;
+            return tileY >= 0 && tileY < n
+                ? `/map-tile/${MAP_THUMB_ZOOM}/${tileX}/${tileY}?v=3`
+                : null;
+        };
 
-        const url = `/map-tile/${MAP_THUMB_ZOOM}/${xTile}/${yTile}`;
         mapThumbImg.loading = 'eager';
-        mapThumbImg.dataset.pinX = String(xFloat - xTile);
-        mapThumbImg.dataset.pinY = String(yFloat - yTile);
-        if (mapThumbImg.dataset.tileUrl !== url || !mapThumbImg.classList.contains('is-loaded')) {
-            mapThumbImg.dataset.tileUrl = url;
-            mapThumbImg.onload = () => {
-                if (mapThumbImg.dataset.tileUrl !== url) return;
-                mapThumbImg.classList.add('is-loaded');
-            };
-            mapThumbImg.onerror = () => {
-                if (mapThumbImg.dataset.tileUrl !== url) return;
-                mapThumbImg.classList.remove('is-loaded');
-            };
-            // Assign on the visible image itself. A hidden preload image
-            // can finish before the camera modal is on screen, and a phone
-            // then never paints the tile.
-            mapThumbImg.src = url;
+        mapThumbImg.dataset.pinX = '0.5';
+        mapThumbImg.dataset.pinY = '0.5';
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const context = canvas.getContext('2d');
+        if (!context) {
+            mapThumbState = 'error';
+            pendingMapThumbCoordinates = null;
+            setError('The satellite map preview could not be prepared. Reopen the camera and try again.');
+            updateCaptureReadiness();
+            return false;
+        }
+        context.fillStyle = '#dbe6da';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        let centerImage;
+        try {
+            centerImage = await loadMapTile(tileUrl(0, 0));
+        } catch (error) {
+            if (version === mapTileVersion) {
+                mapThumbState = 'error';
+                pendingMapThumbCoordinates = null;
+                setError('The satellite map preview could not load. Check your connection and reopen the camera.');
+                updateCaptureReadiness();
+            }
+            return false;
+        }
+        if (version !== mapTileVersion) return false;
+
+        if (!centerImage) {
+            mapThumbState = 'error';
+            pendingMapThumbCoordinates = null;
+            setError('The satellite map preview could not load. Check your connection and reopen the camera.');
+            updateCaptureReadiness();
+            return false;
+        }
+        const tilePixels = centerImage.naturalWidth || 256;
+        const tileScale = tilePixels / 256;
+        const cropX = Math.round(tilePixels + pinX * tileScale - 256);
+        const cropY = Math.round(tilePixels + pinY * tileScale - 256);
+        const dxOffsets = [0];
+        const dyOffsets = [0];
+        if (cropX < tilePixels) dxOffsets.push(-1);
+        if (cropX + 512 > tilePixels * 2) dxOffsets.push(1);
+        if (cropY < tilePixels) dyOffsets.push(-1);
+        if (cropY + 512 > tilePixels * 2) dyOffsets.push(1);
+        const tileOffsets = dxOffsets.flatMap((dx) => dyOffsets
+            .filter((dy) => dx !== 0 || dy !== 0)
+            .map((dy) => ({ dx, dy, url: tileUrl(dx, dy) }))
+            .filter((tile) => tile.url));
+        let loadedTiles;
+        try {
+            const neighbors = await Promise.all(tileOffsets.map(async (tile) => ({
+                ...tile,
+                image: await loadMapTile(tile.url),
+            })));
+            loadedTiles = [{ dx: 0, dy: 0, image: centerImage }, ...neighbors];
+        } catch (error) {
+            if (version === mapTileVersion) {
+                mapThumbState = 'error';
+                pendingMapThumbCoordinates = null;
+                setError('The satellite map preview could not load. Check your connection and reopen the camera.');
+                updateCaptureReadiness();
+            }
+            return false;
+        }
+        if (version !== mapTileVersion) return false;
+        if (loadedTiles.some(({ image }) => !image)) {
+            mapThumbState = 'error';
+            pendingMapThumbCoordinates = null;
+            setError('The satellite map preview is incomplete. Check your connection and try again.');
+            updateCaptureReadiness();
+            return false;
+        }
+
+        const mosaic = document.createElement('canvas');
+        mosaic.width = tilePixels * 3;
+        mosaic.height = tilePixels * 3;
+        const mosaicContext = mosaic.getContext('2d');
+        mosaicContext.fillStyle = '#dbe6da';
+        mosaicContext.fillRect(0, 0, mosaic.width, mosaic.height);
+        loadedTiles.forEach(({ dx, dy, image }) => {
+            if (image) {
+                mosaicContext.drawImage(image, (dx + 1) * tilePixels, (dy + 1) * tilePixels, tilePixels, tilePixels);
+            }
+        });
+        context.drawImage(mosaic, cropX, cropY, 512, 512, 0, 0, 512, 512);
+
+        try {
+            const url = canvas.toDataURL('image/png');
+            await new Promise((resolve, reject) => {
+                const cleanup = () => {
+                    mapThumbImg.removeEventListener('load', onLoad);
+                    mapThumbImg.removeEventListener('error', onError);
+                };
+                const onLoad = () => {
+                    cleanup();
+                    resolve();
+                };
+                const onError = () => {
+                    cleanup();
+                    reject(new Error('Satellite preview image could not be displayed.'));
+                };
+                mapThumbImg.addEventListener('load', onLoad);
+                mapThumbImg.addEventListener('error', onError);
+                mapThumbImg.src = url;
+                if (mapThumbImg.complete) {
+                    cleanup();
+                    if (mapThumbImg.naturalWidth > 0) resolve();
+                    else reject(new Error('Satellite preview image is empty.'));
+                }
+            });
+            if (version !== mapTileVersion) return false;
+            mapThumbImg.classList.add('is-loaded');
+            mapThumbState = 'ready';
+            lastMapThumbCoordinates = { latitude, longitude };
+            pendingMapThumbCoordinates = null;
+            setError('');
+        } catch (error) {
+            if (version === mapTileVersion) {
+                mapThumbState = 'error';
+                pendingMapThumbCoordinates = null;
+                setError('The satellite map preview could not be prepared. Reopen the camera and try again.');
+            }
+            updateCaptureReadiness();
+            return false;
         }
 
         if (mapThumbPin) {
-            mapThumbPin.style.left = `${(xFloat - xTile) * 100}%`;
-            mapThumbPin.style.top = `${(yFloat - yTile) * 100}%`;
+            mapThumbPin.style.left = '50%';
+            mapThumbPin.style.top = '50%';
             mapThumbPin.classList.add('is-visible');
         }
+        if (distanceBetweenCoordinates(lastMapThumbCoordinates, latestMapThumbCoordinates) >= MAP_THUMB_LOCATION_TOLERANCE_METERS) {
+            mapThumbPromise = updateMapThumbnail(latestMapThumbCoordinates.latitude, latestMapThumbCoordinates.longitude);
+            return false;
+        }
+        updateCaptureReadiness();
+        return true;
     }
 
     window.addEventListener('raniag:location-resolved', (event) => {
-        lastResolved = event.detail;
-        updateCaptureReadiness();
-        if (placeEl && event.detail) {
-            if (event.detail.coordinatesOnly) {
-                const lat = Number(event.detail.lat);
-                const lng = Number(event.detail.lng);
-                placeEl.textContent = Number.isNaN(lat)
-                    ? 'Reading this GPS fix…'
-                    : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            } else {
-                const { barangay, municipality, province, country } = event.detail;
-                const parts = [];
-                if (barangay) parts.push(`Barangay ${barangay}`);
-                if (municipality) parts.push(municipality);
-                if (province) parts.push(province);
-                if (country) parts.push(country);
-                placeEl.textContent = parts.length
+        const detail = event.detail;
+        if (placeEl && detail?.coordinatesOnly) {
+            const lat = Number(detail.lat);
+            const lng = Number(detail.lng);
+            placeEl.textContent = Number.isNaN(lat) || Number.isNaN(lng)
+                ? 'Reading this GPS fix…'
+                : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+        const latitude = Number(detail?.lat);
+        const longitude = Number(detail?.lng);
+        if (detail?.placeResolved === true
+            && Number.isFinite(latitude) && Number.isFinite(longitude)
+            && lastPosition
+            && distanceBetweenCoordinates(
+                { latitude, longitude },
+                { latitude: lastPosition.coords.latitude, longitude: lastPosition.coords.longitude }
+            ) <= MAP_THUMB_LOCATION_TOLERANCE_METERS) {
+            lastResolved = event.detail;
+            resolvedPlaceCoordinates = { latitude, longitude };
+            placeResolutionPending = false;
+            if (placeEl) {
+                const parts = [
+                    detail.barangay ? `Barangay ${detail.barangay}` : 'Place not identified',
+                    detail.municipality,
+                    detail.province,
+                    detail.country,
+                ].filter(Boolean);
+                placeEl.textContent = parts.length > 1
                     ? parts.join(', ')
-                    : (event.detail.placeLabel || 'Reading this GPS fix…');
+                    : (detail.placeLabel || 'Address details unavailable');
             }
         }
+        updateCaptureReadiness();
+        updateReviewReadiness();
     });
 
     function supportsCamera() {
@@ -244,19 +452,29 @@
         statusEl.className = `badge bg-${variant}`;
     }
 
-    function updateCoordsDisplay(position) {
+    function updateCoordsDisplay(position, source = locationSource) {
         if (!position || !coordsEl) {
             return;
         }
         const { latitude, longitude, accuracy } = position.coords;
-        coordsEl.textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        if (accuracyEl) {
-            const meters = Number(accuracy);
-            accuracyEl.textContent = Number.isFinite(meters)
-                ? `±${Math.round(meters)} m`
-                : 'Accuracy unknown';
+        const accuracyMeters = typeof accuracy === 'number' && Number.isFinite(accuracy) ? accuracy : NaN;
+        const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        coordsEl.textContent = source === 'map-pin'
+            ? `Map pin (GPS unavailable) - ${coordinates}`
+            : coordinates;
+        if (source === 'gps' && placeEl) {
+            placeEl.textContent = 'GPS fix acquired — resolving place…';
+            placeResolutionPending = true;
+            resolvedPlaceCoordinates = null;
         }
-        updateMapThumbnail(latitude, longitude);
+        if (accuracyEl) {
+            accuracyEl.textContent = source === 'map-pin'
+                ? 'Map pin · GPS unavailable'
+                : Number.isFinite(accuracyMeters)
+                    ? `±${Math.round(accuracyMeters)} m`
+                    : 'Accuracy unknown';
+        }
+        mapThumbPromise = updateMapThumbnail(latitude, longitude);
 
         // Send camera fixes through the map API so the hidden form fields,
         // marker, map center, geofence warning, and address stay synchronized.
@@ -302,6 +520,7 @@
                 if (data?.inside && data.barangay) {
                     window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                         detail: {
+                            placeResolved: true,
                             lat,
                             lng,
                             barangay: data.barangay,
@@ -315,6 +534,7 @@
                 if (data && (data.barangay || data.municipality)) {
                     window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                         detail: {
+                            placeResolved: true,
                             lat,
                             lng,
                             barangay: data.barangay || null,
@@ -342,22 +562,31 @@
             .then((data) => {
                 clearTimeout(timer);
                 const addr = data?.address || {};
-                const barangay = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || null;
-                const municipality = addr.city || addr.town || addr.municipality || null;
-                if (!barangay && !municipality) return;
+                const barangay = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || addr.quarter || addr.locality || null;
+                const municipality = addr.municipality || addr.town || addr.city || addr.county || null;
+                if (!barangay && !municipality) {
+                    window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                        detail: { placeResolved: true, lat, lng, placeLabel: 'Address details unavailable' },
+                    }));
+                    return;
+                }
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                     detail: {
+                        placeResolved: true,
                         lat,
                         lng,
                         barangay,
                         municipality,
-                        province: addr.state || addr.province || null,
+                        province: addr.state || addr.province || addr.state_district || null,
                         country: addr.country || null,
                     },
                 }));
             })
             .catch(() => {
                 clearTimeout(timer);
+                window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                    detail: { placeResolved: true, lat, lng, placeLabel: 'Address details unavailable' },
+                }));
             });
     }
 
@@ -371,6 +600,7 @@
                 latitude: item.latitude,
                 longitude: item.longitude,
                 accuracy: item.accuracy,
+                location_source: item.location_source || 'gps',
                 captured_at: item.captured_at,
             }))
         );
@@ -387,38 +617,110 @@
         return totalEvidenceCount() < maxCaptures;
     }
 
-    // A raw GPS fix isn't enough — that's what left the shutter enabled
-    // while the watermark still read "Resolving location…". Capture now
-    // waits until that resolution has actually finished: either a
-    // barangay was matched, or the outside-municipality fallback (which
-    // always carries a municipality name) has been set.
-    function isLocationReady() {
-        return !!lastPosition;
+    function hasFreshGpsFix() {
+        if (!lastPosition || locationSource !== 'gps') return false;
+        const latitude = Number(lastPosition.coords?.latitude);
+        const longitude = Number(lastPosition.coords?.longitude);
+        if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90
+            || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return false;
+        const timestamp = Number(lastPosition.timestamp);
+        const age = Date.now() - timestamp;
+        return Number.isFinite(timestamp)
+            && age >= -5000
+            && age <= 60000;
     }
-    // Ready = actionable. The button's *color*, not just its opacity, now
-    // reflects that: neutral/outline while not ready (waiting on GPS/address
-    // resolution, or the evidence cap already reached), green only once a
-    // tap will genuinely capture a photo. This replaces relying on a dimmed
-    // green (which agencies read as "already active") with an unambiguous
-    // color swap.
+
+    function isMapPreviewReady() {
+        return mapThumbState === 'ready'
+            && (!mapThumbImg || distanceBetweenCoordinates(lastMapThumbCoordinates, {
+                latitude: lastPosition.coords.latitude,
+                longitude: lastPosition.coords.longitude,
+            }) < MAP_THUMB_LOCATION_TOLERANCE_METERS);
+    }
+
+    function isCameraFrameReady() {
+        return !!(videoEl?.videoWidth
+            && videoEl?.videoHeight
+            && videoEl.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA);
+    }
+
+    function isGpsFixDisplayed() {
+        const coordinates = coordsEl?.textContent?.trim() || '';
+        const accuracy = accuracyEl?.textContent?.trim() || '';
+        return locationSource === 'gps'
+            && coordinates !== ''
+            && !coordinates.startsWith('Waiting for GPS')
+            && accuracy !== ''
+            && !accuracy.startsWith('Waiting for signal');
+    }
+
+    function isPlaceResolvedFor(position) {
+        if (!placeEl) return true;
+        if (!position || placeResolutionPending || !resolvedPlaceCoordinates) return false;
+        return distanceBetweenCoordinates(
+            resolvedPlaceCoordinates,
+            { latitude: position.latitude, longitude: position.longitude }
+        ) <= MAP_THUMB_LOCATION_TOLERANCE_METERS;
+    }
+
+    function isCaptureReady() {
+        return cameraOpen
+            && hasFreshGpsFix()
+            && isGpsFixDisplayed()
+            && isPlaceResolvedFor(lastPosition.coords)
+            && isMapPreviewReady()
+            && isCameraFrameReady()
+            && canAddMoreCaptures();
+    }
+
+    function captureWaitReason() {
+        if (!cameraOpen) return 'Open the camera to capture GPS evidence.';
+        if (!lastPosition || locationSource !== 'gps') return 'Waiting for a GPS location fix. A map pin cannot be used as GPS evidence.';
+        if (!hasFreshGpsFix()) return 'Refreshing your location. Wait for a current GPS fix.';
+        if (!isGpsFixDisplayed()) return 'Waiting for your GPS coordinates and accuracy to appear.';
+        if (!isPlaceResolvedFor(lastPosition.coords)) return 'Resolving the GPS location. Wait until the place is confirmed before capturing or recording.';
+        if (mapThumbState === 'loading' || mapThumbState === 'idle') return 'Loading the satellite preview for this GPS fix…';
+        if (mapThumbState === 'error') return 'Satellite preview is unavailable. Reopen the camera after checking your connection.';
+        if (!isMapPreviewReady()) return 'Updating the satellite preview for your latest location…';
+        if (!isCameraFrameReady()) return 'Camera preview is still starting…';
+        if (!canAddMoreCaptures()) return `Maximum of ${maxCaptures} evidence files allowed.`;
+        return '';
+    }
+
     function updateCaptureReadiness() {
         if (!captureBtn) return;
         if (recording) {
+            if (!hasFreshGpsFix()) {
+                stopRecording(true);
+                setError('GPS was lost during recording. This video was discarded; wait for GPS to return and record again.');
+                return;
+            }
             captureBtn.disabled = false;
             captureBtn.classList.remove('gps-capture-pending', 'btn-success', 'btn-outline-light');
             captureBtn.classList.add('btn-danger');
             captureBtn.innerHTML = '<i class="bi bi-stop-fill me-1"></i>Stop';
             return;
         }
-        const ready = isLocationReady() && canAddMoreCaptures();
+        const ready = isCaptureReady();
         captureBtn.disabled = !ready;
         captureBtn.classList.toggle('gps-capture-pending', !ready);
         captureBtn.classList.toggle('btn-success', ready);
         captureBtn.classList.toggle('btn-outline-light', !ready);
         captureBtn.classList.remove('btn-danger');
+        captureBtn.title = ready ? '' : captureWaitReason();
         captureBtn.innerHTML = captureMode === 'video'
             ? '<i class="bi bi-record-circle me-1"></i>Record'
             : '<i class="bi bi-camera-fill me-1"></i>Capture Photo';
+        if (readinessEl) {
+            readinessEl.textContent = ready ? '' : captureWaitReason();
+            readinessEl.classList.toggle('d-none', !cameraOpen || ready);
+        }
+        if (cameraOpen) {
+            if (ready) setError('');
+            else setError(captureWaitReason());
+        } else {
+            setError('');
+        }
     }
 
     // Counts actual attached evidence (GPS captures + any manually chosen
@@ -427,13 +729,15 @@
     // as soon as a location lock is found, which agencies were mistaking
     // for "I've already provided a photo."
     function updateEvidenceBadge() {
-        if (!evidenceBadgeEl) return;
         const count = captures.length + manualFiles.length;
-        evidenceBadgeEl.classList.toggle('bg-secondary', count === 0);
-        evidenceBadgeEl.classList.toggle('bg-success', count > 0);
-        evidenceBadgeEl.innerHTML = count > 0
-            ? `<i class="bi bi-camera-fill me-1"></i>${count} evidence file${count === 1 ? '' : 's'} attached`
-            : '<i class="bi bi-camera me-1"></i>No evidence yet';
+        if (evidenceBadgeEl) {
+            evidenceBadgeEl.classList.toggle('bg-secondary', count === 0);
+            evidenceBadgeEl.classList.toggle('bg-success', count > 0);
+            evidenceBadgeEl.innerHTML = count > 0
+                ? `<i class="bi bi-camera-fill me-1"></i>${count} evidence file${count === 1 ? '' : 's'} attached`
+                : '<i class="bi bi-camera me-1"></i>No evidence yet';
+        }
+        renderUploadFiles();
     }
 
     function syncEvidenceInput() {
@@ -452,15 +756,91 @@
         evidenceInput.files = dataTransfer.files;
     }
 
-    function refreshManualFiles() {
-        manualFiles.length = 0;
-        const captureNames = new Set(captures.map((item) => item.filename));
+    function fileKey(file) {
+        return `${file.name}\u0000${file.size}\u0000${file.lastModified}\u0000${file.type}`;
+    }
 
-        Array.from(evidenceInput?.files || []).forEach((file) => {
-            if (!captureNames.has(file.name)) {
-                manualFiles.push(file);
+    function formatFileSize(bytes) {
+        return bytes >= 1024 * 1024
+            ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+            : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    }
+
+    function renderUploadFiles(message = '') {
+        if (uploadListEl) {
+            uploadListEl.replaceChildren();
+            manualFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'rg-evidence-upload-item';
+                item.setAttribute('role', 'listitem');
+
+                const icon = document.createElement('i');
+                icon.className = `rg-evidence-upload-item__icon bi ${file.type.startsWith('image/')
+                    ? 'bi-file-image'
+                    : file.type.startsWith('video/')
+                        ? 'bi-file-play'
+                        : 'bi-file-earmark'}`;
+                icon.setAttribute('aria-hidden', 'true');
+
+                const name = document.createElement('span');
+                name.className = 'rg-evidence-upload-item__name';
+                name.textContent = file.name;
+                name.title = file.name;
+
+                const size = document.createElement('span');
+                size.className = 'rg-evidence-upload-item__size';
+                size.textContent = formatFileSize(file.size);
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'rg-evidence-upload-item__remove';
+                remove.setAttribute('aria-label', `Remove ${file.name}`);
+                remove.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
+                remove.addEventListener('click', () => {
+                    manualFiles.splice(index, 1);
+                    syncEvidenceInput();
+                    updateEvidenceBadge();
+                    updateCaptureReadiness();
+                });
+
+                item.append(icon, name, size, remove);
+                uploadListEl.appendChild(item);
+            });
+        }
+
+        if (uploadStatusEl) {
+            const total = totalEvidenceCount();
+            const cameraCount = captures.length;
+            const uploadCount = manualFiles.length;
+            const readyText = total
+                ? `${total} file${total === 1 ? '' : 's'} attached (${cameraCount} camera, ${uploadCount} upload). They will be sent when you submit the report.`
+                : 'No files selected yet.';
+            uploadStatusEl.textContent = message ? `${message} ${readyText}` : readyText;
+            uploadStatusEl.classList.toggle('text-danger', Boolean(message));
+            uploadStatusEl.classList.toggle('text-success', total > 0 && !message);
+        }
+    }
+
+    function refreshManualFiles(selectedFiles) {
+        const captureNames = new Set(captures.map((item) => item.filename));
+        const existingKeys = new Set(manualFiles.map(fileKey));
+        const rejected = [];
+        const maxSize = Number(evidenceInput?.dataset.maxSizeBytes) || Infinity;
+
+        Array.from(selectedFiles || []).forEach((file) => {
+            if (captureNames.has(file.name) || existingKeys.has(fileKey(file))) return;
+            if (file.size > maxSize) {
+                rejected.push(`${file.name} exceeds the ${formatFileSize(maxSize)} per-file limit`);
+                return;
             }
+            if (totalEvidenceCount() >= maxCaptures) {
+                rejected.push(`${file.name} was not added because the ${maxCaptures}-file limit is reached`);
+                return;
+            }
+            manualFiles.push(file);
+            existingKeys.add(fileKey(file));
         });
+        return rejected;
     }
 
     function ensureReviewVideo() {
@@ -488,6 +868,8 @@
             reviewVideo.classList.toggle('d-none', !isVideo);
             if (isVideo) {
                 reviewVideo.src = previewUrl;
+                reviewVideo.preload = 'auto';
+                reviewVideo.load();
                 reviewVideo.play().catch(() => {});
             } else {
                 reviewVideo.pause();
@@ -510,9 +892,12 @@
         if (rp && placeEl) rp.textContent = placeEl.textContent;
         if (rt && timeEl) rt.textContent = timeEl.textContent;
         const rMapImg = document.getElementById('gps-review-map-img');
-        if (rMapImg && mapThumbImg?.src) {
+        if (rMapImg && mapThumbImg?.classList.contains('is-loaded')) {
             rMapImg.src = mapThumbImg.src;
-            rMapImg.classList.add('is-loaded'); // already-loaded tile, show immediately
+            rMapImg.classList.add('is-loaded');
+        } else if (rMapImg) {
+            rMapImg.removeAttribute('src');
+            rMapImg.classList.remove('is-loaded');
         }
         liveViewEl?.classList.add('d-none');
         reviewViewEl?.classList.remove('d-none');
@@ -520,6 +905,17 @@
         liveControlsEl?.classList.add('d-none');
         reviewControlsEl?.classList.remove('d-none');
         reviewControlsEl?.classList.add('d-flex');
+        updateReviewReadiness();
+    }
+
+    function updateReviewReadiness() {
+        if (!useBtn) return;
+        const ready = Boolean(pendingCapture && isPlaceResolvedFor({
+            latitude: pendingCapture.latitude,
+            longitude: pendingCapture.longitude,
+        }));
+        useBtn.disabled = !ready;
+        useBtn.title = ready ? '' : 'Wait until the GPS place is resolved before using this capture.';
     }
 
     function exitReviewMode() {
@@ -533,8 +929,17 @@
 
     function confirmCapture() {
         if (!pendingCapture) return;
+        if (!isPlaceResolvedFor({
+            latitude: pendingCapture.latitude,
+            longitude: pendingCapture.longitude,
+        })) {
+            updateReviewReadiness();
+            setError('Wait until the GPS place is resolved before adding this capture.');
+            return;
+        }
 
-        captures.push(pendingCapture);
+        const acceptedCapture = pendingCapture;
+        captures.push(acceptedCapture);
         pendingCapture = null;
 
         try {
@@ -545,7 +950,12 @@
             syncEvidenceInput();
             syncCaptureLog();
             renderPreviews();
-            applyPositionToMap(lastPosition, true);
+            applyPositionToMap({
+                coords: {
+                    latitude: acceptedCapture.latitude,
+                    longitude: acceptedCapture.longitude,
+                },
+            }, true);
             updateCaptureReadiness();
             updateEvidenceBadge();
             exitReviewMode();
@@ -592,6 +1002,8 @@
         if (isVideo) {
             lightboxVideo.classList.remove('d-none');
             lightboxVideo.src = item.previewUrl;
+            lightboxVideo.preload = 'auto';
+            lightboxVideo.load();
         } else {
             lightboxVideo.pause();
             lightboxVideo.classList.add('d-none');
@@ -625,6 +1037,10 @@
     }
 
     lightboxModalEl?.addEventListener('hidden.bs.modal', () => {
+        const lightboxVideo = document.getElementById('gps-lightbox-video');
+        lightboxVideo?.pause();
+        lightboxVideo?.removeAttribute('src');
+        lightboxVideo?.load();
         hideFallbackFullscreen(lightboxModalEl);
         if (lightboxHome) {
             lightboxHome.parent.insertBefore(lightboxModalEl, lightboxHome.next);
@@ -685,7 +1101,7 @@
             body.className = 'card-body p-2 small';
             body.innerHTML = `
                 <div class="text-truncate"><i class="bi bi-geo-alt text-primary me-1"></i>${item.latitude.toFixed(5)}, ${item.longitude.toFixed(5)}</div>
-                <div class="text-muted">±${Math.round(item.accuracy || 0)} m · ${new Date(item.captured_at).toLocaleString()}</div>
+                <div class="text-muted">${item.location_source === 'map-pin' ? 'Map pin · GPS unavailable' : `±${Math.round(item.accuracy || 0)} m`} · ${new Date(item.captured_at).toLocaleString()}</div>
             `;
 
             const removeBtn = document.createElement('button');
@@ -729,10 +1145,15 @@
 
     function onSharedGps(event) {
         if (cameraOwnsWatch) return;
-        const lat = Number(event.detail?.lat);
-        const lng = Number(event.detail?.lng);
-        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+        const rawLat = event.detail?.lat;
+        const rawLng = event.detail?.lng;
+        if (rawLat == null || rawLng == null) return;
+        const lat = Number(rawLat);
+        const lng = Number(rawLng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)
+            || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
         onGeoSuccess({
+            timestamp: Number(event.detail?.timestamp) || Date.now(),
             coords: {
                 latitude: lat,
                 longitude: lng,
@@ -742,19 +1163,29 @@
     }
 
     function onGeoSuccess(position) {
+        const latitude = Number(position?.coords?.latitude);
+        const longitude = Number(position?.coords?.longitude);
+        if (!Number.isFinite(latitude) || latitude < -90
+            || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+            return;
+        }
+        if (lastPosition && Number(position.timestamp) < Number(lastPosition.timestamp)) {
+            return;
+        }
         const accuracy = position.coords.accuracy;
 
-        // watchPosition already applies the browser's GPS/network filtering.
-        // Do not reject a later reading just because it is less accurate than
-        // the first fix: that prevented real movement from updating the map.
-        if (accuracy != null) {
-            bestAccuracy = Math.min(bestAccuracy, accuracy);
-        }
-
-        lastPosition = position;
-        updateCoordsDisplay(position);
-        setStatus('GPS active', 'success');
-        setError('');
+        lastPosition = Number.isFinite(Number(position.timestamp))
+            ? position
+            : { ...position, timestamp: Date.now() };
+        locationSource = 'gps';
+        updateCoordsDisplay(lastPosition);
+        const accuracyMeters = typeof accuracy === 'number' && Number.isFinite(accuracy) ? accuracy : NaN;
+        setStatus(
+            Number.isFinite(accuracyMeters) ? `GPS fix ±${Math.round(accuracyMeters)} m` : 'GPS location found',
+            'success'
+        );
+        updateCaptureReadiness();
+        updateReviewReadiness();
 
         if (cameraOwnsWatch) {
             const { latitude, longitude } = position.coords;
@@ -776,9 +1207,10 @@
         // "Use Current Location" or the camera's own first read already put
         // a usable lastPosition in hand, so downgrading the badge back to
         // "GPS Error" here is a false alarm, not a real loss of location.
-        if (lastPosition) {
+        if (hasFreshGpsFix()) {
             return;
         }
+        updateCaptureReadiness();
         setStatus('GPS error', 'danger');
         setError(messages[error.code] || error.message || 'Unable to read GPS location.');
     }
@@ -788,6 +1220,13 @@
             setError('Geolocation is not supported on this device.');
             return;
         }
+
+        // Request a fresh high-accuracy fix while the watch keeps refining it.
+        navigator.geolocation.getCurrentPosition(
+            onGeoSuccess,
+            onGeoError,
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+        );
 
         if (watchId !== null) {
             return;
@@ -809,7 +1248,6 @@
         }
 
         setStatus('Acquiring GPS…', 'warning');
-        bestAccuracy = Infinity;
         cameraOwnsWatch = true;
         window.RANIAG_GpsOwner = 'camera';
         watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, geoOptions);
@@ -836,20 +1274,43 @@
         }
 
         setError('');
+        if (!cameraOpen) {
+            lastPosition = null;
+            locationSource = 'gps';
+            mapThumbState = 'idle';
+            lastMapThumbCoordinates = null;
+            pendingMapThumbCoordinates = null;
+            latestMapThumbCoordinates = null;
+            mapThumbPromise = Promise.resolve(false);
+            lastResolved = null;
+            if (coordsEl) coordsEl.textContent = 'Waiting for GPS signal…';
+            if (placeEl) placeEl.textContent = 'Waiting for GPS…';
+            if (accuracyEl) accuracyEl.textContent = 'Waiting for signal…';
+            if (mapThumbImg) mapThumbImg.removeAttribute('src');
+            mapThumbImg?.classList.remove('is-loaded');
+            mapThumbPin?.classList.remove('is-visible');
+        }
+        startGeolocationWatch();
 
         try {
             if (mediaStream) {
                 mediaStream.getTracks().forEach((track) => track.stop());
             }
 
+            const portrait = window.matchMedia('(orientation: portrait)').matches;
             mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode,
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
+                    facingMode: { ideal: facingMode },
+                    width: { ideal: portrait ? 1080 : 1920 },
+                    height: { ideal: portrait ? 1920 : 1080 },
+                    aspectRatio: { ideal: portrait ? 9 / 16 : 16 / 9 },
+                    frameRate: { ideal: 30, max: 30 },
                 },
                 audio: false,
             });
+            cameraOpen = true;
+            clearInterval(readinessTimer);
+            readinessTimer = setInterval(updateCaptureReadiness, 1000);
 
             panelEl?.classList.remove('d-none');
             // Re-parent to <body> first (fixes the navbar-stacking bug for
@@ -862,7 +1323,7 @@
             camModal ? camModal.show() : showFallbackFullscreen(cameraModalEl);
             exitReviewMode();
             if (lastPosition) {
-                updateMapThumbnail(lastPosition.coords.latitude, lastPosition.coords.longitude);
+                mapThumbPromise = updateMapThumbnail(lastPosition.coords.latitude, lastPosition.coords.longitude);
             }
 
             if (videoEl) {
@@ -882,7 +1343,6 @@
             updateCaptureReadiness();
             updateFlashAvailability();
 
-            startGeolocationWatch();
             tickClock();
             clockTimer = setInterval(tickClock, 1000);
         } catch (err) {
@@ -897,6 +1357,7 @@
     }
 
     function stopCamera() {
+        cameraOpen = false;
         if (recording || (mediaRecorder && mediaRecorder.state !== 'inactive')) {
             stopRecording(true);
         }
@@ -904,6 +1365,11 @@
             mediaStream.getTracks().forEach((track) => track.stop());
             mediaStream = null;
         }
+        if (micStream) {
+            micStream.getTracks().forEach((track) => track.stop());
+            micStream = null;
+        }
+        setAudioStatus('', 'secondary');
 
         if (videoEl) {
             videoEl.srcObject = null;
@@ -916,6 +1382,8 @@
         stopGeolocationWatch();
         clearInterval(clockTimer);
         clockTimer = null;
+        clearInterval(readinessTimer);
+        readinessTimer = null;
 
         panelEl?.classList.add('d-none');
         const camModal = getModal(cameraModalEl);
@@ -989,8 +1457,9 @@
             return;
         }
 
-        if (!lastPosition) {
-            setError('Waiting for GPS fix. Hold steady until coordinates appear, then capture.');
+        if (!isCaptureReady()) {
+            updateCaptureReadiness();
+            setError(captureWaitReason());
             return;
         }
 
@@ -1032,6 +1501,13 @@
 
         const width = sWidth;
         const height = sHeight;
+        const capturePosition = lastPosition;
+        const captureSource = locationSource;
+        if (!capturePosition || !isPlaceResolvedFor(capturePosition.coords)) {
+            setError('Wait until the GPS place is resolved before capturing a photo.');
+            updateCaptureReadiness();
+            return;
+        }
 
         canvasEl.width = width;
         canvasEl.height = height;
@@ -1058,7 +1534,7 @@
                 const filename = `gps-${timestamp.getTime()}.jpg`;
                 const file = new File([blob], filename, { type: 'image/jpeg', lastModified: timestamp.getTime() });
                 const previewUrl = URL.createObjectURL(blob);
-                const { latitude, longitude, accuracy } = lastPosition.coords;
+                const { latitude, longitude, accuracy } = capturePosition.coords;
 
                 // Hold the shot for review instead of committing it straight
                 // away — the person can now see it full-size and Retake if
@@ -1070,6 +1546,7 @@
                     latitude,
                     longitude,
                     accuracy,
+                    location_source: captureSource,
                     captured_at: timestamp.toISOString(),
                     // Frozen watermark snapshot so the lightbox can show the
                     // same overlay later, without re-deriving it from live
@@ -1132,6 +1609,7 @@
         function onSuccess(position) {
             try {
                 lastPosition = position;
+                locationSource = 'gps';
                 updateCoordsDisplay(position);
                 startGeolocationWatch();
                 setStatus('Location set', 'success');
@@ -1202,7 +1680,7 @@
         }
         let width = sWidth;
         let height = sHeight;
-        const maxEdge = 1280;
+        const maxEdge = 1920;
         const edge = Math.max(width, height);
         if (edge > maxEdge) {
             const scale = maxEdge / edge;
@@ -1217,54 +1695,150 @@
 
     function paintGpsStamp(context, width, height) {
         const lines = [
-            'RANIAG GPS CAMERA',
             coordsEl?.textContent || '',
             placeEl?.textContent || '',
             timeEl?.textContent || '',
         ].filter(Boolean);
-        if (!lines.length) return;
+        const scale = Math.min(2.5, Math.max(0.7, width / 760));
+        const pad = Math.max(8, Math.round(14 * scale));
+        const gap = Math.max(3, Math.round(5 * scale));
+        const maxThumb = Math.min(Math.round(180 * scale), Math.round(width * 0.22));
+        const title = 'RANIAG GPS CAMERA';
 
-        // Sit the stamp on the bottom edge, same place as the live overlay
-        // the reporter sees while filming.
-        const bannerH = Math.round(Math.min(Math.max(96, height * 0.22), height * 0.3, 240));
-        const top = Math.max(0, height - bannerH);
-        const pad = Math.round(bannerH * 0.14);
-        const thumb = Math.max(36, bannerH - pad * 2);
-        let textX = pad;
+        function wrapText(text, maxWidth) {
+            const wrapped = [];
+            let current = '';
+            const pushWord = (word) => {
+                let remaining = word;
+                while (remaining && context.measureText(remaining).width > maxWidth) {
+                    let end = 1;
+                    while (end < remaining.length
+                        && context.measureText(remaining.slice(0, end + 1)).width <= maxWidth) {
+                        end++;
+                    }
+                    const part = remaining.slice(0, end);
+                    if (current) wrapped.push(current);
+                    wrapped.push(part);
+                    current = '';
+                    remaining = remaining.slice(end);
+                }
+                if (!remaining) return;
+                const candidate = current ? `${current} ${remaining}` : remaining;
+                if (current && context.measureText(candidate).width > maxWidth) {
+                    wrapped.push(current);
+                    current = remaining;
+                } else {
+                    current = candidate;
+                }
+            };
+            for (const word of text.split(/\s+/)) {
+                pushWord(word);
+            }
+            if (current) wrapped.push(current);
+            return wrapped;
+        }
+
+        const maxFontSize = Math.min(56, Math.max(16, Math.round(width * 0.035)));
+        function findLayout(showMap) {
+            for (let fontSize = maxFontSize; fontSize >= 15; fontSize--) {
+                const titleFont = Math.min(38, Math.max(18, Math.round(fontSize * 1.3)));
+                const lineH = Math.ceil(fontSize * 1.32);
+                const thumb = showMap ? maxThumb : 0;
+                const textX = thumb ? pad + thumb + pad : pad;
+                const maxWidth = Math.max(1, width - textX - pad);
+                context.font = `600 ${fontSize}px monospace`;
+                const detailLines = lines.flatMap((line) => wrapText(line, maxWidth));
+                const titleLines = wrapText(title, maxWidth);
+                const bannerH = Math.max(
+                    thumb + pad * 2,
+                    pad * 2 + titleLines.length * titleFont + gap + detailLines.length * lineH
+                );
+                if (bannerH <= height * 0.88) {
+                    return { bannerH, detailLines, fontSize, lineH, maxWidth, pad, textX, thumb, titleFont, titleLines };
+                }
+            }
+            return null;
+        }
+        const textLayout = findLayout(false);
+        const mapLayout = findLayout(true);
+        let layout = mapLayout && (!textLayout || mapLayout.fontSize >= Math.max(16, textLayout.fontSize - 3))
+            ? mapLayout
+            : textLayout;
+
+        if (!layout) {
+            for (let fontSize = 14; fontSize >= 8; fontSize--) {
+                const thumb = 0;
+                const textX = pad;
+                const maxWidth = Math.max(1, width - pad * 2);
+                context.font = `600 ${fontSize}px monospace`;
+                const detailLines = lines.flatMap((line) => wrapText(line, maxWidth));
+                const titleLines = wrapText(title, maxWidth);
+                const titleFont = Math.max(10, Math.round(fontSize * 1.3));
+                const lineH = Math.ceil(fontSize * 1.32);
+                const bannerH = pad * 2 + titleLines.length * titleFont + gap + detailLines.length * lineH;
+                if (bannerH <= height) {
+                    layout = { bannerH, detailLines, fontSize, lineH, maxWidth, pad, textX, thumb, titleFont, titleLines };
+                    break;
+                }
+            }
+        }
+        if (!layout) return;
+
+        const { bannerH, detailLines, fontSize, lineH, maxWidth, textX, thumb, titleFont, titleLines } = layout;
+        const top = height - bannerH;
+
         context.save();
-        context.fillStyle = 'rgba(15, 23, 42, 0.82)';
+        const gradient = context.createLinearGradient(0, top, 0, height);
+        gradient.addColorStop(0, 'rgba(15, 23, 42, 0.3)');
+        gradient.addColorStop(1, 'rgba(15, 23, 42, 0.92)');
+        context.fillStyle = gradient;
         context.fillRect(0, top, width, bannerH);
 
         const img = mapThumbImg;
-        if (img && img.complete && img.naturalWidth > 0 && img.classList.contains('is-loaded')) {
+        if (thumb > 0) {
             try {
                 const thumbY = top + Math.round((bannerH - thumb) / 2);
-                context.drawImage(img, pad, thumbY, thumb, thumb);
-                const pinX = pad + (Number(img.dataset.pinX) || 0.5) * thumb;
-                const pinY = thumbY + (Number(img.dataset.pinY) || 0.5) * thumb;
+                context.save();
+                context.beginPath();
+                context.rect(pad, thumbY, thumb, thumb);
+                context.clip();
+                context.fillStyle = '#dbe6da';
+                context.fillRect(pad, thumbY, thumb, thumb);
+                const tileLoaded = img && img.complete && img.naturalWidth > 0 && img.classList.contains('is-loaded');
+                if (tileLoaded) context.drawImage(img, pad, thumbY, thumb, thumb);
+                const pinX = pad + (tileLoaded ? Number(img.dataset.pinX) : 0.5) * thumb;
+                const pinY = thumbY + (tileLoaded ? Number(img.dataset.pinY) : 0.5) * thumb;
                 context.fillStyle = '#fff';
                 context.beginPath();
-                context.arc(pinX, pinY, Math.max(5, thumb * 0.09), 0, Math.PI * 2);
+                context.shadowColor = 'rgba(15, 23, 42, .9)';
+                context.shadowBlur = Math.max(3, thumb * .045);
+                context.arc(pinX, pinY, Math.max(5, thumb * 0.075), 0, Math.PI * 2);
                 context.fill();
-                context.fillStyle = '#2563eb';
+                context.shadowBlur = 0;
+                context.fillStyle = '#3d8bfd';
                 context.beginPath();
-                context.arc(pinX, pinY, Math.max(3, thumb * 0.055), 0, Math.PI * 2);
+                context.arc(pinX, pinY, Math.max(3, thumb * 0.045), 0, Math.PI * 2);
                 context.fill();
-                textX = pad + thumb + pad;
+                context.restore();
             } catch (err) {
-                textX = pad;
+                context.restore();
             }
         }
 
-        const fontSize = Math.max(11, Math.min(22, Math.floor((bannerH - pad * 2) / lines.length) - 3));
-        const lineH = fontSize + 3;
-        const textBlock = lines.length * lineH;
-        let baseline = top + Math.round((bannerH - textBlock) / 2) + fontSize;
-        context.fillStyle = '#fff';
-        context.font = `600 ${fontSize}px sans-serif`;
+        let baseline = top + pad + titleFont;
         context.textBaseline = 'alphabetic';
-        lines.forEach((line) => {
-            context.fillText(line, textX, baseline, Math.max(40, width - textX - pad));
+        context.font = `700 ${titleFont}px monospace`;
+        context.fillStyle = '#93c5fd';
+        titleLines.forEach((line) => {
+            context.fillText(line, textX, baseline, maxWidth);
+            baseline += titleFont;
+        });
+        baseline += gap;
+
+        context.fillStyle = '#fff';
+        context.font = `600 ${fontSize}px monospace`;
+        detailLines.forEach((line) => {
+            context.fillText(line, textX, baseline, maxWidth);
             baseline += lineH;
         });
         context.restore();
@@ -1272,6 +1846,11 @@
 
     function paintRecordFrame() {
         if (!recording || !videoEl || !canvasEl) return;
+        if (!hasFreshGpsFix()) {
+            stopRecording(true);
+            setError('GPS was lost during recording. This video was discarded; wait for GPS to return and record again.');
+            return;
+        }
         const crop = frameCrop();
         if (crop) {
             const context = canvasEl.getContext('2d');
@@ -1283,27 +1862,66 @@
             context.drawImage(videoEl, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, crop.width, crop.height);
             context.restore();
             paintGpsStamp(context, crop.width, crop.height);
-            if (recordTrack && typeof recordTrack.requestFrame === 'function') {
-                recordTrack.requestFrame();
-            }
         }
         paintFrameId = requestAnimationFrame(paintRecordFrame);
     }
 
     function pickRecorderMime() {
         if (!window.MediaRecorder) return '';
-        const types = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+        const appleBrowser = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.vendor === 'Apple Computer, Inc.' && /Safari/.test(navigator.userAgent));
+        const types = appleBrowser
+            ? [
+                'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+                'video/mp4',
+                'video/webm;codecs=vp8,opus',
+                'video/webm',
+            ]
+            : [
+                'video/webm;codecs=vp8,opus',
+                'video/webm;codecs=vp9,opus',
+                'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+                'video/webm',
+                'video/mp4',
+            ];
         return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
     }
 
     async function ensureMic() {
-        if (!mediaStream || mediaStream.getAudioTracks().length) return;
-        try {
-            const audio = await navigator.mediaDevices.getUserMedia({ audio: true });
-            audio.getAudioTracks().forEach((track) => mediaStream.addTrack(track));
-        } catch (err) {
-            // The clip still records. The phone declined the microphone.
-        }
+        if (micStream?.getAudioTracks().some((track) => track.readyState === 'live')) return true;
+        if (micRequestPromise) return micRequestPromise;
+
+        const cameraStream = mediaStream;
+        micRequestPromise = navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        }).then((stream) => {
+            if (!cameraOpen || !mediaStream || mediaStream !== cameraStream) {
+                stream.getTracks().forEach((track) => track.stop());
+                return false;
+            }
+            micStream = stream;
+            if (captureMode === 'video') setAudioStatus('Microphone ready', 'success');
+            stream.getAudioTracks().forEach((track) => {
+                track.addEventListener('ended', () => {
+                    if (captureMode === 'video') {
+                        setAudioStatus('Microphone disconnected · video will be silent', 'warning');
+                    }
+                }, { once: true });
+            });
+            return true;
+        }).catch((error) => {
+            const reason = error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError'
+                ? 'Microphone permission denied'
+                : 'Microphone unavailable';
+            if (cameraOpen && captureMode === 'video') {
+                setAudioStatus(`${reason} · video will be silent`, 'warning');
+            }
+            return false;
+        }).finally(() => {
+            micRequestPromise = null;
+        });
+
+        return micRequestPromise;
     }
 
     function finishRecording(mime) {
@@ -1311,8 +1929,14 @@
         const discard = discardRecording;
         discardRecording = false;
         mediaRecorder = null;
+        recordTrack?.stop();
         recordTrack = null;
         if (discard || chunks.length === 0) return;
+        if (!hasFreshGpsFix() || !isMapPreviewReady() || !isPlaceResolvedFor(lastPosition.coords)) {
+            setError('A current GPS fix, resolved place, and matching map preview are required. This video was discarded; wait for GPS to return and record again.');
+            updateCaptureReadiness();
+            return;
+        }
         const type = mime.split(';')[0] || 'video/webm';
         const ext = type.includes('mp4') ? 'mp4' : 'webm';
         const blob = new Blob(chunks, { type });
@@ -1329,6 +1953,7 @@
             latitude,
             longitude,
             accuracy,
+            location_source: locationSource,
             captured_at: timestamp.toISOString(),
             place: placeEl?.textContent || '',
             mapThumbSrc: mapThumbImg?.src || '',
@@ -1359,9 +1984,10 @@
     }
 
     async function startRecording() {
-        if (recording) return;
-        if (!lastPosition) {
-            setError('Waiting for GPS fix. Hold steady until coordinates appear, then record.');
+        if (recording || startingRecording) return;
+        if (!isCaptureReady()) {
+            updateCaptureReadiness();
+            setError(captureWaitReason());
             return;
         }
         if (!canAddMoreCaptures()) {
@@ -1379,7 +2005,15 @@
             setError('Camera preview is still starting. Wait for the picture, then record.');
             return;
         }
-        await ensureMic();
+        startingRecording = true;
+        const hasAudio = await ensureMic();
+        startingRecording = false;
+        if (!cameraOpen || !mediaStream || !videoEl?.srcObject) return;
+        if (!isCaptureReady()) {
+            updateCaptureReadiness();
+            setError(captureWaitReason());
+            return;
+        }
         canvasEl.width = crop.width;
         canvasEl.height = crop.height;
         recording = true;
@@ -1392,23 +2026,44 @@
             timerEl.textContent = '0:00 / 1:00';
             timerEl.classList.remove('d-none');
         }
-        const stream = canvasEl.captureStream(0);
+        const stream = canvasEl.captureStream(30);
         recordTrack = stream.getVideoTracks()[0] || null;
         paintRecordFrame();
-        mediaStream?.getAudioTracks().forEach((track) => {
-            try { stream.addTrack(track); } catch (err) { /* video-only */ }
-        });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 800000 });
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data && event.data.size) recordChunks.push(event.data);
-        };
-        mediaRecorder.onerror = () => {
-            setError('The recording stopped before the full minute. Record again.');
-        };
-        mediaRecorder.onstop = () => finishRecording(mime);
-        // One piece, not timed slices. Slices made the saved file look like
-        // only the first few seconds once it was opened.
-        mediaRecorder.start();
+        const audioTracks = hasAudio
+            ? micStream?.getAudioTracks().filter((track) => track.readyState === 'live' && track.enabled) || []
+            : [];
+        audioTracks.forEach((track) => stream.addTrack(track));
+        try {
+            const videoBitrate = Math.max(1_600_000, Math.min(2_600_000, crop.width * crop.height * 1.1));
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: mime,
+                videoBitsPerSecond: videoBitrate,
+                audioBitsPerSecond: 128_000,
+            });
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size) recordChunks.push(event.data);
+            };
+            mediaRecorder.onerror = () => {
+                setError('The recording stopped before the full minute. Record again.');
+            };
+            mediaRecorder.onstop = () => finishRecording(mime);
+            // One piece, not timed slices. Slices made the saved file look like
+            // only the first few seconds once it was opened.
+            mediaRecorder.start();
+            if (audioTracks.length === 0) {
+                setAudioStatus('No microphone · video is recording without audio', 'warning');
+            }
+        } catch (error) {
+            recording = false;
+            cancelAnimationFrame(paintFrameId);
+            recordTrack?.stop();
+            recordTrack = null;
+            document.getElementById('gps-mode-rail')?.classList.remove('d-none');
+            document.getElementById('gps-record-timer')?.classList.add('d-none');
+            updateCaptureReadiness();
+            setError(`Unable to start video recording: ${error.message || 'unsupported recording format'}`);
+            return;
+        }
         recordStartedAt = Date.now();
         const limitSeconds = Math.round(videoMaxMs / 1000);
         const clock = (total) => {
@@ -1430,7 +2085,12 @@
             button.classList.toggle('is-active', button.dataset.gpsMode === captureMode);
         });
         updateCaptureReadiness();
-        if (captureMode === 'video') ensureMic();
+        if (captureMode === 'video') {
+            setAudioStatus('Requesting microphone…', 'warning');
+            ensureMic();
+        } else {
+            setAudioStatus('', 'secondary');
+        }
     }
 
     function mountModeRail() {
@@ -1450,6 +2110,11 @@
         timer.className = 'gps-record-timer d-none';
         timer.textContent = '0:00';
         liveViewEl.appendChild(timer);
+        audioStatusEl = document.createElement('div');
+        audioStatusEl.id = 'gps-camera-audio-status';
+        audioStatusEl.className = 'gps-camera-audio-status d-none';
+        audioStatusEl.setAttribute('role', 'status');
+        liveViewEl.appendChild(audioStatusEl);
         rail.addEventListener('click', (event) => {
             const button = event.target.closest('[data-gps-mode]');
             if (!button) return;
@@ -1480,6 +2145,9 @@
         capturePhoto();
     });
     mountModeRail();
+    ['loadeddata', 'canplay', 'playing'].forEach((eventName) => {
+        videoEl?.addEventListener(eventName, updateCaptureReadiness);
+    });
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible' || !mediaStream || !videoEl) return;
@@ -1493,17 +2161,13 @@
     useLocationBtn?.addEventListener('click', useCurrentLocation);
 
     evidenceInput?.addEventListener('change', () => {
-        refreshManualFiles();
-        if (totalEvidenceCount() > maxCaptures) {
-            setError(`Maximum of ${maxCaptures} evidence files allowed.`);
-        } else {
-            setError('');
-        }
+        const rejected = refreshManualFiles(evidenceInput.files);
         syncEvidenceInput();
-        if (captureBtn) {
-            updateCaptureReadiness();
-        }
+        if (captureBtn) updateCaptureReadiness();
         updateEvidenceBadge();
+        renderUploadFiles(rejected.length
+            ? rejected.join('. ')
+            : '');
     });
 
     window.addEventListener('beforeunload', () => {
@@ -1520,7 +2184,8 @@
         setError('Camera API is not available. Use file upload instead.');
     }
 
-    refreshManualFiles();
+    refreshManualFiles(evidenceInput?.files);
+    updateCaptureReadiness();
     updateEvidenceBadge();
 
     window.RANIAG_GPS_API = {

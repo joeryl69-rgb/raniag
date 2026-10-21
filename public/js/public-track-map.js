@@ -29,6 +29,7 @@
         if (!el) return;
 
         const map = L.map(el).setView([cfg.lat, cfg.lng], 14);
+        global.RaniagMapScroll?.guard(map);
         if (Mapbox) Mapbox.addBasemap(map, cfg.map || {});
         else {
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -37,13 +38,27 @@
             }).addTo(map);
         }
 
-        L.circleMarker([cfg.lat, cfg.lng], {
-            radius: 8,
-            color: '#fff',
-            weight: 2,
-            fillColor: '#dc2626',
-            fillOpacity: 1,
-        }).bindPopup('Report location').addTo(map);
+        const sceneIcon = global.RaniagIcons?.buildDivIcon
+            ? global.RaniagIcons.buildDivIcon({
+                icon: cfg.icon,
+                color: cfg.color,
+                priority: cfg.priority,
+                size: 34,
+            })
+            : null;
+        if (sceneIcon) {
+            L.marker([cfg.lat, cfg.lng], { icon: sceneIcon, zIndexOffset: 400 })
+                .bindPopup(cfg.scenePopup || 'Report location')
+                .addTo(map);
+        } else {
+            L.circleMarker([cfg.lat, cfg.lng], {
+                radius: 8,
+                color: '#fff',
+                weight: 2,
+                fillColor: cfg.color || '#64748b',
+                fillOpacity: 1,
+            }).bindPopup(cfg.scenePopup || 'Report location').addTo(map);
+        }
 
         const unitGroup = L.layerGroup().addTo(map);
         const routeGroup = L.layerGroup().addTo(map);
@@ -53,6 +68,7 @@
         let lastRoute = null;
         const token = String(cfg.map?.mapbox_token || '').trim();
         const statusEl = document.getElementById(cfg.statusEl || 'track-units-status');
+        let refreshInFlight = false;
 
         async function paint(units) {
             const raw = Array.isArray(units) ? units : [];
@@ -62,6 +78,8 @@
             let plotted = 0;
             const seen = new Set();
             list.forEach((u) => {
+                const phase = String(u.field_phase || '');
+                if (phase !== 'en_route' && phase !== 'on_scene') return;
                 const lat = Number(u.latitude);
                 const lng = Number(u.longitude);
                 if (Number.isNaN(lat) || Number.isNaN(lng)) return;
@@ -69,14 +87,14 @@
                 bounds.extend([lat, lng]);
                 const key = String(u.id || u.assignment_id || u.label || 'Responder');
                 seen.add(key);
-                const phase = String(u.field_phase || 'assigned').replaceAll('_', ' ');
+                const phaseLabel = phase.replaceAll('_', ' ');
                 const existing = markerByKey.get(key);
                 if (existing) {
                     existing.setLatLng([lat, lng]);
-                    existing.setPopupContent(`<strong>${esc(u.label)}</strong><br>${esc(phase)}`);
+                    existing.setPopupContent(`<strong>${esc(u.label)}</strong><br>${esc(phaseLabel)}`);
                 } else {
                     const marker = L.marker([lat, lng], { icon: unitIcon(u.label), zIndexOffset: 800 + plotted })
-                        .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(phase)}`)
+                        .bindPopup(`<strong>${esc(u.label)}</strong><br>${esc(phaseLabel)}`)
                         .addTo(unitGroup);
                     markerByKey.set(key, marker);
                 }
@@ -96,9 +114,20 @@
                         : 'Responders appear here once they are en route and this device is sharing location.');
             }
 
-            if (!plotted) return;
+            if (!plotted) {
+                routeGroup.clearLayers();
+                lastRoute = null;
+                lastRouteAt = 0;
+                return;
+            }
 
-            const primary = list.find((u) => !Number.isNaN(Number(u.latitude)) && !Number.isNaN(Number(u.longitude))) || list[0];
+            const primary = list.find((u) => {
+                const phase = String(u.field_phase || '');
+                return (phase === 'en_route' || phase === 'on_scene')
+                    && !Number.isNaN(Number(u.latitude))
+                    && !Number.isNaN(Number(u.longitude));
+            });
+            if (!primary) return;
             const from = { lat: Number(primary.latitude), lng: Number(primary.longitude) };
             const to = { lat: cfg.lat, lng: cfg.lng };
             const refreshRoute = !lastRouteAt || (Date.now() - lastRouteAt) > 8000;
@@ -154,6 +183,8 @@
                 if (statusEl) statusEl.textContent = 'Responder feed is not configured.';
                 return;
             }
+            if (refreshInFlight) return;
+            refreshInFlight = true;
             try {
                 const glue = cfg.unitsUrl.includes('?') ? '&' : '?';
                 const res = await fetch(`${cfg.unitsUrl}${glue}_=${Date.now()}`, {
@@ -169,6 +200,8 @@
                 await paint(data.units || []);
             } catch (e) {
                 if (statusEl) statusEl.textContent = 'Could not load responders.';
+            } finally {
+                refreshInFlight = false;
             }
         }
 
@@ -177,6 +210,11 @@
         }
         await refresh();
         setInterval(refresh, cfg.pollMs || 5000);
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') refresh();
+        };
+        document.addEventListener('visibilitychange', refreshWhenVisible);
+        window.addEventListener('focus', refreshWhenVisible);
         // Invalidate after layout settles so aspect-ratio containers paint correctly.
         [100, 350, 800].forEach((ms) => setTimeout(() => map.invalidateSize(), ms));
         if (typeof ResizeObserver !== 'undefined') {

@@ -66,6 +66,22 @@ test('back to sign in clears pending two factor challenge', function () {
     expect(session()->has('pending_2fa_id'))->toBeFalse();
 });
 
+test('two factor challenge presents six accessible code boxes backed by the existing code field', function () {
+    $user = User::factory()->administrator()->create();
+    session(['pending_2fa_id' => $user->id]);
+
+    $this->get(route('two-factor.challenge'))
+        ->assertOk()
+        ->assertSee('name="code"', false)
+        ->assertSee('data-otp-entry', false)
+        ->assertSee('Six-digit authentication code')
+        ->assertSee('autocomplete="one-time-code"', false)
+        ->assertSee('Digit 1 of 6')
+        ->assertSee('Digit 6 of 6')
+        ->assertSee('fillFrom(index, event.clipboardData.getData', false)
+        ->assertSee(route('two-factor.store'), false);
+});
+
 test('successful otp verification can remember a device with database cache', function () {
     Mail::fake();
     config([

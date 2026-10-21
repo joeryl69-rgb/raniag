@@ -18,9 +18,16 @@ use Illuminate\View\View;
  */
 class PersonnelRoleController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $roles = PersonnelRole::orderBy('sort_order')->orderBy('title')->get();
+        $sort = $request->string('sort')->value() ?: 'sort_order';
+        $direction = $request->string('direction')->value() === 'desc' ? 'desc' : 'asc';
+        $sortable = ['sort_order', 'title', 'is_active'];
+        $sortColumn = in_array($sort, $sortable, true) ? $sort : 'sort_order';
+        $roles = PersonnelRole::orderBy($sortColumn, $direction)
+            ->when($sortColumn !== 'title', fn ($query) => $query->orderBy('title'))
+            ->orderBy('id')
+            ->get();
 
         // role_title on users is a plain string (not a foreign key — see
         // migration note), so "how many personnel currently use this role"

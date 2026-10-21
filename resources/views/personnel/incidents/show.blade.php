@@ -4,6 +4,7 @@
     </x-slot>
 
     @push('styles')
+        <link rel="stylesheet" href="{{ asset('css/incidents.css') }}?v={{ @filemtime(public_path('css/incidents.css')) }}">
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
         <style>
             .case-map-frame {
@@ -14,8 +15,6 @@
                 position: relative;
                 overflow: hidden;
                 border-radius: 0.75rem;
-                background: #eef5f0;
-                border: 1px solid #dee2e6;
             }
             .case-map-frame #personnel-incident-map,
             .case-map-frame .leaflet-container {
@@ -31,8 +30,7 @@
             }
             .case-unit-strip {
                 display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
-                padding: .65rem .85rem; font-size: .82rem; color: #334155;
-                background: #f8fafc; border-top: 1px solid #e2e8f0;
+                padding: .65rem .85rem; font-size: .82rem;
             }
             .case-unit-strip .live-dot {
                 width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
@@ -55,13 +53,10 @@
         </style>
     @endpush
 
-    <div class="d-flex mb-3 mb-md-4">
-        <a href="{{ route('personnel.incidents.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Dispatches
-        </a>
-    </div>
+    <div class="rg-incident-detail">
+    <x-incidents.detail-hero :incident="$incident" :back-url="route('personnel.incidents.index')" back-label="Back to dispatches" priority-label="Assigned priority" />
 
-    <div class="card raniag-card rg-app-card mb-3 overflow-hidden">
+    <div class="card raniag-card rg-app-card mb-3 overflow-hidden" id="case-location">
         <div class="card-header raniag-card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap">
             <h5 class="mb-0 fw-bold"><i class="bi bi-broadcast-pin text-primary me-2"></i>Live Response Map</h5>
             <span class="font-monospace text-muted small">#{{ $incident->tracking_number }}</span>
@@ -89,55 +84,30 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 rg-personnel-case-layout">
         <!-- Details Column -->
-        <div class="col-lg-7 order-2">
-            <div class="card raniag-card rg-app-card mb-4">
+        <div class="col-lg-7 order-1 rg-response-brief">
+            <div class="card raniag-card rg-app-card mb-4" id="case-situation">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-folder-fill text-primary me-2"></i>Case Details</h5>
+                        <div>
+                            <span class="rg-section-kicker">CASE BRIEF / ORIGINAL INTAKE</span>
+                            <h2 class="h5 mb-0 fw-bold"><i class="bi bi-journal-text text-primary me-2"></i>Reported situation</h2>
+                        </div>
                         <span class="font-monospace text-muted small">Tracking #: {{ $incident->tracking_number }}</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    @if ($incident->title)
-                        <h3 class="h5 fw-bold text-dark mb-2">{{ $incident->title }}</h3>
-                    @endif
-                    <p class="mb-4 text-dark fs-6" style="white-space: pre-wrap;">{{ $incident->description }}</p>
-
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Incident Category</div>
-                                <span class="badge rounded-pill mt-1 text-white" style="background-color: {{ $incident->incidentType?->color ?? '#6c757d' }}">
-                                    {{ $incident->incidentType?->name ?? 'Incident' }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Current Status</div>
-                                <div class="mt-1"><x-public.status-badge :status="$incident->status" /></div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Assigned Priority</div>
-                                <span class="badge bg-secondary text-capitalize mt-1">{{ $incident->priority?->label() ?? '—' }}</span>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-3 bg-light rounded-3">
-                                <div class="text-muted small">Reported At</div>
-                                <strong class="text-dark d-block mt-1">{{ $incident->reported_at?->format('M d, Y h:i A') ?? '—' }}</strong>
-                            </div>
-                        </div>
+                    <div class="rg-report-narrative">
+                        <span class="rg-report-marker" aria-hidden="true"><i class="bi bi-quote"></i></span>
+                        <p>{{ $incident->description ?: 'No repository documents attached for the selected content.' }}</p>
                     </div>
                 </div>
             </div>
 
+            <div class="rg-case-support-column">
             <!-- Evidence / Media -->
-            <div class="card raniag-card rg-app-card mb-4">
+            <div class="card raniag-card rg-app-card mb-4" id="case-evidence">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-images text-primary me-2"></i>Attached Evidence</h5>
                 </div>
@@ -150,18 +120,20 @@
                                 <div class="col-6 col-md-4">
                                     <div class="card h-100 border">
                                         @if (str_starts_with($ev->mime_type, 'image/'))
-                                            <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-{{ $incident->id }}" data-caption="{{ $ev->original_filename }}">
+                                            <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-{{ $incident->id }}" data-caption="{{ str_starts_with((string) $ev->mime_type, 'image/') ? ($ev->is_gps_capture ? 'GPS Photo' : 'Attached photo') : ($ev->is_gps_capture ? 'GPS Video' : $ev->original_filename) }}">
                                                 <img src="{{ $ev->url() }}" class="card-img-top evidence-thumb" alt="Evidence">
                                             </a>
                                         @elseif (str_starts_with((string) $ev->mime_type, 'video/'))
-                                            <video src="{{ $ev->url() }}" class="card-img-top evidence-thumb" controls playsinline preload="metadata"></video>
+                                            <div class="evidence-video-container">
+                                                <x-evidence-video-player :src="$ev->url()" :label="$ev->original_filename" variant="compact" />
+                                            </div>
                                         @else
                                             <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top evidence-thumb">
                                                 <i class="bi bi-file-earmark fs-1"></i>
                                             </div>
                                         @endif
                                         <div class="card-body p-2 small">
-                                            <div class="text-truncate">{{ $ev->original_filename }}</div>
+                                            <div class="text-truncate">{{ str_starts_with((string) $ev->mime_type, 'image/') ? ($ev->is_gps_capture ? 'GPS Photo' : 'Attached photo') : ($ev->is_gps_capture ? 'GPS Video' : $ev->original_filename) }}</div>
                                             <div class="text-muted" style="font-size: 0.75rem;">
                                                 @if ($ev->is_gps_capture)
                                                     <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-geo-alt-fill"></i> {{ str_starts_with((string) $ev->mime_type, 'video/') ? 'GPS Video' : 'GPS Photo' }}</span>
@@ -183,11 +155,11 @@
             </div>
 
             <!-- History Timeline -->
-            <div class="card raniag-card rg-app-card mb-4">
+            <div class="card raniag-card rg-app-card mb-4" id="case-history" data-live-refresh data-live-refresh-target="#personnel-history-content" data-live-refresh-interval="4000">
                 <div class="card-header raniag-card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Investigation updates Log</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body" id="personnel-history-content">
                     @if ($incident->statusTimeline->isEmpty())
                         <p class="text-muted mb-0">No history logged.</p>
                     @else
@@ -210,12 +182,13 @@
                     @endif
                 </div>
             </div>
+            </div>
         </div>
 
         <!-- Sidebar Actions Column -->
-        <div class="col-lg-5 order-1">
+        <div class="col-lg-5 order-2 rg-response-actions">
             <!-- Case Action Control -->
-            <div class="card rg-console-card">
+            <div class="card rg-console-card" id="case-actions">
                 <div class="card-header">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-broadcast me-2"></i>Case Action Control</h5>
                 </div>
@@ -239,8 +212,8 @@
                     @if ($needsAcceptance)
                         <!-- Action: Accept assignment — confirm modal first, then submit -->
                         <div class="p-3 text-center">
-                            <p class="text-muted small mb-3">Accept this dispatch to indicate your branch has received the alert and is initiating investigation. Location is not required to accept.</p>
-                            <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
+                            <p class="text-muted small mb-3">Accept to confirm you have this alert. Location sharing starts when you mark En route.</p>
+                            <button type="button" class="btn btn-danger rg-accept-dispatch" data-bs-toggle="modal" data-bs-target="#acceptAcknowledgeModal">
                                 <i class="bi bi-check2-circle me-1"></i>Accept & Acknowledge
                             </button>
                         </div>
@@ -287,10 +260,10 @@
 
                                 <div class="mb-3">
                                     <label for="comment" class="form-label">Investigation Logs</label>
-                                    <textarea class="form-control" name="comment" id="comment" rows="3" required placeholder="Type comments visible to public/admin..."></textarea>
+                                    <textarea class="form-control" name="comment" id="comment" rows="3" required placeholder="Notes for MDRRMO and the responding team. This is not shown on the public tracking page."></textarea>
                                 </div>
 
-                                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-file-earmark-diff me-1"></i>Post Update</button>
+                                <button type="submit" class="btn btn-outline-primary"><i class="bi bi-file-earmark-diff me-1"></i>Post Update</button>
                             </form>
 
                             <!-- Submit Resolution Form -->
@@ -509,6 +482,8 @@
         </div>
     </div>
 
+    </div>
+
     @push('scripts')
         <script>
             window.RANIAG_GPS = @json($gpsConfig);
@@ -548,6 +523,7 @@
                         map: @json(config('raniag.map')),
                         icon: @json($incident->incidentType?->icon),
                         color: @json($incident->incidentType?->color),
+                        priority: @json($incident->priority?->value ?? $incident->priority),
                         outsideJurisdiction: withinJurisdiction === false,
                         scenePopup: withinJurisdiction === false ? 'Incident Location (Outside AOR)' : 'Incident Location',
                         unitsUrl: @json(route('personnel.incidents.live_units', $incident)),

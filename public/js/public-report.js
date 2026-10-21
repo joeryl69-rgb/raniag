@@ -114,13 +114,34 @@
     let evidenceGateModalShown = false;
 
     function hasGpsCameraEvidence() {
-        if (captureLogInput?.value) {
-            try {
-                const parsed = JSON.parse(captureLogInput.value);
-                if (Array.isArray(parsed) && parsed.length > 0) return true;
-            } catch (e) { /* no gps capture yet */ }
+        return validGpsCaptures().length > 0;
+    }
+
+    function validGpsCaptures() {
+        if (!captureLogInput?.value || !evidenceFileInput?.files?.length) return [];
+
+        try {
+            const parsed = JSON.parse(captureLogInput.value);
+            if (!Array.isArray(parsed)) return [];
+
+            return parsed.filter((capture) => {
+                const latitude = Number(capture?.latitude);
+                const longitude = Number(capture?.longitude);
+                const capturedAt = Date.parse(capture?.captured_at);
+                return capture?.location_source === 'gps'
+                    && Number.isFinite(latitude) && latitude >= -90 && latitude <= 90
+                    && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180
+                    && Number.isFinite(capturedAt)
+                    && Array.from(evidenceFileInput.files).some((file) => {
+                        const isMedia = file.type.startsWith('image/')
+                            || file.type.startsWith('video/')
+                            || /\.(jpe?g|png|gif|webp|mp4|mov|webm)$/i.test(file.name);
+                        return isMedia && file.name === capture.filename;
+                    });
+            });
+        } catch (error) {
+            return [];
         }
-        return false;
     }
 
     function hasClientEvidence() {
@@ -130,12 +151,6 @@
         if (typeof window.RANIAG_GPS_API?.evidenceCount === 'function'
             && window.RANIAG_GPS_API.evidenceCount() > 0) {
             return true;
-        }
-        if (captureLogInput?.value) {
-            try {
-                const parsed = JSON.parse(captureLogInput.value);
-                if (Array.isArray(parsed) && parsed.length > 0) return true;
-            } catch (e) { /* treat as no evidence */ }
         }
         return false;
     }
@@ -353,6 +368,7 @@
             // "ready to capture" state flicker on and off.
             window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                 detail: {
+                    placeResolved: true,
                     lat, lng,
                     barangay: geofenced,
                     municipality: addressDefaults.municipality,
@@ -368,13 +384,16 @@
         }
 
         geocodeTimer = setTimeout(async () => {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
             try {
                 const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
-                const res = await fetch(url, { headers: { Accept: 'application/json' } });
-                if (myToken !== geocodeToken) return;
+                const res = await fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
                 const data = await res.json();
+                clearTimeout(timeout);
+                if (myToken !== geocodeToken) return;
                 const addr = data.address || {};
-                const municipality = addr.city || addr.town || addr.municipality || addressDefaults.municipality;
+                const municipality = addr.municipality || addr.town || addr.city || addr.county || addressDefaults.municipality;
                 const province = addr.state || addr.province || addressDefaults.province;
                 const country = addr.country || addressDefaults.country;
                 const locationCandidates = [
@@ -383,12 +402,15 @@
                     addr.hamlet,
                     addr.neighbourhood,
                     addr.city_district,
+                    addr.quarter,
+                    addr.locality,
                     addr.city,
                     addr.town,
                     addr.municipality,
+                    addr.county,
                     data.display_name || '',
                 ].filter(Boolean);
-                const areaName = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || null;
+                const areaName = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || addr.quarter || addr.locality || null;
                 const textMatched = locationCandidates.map((candidate) => matchBarangay(candidate)).find(Boolean) || null;
                 const matched = geofenced || textMatched;
                 // Outside Pamplona's mapped barangays, "areaName" (e.g. "Langagan")
@@ -422,9 +444,10 @@
                 lastResolvedLabel = label;
 
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                    detail: { lat, lng, barangay: barangayDisplay, municipality, province, country, label },
+                    detail: { placeResolved: true, lat, lng, barangay: barangayDisplay, municipality, province, country, label },
                 }));
             } catch (err) {
+                clearTimeout(timeout);
                 if (myToken !== geocodeToken) return;
                 if (withinMunicipality === false) {
                     setResolveStatus('Outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
@@ -438,6 +461,7 @@
                 // on an external service before it will allow a capture.
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                     detail: {
+                        placeResolved: true,
                         lat, lng,
                         barangay: geofenced,
                         municipality: geofenced ? addressDefaults.municipality : (withinMunicipality === false ? 'Outside Pamplona' : addressDefaults.municipality),
@@ -539,10 +563,14 @@
 
             mapInstance = leaflet.map('incident-map', { attributionControl: false }).setView([defaultLat, defaultLng], mapConfig.default_zoom || 13);
 
-            leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap contributors',
-            }).addTo(mapInstance);
+            if (window.RANIAG_Mapbox?.addBasemap) {
+                window.RANIAG_Mapbox.addBasemap(mapInstance, mapConfig);
+            } else {
+                leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors',
+                }).addTo(mapInstance);
+            }
 
             if (boundaryGeometry) {
                 leaflet.geoJSON(boundaryGeometry, {
@@ -560,6 +588,7 @@
             mapInstance.touchZoom.disable();
             mapInstance.boxZoom.disable();
             mapInstance.keyboard.disable();
+            window.RaniagMapScroll?.guard(mapInstance, { interactive: false });
 
             if (latInput?.value && lngInput?.value) {
                 setMarker(parseFloat(latInput.value), parseFloat(lngInput.value), { pan: false });
@@ -585,6 +614,17 @@
                 return { lat, lng };
             }
             return null;
+        },
+        hasPinnedLocation() {
+            if (!mapInstance || !mapMarker) return false;
+
+            const pin = mapMarker.getLatLng();
+            const lat = Number(latInput?.value);
+            const lng = Number(lngInput?.value);
+            return Number.isFinite(lat) && lat >= -90 && lat <= 90
+                && Number.isFinite(lng) && lng >= -180 && lng <= 180
+                && Math.abs(pin.lat - lat) <= 0.000001
+                && Math.abs(pin.lng - lng) <= 0.000001;
         },
         panTo(lat, lng) {
             if (mapInstance) {
@@ -733,15 +773,16 @@
         // NOT full-page redirect. Browser redirects discard FileList, which
         // made a successful GPS capture look like "no photo attached".
         form.addEventListener('submit', async (event) => {
-            if (!navigator.onLine) {
-                // Offline outbox handler (capture phase) owns this path.
-                return;
-            }
-
             event.preventDefault();
             event.stopPropagation();
 
             if (!guardReportBeforeSubmit()) return;
+
+            const outbox = window.RANIAG_REPORT_OUTBOX;
+            if (!navigator.onLine || !(await outbox?.reachable?.())) {
+                await outbox?.keep?.(form);
+                return;
+            }
 
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
@@ -759,16 +800,34 @@
             }, 15000);
 
             try {
-                const res = await fetch(form.action, {
+                const sendReport = (csrf) => fetch(form.action, {
                     method: 'POST',
                     body: new FormData(form),
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         Accept: 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        'X-CSRF-TOKEN': csrf,
                     },
                     credentials: 'same-origin',
                 });
+
+                let csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                let res = await sendReport(csrf);
+                if (res.status === 419) {
+                    try {
+                        csrf = await outbox?.refreshCsrfToken?.(form.action);
+                    } catch (error) {
+                        console.error('Report security token refresh failed:', error);
+                    }
+                    if (!csrf) {
+                        showSubmitErrors({
+                            message: 'Your report session expired. Refresh this page before submitting again.',
+                        });
+                        resetSubmitButton();
+                        return;
+                    }
+                    res = await sendReport(csrf);
+                }
 
                 const data = await res.json().catch(() => ({}));
 
@@ -787,16 +846,27 @@
                     return;
                 }
 
+                if (res.status === 419) {
+                    showSubmitErrors({
+                        message: 'Your report session expired. Refresh this page before submitting again.',
+                    });
+                    resetSubmitButton();
+                    return;
+                }
+
                 showSubmitErrors({
                     message: data.message || `Submit failed (${res.status}). Please try again.`,
                 });
                 resetSubmitButton();
             } catch (err) {
                 console.error(err);
-                showSubmitErrors({
-                    message: 'Network error while submitting. Check your connection and try again.',
-                });
-                resetSubmitButton();
+                const kept = await window.RANIAG_REPORT_OUTBOX?.keep?.(form);
+                if (!kept) {
+                    showSubmitErrors({
+                        message: 'Network error while submitting. Check your connection and try again.',
+                    });
+                    resetSubmitButton();
+                }
             } finally {
                 window.clearTimeout(slowSubmissionNotice);
             }
@@ -820,23 +890,17 @@
     let wizardFieldErrors = [];
 
     function captureHasCoordinates() {
-        if (!captureLogInput?.value) return false;
-        try {
-            const parsed = JSON.parse(captureLogInput.value);
-            return Array.isArray(parsed) && parsed.some((item) =>
-                Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude))
-            );
-        } catch (e) {
-            return false;
-        }
+        return validGpsCaptures().length > 0;
     }
 
     function locationIsReady() {
-        if (captureHasCoordinates()) return true;
+        const captureReady = captureHasCoordinates();
         const lat = Number(latInput?.value);
         const lng = Number(lngInput?.value);
-        return latInput?.value !== '' && lngInput?.value !== ''
-            && Number.isFinite(lat) && Number.isFinite(lng);
+        const coordinatesReady = captureReady || (latInput?.value !== '' && lngInput?.value !== ''
+            && Number.isFinite(lat) && lat >= -90 && lat <= 90
+            && Number.isFinite(lng) && lng >= -180 && lng <= 180);
+        return coordinatesReady && window.RANIAG_MAP_API?.hasPinnedLocation?.() === true;
     }
 
     function contactIsReady() {
@@ -848,16 +912,7 @@
     }
 
     function firstCapture() {
-        if (!captureLogInput?.value) return null;
-        try {
-            const parsed = JSON.parse(captureLogInput.value);
-            if (!Array.isArray(parsed)) return null;
-            return parsed.find((item) =>
-                Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude))
-            ) || null;
-        } catch (e) {
-            return null;
-        }
+        return validGpsCaptures()[0] || null;
     }
 
     function syncLocationMode(options = {}) {
@@ -979,11 +1034,33 @@
         window.RANIAG_JO?.syncReportCoach(wizardStep, { force: true, pose: 'alert', text: message });
     }
 
+    function videoEvidenceWithoutGpsCapture() {
+        const files = Array.from(evidenceFileInput?.files || []);
+        if (!files.length) return false;
+        const captures = validGpsCaptures();
+
+        return files.some((file) => {
+            const isVideo = file.type.startsWith('video/')
+                || /\.(mp4|mov|webm)$/i.test(file.name);
+            if (!isVideo) return false;
+
+            return !captures.some((capture) => capture.filename === file.name);
+        });
+    }
+
     function guardReportBeforeSubmit() {
+        if (videoEvidenceWithoutGpsCapture()) {
+            showWizardStep(CAMERA_STEP);
+            setWizardError(
+                'Video evidence must be recorded with the GPS Camera after a GPS fix appears. Remove the untracked video or record it again with GPS ready.',
+                ['#gps-camera-module', '#evidence']
+            );
+            return false;
+        }
         if (!locationIsReady()) {
             showWizardStep(LOCATION_STEP);
-            setWizardError('Add an incident location before sending this report.', LOCATION_ERROR_SPOTS, [
-                { selector: '#use-current-location', text: 'Use your location button or place a pin on the map.' },
+            setWizardError('Wait for your location pin to appear on the map before sending this report.', LOCATION_ERROR_SPOTS, [
+                { selector: '#use-current-location', text: 'Get a GPS fix and confirm its pin is visible on the map.' },
             ]);
             return false;
         }
@@ -1091,8 +1168,8 @@
             }
         }
         if (step === LOCATION_STEP && !locationIsReady()) {
-            setWizardError('Add an incident location to continue.', LOCATION_ERROR_SPOTS, [
-                { selector: '#use-current-location', text: 'Use your location button or place a pin on the map.' },
+            setWizardError('Wait for your location pin to appear on the map before continuing.', LOCATION_ERROR_SPOTS, [
+                { selector: '#use-current-location', text: 'Get a GPS fix and confirm its pin is visible on the map.' },
             ]);
             return false;
         }
@@ -1152,7 +1229,9 @@
             (pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
-                window.dispatchEvent(new CustomEvent('raniag:location-resolved', { detail: { lat, lng } }));
+                window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                    detail: { lat, lng, coordinatesOnly: true },
+                }));
                 resolveLocation(lat, lng);
                 if (window.RANIAG_MAP_API) window.RANIAG_MAP_API.setCoordinates(lat, lng, { pan: true });
             },

@@ -67,11 +67,16 @@ class IncidentTypeController extends Controller
         'critical' => 'Critical',
     ];
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        $sort = $request->string('sort')->value() ?: 'sort_order';
+        $direction = $request->string('direction')->value() === 'desc' ? 'desc' : 'asc';
+        $sortable = ['sort_order', 'name', 'default_priority', 'is_active', 'incidents_count'];
+        $sortColumn = in_array($sort, $sortable, true) ? $sort : 'sort_order';
         $types = IncidentType::withCount('incidents')
-            ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy($sortColumn, $direction)
+            ->when($sortColumn !== 'name', fn ($query) => $query->orderBy('name'))
+            ->orderBy('id')
             ->get();
 
         return view('admin.incident_types.index', [

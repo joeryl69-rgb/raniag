@@ -118,11 +118,11 @@ class SimpleXlsxWriter
     {
         // Fonts: 0 normal, 1 bold, 2 title (white,14,bold), 3 italic gray, 4 header (white,bold)
         $fonts = '<fonts count="5">'
-            .'<font><sz val="11"/><name val="Calibri"/></font>'
-            .'<font><b/><sz val="11"/><name val="Calibri"/></font>'
-            .'<font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'
-            .'<font><i/><sz val="10"/><color rgb="FF666666"/><name val="Calibri"/></font>'
-            .'<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'
+            .'<font><sz val="11"/><name val="Arial"/></font>'
+            .'<font><b/><sz val="11"/><name val="Arial"/></font>'
+            .'<font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>'
+            .'<font><i/><sz val="10"/><color rgb="FF666666"/><name val="Arial"/></font>'
+            .'<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>'
             .'</fonts>';
 
         // Fills: 0 none, 1 gray125(reserved), 2 light green (section), 3 dark green (title/header)

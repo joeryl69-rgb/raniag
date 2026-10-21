@@ -1,4 +1,4 @@
-<x-auth-split eyebrow="RANIAG PORTAL" :title="'Sign in to your account'" subtitle="Welcome back. Sign in with your staff credentials to access the incident reporting dashboard.">
+<x-auth-split eyebrow="RANIAG PORTAL" :title="'Sign in to your account'" :subtitle="config('raniag.two_factor.enabled') ? 'Welcome back. Sign in with your staff credentials, then verify with the code sent to your registered email.' : 'Welcome back. Sign in with your staff credentials to access the incident reporting dashboard.'">
     @if (session('status'))
         <div class="auth-alert auth-alert--info"><i class="bi bi-info-circle-fill"></i><div>{{ session('status') }}</div></div>
     @endif
@@ -87,9 +87,9 @@
                 <a href="{{ route('password.request') }}" class="small fw-semibold text-decoration-none" style="color:#0b5ed7;">Forgot password?</a>
             @endif
         </div>
-        <button type="submit" class="auth-submit" id="login-submit">
-            <span class="button-label">Sign in</span>
-            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true" id="login-spinner"></span>
+        <button type="submit" class="auth-submit" id="login-submit" data-submit-text="Sign in" data-loading-text="Signing in…">
+            <span data-submit-label>Sign in</span>
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true" data-submit-spinner></span>
         </button>
     </form>
     <form id="quick-login-form" method="POST" action="{{ route('login.quick') }}" class="d-none">
@@ -102,8 +102,6 @@
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('login-form');
             const submitButton = document.getElementById('login-submit');
-            const buttonLabel = submitButton?.querySelector('.button-label');
-            const spinner = document.getElementById('login-spinner');
             const passwordInput = document.getElementById('password');
             const toggleButton = document.getElementById('toggle-password');
             const emailInput = document.getElementById('email');
@@ -156,16 +154,6 @@
                     passwordInput.type = showing ? 'password' : 'text';
                     toggleButton.textContent = showing ? 'Show' : 'Hide';
                     toggleButton.setAttribute('aria-pressed', showing ? 'false' : 'true');
-                });
-            }
-            if (form && submitButton && buttonLabel && spinner) {
-                form.addEventListener('submit', function (event) {
-                    if (event.defaultPrevented || form.dataset.rgSubmitting === '1') return;
-                    event.preventDefault();
-                    form.dataset.rgSubmitting = '1';
-                    buttonLabel.textContent = 'Signing in...';
-                    spinner.classList.remove('d-none');
-                    HTMLFormElement.prototype.submit.call(form);
                 });
             }
             let remaining = parseInt(document.getElementById('lockout-countdown')?.textContent || '0', 10);

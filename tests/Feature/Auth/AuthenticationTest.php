@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Mail\LoginOtpMail;
+use Illuminate\Support\Facades\Mail;
 
 test('login screen can be rendered', function () {
     $response = $this->get('/login');
@@ -16,7 +18,8 @@ test('login screen shows the updated sign-in experience', function () {
         ->assertSee('Show password');
 });
 
-test('administrators are redirected to the admin dashboard after login', function () {
+test('administrator login sends an email verification code', function () {
+    Mail::fake();
     $user = User::factory()->administrator()->create();
 
     $response = $this->post('/login', [
@@ -24,11 +27,14 @@ test('administrators are redirected to the admin dashboard after login', functio
         'password' => 'password',
     ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('admin.dashboard', absolute: false));
+    $response->assertSessionHasNoErrors();
+    $this->assertGuest();
+    $response->assertRedirect(route('two-factor.challenge', absolute: false));
+    Mail::assertSent(LoginOtpMail::class, fn (LoginOtpMail $mail) => $mail->hasTo($user->email));
 });
 
-test('agency users are redirected to the agency dashboard after login', function () {
+test('agency login sends an email verification code', function () {
+    Mail::fake();
     $user = User::factory()->agency()->create();
 
     $response = $this->post('/login', [
@@ -36,8 +42,10 @@ test('agency users are redirected to the agency dashboard after login', function
         'password' => 'password',
     ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('agency.dashboard', absolute: false));
+    $response->assertSessionHasNoErrors();
+    $this->assertGuest();
+    $response->assertRedirect(route('two-factor.challenge', absolute: false));
+    Mail::assertSent(LoginOtpMail::class, fn (LoginOtpMail $mail) => $mail->hasTo($user->email));
 });
 
 test('seeders create the baseline dashboard data', function () {

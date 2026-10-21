@@ -2,11 +2,13 @@
 
 use App\Enums\IncidentStatus;
 use App\Enums\UserRole;
+use App\Jobs\DispatchWebPushJob;
 use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationService;
+use App\Services\WebPushService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
@@ -56,6 +58,32 @@ test('notifyRole fans out database notifications to active admins', function () 
     expect(Notification::query()->where('type', 'incident.test')->count())->toBe(2)
         ->and(Notification::query()->where('user_id', $adminA->id)->exists())->toBeTrue()
         ->and(Notification::query()->where('user_id', $adminB->id)->exists())->toBeTrue();
+});
+
+test('staff web push includes the notification id for browser deduplication', function () {
+    $user = User::factory()->create([
+        'role' => UserRole::Administrator,
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+    $notification = Notification::query()->create([
+        'user_id' => $user->id,
+        'type' => 'incident.test',
+        'title' => 'Test alert',
+        'message' => 'Test alert body',
+    ]);
+    $webPush = Mockery::mock(WebPushService::class);
+    $webPush->shouldReceive('sendToUser')
+        ->once()
+        ->withArgs(fn ($recipient, $title, $message, $url, $extra) =>
+            $recipient->is($user)
+            && $title === 'Test alert'
+            && $message === 'Test alert body'
+            && $url === null
+            && $extra === ['notification_id' => $notification->id]
+        );
+
+    (new DispatchWebPushJob($notification->id))->handle($webPush);
 });
 
 test('raniag:escalate-sla notifies once and stamps meta', function () {

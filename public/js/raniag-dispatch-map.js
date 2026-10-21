@@ -29,6 +29,7 @@
         if (!el) return;
 
         const map = L.map(el).setView([cfg.lat, cfg.lng], 14);
+        global.RaniagMapScroll?.guard(map);
         if (Mapbox) Mapbox.addBasemap(map, cfg.map || {});
         else {
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -45,6 +46,7 @@
             ? global.RaniagIcons.buildDivIcon({
                 icon: cfg.icon,
                 color: cfg.color,
+                priority: cfg.priority,
                 outsideJurisdiction: cfg.outsideJurisdiction === true,
             })
             : undefined;
@@ -61,6 +63,7 @@
         let serverUnits = [];
         let serverAssigned = [];
         let fitted = false;
+        let refreshInFlight = false;
         const markerByKey = new Map();
         const routeBuckets = new Map();
         const routeDrawnAt = new Map();
@@ -146,6 +149,8 @@
             const plotted = [];
 
             list.forEach((u) => {
+                const phase = String(u.field_phase || '');
+                if (phase !== 'en_route' && phase !== 'on_scene') return;
                 const lat = Number(u.latitude);
                 const lng = Number(u.longitude);
                 if (Number.isNaN(lat) || Number.isNaN(lng)) return;
@@ -214,6 +219,8 @@
                 await drawUnits(cfg.units || [], []);
                 return;
             }
+            if (refreshInFlight) return;
+            refreshInFlight = true;
             try {
                 const glue = String(cfg.unitsUrl).includes('?') ? '&' : '?';
                 const res = await fetch(`${cfg.unitsUrl}${glue}_=${Date.now()}`, {
@@ -222,8 +229,11 @@
                     cache: 'no-store',
                 });
                 if (!res.ok) {
-                    if (statusEl && !unitGroup.getLayers().length) {
-                        statusEl.textContent = 'Could not load the assigned agency on the map. Refresh this page.';
+                    if (statusEl) {
+                        const hasLastKnown = unitGroup.getLayers().length > 0;
+                        statusEl.textContent = hasLastKnown
+                            ? `Could not refresh responder locations (HTTP ${res.status}). Showing last known positions.`
+                            : `Could not load responder locations (HTTP ${res.status}).`;
                     }
                     return;
                 }
@@ -231,17 +241,34 @@
                 serverUnits = asList(data.units);
                 serverAssigned = asList(data.assigned);
                 await drawUnits(serverUnits, serverAssigned);
-            } catch (e) { /* offline */ }
+            } catch (e) {
+                if (statusEl) {
+                    const hasLastKnown = unitGroup.getLayers().length > 0;
+                    statusEl.textContent = hasLastKnown
+                        ? 'Could not refresh responder locations. Showing last known positions.'
+                        : 'Could not load responder locations. Check your connection and refresh.';
+                }
+            } finally {
+                refreshInFlight = false;
+            }
         }
 
         document.addEventListener('raniag:gps', (event) => {
+            const phase = document.getElementById('field-phase-strip')?.dataset?.fieldPhase || '';
+            if (phase !== 'en_route' && phase !== 'on_scene') {
+                if (localFix) {
+                    localFix = null;
+                    drawUnits(serverUnits, serverAssigned);
+                }
+                return;
+            }
             const lat = Number(event.detail?.lat);
             const lng = Number(event.detail?.lng);
             if (Number.isNaN(lat) || Number.isNaN(lng)) return;
             localFix = {
                 id: 'self',
                 label: cfg.selfLabel || 'You',
-                field_phase: 'en_route',
+                field_phase: phase,
                 latitude: lat,
                 longitude: lng,
             };
@@ -249,7 +276,14 @@
         });
 
         await refresh();
-        if (cfg.unitsUrl) setInterval(refresh, cfg.pollMs || 15000);
+        if (cfg.unitsUrl) {
+            setInterval(refresh, cfg.pollMs || 15000);
+            const refreshWhenVisible = () => {
+                if (document.visibilityState === 'visible') refresh();
+            };
+            document.addEventListener('visibilitychange', refreshWhenVisible);
+            window.addEventListener('focus', refreshWhenVisible);
+        }
         [100, 350, 800].forEach((ms) => setTimeout(() => map.invalidateSize(), ms));
         if (typeof ResizeObserver !== 'undefined') {
             new ResizeObserver(() => map.invalidateSize()).observe(el.parentElement || el);

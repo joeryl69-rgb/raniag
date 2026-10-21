@@ -24,6 +24,8 @@
     <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png?v=8">
     <script src="{{ asset('js/public-theme.js') }}?v={{ @filemtime(public_path('js/public-theme.js')) }}"></script>
+    <script src="{{ asset('js/map-scroll.js') }}?v={{ @filemtime(public_path('js/map-scroll.js')) }}"></script>
+    <meta name="vapid-public-key" content="{{ config('services.webpush.public_key') }}">
     @stack('styles')
     <link href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}" rel="stylesheet">
     <link href="{{ asset('css/raniag-loader.css') }}?v={{ @filemtime(public_path('css/raniag-loader.css')) }}" rel="stylesheet">
@@ -279,6 +281,7 @@
         /* Live-refresh regions must never flash invisible after a DOM swap */
         [data-live-refresh-target] [data-rg-reveal] { opacity: 1 !important; transform: none !important; }
 
+        html, body { scroll-behavior: auto !important; }
         /* Lenis smooth-scroll html setup */
         html.lenis, html.lenis body { height: auto; }
         .lenis.lenis-smooth { scroll-behavior: auto !important; }
@@ -290,6 +293,7 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation: none !important; transition: none !important; }
             [data-rg-reveal]:not(.gsap-ready) { opacity: 1; }
+            .rg-cursor-field { display: none; }
         }
 
         /* ============================================================
@@ -752,6 +756,10 @@
         }
         .rg-hazard-tabs { border-bottom: 1px solid #294257; padding-bottom: 8px; }
         .rg-hazard-nearest, .rg-hazard-route { color: #e2ecef; background: #162e43; border-color: #365064 !important; }
+        .rg-hazard-panel .rg-hazard-nearest-btn,
+        .rg-hazard-panel .rg-hazard-nearest-btn strong { color: #f0f5f6; }
+        .rg-hazard-panel .rg-hazard-nearest-btn:hover strong,
+        .rg-hazard-panel .rg-hazard-nearest-btn:focus-visible strong { color: #9ae4ce; }
         .rg-hazard-list-item { color: #e2ecef; }
         .rg-hazard-list-item:hover, .rg-hazard-list-item.is-active { background: #183b4c; border-color: #367b7b; }
         .rg-hazard-locate { border-color: #4bc6a8; border-radius: 4px; color: #075b52; }
@@ -860,35 +868,35 @@
         .rg-nav-actions { display:flex;align-items:center;gap:.55rem; }
         .rg-strip-separator { padding: 0 .35rem; color: #e9bd5c; }
         .rg-strip-location { color: #cfdee2; }
-        body.raniag-public #rg-main { transition: opacity .16s cubic-bezier(.2,.75,.25,1), transform .16s cubic-bezier(.2,.75,.25,1); }
-        body.rg-page-arriving #rg-main { animation: rg-page-arrive .18s cubic-bezier(.2,.75,.25,1) both; }
-        body.rg-page-leaving #rg-main { opacity:.72; transform:translateY(2px); }
-        @keyframes rg-page-arrive {
-            from { opacity:0; transform:translateY(5px); }
-            to { opacity:1; transform:translateY(0); }
+        body.raniag-public #rg-main,
+        body.rg-page-arriving #rg-main,
+        body.rg-page-leaving #rg-main { opacity: 1; transform: none; transition: none; animation: none; }
+        .rg-cursor-field {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            opacity: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(420px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(13,132,118,.22), transparent 74%),
+                radial-gradient(120px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(72,200,179,.12), transparent 78%);
+            transition: opacity .2s ease;
         }
-        body.rg-page-leaving::after {
-            content:"";
-            position:fixed;
-            z-index:2000;
-            inset:0 0 auto;
-            height:3px;
-            background:linear-gradient(90deg,#e9bd5c,#4bc5ad);
-            transform-origin:left;
-            animation:rg-page-progress .12s ease-out both;
-            pointer-events:none;
+        .rg-cursor-field.is-active { opacity: 1; }
+        html[data-public-theme="dark"] .rg-cursor-field {
+            background:
+                radial-gradient(460px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(47,205,173,.28), transparent 74%),
+                radial-gradient(130px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(107,242,211,.14), transparent 78%);
         }
-        @keyframes rg-page-progress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
-        @media (prefers-reduced-motion: reduce) {
-            body.raniag-public #rg-main { transition:none; }
-            body.rg-page-arriving #rg-main { animation:none; }
-            body.rg-page-leaving #rg-main { opacity:1; transform:none; }
-            body.rg-page-leaving::after { animation:none; }
+        #rg-main, .raniag-footer { position: relative; z-index: 2; }
+        body[data-jo-page="home"] #rg-main { padding-top: 0 !important; padding-bottom: 0 !important; }
+        @media (pointer: coarse) {
+            .rg-cursor-field { display: none; }
         }
         .rg-help-fab {
             position: fixed !important;
             inset: auto max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) auto !important;
-            z-index: 1085 !important;
+            z-index: 1040 !important;
             width: auto;
             height: 54px;
             gap: 9px;
@@ -999,7 +1007,9 @@
         html[data-public-theme="dark"] .text-muted,
         html[data-public-theme="dark"] .form-text,
         html[data-public-theme="dark"] .rg-privacy-copy,
-        html[data-public-theme="dark"] .rg-community-updated { color: #a9bdc3 !important; }
+        html[data-public-theme="dark"] .rg-community-updated,
+        html[data-public-theme="dark"] .rg-stepper-jo-text,
+        html[data-public-theme="dark"] .jo-report-coach-text { color: #e8f4f2 !important; }
         html[data-public-theme="dark"] .raniag-card,
         html[data-public-theme="dark"] .card.raniag-card,
         html[data-public-theme="dark"] .rg-support-card,
@@ -1114,6 +1124,37 @@
             --bs-btn-hover-bg: #72d7c2;
             --bs-btn-hover-border-color: #72d7c2;
         }
+        html[data-public-theme="dark"] .btn-outline-secondary {
+            --bs-btn-color: #d7e6e8;
+            --bs-btn-border-color: #5c7680;
+            --bs-btn-hover-color: #f4fbfa;
+            --bs-btn-hover-bg: #1c3944;
+            --bs-btn-hover-border-color: #86a8b0;
+            --bs-btn-active-color: #f4fbfa;
+            --bs-btn-active-bg: #1c3944;
+            --bs-btn-active-border-color: #86a8b0;
+        }
+        html[data-public-theme="dark"] .bg-light {
+            background-color: #10232d !important;
+            color: #e8f1f0 !important;
+        }
+        html[data-public-theme="dark"] .rg-timeline strong,
+        html[data-public-theme="dark"] .rg-tips li,
+        html[data-public-theme="dark"] .rg-support-card__head:not(.rg-support-card__head--dark):not(.rg-support-card__head--gold) { color: #e7f2f1; }
+        html[data-public-theme="dark"] .rg-timeline p,
+        html[data-public-theme="dark"] .rg-cat-choice__hint { color: #b7c8cd; }
+        html[data-public-theme="dark"] .rg-cat-choice__label { color: #e8f1f0; }
+        html[data-public-theme="dark"] .rg-cat-choice { background: #10232d; border-color: #47606b; }
+        html[data-public-theme="dark"] .rg-cat-choice i { color: #9ec3c8; }
+        html[data-public-theme="dark"] .rg-cat-choice.is-selected .rg-cat-choice__label,
+        html[data-public-theme="dark"] .rg-cat-choice.is-selected i { color: #8be6d4; }
+        html[data-public-theme="dark"] .rg-confirm-card {
+            background: #142630;
+            color: #e7f2f1;
+            border: 1px solid #304955;
+        }
+        html[data-public-theme="dark"] .rg-confirm-card__title { color: #f3f8f7; }
+        html[data-public-theme="dark"] .rg-confirm-card__body { color: #c5d5d8; }
         html[data-public-theme="dark"] .rg-info-box { background: #382e19; border-color: #745b2c; color: #f4e7bb; }
         html[data-public-theme="dark"] .rg-lock-note { background: #382e19; border-color: #745b2c; color: #f4e7bb; }
         html[data-public-theme="dark"] .rg-wizard-dock .rg-wizard-nav-btn:focus-visible,
@@ -1159,6 +1200,7 @@
         default => 'home',
     };
 @endphp data-jo-page="{{ $joPage }}">
+    <div class="rg-cursor-field" aria-hidden="true"></div>
     <div id="rg-progress"></div>
 
     <a href="#rg-main" class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-light btn-sm">Skip to content</a>
@@ -1335,13 +1377,12 @@
 
     {{-- ================= loading overlay ================= --}}
     <x-loading-overlay />
+    <script src="{{ asset('js/modal-root.js') }}?v={{ @filemtime(public_path('js/modal-root.js')) }}"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{{ asset('js/live-refresh.js') }}?v={{ @filemtime(public_path('js/live-refresh.js')) }}"></script>
     <script src="{{ asset('js/public-page-transition.js') }}?v={{ @filemtime(public_path('js/public-page-transition.js')) }}"></script>
-    @if ($joPage === 'home')
-        <script src="{{ asset('js/public-home-pointer.js') }}?v={{ @filemtime(public_path('js/public-home-pointer.js')) }}"></script>
-    @endif
+    <script src="{{ asset('js/public-home-pointer.js') }}?v={{ @filemtime(public_path('js/public-home-pointer.js')) }}"></script>
     <script>
     // Robust scroll lock: `overflow:hidden` on <body> alone doesn't stop
     // touch/rubber-band scrolling on iOS Safari, which let the page scroll
@@ -1386,20 +1427,9 @@
     // doesn't exist yet, so pages with async content call this manually,
     // right after they un-hide their container, instead of relying on
     // data-rg-reveal/data-rg-stagger.
-    window.rgRevealNow = function (root) {
-        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (prefersReduced || typeof gsap === 'undefined') return;
-        const scope = (typeof root === 'string') ? document.querySelector(root) : (root || document);
-        if (!scope) return;
-        scope.querySelectorAll('[data-rg-stagger]').forEach(container => {
-            if (container.dataset.rgStagger === 'css') return;
-            const children = Array.from(container.children);
-            if (!children.length) return;
-            gsap.from(children, { y: 30, opacity: 0, duration: 0.55, stagger: { amount: 0.3, from: 'start' }, ease: 'power3.out' });
-        });
-        scope.querySelectorAll('[data-rg-pop]').forEach((el, i) => {
-            gsap.from(el, { scale: 0.7, opacity: 0, duration: 0.45, delay: i * 0.06, ease: 'back.out(1.7)' });
-        });
+    window.rgRevealNow = function () {
+        // Late-loaded sections stay where they render. A rise here was the
+        // same upward handoff as the rest of the public pages.
     };
 
     // ============================================================
@@ -1454,18 +1484,42 @@
         // ------ mark all reveal elements as gsap-ready (removes CSS opacity:0) ------
         document.querySelectorAll('[data-rg-reveal]').forEach(el => el.classList.add('gsap-ready'));
 
-        if (prefersReduced || typeof gsap === 'undefined' || typeof Lenis === 'undefined' || typeof ScrollTrigger === 'undefined') {
+        // Lenis and the load-time slides made every public page rise into
+        // place after a navigation. Journey steps use the observer below.
+        if (true) {
             if (journey) {
                 const steps = Array.from(journey.querySelectorAll('[data-journey-step]'));
-                setJourneyStep(0);
-                if ('IntersectionObserver' in window) {
-                    const observer = new IntersectionObserver((entries) => {
-                        const current = entries
-                            .filter(entry => entry.isIntersecting)
-                            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-                        if (current) setJourneyStep(Number(current.target.dataset.journeyStep));
-                    }, { rootMargin: '-38% 0px -38% 0px', threshold: [0, .15, .35, .6] });
-                    steps.forEach(step => observer.observe(step));
+                let activeJourneyStep = -1;
+                let journeyUpdateFrame = 0;
+                const updateJourneyStep = () => {
+                    journeyUpdateFrame = 0;
+                    const focusY = window.innerHeight * 0.5;
+                    let closestIndex = 0;
+                    let closestDistance = Infinity;
+                    steps.forEach((step, index) => {
+                        const rect = step.getBoundingClientRect();
+                        const center = rect.top + rect.height * 0.5;
+                        const distance = Math.abs(center - focusY);
+                        if (distance < closestDistance) {
+                            closestDistance = distance;
+                            closestIndex = index;
+                        }
+                    });
+                    if (closestIndex !== activeJourneyStep) {
+                        activeJourneyStep = closestIndex;
+                        setJourneyStep(closestIndex, true);
+                    }
+                };
+                const queueJourneyUpdate = () => {
+                    if (journeyUpdateFrame) return;
+                    journeyUpdateFrame = window.requestAnimationFrame(updateJourneyStep);
+                };
+                window.addEventListener('scroll', queueJourneyUpdate, { passive: true });
+                window.addEventListener('resize', queueJourneyUpdate, { passive: true });
+                if (steps.length) {
+                    activeJourneyStep = 0;
+                    setJourneyStep(0);
+                    queueJourneyUpdate();
                 }
             }
             // Fallback: ensure everything visible, run navbar logic natively
@@ -1481,289 +1535,9 @@
             return;
         }
 
-        // ------ 1. Lenis smooth scroll ------
-        const lenis = new Lenis({
-            duration: 1.15,
-            easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            smoothTouch: false,
-            touchMultiplier: 1.8,
-            infinite: false,
-        });
-
-        // Sync Lenis with GSAP ticker for frame-perfect timing
-        gsap.ticker.add(time => lenis.raf(time * 1000));
-        gsap.ticker.lagSmoothing(0);
-
-        // ------ 2. ScrollTrigger ------
-        gsap.registerPlugin(ScrollTrigger);
-        if (journey) {
-            const steps = Array.from(journey.querySelectorAll('[data-journey-step]'));
-            setJourneyStep(0);
-            steps.forEach((step, index) => {
-                ScrollTrigger.create({
-                    trigger: step,
-                    start: 'top 56%',
-                    end: 'bottom 44%',
-                    onEnter: () => setJourneyStep(index, true),
-                    onEnterBack: () => setJourneyStep(index, true),
-                });
-            });
-            const route = journey.querySelector('.rg-map-route');
-            if (route) {
-                gsap.fromTo(route, { scaleX: 0.25, transformOrigin: 'left center' }, {
-                    scaleX: 1,
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: journey,
-                        start: 'top 70%',
-                        end: 'bottom 25%',
-                        scrub: 0.8,
-                    },
-                });
-            }
-        }
-        lenis.on('scroll', ScrollTrigger.update);
-        window.addEventListener('scroll', ScrollTrigger.update, { passive: true });
-
-        // ------ 3. Scroll progress bar (via Lenis event) ------
-        const bar = document.getElementById('rg-progress');
-        if (bar) {
-            lenis.on('scroll', ({ scroll, limit }) => {
-                bar.style.width = (limit > 0 ? (scroll / limit) * 100 : 0) + '%';
-            });
-        }
-
-        // ------ 4. Navbar sticky state (via Lenis) ------
-        const nav = document.getElementById('rg-nav');
-        if (nav) {
-            lenis.on('scroll', ({ scroll }) => nav.classList.toggle('is-scrolled', scroll > 8));
-        }
-
-        // ------ 6. Hero section — staggered entrance ------
-        const heroEyebrow = document.querySelector('[data-rg-hero-eyebrow]');
-        const heroTitle   = document.querySelector('[data-rg-hero-title]');
-        const heroTag     = document.querySelector('[data-rg-hero-tag]');
-        const heroDesc    = document.querySelector('[data-rg-hero-desc]');
-        const heroBtns    = document.querySelector('[data-rg-hero-btns]');
-        const heroCard    = document.querySelector('[data-rg-hero-card]');
-
-        if (heroTitle) {
-            const heroTl = gsap.timeline({ delay: 0.22 });
-            if (heroEyebrow) heroTl.from(heroEyebrow, { y: 22, opacity: 0, duration: 0.55, ease: 'power3.out' });
-            heroTl.from(heroTitle,   { y: 38, opacity: 0, duration: 0.75, ease: 'power4.out' }, heroEyebrow ? '-=0.25' : '+=0');
-            if (heroTag)  heroTl.from(heroTag,  { y: 18, opacity: 0, duration: 0.5, ease: 'power3.out' }, '-=0.5');
-            if (heroDesc) heroTl.from(heroDesc, { y: 18, opacity: 0, duration: 0.5, ease: 'power3.out' }, '-=0.42');
-            if (heroBtns) heroTl.from(heroBtns, { y: 16, opacity: 0, duration: 0.45, ease: 'power3.out' }, '-=0.38');
-            if (heroCard) heroTl.from(heroCard,  { x: 32, opacity: 0, duration: 0.65, ease: 'power3.out' }, '-=0.52');
-        }
-
-        // ------ 7. Generic reveal blocks (data-rg-reveal) ------
-        gsap.utils.toArray('[data-rg-reveal]').forEach(el => {
-            // Skip if inside a live-refresh zone (those are always visible)
-            if (el.closest('[data-live-refresh-target]')) return;
-            // Skip elements that start hidden (e.g. inside a d-none container
-            // awaiting an async fetch) — ScrollTrigger can't measure a
-            // display:none element, so it locks in a wrong trigger position
-            // and the element is left part-transparent forever. Pages with
-            // this pattern call window.rgRevealNow() themselves once the
-            // container is un-hidden (see dashboard.blade.php).
-            if (el.offsetParent === null) return;
-            gsap.from(el, {
-                y: 38,
-                opacity: 0,
-                duration: 0.72,
-                ease: 'power3.out',
-                scrollTrigger: {
-                    trigger: el,
-                    start: 'top 90%',
-                    toggleActions: 'play none none none',
-                    once: true,
-                },
-            });
-        });
-
-        // ------ 8. Card stagger groups (data-rg-stagger) ------
-        gsap.utils.toArray('[data-rg-stagger]').forEach(container => {
-            if (container.dataset.rgStagger === 'css') return;
-            // Skip containers that start hidden (e.g. #pd-content on the
-            // dashboard, which is d-none until its fetch() resolves). Same
-            // reasoning as the data-rg-reveal guard above — a tween created
-            // against a display:none container leaves its children stuck at
-            // a dimmed, never-completed opacity once the container is later
-            // shown. window.rgRevealNow() handles the reveal for these once
-            // they're actually visible.
-            if (container.offsetParent === null) return;
-            const children = Array.from(container.children);
-            if (!children.length) return;
-            const staggerAnimation = {
-                y: 44,
-                opacity: 0,
-                duration: 0.6,
-                stagger: { amount: 0.35, from: 'start' },
-                ease: 'power3.out',
-            };
-            if (container.dataset.rgStagger !== 'on-load') {
-                staggerAnimation.scrollTrigger = {
-                    trigger: container,
-                    start: 'top 88%',
-                    toggleActions: 'play none none none',
-                    once: true,
-                };
-            }
-            gsap.from(children, staggerAnimation);
-        });
-
-        // ------ 9. Feature icon tiles — subtle scale pop ------
-        gsap.utils.toArray('.rg-icon-tile').forEach(tile => {
-            gsap.from(tile, {
-                scale: 0.6,
-                opacity: 0,
-                duration: 0.5,
-                ease: 'back.out(1.7)',
-                scrollTrigger: { trigger: tile, start: 'top 90%', once: true },
-            });
-        });
-
-        // ------ 9a. Generic scale-pop for one-off elements (data-rg-pop) ------
-        // (Fine to use inside a live-refresh zone too — the periodic
-        // refresh only swaps innerHTML after this initial pass has
-        // already played once; it doesn't re-trigger this animation.)
-        gsap.utils.toArray('[data-rg-pop]').forEach((el, i) => {
-            gsap.from(el, {
-                scale: 0.65, opacity: 0, duration: 0.5, delay: i * 0.06,
-                ease: 'back.out(1.7)',
-                scrollTrigger: { trigger: el, start: 'top 92%', once: true },
-            });
-        });
-
-        // ------ 9b. Live impact counters — count up from 0 ------
-        gsap.utils.toArray('[data-rg-counter]').forEach(el => {
-            const target = parseInt(el.dataset.rgCounterTo || '0', 10);
-            const counterObj = { val: 0 };
-            gsap.to(counterObj, {
-                val: target,
-                duration: 1.4,
-                ease: 'power2.out',
-                onUpdate: () => { el.textContent = Math.round(counterObj.val).toLocaleString(); },
-                scrollTrigger: { trigger: el, start: 'top 90%', once: true },
-            });
-        });
-
-        // ------ 10. Footer columns stagger ------
-        const footerCols = document.querySelectorAll('.raniag-footer .row > [class*="col"]');
-        if (footerCols.length) {
-            gsap.from(footerCols, {
-                y: 28,
-                opacity: 0,
-                duration: 0.6,
-                stagger: 0.1,
-                ease: 'power3.out',
-                scrollTrigger: {
-                    trigger: '.raniag-footer',
-                    start: 'top 92%',
-                    once: true,
-                },
-            });
-        }
-
-        // ------ 12. Announce cards — horizontal stagger ------
-        gsap.utils.toArray('.rg-announce-card').forEach((card, i) => {
-            gsap.from(card, {
-                y: 30,
-                opacity: 0,
-                duration: 0.55,
-                delay: i * 0.1,
-                ease: 'power3.out',
-                scrollTrigger: { trigger: card, start: 'top 90%', once: true },
-            });
-        });
-
-        // ------ 13. Support card — subtle scale ------
-        const supportCard = document.querySelector('.rg-support-card');
-        if (supportCard) {
-            gsap.from(supportCard, {
-                scale: 0.97,
-                opacity: 0,
-                duration: 0.65,
-                ease: 'power3.out',
-                scrollTrigger: { trigger: supportCard, start: 'top 88%', once: true },
-            });
-        }
-
-        // ------ 14. GSAP card hover micro-interactions ------
-        document.querySelectorAll('.raniag-card, .rg-announce-card').forEach(card => {
-            card.addEventListener('mouseenter', () => {
-                gsap.to(card, { y: -4, boxShadow: '0 22px 44px -18px rgba(11,18,32,.32)', duration: 0.25, ease: 'power2.out' });
-            });
-            card.addEventListener('mouseleave', () => {
-                gsap.to(card, { y: 0, boxShadow: '', duration: 0.3, ease: 'power2.out' });
-            });
-        });
-
-        // ------ 15. Announcement section header slide ------
-        const updatesHead = document.querySelector('#updates .d-flex.align-items-center.justify-content-between');
-        if (updatesHead) {
-            gsap.from(updatesHead, {
-                y: 22, opacity: 0, duration: 0.55, ease: 'power3.out',
-                scrollTrigger: { trigger: updatesHead, start: 'top 90%', once: true },
-            });
-        }
-
-        // ------ 16. rg-strip top bar fade ------
-        const strip = document.querySelector('.rg-strip');
-        if (strip) gsap.from(strip, { opacity: 0, duration: 0.5, ease: 'power2.out' });
-
-        // Refresh ScrollTrigger after all setup
-        ScrollTrigger.refresh();
-
-        // Positions computed above can be stale: Bootstrap Icons (a webfont)
-        // and any late CSS/images can reflow the page after this point,
-        // shifting elements out from under the trigger markers ScrollTrigger
-        // just recorded. When that happens, an element whose "from" state
-        // (opacity:0) already rendered never gets its trigger re-checked,
-        // so it stays invisible even though it's on screen. Recompute once
-        // fonts finish and once more on full window load to catch both.
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(() => ScrollTrigger.refresh());
-        }
-        window.addEventListener('load', () => ScrollTrigger.refresh());
     }
 
-    function loadPublicScript(src) {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-
-    // Motion is decorative, so load it after the first screen and during an
-    // idle window. The page remains interactive if a CDN is slow or blocked.
-    window.addEventListener('load', () => {
-        const start = () => {
-            // Keep the full motion system on mobile too. It is still loaded
-            // after the first screen and during idle time, so it does not
-            // block the initial render.
-            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                initPublicMotion();
-                return;
-            }
-
-            loadPublicScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js')
-                .then(() => loadPublicScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js'))
-                .then(() => loadPublicScript('https://unpkg.com/lenis@1.1.14/dist/lenis.min.js'))
-                .then(initPublicMotion)
-                .catch(() => initPublicMotion());
-        };
-
-        if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(start, { timeout: 2000 });
-        } else {
-            setTimeout(start, 1000);
-        }
-    }, { once: true });
+    initPublicMotion();
 
     // Auto-dismiss flash messages
     setTimeout(() => {
@@ -1785,6 +1559,10 @@
         <x-help-fab :href="route('public.support')" />
     @endunless
     <script src="{{ asset('js/public-guide.js') }}?v={{ @filemtime(public_path('js/public-guide.js')) }}"></script>
+    <script src="{{ asset('js/help-fab.js') }}?v={{ @filemtime(public_path('js/help-fab.js')) }}"></script>
+    <script src="{{ asset('js/evidence-video-player.js') }}?v={{ @filemtime(public_path('js/evidence-video-player.js')) }}"></script>
+    <script src="{{ asset('js/filter-select.js') }}?v={{ @filemtime(public_path('js/filter-select.js')) }}" defer></script>
+    <script src="{{ asset('js/filter-date-picker.js') }}?v={{ @filemtime(public_path('js/filter-date-picker.js')) }}" defer></script>
     @stack('scripts')
 </body>
 </html>

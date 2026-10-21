@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Mail;
 
 class User extends Authenticatable
 {
@@ -17,13 +17,12 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * Send a branded reset-password email instead of Laravel's plain
-     * default notification (which also exposes the raw reset URL as
-     * fallback text — this replaces that behavior entirely).
+     * Send the branded reset email without Laravel's default raw-URL
+     * fallback or duplicate notification message.
      */
     public function sendPasswordResetNotification($token): void
     {
-        parent::sendPasswordResetNotification($token);
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     protected $fillable = [

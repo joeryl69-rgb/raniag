@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class AgencyController extends Controller
 {
@@ -26,6 +27,12 @@ class AgencyController extends Controller
         $agenciesQuery = Agency::with('users');
         Filters::search($agenciesQuery, ['name', 'code', 'email'], $agencyFilters);
         Filters::dateRange($agenciesQuery, 'created_at', $agencyFilters);
+        $agencySort = $request->string('agency_sort')->value() ?: 'created_at';
+        $agencyDirection = $request->string('agency_direction')->value() === 'asc' ? 'asc' : 'desc';
+        $agenciesQuery->orderBy(
+            in_array($agencySort, ['name', 'code', 'is_active', 'created_at'], true) ? $agencySort : 'created_at',
+            $agencyDirection,
+        )->orderByDesc('id');
         $agencies = $agenciesQuery->paginate(15, ['*'], 'agency_page')->withQueryString();
 
         $personnelFilters = [
@@ -37,6 +44,14 @@ class AgencyController extends Controller
         $personnelQuery = User::where('role', UserRole::Personnel);
         Filters::search($personnelQuery, ['name', 'email', 'role_title', 'team_assignment'], $personnelFilters);
         Filters::dateRange($personnelQuery, 'created_at', $personnelFilters);
+        $personnelSort = $request->string('personnel_sort')->value() ?: 'created_at';
+        $personnelDirection = $request->string('personnel_direction')->value() === 'asc' ? 'asc' : 'desc';
+        $personnelQuery->orderBy(
+            in_array($personnelSort, ['name', 'email', 'role_title', 'team_assignment', 'is_active', 'created_at'], true)
+                ? $personnelSort
+                : 'created_at',
+            $personnelDirection,
+        )->orderByDesc('id');
         $personnelAccounts = $personnelQuery->paginate(15, ['*'], 'personnel_page')->withQueryString();
 
         return view('admin.agencies.index', compact('agencies', 'personnelAccounts'));
@@ -132,7 +147,8 @@ class AgencyController extends Controller
             'is_available' => ['sometimes', 'boolean'],
             'officer_name' => ['required', 'string', 'max:255'],
             'officer_email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
-            'officer_password' => ['nullable', 'string', 'min:8'],
+            'officer_password' => ['nullable', 'string', PasswordRule::min(8)->mixedCase()->numbers()->symbols()],
+            'officer_password_confirmation' => ['required_with:officer_password', 'same:officer_password'],
         ]);
 
         $isActive = $request->has('is_active');

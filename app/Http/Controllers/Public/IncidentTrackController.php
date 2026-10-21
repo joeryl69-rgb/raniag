@@ -131,7 +131,7 @@ class IncidentTrackController extends Controller
     {
         session()->put('track_verified.'.$incident->id, true);
 
-        $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency']);
+        $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency', 'statusUpdates.user.agency']);
 
         return view('public.track.show', [
             'incident' => $incident,

@@ -6,8 +6,8 @@
     <title>Chart Summary Report — {{ config('raniag.organization') }}</title>
     <style>
         body {
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            font-size: 11pt;
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
             line-height: 1.5;
             color: #333;
             margin: 0;
@@ -89,7 +89,7 @@
                 @endswitch
             </span>
         </p>
-        <p><strong>Report View:</strong> {{ ucfirst($viewMode) }}{{ $viewMode !== 'periodic' ? ' (grouped by '.($viewMode === 'monthly' ? 'calendar month' : 'calendar week').')' : '' }}</p>
+        <p><strong>Report View:</strong> {{ ucfirst($viewMode) }}{{ $viewMode !== 'periodic' ? ' (grouped by '.match ($viewMode) { 'monthly' => 'calendar month', 'yearly' => 'calendar year', default => 'calendar week' }.')' : '' }}</p>
         @if(!empty($filters['barangay']))
             <p><strong>Barangay:</strong> {{ $filters['barangay'] }}</p>
         @endif

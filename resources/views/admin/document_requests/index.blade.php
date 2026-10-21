@@ -2,6 +2,29 @@
     <x-slot name="header">
         {{ __('Printable Document Requests') }}
     </x-slot>
+    <x-workspace-intro
+        eyebrow="COORDINATION / CASE FILE ACCESS"
+        title="Document requests"
+        description="Review agency requests for printable case records and track delivery status."
+        icon="bi-file-earmark-pdf"
+        variant="document-workbench"
+    />
+
+    @if (session('document_request_success'))
+        <div class="alert alert-{{ session('document_request_success.tone', 'success') }} alert-dismissible fade show d-flex align-items-start gap-3 mb-4" role="status">
+                <span class="rg-icon-tile bg-{{ session('document_request_success.tone', 'success') }}-subtle text-{{ session('document_request_success.tone', 'success') }}-emphasis flex-shrink-0" aria-hidden="true">
+                    <i class="bi {{ session('document_request_success.tone') === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill' }}"></i>
+                </span>
+                <div class="min-w-0 flex-grow-1">
+                    <h2 class="h6 fw-bold mb-1">{{ session('document_request_success.title') }}</h2>
+                    <p class="mb-1">{{ session('document_request_success.message') }}</p>
+                    @if (session('document_request_success.tracking_number'))
+                        <span class="small text-muted">Case {{ session('document_request_success.tracking_number') }}</span>
+                    @endif
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+        </div>
+    @endif
 
     <x-kpi-strip :items="[
         ['label' => 'Requests', 'value' => $documentRequests->total(), 'icon' => 'bi-file-earmark-pdf', 'tone' => 'primary', 'sub' => 'Matching the filters'],
@@ -30,9 +53,9 @@
 
     <p class="small text-muted mb-3">An office asks for a printable case file. Review what they asked for, then approve it to build the PDF and email the office, or reject it.</p>
 
-    <div class="card border-0 shadow-sm">
+    <section class="card rg-filter-host rg-document-request-register border-0 shadow-sm" aria-label="Printable document requests">
         <div class="p-3 border-bottom">
-            <x-filters.toolbar search-placeholder="Search tracking number, office, or note" :action="route('admin.document_requests.index')">
+            <x-filters.toolbar search-placeholder="Search tracking number, office, or note" :action="route('admin.document_requests.index')" :compact="true">
                 @php
                     $currentStatus = request()->query('status', null);
                     $selected = $currentStatus === null ? '0' : $currentStatus;
@@ -51,8 +74,8 @@
             </x-filters.toolbar>
         </div>
 
-        <div class="card-body" data-live-refresh data-live-refresh-target="#rg-doc-requests-list" data-live-refresh-interval="4000">
-            <div id="rg-doc-requests-list" class="d-flex flex-column gap-3">
+        <div class="card-body rg-document-request-list" data-live-refresh data-live-refresh-target="#rg-doc-requests-list" data-live-refresh-interval="4000">
+            <div id="rg-doc-requests-list">
                 @forelse($documentRequests as $dr)
                     @php
                         $status = (string) $dr->status;
@@ -125,9 +148,10 @@
                         </div>
                     </article>
                 @empty
-                    <div class="text-center py-5 text-muted">
-                        <i class="bi bi-inbox display-6 d-block mb-2"></i>
-                        No document requests in this view.
+                    <div class="rg-empty-state" role="status">
+                        <span class="rg-empty-state-icon"><i class="bi bi-inbox" aria-hidden="true"></i></span>
+                        <strong>No requests in this view</strong>
+                        <span>Try another status or broaden the search to find a case-file request.</span>
                     </div>
                 @endforelse
             </div>
@@ -139,40 +163,6 @@
                 {{ $documentRequests->links('pagination::bootstrap-5') }}
             </div>
         @endif
-    </div>
+    </section>
 
-    @push('styles')
-    <style>
-        .doc-request {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 16px;
-            background: #fff;
-        }
-        .doc-request.is-pending { border-left: 4px solid #d97706; }
-        .doc-track {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            font-weight: 700;
-            white-space: nowrap;
-            text-decoration: none;
-        }
-        .doc-kicker { font-size: 0.82rem; color: #64748b; }
-        .doc-actions { width: 100%; max-width: 320px; }
-        .doc-status { font-weight: 600; }
-        .doc-status-pending { background: #fff7ed; color: #9a3412; }
-        .doc-status-approved, .doc-status-sent { background: #ecfdf5; color: #047857; }
-        .doc-status-failed { background: #fef2f2; color: #b91c1c; }
-        .doc-status-rejected { background: #f1f5f9; color: #475569; }
-        [data-theme="dark"] .doc-request { background: #16213a; border-color: #2a3a5c; }
-        [data-theme="dark"] .doc-kicker { color: #94a3b8; }
-        [data-theme="dark"] .doc-status-pending { background: #3b2a14; color: #fdba74; }
-        [data-theme="dark"] .doc-status-approved,
-        [data-theme="dark"] .doc-status-sent { background: #12352c; color: #6ee7b7; }
-        [data-theme="dark"] .doc-status-failed { background: #3f1d1d; color: #fca5a5; }
-        [data-theme="dark"] .doc-status-rejected { background: #1e293b; color: #cbd5e1; }
-        @media (max-width: 991.98px) {
-            .doc-actions { max-width: none; }
-        }
-    </style>
-    @endpush
 </x-app-layout>

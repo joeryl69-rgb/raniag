@@ -1,0 +1,12 @@
+# Round 68 — Task-based operations reporting
+
+- Reworked Reports around the admin's task instead of leading with a generic builder: create a situation report for incident patterns and hotspots, prepare a day-to-day operations and services record, or choose sections for a specific request.
+- Added a ready-made operations record with open cases, the shelter roll, missing case papers, failed texts, support requests, public notices, and staff activity. Its useful defaults are preselected and optional filters are collapsed unless an error needs attention.
+- Removed repeated links to the same builder and archive from the Reports home and period overview. Navigation now has one Report home link and one Saved reports link; filing actions state that they save a PDF and lock the copy.
+- Added week, month, and year quick-report previews with incident totals and status, response timing, current shelter occupancy, incident-type and barangay summaries, repeat barangay/type hotspots, a shaded Pamplona barangay map, and selected case references with descriptions.
+- Added one-step PDF filing for situation reports and the operations template. A filed report keeps its generated data snapshot and PDF in Saved reports; admins can open or download it later.
+- Kept draft create, read, update, and delete functionality for specific requests with strict server-side validation. Filed reports stay immutable; filters can be adjusted only when needed.
+- Fixed the draft edit form to POST to a matching save endpoint, while retaining PATCH support for API/REST clients and POST filing actions. This prevents browsers that omit a submit-button method override from receiving a 405 response.
+- Added coverage for report choices and the preselected operations template, hotspot aggregation and descriptions, PDF filing and retrieval, invalid period rejection, draft CRUD, validation, and the legacy export archive.
+- Applied the pending report-record migrations to the configured database: added the nullable snapshot column and the `report_kind` column (existing rows default to `custom`). These migrations are required before opening or filing quick reports.
+- Verification: 44 report workflow/archive and shelter-integration tests passed (289 assertions); Pint formatting, Blade compilation, and `git diff --check` passed. The full project suite has 143 passing tests and 4 unrelated failures in authentication/seeder and public-report idempotency tests.

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Public;
 
 use App\Models\IncidentType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 
 class StoreIncidentReportRequest extends FormRequest
@@ -43,9 +44,15 @@ class StoreIncidentReportRequest extends FormRequest
             ]);
         }
 
+        $meta = $this->input('meta');
+        if (is_array($meta) && is_string($meta['gps_captures'] ?? null)) {
+            $meta['gps_captures'] = json_encode($this->validGpsCaptures(), JSON_INVALID_UTF8_SUBSTITUTE);
+            $this->merge(['meta' => $meta]);
+        }
+
         // A GPS photo or recording already carries coordinates. Copy them
         // onto the report when the location fields were left blank so a
-        // successful capture is not rejected as "no location".
+        // successful, attached capture is not rejected as "no location".
         $capture = $this->firstGpsCapture();
         $latBlank = $this->input('latitude') === null || $this->input('latitude') === '';
         $lngBlank = $this->input('longitude') === null || $this->input('longitude') === '';
@@ -144,13 +151,25 @@ class StoreIncidentReportRequest extends FormRequest
             if ($errors->has('reporter_email') && $errors->has('reporter_phone')) {
                 $errors->forget('reporter_phone');
             }
+
+            foreach ((array) $this->file('evidence', []) as $index => $file) {
+                if (! $file instanceof UploadedFile || ! $this->isVideoEvidence($file)) {
+                    continue;
+                }
+
+                if (! $this->hasGpsCaptureFor($file)) {
+                    $validator->errors()->add(
+                        "evidence.{$index}",
+                        'Video evidence must be recorded with the GPS Camera while a GPS fix is available. Please record it again after GPS is ready.'
+                    );
+                }
+            }
         });
     }
 
     /**
-     * True when the report carries a photo (manually chosen or captured via
-     * the GPS camera — both end up in the `evidence` file array) or at least
-     * one entry in the GPS-camera's capture log.
+     * True when the report carries an uploaded file or a valid GPS capture
+     * record matched to an attached photo or video.
      */
     public function hasEvidence(): bool
     {
@@ -160,7 +179,7 @@ class StoreIncidentReportRequest extends FormRequest
             }
         }
 
-        return $this->gpsCaptures() !== [];
+        return $this->hasGpsCapture();
     }
 
     /**
@@ -177,16 +196,7 @@ class StoreIncidentReportRequest extends FormRequest
      */
     private function firstGpsCapture(): ?array
     {
-        foreach ($this->gpsCaptures() as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-            if (is_numeric($item['latitude'] ?? null) && is_numeric($item['longitude'] ?? null)) {
-                return $item;
-            }
-        }
-
-        return null;
+        return $this->gpsCaptures()[0] ?? null;
     }
 
     /**
@@ -201,6 +211,76 @@ class StoreIncidentReportRequest extends FormRequest
 
         $decoded = json_decode($captures, true);
 
-        return is_array($decoded) ? array_values($decoded) : [];
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        return $this->validGpsCaptures($decoded);
+    }
+
+    /**
+     * @param  list<mixed>|null  $captures
+     * @return list<array<string, mixed>>
+     */
+    private function validGpsCaptures(?array $captures = null): array
+    {
+        if ($captures === null) {
+            $raw = $this->input('meta.gps_captures');
+            $decoded = is_string($raw) ? json_decode($raw, true) : null;
+            $captures = is_array($decoded) ? array_values($decoded) : [];
+        }
+
+        $files = array_values(array_filter(
+            (array) $this->file('evidence', []),
+            fn ($file) => $file instanceof UploadedFile
+        ));
+        $valid = [];
+
+        foreach ($captures as $capture) {
+            if (! is_array($capture)
+                || ($capture['location_source'] ?? null) !== 'gps'
+                || ! is_string($capture['filename'] ?? null)
+                || ! is_numeric($capture['latitude'] ?? null)
+                || ! is_numeric($capture['longitude'] ?? null)
+                || ! is_string($capture['captured_at'] ?? null)
+                || strtotime($capture['captured_at']) === false) {
+                continue;
+            }
+
+            $latitude = (float) $capture['latitude'];
+            $longitude = (float) $capture['longitude'];
+            if (! is_finite($latitude) || ! is_finite($longitude)
+                || $latitude < -90 || $latitude > 90
+                || $longitude < -180 || $longitude > 180) {
+                continue;
+            }
+
+            foreach ($files as $file) {
+                if ($file->getClientOriginalName() === $capture['filename']
+                    && ($this->isVideoEvidence($file) || str_starts_with((string) $file->getClientMimeType(), 'image/'))) {
+                    $valid[] = $capture;
+                    break;
+                }
+            }
+        }
+
+        return $valid;
+    }
+
+    private function isVideoEvidence(UploadedFile $file): bool
+    {
+        return str_starts_with((string) $file->getClientMimeType(), 'video/')
+            || in_array(strtolower($file->getClientOriginalExtension()), ['mp4', 'mov', 'webm'], true);
+    }
+
+    private function hasGpsCaptureFor(UploadedFile $file): bool
+    {
+        foreach ($this->gpsCaptures() as $capture) {
+            if (($capture['filename'] ?? null) === $file->getClientOriginalName()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

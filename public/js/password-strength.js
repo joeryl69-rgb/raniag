@@ -41,7 +41,7 @@
         const meterWrap = document.createElement('div');
         meterWrap.className = 'rg-pw-meter-wrap mt-2';
         meterWrap.innerHTML = `
-            <div class="rg-pw-meter"><div class="rg-pw-meter-fill"></div></div>
+            <div class="rg-pw-meter" role="progressbar" aria-label="Password requirements" aria-valuemin="0" aria-valuemax="${RULES.length}" aria-valuenow="0"><div class="rg-pw-meter-fill"></div></div>
             <span class="rg-pw-meter-label"></span>
         `;
 
@@ -56,16 +56,20 @@
 
         const fill = meterWrap.querySelector('.rg-pw-meter-fill');
         const label = meterWrap.querySelector('.rg-pw-meter-label');
+        const meter = meterWrap.querySelector('.rg-pw-meter');
 
         function refresh() {
             const value = input.value;
             const score = scoreOf(value);
             const { text, tone } = strengthLabel(score);
+            const valid = score === RULES.length;
 
             fill.className = 'rg-pw-meter-fill ' + tone;
             fill.style.width = value ? `${(score / RULES.length) * 100}%` : '0%';
-            label.textContent = value ? text : '';
+            label.textContent = value ? `${text} · ${score}/${RULES.length} requirements` : `0/${RULES.length} requirements`;
             label.className = 'rg-pw-meter-label ' + (value ? tone : '');
+            meter.setAttribute('aria-valuenow', String(score));
+            input.setCustomValidity(valid || !value ? '' : 'Meet all five password requirements before continuing.');
 
             RULES.forEach((r, i) => {
                 const li = checklist.querySelector(`li[data-rule="${i}"]`);
@@ -77,9 +81,52 @@
 
         input.addEventListener('input', refresh);
         refresh();
+
+        const form = input.form;
+        if (form && !form.dataset.passwordRulesBound) {
+            form.dataset.passwordRulesBound = '1';
+            form.addEventListener('submit', function (event) {
+                const invalidStrengthInput = [...form.querySelectorAll('input[data-password-strength]')]
+                    .find((passwordInput) => {
+                        if (passwordInput.hasAttribute('data-password-optional') && !passwordInput.value) return false;
+                        return scoreOf(passwordInput.value) !== RULES.length;
+                    });
+                const invalidConfirmation = [...form.querySelectorAll('input[data-password-confirm-of]')]
+                    .find((confirmationInput) => {
+                        const source = document.getElementById(confirmationInput.getAttribute('data-password-confirm-of'));
+                        return source && confirmationInput.value !== source.value;
+                    });
+
+                if (invalidStrengthInput || invalidConfirmation) {
+                    event.preventDefault();
+                    (invalidStrengthInput || invalidConfirmation).reportValidity();
+                    const submitButton = form.querySelector('[data-password-submit]');
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.removeAttribute('aria-busy');
+                        submitButton.textContent = submitButton.dataset.submitText || 'Update Password';
+                    }
+                    delete form.dataset.rgSubmitting;
+                }
+            });
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+            button.addEventListener('click', function () {
+                const input = document.getElementById(button.getAttribute('aria-controls'));
+                if (!input) return;
+
+                const showing = input.type === 'password';
+                input.type = showing ? 'text' : 'password';
+                button.setAttribute('aria-pressed', showing ? 'true' : 'false');
+                button.setAttribute('aria-label', `${showing ? 'Hide' : 'Show'} ${button.dataset.passwordLabel || 'password'}`);
+                const icon = button.querySelector('i');
+                if (icon) icon.className = showing ? 'bi bi-eye-slash' : 'bi bi-eye';
+            });
+        });
+
         document.querySelectorAll('input[data-password-strength]').forEach(build);
 
         // Live "passwords match" feedback next to a confirmation field, when
@@ -98,16 +145,18 @@
             function refreshMatch() {
                 if (!confirmInput.value) {
                     matchEl.textContent = '';
+                    confirmInput.setCustomValidity(source.value ? 'Enter your password again to confirm it.' : '');
                     return;
                 }
                 const matches = confirmInput.value === source.value;
                 matchEl.textContent = matches ? 'Passwords match' : "Passwords don't match yet";
                 matchEl.className = 'rg-pw-match mt-1 ' + (matches ? 'rg-pw-strong' : 'rg-pw-weak');
+                confirmInput.setCustomValidity(matches ? '' : 'The password confirmation does not match.');
             }
 
             confirmInput.addEventListener('input', refreshMatch);
             source.addEventListener('input', refreshMatch);
+            refreshMatch();
         });
     });
 })();
-

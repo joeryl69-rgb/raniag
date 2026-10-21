@@ -137,6 +137,25 @@ class IncidentService
             $fromStatus = $incident->status;
 
             if ($fromStatus === $toStatus) {
+                if (filled($comment)) {
+                    $incident->statusUpdates()->create([
+                        'user_id' => $user?->id,
+                        'from_status' => $fromStatus,
+                        'to_status' => $toStatus,
+                        'comment' => $comment,
+                        'is_public' => $isPublic,
+                    ]);
+
+                    $this->activityLogs->log(
+                        description: 'Investigation note added.',
+                        user: $user,
+                        subject: $incident,
+                        event: 'incident.note',
+                        logName: 'incident',
+                        properties: ['status' => $toStatus->value],
+                    );
+                }
+
                 return $incident;
             }
 
@@ -239,11 +258,14 @@ class IncidentService
             );
 
             if ($incident->status === IncidentStatus::Assigned) {
+                $assignment->loadMissing('agency');
+                $who = $assignment->agency?->name ?: $user->display_title;
+
                 $incident = $this->recordStatusChange(
                     incident: $incident,
                     toStatus: IncidentStatus::InProgress,
                     user: $user,
-                    comment: 'Assignment accepted and incident under active investigation',
+                    comment: $who.' accepted the assignment and started the investigation.',
                     isPublic: true,
                 );
             }

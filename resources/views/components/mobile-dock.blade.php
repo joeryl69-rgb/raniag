@@ -121,12 +121,73 @@
     }
 
     body.has-mobile-dock #page-content-wrapper .container-fluid {
-        padding-bottom: calc(5.4rem + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
     }
 
     @media (max-width: 991.98px) {
         .rg-help-fab {
             bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .mobile-dock {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            width: calc(100vw - 1rem);
+            max-width: 26rem;
+            gap: 0.12rem;
+            padding: 0.32rem;
+            overflow: visible;
+        }
+        .mobile-dock-link {
+            min-width: 0;
+            padding: 0.42rem 0.12rem;
+            font-size: 0.58rem;
+            letter-spacing: 0;
+        }
+        .mobile-dock-link i { font-size: 1.12rem; }
+    }
+
+    @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+        .mobile-dock.d-lg-none {
+            display: grid !important;
+        }
+    }
+
+    @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+        .mobile-dock.d-lg-none {
+            display: grid !important;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            width: min(34rem, calc(100vw - 1rem));
+            max-width: none;
+            bottom: max(.35rem, env(safe-area-inset-bottom, 0px));
+            gap: .12rem;
+            padding: .22rem;
+            overflow: visible;
+        }
+        .mobile-dock-link {
+            min-width: 0;
+            padding: .3rem .12rem;
+            font-size: .56rem;
+        }
+        .mobile-dock-link i { font-size: 1rem; }
+        body.has-mobile-dock #page-content-wrapper .container-fluid {
+            padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+        }
+    }
+
+    .mobile-dock.is-keyboard-open {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-50%) translateY(calc(100% + 0.8rem));
+    }
+
+    @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+        .mobile-dock.is-hidden {
+            transform: translateX(-50%);
+            opacity: 1;
+            pointer-events: auto;
         }
     }
 
@@ -159,9 +220,35 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const dock = document.querySelector('.mobile-dock');
-        if (!dock || window.matchMedia('(min-width: 992px)').matches) return;
+        const compactTouchLandscape = window.matchMedia('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
+        const mobileViewport = window.matchMedia('(max-width: 991.98px)');
+        if (!dock || (!mobileViewport.matches && !compactTouchLandscape.matches)) return;
 
         dock.classList.add('is-visible');
+
+        if (window.visualViewport) {
+            let viewportHeight = window.visualViewport.height;
+            const isEditable = function (element) {
+                return element instanceof HTMLElement
+                    && !element.hasAttribute('readonly')
+                    && (element.isContentEditable || element.matches('input, textarea, select'));
+            };
+            const syncKeyboardState = function () {
+                const keyboardIsOpen = isEditable(document.activeElement)
+                    && viewportHeight - window.visualViewport.height > 140;
+                dock.classList.toggle('is-keyboard-open', keyboardIsOpen);
+            };
+            window.visualViewport.addEventListener('resize', function () {
+                if (!isEditable(document.activeElement)) viewportHeight = window.visualViewport.height;
+                syncKeyboardState();
+            });
+            window.visualViewport.addEventListener('scroll', syncKeyboardState);
+            document.addEventListener('focusin', syncKeyboardState);
+            document.addEventListener('focusout', function () {
+                window.requestAnimationFrame(syncKeyboardState);
+            });
+            syncKeyboardState();
+        }
 
         let lastScrollY = window.scrollY || window.pageYOffset || 0;
         let ticking = false;

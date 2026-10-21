@@ -3,6 +3,14 @@
         {{ __('Resolved Reports') }}
     </x-slot>
 
+    <x-workspace-intro
+        eyebrow="INCIDENT MANAGEMENT / ARCHIVE"
+        title="Resolved reports"
+        description="A searchable record of completed incidents assigned to your agency."
+        icon="bi-archive"
+        variant="case-documents"
+    />
+
     <x-kpi-strip :items="[
         ['label' => 'Resolved reports', 'value' => $reports->total(), 'icon' => 'bi-clock-history', 'tone' => 'success', 'sub' => 'Matching the filters'],
     ]" />
@@ -21,6 +29,7 @@
                 :action="route('agency.archived_reports.index')"
                 search-placeholder="e.g. RAN-1234"
                 :clear-url="route('agency.archived_reports.index')"
+                :compact="true"
             >
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Barangay</label>
@@ -39,21 +48,22 @@
                         <option value="closed" @selected(request('status') === 'closed')>Closed</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">Sort By</label>
-                    <select name="sort" class="form-select" data-filter-default="reported_at">
-                        <option value="reported_at" @selected(request('sort', 'reported_at') === 'reported_at')>Date Reported</option>
-                        <option value="tracking_number" @selected(request('sort') === 'tracking_number')>Tracking #</option>
-                        <option value="barangay" @selected(request('sort') === 'barangay')>Barangay</option>
-                    </select>
-                </div>
             </x-filters.toolbar>
         </div>
     </div>
 
-    <div class="card raniag-card shadow-sm border-0">
-        <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-archived-reports-tbody" data-live-refresh-interval="4000">
-            <table class="table table-hover align-middle mb-0">
+    <div class="card raniag-card rg-table-desk shadow-sm border-0">
+        <div class="rg-table-desk-head">
+            <div>
+                <h2>Completed case register <span>{{ $reports->total() }} reports</span></h2>
+                <p>Completed cases, ordered by the report date.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-archive text-primary fs-5" aria-hidden="true"></i>
+            </div>
+        </div>
+        <div class="table-responsive rg-data-table-wrap" data-live-refresh data-live-refresh-target="#rg-archived-reports-tbody" data-live-refresh-interval="4000">
+            <table class="table table-hover align-middle mb-0 rg-data-table">
                 <thead class="table-light">
                     <tr>
                         <th>Tracking #</th>
@@ -61,7 +71,7 @@
                         <th class="d-none d-md-table-cell">Barangay</th>
                         <th>Status</th>
                         <th class="d-none d-lg-table-cell">Files</th>
-                        <th class="d-none d-lg-table-cell">Reported At</th>
+                        <th class="d-none d-lg-table-cell"><x-table-sort-link label="Reported at" column="reported_at" route="agency.archived_reports.index" default-sort="reported_at" /></th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>

@@ -20,8 +20,7 @@ class PrintableReportRequestController extends Controller
     public function index(Request $request): View|JsonResponse
     {
         $query = DocumentRequest::query()
-            ->with(['incident', 'requestingAgency', 'requestedByUser'])
-            ->orderByDesc('created_at');
+            ->with(['incident', 'requestingAgency', 'requestedByUser']);
 
         // status filter:
         // - omitted / 0 / empty: pending only
@@ -54,7 +53,14 @@ class PrintableReportRequestController extends Controller
             ]);
         }
 
-        $documentRequests = $query->paginate(10)->withQueryString();
+        $sort = $request->string('sort')->value() ?: 'created_at';
+        $direction = $request->string('direction')->value() === 'asc' ? 'asc' : 'desc';
+        $sortable = ['created_at', 'status', 'request_type'];
+        $documentRequests = $query
+            ->orderBy(in_array($sort, $sortable, true) ? $sort : 'created_at', $direction)
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.document_requests.index', [
             'documentRequests' => $documentRequests,
@@ -78,9 +84,33 @@ class PrintableReportRequestController extends Controller
             ]);
         }
 
+        $deliveryStatus = (string) $result->status;
+        [$title, $message, $tone] = match ($deliveryStatus) {
+            'sent' => [
+                'Request approved and emailed',
+                'The PDF is ready, and the requesting office has been emailed.',
+                'success',
+            ],
+            'failed' => [
+                'PDF generated; email delivery failed',
+                'The request was approved and the PDF is ready, but the email could not be sent. The request details show the delivery error.',
+                'warning',
+            ],
+            default => [
+                'Request approved',
+                'The request was approved and the PDF is ready for the requesting office.',
+                'success',
+            ],
+        };
+
         return redirect()
             ->route('admin.document_requests.index')
-            ->with('success', 'Printable request approved and generated.');
+            ->with('document_request_success', [
+                'tone' => $tone,
+                'title' => $title,
+                'message' => $message,
+                'tracking_number' => $result->incident?->tracking_number,
+            ]);
     }
 
     public function reject(ApproveDocumentRequestRequest $request, DocumentRequest $documentRequest): RedirectResponse|JsonResponse
@@ -106,6 +136,11 @@ class PrintableReportRequestController extends Controller
 
         return redirect()
             ->route('admin.document_requests.index')
-            ->with('success', 'Printable request rejected.');
+            ->with('document_request_success', [
+                'tone' => 'warning',
+                'title' => 'Request rejected',
+                'message' => 'The printable document request was rejected and the requesting office can see the decision.',
+                'tracking_number' => $documentRequest->incident?->tracking_number,
+            ]);
     }
 }

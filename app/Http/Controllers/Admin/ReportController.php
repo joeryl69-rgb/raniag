@@ -2,17 +2,27 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\IncidentStatus;
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Agency;
+use App\Models\Announcement;
+use App\Models\EvacuationCenter;
 use App\Models\Evacuee;
+use App\Models\FeedbackSubmission;
+use App\Models\HazardZone;
 use App\Models\Incident;
+use App\Models\IncidentDocument;
 use App\Models\IncidentType;
+use App\Models\ReportArchive;
+use App\Models\SmsLog;
 use App\Support\PeriodRange;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ReportController extends Controller
@@ -52,11 +62,26 @@ class ReportController extends Controller
         'when_reports_arrived' => 'When reports came in',
     ];
 
+    private const OPERATIONS = [
+        'daily' => 'Operations file',
+        'shelter' => 'Shelter guests',
+        'places' => 'Hazard areas and shelters',
+        'messages' => 'Texts sent',
+        'papers' => 'Papers filed',
+        'support' => 'Support messages',
+        'notices' => 'Public notices',
+        'activity' => 'Office activity',
+    ];
+
     public function index(): View
     {
         $incidentTypes = IncidentType::orderBy('name')->get(['id', 'name']);
         $agencies = Agency::orderBy('name')->get(['id', 'name', 'code']);
         $barangays = config('raniag.barangays');
+
+        $archives = Schema::hasTable('report_archives')
+            ? ReportArchive::query()->with('user:id,name')->latest()->limit(20)->get()
+            : collect();
 
         return view('admin.reports.index', [
             'incidentTypes' => $incidentTypes,
@@ -64,6 +89,7 @@ class ReportController extends Controller
             'barangays' => $barangays,
             'chartKeys' => self::CHART_KEYS,
             'chartLabels' => self::CHART_LABELS,
+            'archives' => $archives,
         ]);
     }
 
@@ -95,10 +121,15 @@ class ReportController extends Controller
             'shelters' => $this->shelterPicture($validated['date_from'], $validated['date_to']),
             'repeats' => $this->repeatAreas($incidents),
             'generated_at' => now(),
-        ]);
+        ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('raniag-report-'.now()->format('Y-m-d').'.pdf')
-            ->cookie('download_token', $Request->input('download_token'), 1, null, null, null, false);
+        return $this->sendFile($pdf->output(), 'application/pdf', 'raniag-report-'.now()->format('Y-m-d').'.pdf', $Request, [
+            'kind' => 'register',
+            'title' => 'Incident register',
+            'format' => 'pdf',
+            'date_from' => $validated['date_from'],
+            'date_to' => $validated['date_to'],
+        ]);
     }
 
     public function generateExcel(Request $request)
@@ -202,10 +233,19 @@ class ReportController extends Controller
             ], $writer::STYLE_BODY);
         }
 
-        return response($writer->toBinary(), 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="raniag-report-'.now()->format('Y-m-d').'.xlsx"',
-        ])->cookie('download_token', $request->input('download_token'), 1, null, null, null, false);
+        return $this->sendFile(
+            $writer->toBinary(),
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'raniag-report-'.now()->format('Y-m-d').'.xlsx',
+            $request,
+            [
+                'kind' => 'sheet',
+                'title' => 'Working spreadsheet',
+                'format' => 'xlsx',
+                'date_from' => $validated['date_from'],
+                'date_to' => $validated['date_to'],
+            ]
+        );
     }
 
     /**
@@ -271,10 +311,15 @@ class ReportController extends Controller
             'chartLabels' => self::CHART_LABELS,
             'narrative' => $narrative,
             'generated_at' => now(),
-        ]);
+        ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('raniag-chart-summary-'.now()->format('Y-m-d').'.pdf')
-            ->cookie('download_token', $request->input('download_token'), 1, null, null, null, false);
+        return $this->sendFile($pdf->output(), 'application/pdf', 'raniag-chart-summary-'.now()->format('Y-m-d').'.pdf', $request, [
+            'kind' => 'brief',
+            'title' => 'Operations brief',
+            'format' => 'pdf',
+            'date_from' => $validated['date_from'],
+            'date_to' => $validated['date_to'],
+        ]);
     }
 
     /**
@@ -345,10 +390,15 @@ class ReportController extends Controller
             'projection' => $projection,
             'shelters' => $this->shelterPicture($validated['date_from'], $validated['date_to']),
             'generated_at' => now(),
-        ]);
+        ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('raniag-decision-'.now()->format('Y-m-d').'.pdf')
-            ->cookie('download_token', $request->input('download_token'), 1, null, null, null, false);
+        return $this->sendFile($pdf->output(), 'application/pdf', 'raniag-decision-'.now()->format('Y-m-d').'.pdf', $request, [
+            'kind' => 'decision',
+            'title' => 'Decision report',
+            'format' => 'pdf',
+            'date_from' => $validated['date_from'],
+            'date_to' => $validated['date_to'],
+        ]);
     }
 
     /**
@@ -536,7 +586,7 @@ class ReportController extends Controller
         ];
 
         if ($withView) {
-            $rules['view_mode'] = 'nullable|string|in:periodic,weekly,monthly,quarterly,yearly';
+            $rules['view_mode'] = 'nullable|string|in:periodic,weekly,monthly,yearly';
             $rules['charts'] = 'nullable|array';
             $rules['charts.*'] = 'string|in:'.implode(',', self::CHART_KEYS);
             $rules['sections'] = 'nullable|array';
@@ -629,7 +679,6 @@ class ReportController extends Controller
         $periods = [];
         $cursor = match ($viewMode) {
             'monthly' => $start->copy()->startOfMonth(),
-            'quarterly' => $start->copy()->startOfQuarter(),
             'yearly' => $start->copy()->startOfYear(),
             default => $start->copy()->startOfWeek(),
         };
@@ -637,7 +686,6 @@ class ReportController extends Controller
         while ($cursor->lte($end)) {
             $bucketEnd = match ($viewMode) {
                 'monthly' => $cursor->copy()->endOfMonth(),
-                'quarterly' => $cursor->copy()->endOfQuarter(),
                 'yearly' => $cursor->copy()->endOfYear(),
                 default => $cursor->copy()->endOfWeek(),
             };
@@ -650,7 +698,6 @@ class ReportController extends Controller
 
             $label = match ($viewMode) {
                 'monthly' => $cursor->format('F Y'),
-                'quarterly' => 'Q'.$cursor->quarter.' '.$cursor->format('Y'),
                 'yearly' => $cursor->format('Y'),
                 default => 'Week of '.$rangeFrom->format('M d, Y'),
             };
@@ -664,7 +711,6 @@ class ReportController extends Controller
 
             $cursor = match ($viewMode) {
                 'monthly' => $cursor->copy()->addMonthNoOverflow(),
-                'quarterly' => $cursor->copy()->addQuarter(),
                 'yearly' => $cursor->copy()->addYear(),
                 default => $cursor->copy()->addWeek(),
             };
@@ -903,7 +949,11 @@ class ReportController extends Controller
                 $direction = $delta > 0 ? 'increased' : ($delta < 0 ? 'decreased' : 'stayed level');
                 $pctChange = $firstSum > 0 ? round(abs($delta) / $firstSum * 100, 1) : null;
                 $changeText = $pctChange !== null ? " ({$pctChange}%)" : '';
-                $unit = $viewMode === 'monthly' ? 'months' : 'weeks';
+                $unit = match ($viewMode) {
+                    'monthly' => 'months',
+                    'yearly' => 'years',
+                    default => 'weeks',
+                };
                 $lines[] = "Comparing the first and second half of the selected {$unit}, incident volume {$direction}{$changeText} — from {$firstSum} to {$secondSum}.";
             }
 
@@ -1006,5 +1056,381 @@ class ReportController extends Controller
                 'status' => $person->checked_out_at ? 'Left '.$person->checked_out_at->format('M j') : 'Inside',
             ])->all(),
         ];
+    }
+
+    /**
+     * One PDF for a day-to-day record that is not an incident export:
+     * the operations packet, shelter guests, the map, texts, papers,
+     * support messages, notices, or the office activity list.
+     */
+    public function operations(Request $request)
+    {
+        $validated = $request->validate([
+            'report_kind' => 'required|string|in:'.implode(',', array_keys(self::OPERATIONS)),
+            'date_from' => 'required|date|before_or_equal:today',
+            'date_to' => 'required|date|after_or_equal:date_from|before_or_equal:today',
+            'barangay' => 'nullable|string',
+            'agency_id' => 'nullable',
+            'incident_type_id' => 'nullable',
+            'aor_scope' => 'nullable|string|in:aor_only,outside_aor_only,all',
+        ]);
+
+        $kind = $validated['report_kind'];
+        $document = $this->operationDocument($kind, $validated);
+        $filename = 'raniag-'.$kind.'-'.now()->format('Y-m-d').'.pdf';
+        $pdf = Pdf::loadView('admin.reports.operations_pdf', [
+            'title' => $document['title'],
+            'intro' => $document['intro'],
+            'from' => Carbon::parse($validated['date_from'])->format('M j, Y'),
+            'to' => Carbon::parse($validated['date_to'])->format('M j, Y'),
+            'sections' => $document['sections'],
+            'generated_at' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        return $this->sendFile($pdf->output(), 'application/pdf', $filename, $request, [
+            'kind' => $kind,
+            'title' => $document['title'],
+            'format' => 'pdf',
+            'date_from' => $validated['date_from'],
+            'date_to' => $validated['date_to'],
+        ]);
+    }
+
+    public function copy(ReportArchive $archive)
+    {
+        if (! Storage::disk('local')->exists($archive->path)) {
+            return redirect()->route('admin.reports.index')
+                ->with('warning', 'That saved file is no longer on this system.');
+        }
+
+        return Storage::disk('local')->download($archive->path, $archive->filename);
+    }
+
+    /**
+     * @param  array{kind: string, title: string, format: string, date_from?: string|null, date_to?: string|null}  $meta
+     */
+    private function sendFile(string $binary, string $mime, string $filename, Request $request, array $meta)
+    {
+        try {
+            $safe = preg_replace('/[^A-Za-z0-9._-]+/', '-', $filename) ?: 'report.bin';
+            $path = 'report-archive/'.now()->format('Y/m').'/'.now()->format('Ymd-His').'-'.$safe;
+            Storage::disk('local')->put($path, $binary);
+            if (Schema::hasTable('report_archives')) {
+                ReportArchive::query()->create([
+                    'user_id' => $request->user()?->id,
+                    'kind' => $meta['kind'],
+                    'title' => $meta['title'],
+                    'format' => $meta['format'],
+                    'date_from' => $meta['date_from'] ?? null,
+                    'date_to' => $meta['date_to'] ?? null,
+                    'filename' => $safe,
+                    'path' => $path,
+                    'bytes' => strlen($binary),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return response($binary, 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ])->cookie('download_token', (string) $request->input('download_token'), 1, null, null, null, false);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{title: string, intro: string, sections: list<array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}>}
+     */
+    private function operationDocument(string $kind, array $validated): array
+    {
+        $from = $validated['date_from'];
+        $to = $validated['date_to'];
+        $sections = match ($kind) {
+            'daily' => array_merge(
+                [$this->incidentRowsSection($validated)],
+                $this->shelterSections($from, $to),
+                [$this->messageSection($from, $to), $this->paperSection($from, $to), $this->supportSection($from, $to)]
+            ),
+            'shelter' => $this->shelterSections($from, $to),
+            'places' => $this->placeSections(),
+            'messages' => [$this->messageSection($from, $to)],
+            'papers' => [$this->paperSection($from, $to)],
+            'support' => [$this->supportSection($from, $to)],
+            'notices' => [$this->noticeSection($from, $to)],
+            'activity' => [$this->activitySection($from, $to)],
+            default => [],
+        };
+
+        $intro = match ($kind) {
+            'daily' => 'Incidents, shelter guests, texts, papers filed, and support messages for these dates.',
+            'shelter' => 'People who checked into a shelter during these dates, and the shelters as they stand now.',
+            'places' => 'Hazard areas and shelters as they stand when this file is made.',
+            'messages' => 'Texts the office sent during these dates.',
+            'papers' => 'Papers uploaded onto a case during these dates.',
+            'support' => 'Messages received by the support desk during these dates.',
+            'notices' => 'Public notices published during these dates.',
+            'activity' => 'What staff did in the system during these dates.',
+            default => 'Office record for these dates.',
+        };
+
+        return [
+            'title' => self::OPERATIONS[$kind] ?? 'Office record',
+            'intro' => $intro,
+            'sections' => $sections,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}
+     */
+    private function incidentRowsSection(array $validated): array
+    {
+        $validated['aor_scope'] = $validated['aor_scope'] ?? 'aor_only';
+        $incidents = $this->buildFilteredQuery($validated, ['incidentType'])->orderByDesc('reported_at')->get();
+        $open = $incidents->filter(function ($incident) {
+            $status = $incident->status instanceof IncidentStatus ? $incident->status : IncidentStatus::tryFrom((string) $incident->status);
+
+            return $status && ! in_array($status, [IncidentStatus::Resolved, IncidentStatus::Closed, IncidentStatus::Rejected, IncidentStatus::OutsideAor], true);
+        });
+        $shown = $incidents->take(200);
+
+        return $this->tableSection(
+            'Incidents',
+            ['Tracking', 'Type', 'Barangay', 'Status', 'Reported'],
+            $shown->map(function ($incident) {
+                $status = $incident->status instanceof IncidentStatus ? $incident->status->label() : ucfirst(str_replace('_', ' ', (string) $incident->status));
+
+                return [
+                    (string) $incident->tracking_number,
+                    (string) ($incident->incidentType?->name ?? '—'),
+                    (string) ($incident->barangay ?: '—'),
+                    $status,
+                    $incident->reported_at?->format('M j, Y g:i a') ?? '—',
+                ];
+            })->all(),
+            $incidents->count(),
+            $open->count().' still open of '.$incidents->count().' reports in these dates.'
+        );
+    }
+
+    /**
+     * @return list<array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}>
+     */
+    private function shelterSections(string $from, string $to): array
+    {
+        $picture = $this->shelterPicture($from, $to);
+        $centers = Schema::hasTable('evacuation_centers')
+            ? EvacuationCenter::query()->withCount(['evacuees as inside_count' => fn ($q) => $q->whereNull('checked_out_at')])->orderBy('name')->get()
+            : collect();
+
+        return [
+            $this->tableSection(
+                'Shelters now',
+                ['Shelter', 'Barangay', 'Open', 'Capacity', 'Inside now'],
+                $centers->map(fn (EvacuationCenter $center) => [
+                    $center->name,
+                    $center->barangay ?: '—',
+                    $center->is_open ? 'Open' : 'Closed',
+                    $center->capacity ? (string) $center->capacity : '—',
+                    (string) $center->inside_count,
+                ])->all(),
+                $centers->count(),
+                'This table is the shelters at the moment the file is made.'
+            ),
+            $this->tableSection(
+                'People who checked in',
+                ['Name', 'Shelter', 'From', 'Checked in', 'Now'],
+                array_map(fn (array $row) => [
+                    $row['name'],
+                    $row['shelter'],
+                    $row['from'].' ('.$row['origin'].')',
+                    $row['checked_in'],
+                    $row['status'],
+                ], $picture['rows']),
+                count($picture['rows']),
+                $picture['still_in'].' of these guests are still inside. '.$picture['outside'].' live outside Pamplona.'
+            ),
+        ];
+    }
+
+    /**
+     * @return list<array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}>
+     */
+    private function placeSections(): array
+    {
+        $zones = Schema::hasTable('hazard_zones')
+            ? HazardZone::query()->with('type')->orderBy('name')->get()
+            : collect();
+        $shelterSections = $this->shelterSections(now()->toDateString(), now()->toDateString());
+
+        return [
+            $this->tableSection(
+                'Hazard areas',
+                ['Area', 'Type', 'Barangay', 'Shown to the public'],
+                $zones->map(fn (HazardZone $zone) => [
+                    $zone->name,
+                    (string) ($zone->type?->name ?? '—'),
+                    $zone->barangay ?: '—',
+                    $zone->is_active ? 'Yes' : 'No',
+                ])->all(),
+                $zones->count(),
+                'This is the map at the moment the file is made.'
+            ),
+            $shelterSections[0],
+        ];
+    }
+
+    /**
+     * @return array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}
+     */
+    private function messageSection(string $from, string $to): array
+    {
+        if (! Schema::hasTable('sms_logs')) {
+            return $this->tableSection('Texts sent', ['When', 'To', 'Case', 'Status', 'Message'], [], 0);
+        }
+
+        $query = SmsLog::query()->with('incident:id,tracking_number')->whereBetween('created_at', $this->dayWindow($from, $to))->latest();
+        $total = (clone $query)->count();
+        $rows = $query->limit(200)->get()->map(function (SmsLog $log) {
+            $status = is_object($log->status) && method_exists($log->status, 'label') ? $log->status->label() : (string) $log->status;
+
+            return [
+                ($log->sent_at ?? $log->created_at)?->format('M j, Y g:i a') ?? '—',
+                (string) $log->recipient_phone,
+                (string) ($log->incident?->tracking_number ?? '—'),
+                $status,
+                $this->clip((string) $log->message, 180),
+            ];
+        })->all();
+
+        return $this->tableSection('Texts sent', ['When', 'To', 'Case', 'Status', 'Message'], $rows, $total);
+    }
+
+    /**
+     * @return array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}
+     */
+    private function paperSection(string $from, string $to): array
+    {
+        if (! Schema::hasTable('incident_documents')) {
+            return $this->tableSection('Papers filed', ['When', 'Case', 'Paper', 'File', 'Filed by'], [], 0);
+        }
+
+        $query = IncidentDocument::query()->with(['incident:id,tracking_number', 'uploader:id,name'])->whereBetween('created_at', $this->dayWindow($from, $to))->latest();
+        $total = (clone $query)->count();
+        $rows = $query->limit(200)->get()->map(function (IncidentDocument $paper) {
+            $type = is_object($paper->document_type) && method_exists($paper->document_type, 'label')
+                ? $paper->document_type->label()
+                : (string) $paper->document_type;
+
+            return [
+                $paper->created_at?->format('M j, Y g:i a') ?? '—',
+                (string) ($paper->incident?->tracking_number ?? '—'),
+                $type,
+                $this->clip((string) $paper->original_filename, 80),
+                (string) ($paper->uploader?->name ?? '—'),
+            ];
+        })->all();
+
+        return $this->tableSection('Papers filed', ['When', 'Case', 'Paper', 'File', 'Filed by'], $rows, $total);
+    }
+
+    /**
+     * @return array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}
+     */
+    private function supportSection(string $from, string $to): array
+    {
+        if (! Schema::hasTable('feedback_submissions')) {
+            return $this->tableSection('Support messages', ['When', 'Topic', 'Subject', 'From', 'Status'], [], 0);
+        }
+
+        $query = FeedbackSubmission::query()->whereBetween('created_at', $this->dayWindow($from, $to))->latest();
+        $total = (clone $query)->count();
+        $rows = $query->limit(200)->get()->map(fn (FeedbackSubmission $item) => [
+            $item->created_at?->format('M j, Y g:i a') ?? '—',
+            $item->categoryLabel(),
+            $this->clip((string) $item->subject, 80),
+            $this->clip((string) ($item->submitter_name ?: '—'), 60),
+            ucfirst((string) $item->status),
+        ])->all();
+
+        return $this->tableSection('Support messages', ['When', 'Topic', 'Subject', 'From', 'Status'], $rows, $total);
+    }
+
+    /**
+     * @return array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}
+     */
+    private function noticeSection(string $from, string $to): array
+    {
+        if (! Schema::hasTable('announcements')) {
+            return $this->tableSection('Public notices', ['When', 'Title', 'On the public page', 'Text'], [], 0);
+        }
+
+        $query = Announcement::query()->whereBetween('published_at', $this->dayWindow($from, $to))->latest('published_at');
+        $total = (clone $query)->count();
+        $rows = $query->limit(200)->get()->map(fn (Announcement $notice) => [
+            $notice->published_at?->format('M j, Y g:i a') ?? '—',
+            $this->clip((string) $notice->title, 80),
+            $notice->is_published ? 'Yes' : 'No',
+            $this->clip(trim(preg_replace('/\s+/', ' ', (string) $notice->body) ?? ''), 180),
+        ])->all();
+
+        return $this->tableSection('Public notices', ['When', 'Title', 'On the public page', 'Text'], $rows, $total);
+    }
+
+    /**
+     * @return array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}
+     */
+    private function activitySection(string $from, string $to): array
+    {
+        if (! Schema::hasTable('activity_logs')) {
+            return $this->tableSection('Office activity', ['When', 'Who', 'What happened'], [], 0);
+        }
+
+        $query = ActivityLog::query()->with('user:id,name')->whereBetween('created_at', $this->dayWindow($from, $to))->latest();
+        $total = (clone $query)->count();
+        $rows = $query->limit(200)->get()->map(fn (ActivityLog $log) => [
+            $log->created_at?->format('M j, Y g:i a') ?? '—',
+            (string) ($log->user?->name ?? 'System'),
+            $this->clip((string) $log->description, 180),
+        ])->all();
+
+        return $this->tableSection('Office activity', ['When', 'Who', 'What happened'], $rows, $total);
+    }
+
+    /**
+     * @param  list<list<string>>  $rows
+     * @return array{heading: string, columns: list<string>, rows: list<list<string>>, note?: string}
+     */
+    private function tableSection(string $heading, array $columns, array $rows, int $total, ?string $note = null): array
+    {
+        if ($total > count($rows)) {
+            $extra = 'Showing the first '.count($rows).' of '.$total.'.';
+            $note = $note ? $note.' '.$extra : $extra;
+        }
+
+        return [
+            'heading' => $heading,
+            'columns' => $columns,
+            'rows' => $rows,
+            'note' => $note,
+        ];
+    }
+
+    /** @return array{0: string, 1: string} */
+    private function dayWindow(string $from, string $to): array
+    {
+        return [$from.' 00:00:00', $to.' 23:59:59'];
+    }
+
+    private function clip(string $value, int $length): string
+    {
+        $value = trim($value);
+        if (mb_strlen($value) <= $length) {
+            return $value !== '' ? $value : '—';
+        }
+
+        return mb_substr($value, 0, $length - 1).'…';
     }
 }

@@ -3,11 +3,18 @@
         {{ __('Register New Account') }}
     </x-slot>
 
-    <div class="d-flex mb-4">
-        <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to List
-        </a>
-    </div>
+    <div class="rg-account-workspace rg-account-create">
+        <x-workspace-intro
+            eyebrow="COORDINATION / ACCOUNT CONFIGURATION"
+            title="Create an account"
+            description="Set up a response agency or a personnel login with the right role and team assignment."
+            icon="bi-person-plus"
+            variant="agency-directory"
+        >
+            <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to directory
+            </a>
+        </x-workspace-intro>
 
     @if ($errors->any())
         <div class="alert alert-danger mb-4">
@@ -20,10 +27,10 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.agencies.store') }}" method="POST">
+    <form class="rg-account-form" action="{{ route('admin.agencies.store') }}" method="POST">
         @csrf
 
-        <div class="card raniag-card shadow-sm border-0 mb-4">
+        <div class="card rg-account-type-switch border-0 mb-3">
             <div class="card-body py-3 bg-white">
                 <div class="row g-3 align-items-center">
                     <div class="col-auto">
@@ -45,7 +52,7 @@
         <div class="row g-4">
             <!-- Agency Info Card -->
             <div id="agency-creation-fields" class="col-md-6 {{ old('account_type', 'agency') !== 'agency' ? 'd-none' : '' }}">
-                <div class="card raniag-card shadow-sm border-0 h-100">
+                <div class="card raniag-card rg-account-form-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-building me-2 text-primary"></i>Agency Information</h5>
                     </div>
@@ -77,7 +84,7 @@
 
             <!-- Officer Login Card -->
             <div class="col-12 col-md-6" id="account-details-col">
-                <div class="card raniag-card shadow-sm border-0 h-100">
+                <div class="card raniag-card rg-account-form-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i>Account Details</h5>
                     </div>
@@ -140,6 +147,7 @@
             </div>
         </div>
     </form>
+    </div>
 
     @push('scripts')
         <script>

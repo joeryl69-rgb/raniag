@@ -11,25 +11,37 @@
     ]);
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagAppearance->dark_mode ? 'dark' : 'light' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagAppearance->dark_mode && ! $__raniagAppearance->follow_system ? 'dark' : 'light' }}">
 <head>
-    {{-- Dark mode is the only appearance switch. The old "follow system"
-         flag is ignored so a saved OS preference cannot override the toggle. --}}
-
     <script>
-        // Applied before paint (like the follow-system block above) to avoid
-        // a flash of the sidebar snapping from expanded to collapsed once JS
-        // catches up after first render.
+        @if ($__raniagAppearance->follow_system)
+            (function () {
+                const colorMode = window.matchMedia('(prefers-color-scheme: dark)');
+                const applySystemMode = () => document.documentElement.setAttribute('data-theme', colorMode.matches ? 'dark' : 'light');
+                applySystemMode();
+                colorMode.addEventListener('change', applySystemMode);
+            })();
+        @endif
+
+        // Apply the saved desktop sidebar state before paint.
         (function () {
-            try {
-                if (window.matchMedia('(min-width: 992px)').matches && localStorage.getItem('raniag-sidebar-collapsed') === '1') {
-                    document.documentElement.classList.add('rg-sidebar-collapsed-init');
-                }
-            } catch (e) {}
+            const desktopViewport = window.matchMedia('(min-width: 992px)');
+            const compactTouchLandscape = window.matchMedia('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
+            const syncSidebarState = () => {
+                let collapsed = false;
+                try {
+                    collapsed = desktopViewport.matches && !compactTouchLandscape.matches
+                        && localStorage.getItem('raniag-sidebar-collapsed') === '1';
+                } catch (e) {}
+                document.documentElement.classList.toggle('rg-sidebar-collapsed-init', collapsed);
+            };
+            syncSidebarState();
+            desktopViewport.addEventListener('change', syncSidebarState);
+            compactTouchLandscape.addEventListener('change', syncSidebarState);
         })();
     </script>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="vapid-public-key" content="{{ config('services.webpush.public_key') }}">
 
@@ -41,6 +53,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}" rel="stylesheet">
+    <script src="{{ asset('js/map-scroll.js') }}?v={{ @filemtime(public_path('js/map-scroll.js')) }}"></script>
+    <link href="{{ asset('css/workspace.css') }}?v={{ @filemtime(public_path('css/workspace.css')) }}" rel="stylesheet">
     <link href="{{ asset('css/raniag-loader.css') }}?v={{ @filemtime(public_path('css/raniag-loader.css')) }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json?v=8">
     <meta name="theme-color" content="#0e4a6b">
@@ -51,11 +65,11 @@
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png?v=8">
     @stack('styles')
 
-    {{-- Admin-selected theme (System Settings) — overrides the --raniag-*
+    {{-- Per-user theme (System Settings) — overrides the --raniag-*
          tokens defined in public.css :root, so every screen using those
          tokens (109 usages across public/admin/agency/personnel layouts)
          recolors together, no per-page exceptions. --}}
-    <style>{!! \App\Support\ThemePresets::cssVariables($__raniagAppearance->theme_key, $__raniagAppearance->dark_mode, $__raniagAppearance->font_key, $__raniagAppearance->font_size) !!}</style>
+    <style>{!! \App\Support\ThemePresets::cssVariables($__raniagAppearance->theme_key, $__raniagAppearance->dark_mode && ! $__raniagAppearance->follow_system, $__raniagAppearance->font_key, $__raniagAppearance->font_size, $__raniagAppearance->follow_system) !!}</style>
 
     <style>
         html {
@@ -78,12 +92,12 @@
         #sidebar-wrapper {
             width: 260px;
             background-color: var(--raniag-sidebar);
-            color: #a9c1cf;
+            color: #b9cada;
             flex-shrink: 0;
             transition: margin-left 0.25s ease;
             display: flex;
             flex-direction: column;
-            border-right: 1px solid rgba(255,255,255,0.06);
+            border-right: 1px solid var(--raniag-border);
             overflow: visible;
         }
 
@@ -95,7 +109,7 @@
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.25) transparent;
+            scrollbar-color: rgba(255,255,255,0.24) transparent;
             padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
         }
 
@@ -115,30 +129,46 @@
 
         #sidebar-wrapper .sidebar-brand {
             padding: 1.5rem 1.25rem;
-            background: linear-gradient(135deg, var(--raniag-primary-dark), var(--raniag-primary));
+            background: linear-gradient(145deg, var(--raniag-primary-dark), var(--raniag-primary));
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
 
         #sidebar-wrapper .sidebar-profile {
             padding: 1.25rem;
-            background-color: rgba(255,255,255,0.04);
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background-color: rgba(255,255,255,0.045);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
         }
 
         #sidebar-wrapper .nav-link {
-            color: #a9c1cf;
-            padding: 0.8rem 1.25rem;
+            color: #b9cada;
+            padding: 0.72rem 0.9rem;
+            margin: 0.12rem 0.6rem;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.8rem;
             border-left: 3px solid transparent;
-            transition: all 0.15s ease;
-            min-height: 44px;
+            border-radius: 0.7rem;
+            transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+            min-height: 46px;
+        }
+
+        #sidebar-wrapper .nav-link > .bi {
+            width: 1.25rem;
+            flex: 0 0 1.25rem;
+            color: #8ea8b8;
+            text-align: center;
+            font-size: 1.05rem;
         }
 
         #sidebar-wrapper .nav-link:hover {
             color: #fff;
             background-color: var(--raniag-sidebar-active);
+            transform: translateX(2px);
+        }
+
+        #sidebar-wrapper .nav-link:hover > .bi,
+        #sidebar-wrapper .nav-link.active > .bi {
+            color: var(--raniag-accent);
         }
 
         #sidebar-wrapper .nav-link.active {
@@ -154,13 +184,25 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #6f8ea0;
+            color: #849daf;
         }
 
         #sidebar-wrapper .nav-item + .nav-section-label {
-            border-top: 1px solid rgba(255,255,255,0.06);
-            margin-top: 0.4rem;
+            border-top: 1px solid rgba(255,255,255,0.09);
+            margin-top: 0.55rem;
         }
+
+        #sidebar-wrapper { border-right-color: rgba(255,255,255,0.08); }
+
+        [data-theme="dark"] #sidebar-wrapper .sidebar-nav-scroll {
+            scrollbar-color: rgba(255,255,255,0.25) transparent;
+        }
+
+        [data-theme="dark"] #sidebar-wrapper .sidebar-brand {
+            border-bottom-color: rgba(255,255,255,0.08);
+        }
+
+        [data-theme="dark"] #sidebar-wrapper .sidebar-profile { background-color: rgba(255,255,255,0.045); }
 
         /* Collapsible "Agencies & Personnel" group (Coordination section) */
         #sidebar-wrapper .nav-caret {
@@ -298,7 +340,7 @@
                 border-radius: 50%;
                 background-color: var(--raniag-primary);
                 color: #fff;
-                border: 2px solid #fff;
+                border: 2px solid var(--raniag-sidebar);
                 box-shadow: 0 2px 8px rgba(15, 23, 42, 0.28);
                 display: flex;
                 align-items: center;
@@ -350,6 +392,26 @@
             #wrapper.toggled #sidebar-overlay {
                 display: block;
             }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+            #sidebar-wrapper {
+                width: 260px;
+                margin-left: -260px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                height: 100dvh;
+                z-index: 1040;
+            }
+            #wrapper.toggled #sidebar-wrapper { margin-left: 0; }
+            #page-content-wrapper { width: 100%; min-width: 0; margin-left: 0; }
+            #page-content-wrapper .container-fluid { min-width: 0; max-width: 100%; }
+            .rg-sidebar-collapse-btn { display: none !important; }
+            body.sidebar-open { overflow: hidden; touch-action: none; }
+            body.sidebar-open #page-content-wrapper { touch-action: none; }
+            #wrapper.toggled #sidebar-overlay { display: block; }
         }
         
         .fs-8 {
@@ -456,10 +518,17 @@
     <x-mobile-dock />
 
     <x-loading-overlay />
- 
+
+    <script src="{{ asset('js/modal-root.js') }}?v={{ @filemtime(public_path('js/modal-root.js')) }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{{ asset('js/live-refresh.js') }}?v={{ @filemtime(public_path('js/live-refresh.js')) }}"></script>
     <script src="{{ asset('js/filter-bar.js') }}?v={{ @filemtime(public_path('js/filter-bar.js')) }}"></script>
+    <script src="{{ asset('js/filter-select.js') }}?v={{ @filemtime(public_path('js/filter-select.js')) }}" defer></script>
+    <script src="{{ asset('js/filter-date-picker.js') }}?v={{ @filemtime(public_path('js/filter-date-picker.js')) }}" defer></script>
+    <script src="{{ asset('js/notification-filters.js') }}?v={{ @filemtime(public_path('js/notification-filters.js')) }}"></script>
+    <script src="{{ asset('js/feedback-disclosure.js') }}?v={{ @filemtime(public_path('js/feedback-disclosure.js')) }}"></script>
+    <script src="{{ asset('js/table-view-mode.js') }}?v={{ @filemtime(public_path('js/table-view-mode.js')) }}"></script>
+    <script src="{{ asset('js/notification-alert-sound.js') }}?v={{ @filemtime(public_path('js/notification-alert-sound.js')) }}"></script>
     <script src="{{ asset('js/push-notifications.js') }}?v={{ @filemtime(public_path('js/push-notifications.js')) }}"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" integrity="sha384-X9kJyAubVxnP0hcA+AMMs21U445qsnqhnUF8EBlEpP3a42Kh/JwWjlv2ZcvGfphb" crossorigin="anonymous"></script>
     <script>
@@ -479,9 +548,28 @@
             try { localStorage.setItem('raniag-sidebar-collapsed', collapsed ? '1' : '0'); } catch (e) {}
             const btn = document.getElementById('sidebarCollapseBtn');
             if (btn) btn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+            syncSidebarTooltips(collapsed);
+        }
+
+        function syncSidebarTooltips(collapsed) {
+            document.querySelectorAll('#sidebar-wrapper .nav-link').forEach(function (link) {
+                const label = link.querySelector(':scope > span:not(.sidebar-notif-count)')?.textContent.trim();
+                if (!label) return;
+                link.setAttribute('aria-label', label);
+                if (collapsed && window.bootstrap?.Tooltip) {
+                    window.bootstrap.Tooltip.getOrCreateInstance(link, {
+                        title: label,
+                        placement: 'right',
+                        container: 'body',
+                    });
+                } else {
+                    window.bootstrap?.Tooltip?.getInstance(link)?.dispose();
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            syncSidebarTooltips(document.documentElement.classList.contains('rg-sidebar-collapsed-init'));
             const collapseBtn = document.getElementById('sidebarCollapseBtn');
             if (collapseBtn) {
                 collapseBtn.addEventListener('click', function () {
@@ -589,10 +677,46 @@
             }
         }
  
+        function rgFormSubmitter(form, button) {
+            if (!button || button.form !== form) return null;
+            const type = (button.getAttribute('type') || 'submit').toLowerCase();
+            return type === 'submit' ? button : null;
+        }
+
+        function rgSubmitWithSubmitter(form, submitter) {
+            const restore = [];
+            let hidden = null;
+            if (submitter) {
+                if (submitter.name && !submitter.disabled) {
+                    hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = submitter.name;
+                    hidden.value = submitter.value;
+                    form.appendChild(hidden);
+                }
+                [['formaction', 'action'], ['formmethod', 'method'], ['formenctype', 'enctype'], ['formtarget', 'target']].forEach(function (pair) {
+                    if (!submitter.hasAttribute(pair[0])) return;
+                    restore.push([pair[1], form.getAttribute(pair[1])]);
+                    form.setAttribute(pair[1], submitter.getAttribute(pair[0]));
+                });
+            }
+            try {
+                HTMLFormElement.prototype.submit.call(form);
+            } finally {
+                // The submission already captured its data and target, so leave the
+                // form as it was in case the page stays (download, new tab).
+                if (hidden) hidden.remove();
+                restore.forEach(function (pair) {
+                    if (pair[1] === null) form.removeAttribute(pair[0]);
+                    else form.setAttribute(pair[0], pair[1]);
+                });
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('form').forEach(function (form) {
                 let lastClickedSubmit = null;
-                form.querySelectorAll('button[type="submit"]').forEach(function (btn) {
+                form.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]').forEach(function (btn) {
                     btn.addEventListener('click', function () { lastClickedSubmit = btn; });
                 });
 
@@ -605,7 +729,11 @@
                         return;
                     }
 
-                    const submitButton = lastClickedSubmit || this.querySelector('button[type="submit"]');
+                    // The button that actually submitted this form (e.submitter), so its
+                    // name/value and formaction survive the manual submit below.
+                    const submitter = rgFormSubmitter(this, event.submitter || lastClickedSubmit);
+                    lastClickedSubmit = null;
+                    const submitButton = submitter || this.querySelector('button[type="submit"]');
                     const message = submitButton?.dataset.loadingMessage || this.dataset.loadingMessage || 'Processing, please wait...';
 
                     // For forms that trigger a file download (e.g. PDF export), the browser
@@ -629,9 +757,11 @@
                     // the button or pins the page. Cancel that click, then
                     // post with the form's own submit, which is not tied to
                     // the button. Do this without disabling the button.
+                    // form.submit() ignores the clicked button, so carry its name/value
+                    // and formaction/formmethod/formenctype/formtarget over first.
                     event.preventDefault();
                     this.dataset.rgSubmitting = '1';
-                    HTMLFormElement.prototype.submit.call(this);
+                    rgSubmitWithSubmitter(this, submitter);
                     showLoadingOverlay(message, { lockScroll: false });
                 });
             });
@@ -687,6 +817,8 @@
         });
     </script>
     <x-lightbox />
+    <script src="{{ asset('js/help-fab.js') }}?v={{ @filemtime(public_path('js/help-fab.js')) }}"></script>
+    <script src="{{ asset('js/evidence-video-player.js') }}?v={{ @filemtime(public_path('js/evidence-video-player.js')) }}"></script>
     @stack('scripts')
 </body>
 </html>

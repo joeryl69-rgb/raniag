@@ -3,11 +3,18 @@
         {{ __('Edit Government Agency') }}
     </x-slot>
 
-    <div class="d-flex mb-4">
-        <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to List
-        </a>
-    </div>
+    <div class="rg-account-workspace rg-account-edit rg-account-edit-agency">
+        <x-workspace-intro
+            eyebrow="COORDINATION / AGENCY PROFILE"
+            title="Edit agency account"
+            description="Update the agency profile, officer login, and dispatch availability."
+            icon="bi-building-gear"
+            variant="agency-directory"
+        >
+            <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to directory
+            </a>
+        </x-workspace-intro>
 
     @if ($errors->any())
         <div class="alert alert-danger mb-4">
@@ -20,14 +27,14 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.agencies.update', $agency->id) }}" method="POST">
+    <form class="rg-account-form" action="{{ route('admin.agencies.update', $agency->id) }}" method="POST">
         @csrf
         @method('PUT')
 
         <div class="row g-4">
             <!-- Agency Info Card -->
             <div class="col-md-6">
-                <div class="card raniag-card shadow-sm border-0 h-100">
+                <div class="card raniag-card rg-account-form-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3 d-flex align-items-center justify-content-between">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-building me-2 text-primary"></i>Agency Information</h5>
                         <div class="form-check form-switch mb-0">
@@ -71,7 +78,7 @@
 
             <!-- Officer Login Card -->
             <div class="col-md-6">
-                <div class="card raniag-card shadow-sm border-0 h-100">
+                <div class="card raniag-card rg-account-form-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i>Account Details</h5>
                     </div>
@@ -88,11 +95,12 @@
                                 <div class="form-text">Single Gmail address used for login, notifications, and password reset.</div>
                             </div>
 
-                            <div class="mb-0">
-                                <label for="officer_password" class="form-label">Reset Password <span class="text-muted">(leave blank to keep current)</span></label>
-                                <input type="text" class="form-control" id="officer_password" name="officer_password" placeholder="Type new password if changing">
-                                <div class="form-text">Must be at least 8 characters.</div>
-                            </div>
+                            <x-account-password-reset
+                                id="officer_password"
+                                name="officer_password"
+                                label="Reset Password"
+                                help="Leave blank to keep the current officer password."
+                            />
                         @else
                             <div class="alert alert-warning mb-0">
                                 <i class="bi bi-exclamation-triangle-fill fs-5"></i>
@@ -132,5 +140,6 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 </x-app-layout>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PushSubscription;
+use App\Models\ReporterPushSubscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\Subscription;
@@ -102,6 +103,52 @@ class WebPushService
             } else {
                 Log::warning('Web Push delivery failed', [
                     'user_id' => $user->id,
+                    'reason' => $report->getReason(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Tell the browser that queued an offline report that RANIAG accepted it.
+     */
+    public function sendToReporter(string $clientToken, string $title, string $body, ?string $url = null): void
+    {
+        $client = $this->client();
+        $subscription = ReporterPushSubscription::query()->where('client_token', $clientToken)->first();
+        if (! $client || ! $subscription) {
+            return;
+        }
+
+        $client->queueNotification(
+            Subscription::create([
+                'endpoint' => $subscription->endpoint,
+                'publicKey' => $subscription->public_key,
+                'authToken' => $subscription->auth_token,
+                'contentEncoding' => $subscription->content_encoding ?: 'aes128gcm',
+            ]),
+            json_encode([
+                'title' => $title,
+                'body' => $body,
+                'url' => $url ?? '/',
+                'icon' => '/images/icons/icon-192.png',
+                'badge' => '/images/icons/icon-72.png',
+                'silent' => false,
+                'vibrate' => [220, 90, 220, 90, 320],
+                'sound' => true,
+            ])
+        );
+
+        foreach ($client->flush() as $report) {
+            if ($report->isSuccess()) {
+                continue;
+            }
+
+            if (in_array($report->getResponse()?->getStatusCode(), [404, 410], true)) {
+                $subscription->delete();
+            } else {
+                Log::warning('Reporter web push delivery failed', [
+                    'client_token' => $clientToken,
                     'reason' => $report->getReason(),
                 ]);
             }

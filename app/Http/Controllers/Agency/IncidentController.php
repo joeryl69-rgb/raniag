@@ -134,7 +134,7 @@ class IncidentController extends Controller
         }
 
         $comment = $data['comment'] ?? null;
-        $isPublicUpdate = true;
+        $isPublicUpdate = false;
         $successMessage = 'Case investigation status successfully logged.';
         if ($newStatus->value === 'pending_info') {
             $comment = 'Awaiting information: '.($data['needs_info'] ?? $comment);

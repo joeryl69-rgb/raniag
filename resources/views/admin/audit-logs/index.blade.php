@@ -2,6 +2,13 @@
     <x-slot name="header">
         {{ __('Audit Trails Log') }}
     </x-slot>
+    <x-workspace-intro
+        eyebrow="OVERSIGHT / SYSTEM INTEGRITY"
+        title="Audit trail"
+        description="Trace staff actions and system events across incident assignment and case updates."
+        icon="bi-shield-check"
+        variant="audit-explorer"
+    />
 
     <x-kpi-strip :items="[
         ['label' => 'Audit entries', 'value' => $logs->total(), 'icon' => 'bi-shield-shaded', 'tone' => 'primary', 'sub' => 'Matching the filters'],
@@ -10,20 +17,22 @@
 
     <div class="row">
         <div class="col-12">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
+            <div class="card raniag-card rg-table-desk rg-filter-host rg-audit-register shadow-sm border-0 mb-4">
                 <div class="card-header bg-white py-3 border-0">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                         <div>
                             <h5 class="mb-1 fw-bold"><i class="bi bi-shield-shaded text-primary me-2"></i>System Activity Logs</h5>
                             <p class="text-muted small mb-0">Track assignments, updates, and investigation changes across the portal.</p>
                         </div>
-                        <a href="{{ route('admin.audit-logs') }}" class="btn btn-sm btn-outline-primary" data-loading-link data-loading-message="Refreshing activity logs...">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                        </a>
+                        <div class="d-flex align-items-center gap-2 rg-register-actions">
+                            <a href="{{ route('admin.audit-logs') }}" class="btn btn-sm btn-outline-primary" data-loading-link data-loading-message="Refreshing activity logs...">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="p-3 border-bottom bg-light-subtle">
-                    <x-filters.toolbar search-placeholder="Search description, event" :action="route('admin.audit-logs')">
+                    <x-filters.toolbar search-placeholder="Search description, event" :action="route('admin.audit-logs')" :compact="true">
                         <div class="col-md-2">
                             <label class="form-label small text-muted mb-1">Log Name</label>
                             <select name="log_name" class="form-select" data-filter-default="all">
@@ -36,23 +45,23 @@
                     </x-filters.toolbar>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-audit-logs-tbody" data-live-refresh-interval="4000">
-                        <table class="table table-hover table-striped mb-0 align-middle">
+                    <div class="table-responsive rg-data-table-wrap" data-live-refresh data-live-refresh-target="#rg-audit-logs-tbody" data-live-refresh-interval="4000">
+                        <table class="table table-hover table-striped mb-0 align-middle rg-data-table">
                             <thead class="table-light text-muted small">
                                 <tr>
                                     <th class="px-4 py-3">Log ID</th>
                                     <th class="py-3">User</th>
                                     <th class="py-3">Event</th>
                                     <th class="py-3">Action Details</th>
-                                    <th class="py-3">Log Name</th>
-                                    <th class="py-3">Occurred At</th>
+                                    <th class="py-3">Log name</th>
+                                    <th class="py-3"><x-table-sort-link label="Occurred at" column="created_at" route="admin.audit-logs" /></th>
                                 </tr>
                             </thead>
                             <tbody id="rg-audit-logs-tbody">
                                 @forelse ($logs as $log)
                                     <tr>
-                                        <td class="px-4 py-3 text-muted small">#{{ $log->id }}</td>
-                                        <td class="py-3">
+                                        <td class="px-4 py-3 text-muted small"><span class="rg-register-id">#{{ $log->id }}</span></td>
+                                        <td class="py-3 rg-audit-actor">
                                             @if ($log->user)
                                                 <div class="fw-semibold text-dark">{{ $log->user->name }}</div>
                                                 <div class="text-muted small text-capitalize">{{ $log->user->role->value }}</div>
@@ -60,10 +69,10 @@
                                                 <span class="text-secondary small">System/Public</span>
                                             @endif
                                         </td>
-                                        <td class="py-3"><span class="badge bg-light text-primary border font-monospace">{{ $log->event }}</span></td>
-                                        <td class="py-3 text-dark small">{{ $log->description }}</td>
-                                        <td class="py-3 text-capitalize small"><span class="badge bg-secondary">{{ $log->log_name }}</span></td>
-                                        <td class="py-3 text-muted small">{{ $log->created_at->format('M d, Y h:i A') }}</td>
+                                        <td class="py-3"><span class="rg-audit-event">{{ $log->event }}</span></td>
+                                        <td class="py-3 text-dark small rg-audit-description">{{ $log->description }}</td>
+                                        <td class="py-3 text-capitalize small"><span class="rg-audit-channel">{{ $log->log_name }}</span></td>
+                                        <td class="py-3 text-muted small"><time datetime="{{ $log->created_at->toIso8601String() }}">{{ $log->created_at->format('M d, Y h:i A') }}</time></td>
                                     </tr>
                                 @empty
                                     <tr>

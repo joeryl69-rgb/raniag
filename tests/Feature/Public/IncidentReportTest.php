@@ -54,7 +54,11 @@ test('trusted device survives logout and skips otp on next login', function () {
 test('public home page is accessible', function () {
     $this->get(route('public.home'))
         ->assertOk()
-        ->assertSee(config('raniag.name'), false);
+        ->assertSee(config('raniag.name'), false)
+        ->assertSee('data-report-qr', false)
+        ->assertSee('Download QR image', false)
+        ->assertSee(route('public.report.create'), false)
+        ->assertSee('js/report-qr.js', false);
 });
 
 test('report form page is accessible', function () {
@@ -63,7 +67,11 @@ test('report form page is accessible', function () {
     $this->get(route('public.report.create'))
         ->assertOk()
         ->assertSee('Report an Incident', false)
-        ->assertSee('GPS Camera', false);
+        ->assertSee('GPS Camera', false)
+        ->assertSee('id="gps-camera-capture" disabled', false)
+        ->assertDontSee('report-push-opt-in', false)
+        ->assertDontSee('This phone will be notified when the report is received', false)
+        ->assertSee('action="/report"', false);
 });
 
 test('anonymous users can submit an incident report via web', function () {
@@ -75,6 +83,7 @@ test('anonymous users can submit an incident report via web', function () {
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ],
@@ -106,6 +115,7 @@ test('anonymous users can submit an incident report via json', function () {
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ],
@@ -146,6 +156,7 @@ test('json validation keeps evidence and only asks for name when photo is presen
                     'filename' => 'gps-456.jpg',
                     'latitude' => 18.472,
                     'longitude' => 121.325,
+                    'location_source' => 'gps',
                     'accuracy' => 8,
                     'captured_at' => now()->toIso8601String(),
                 ],
@@ -169,6 +180,7 @@ test('users can track an incident by tracking number via web', function () {
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ],
@@ -186,6 +198,16 @@ test('users can track an incident by tracking number via web', function () {
     ]);
 
     $trackingNumber = Incident::query()->value('tracking_number');
+    $incident = Incident::query()->where('tracking_number', $trackingNumber)->firstOrFail();
+    $incident->evidence()->create([
+        'type' => 'video',
+        'file_path' => 'incidents/'.$incident->id.'/evidence/gps-report.webm',
+        'original_filename' => 'gps-report.webm',
+        'mime_type' => 'video/webm',
+        'file_size' => 1024,
+        'priority' => 1,
+        'is_gps_capture' => true,
+    ]);
 
     $this->post(route('public.track.lookup'), [
         'tracking_number' => $trackingNumber,
@@ -195,7 +217,10 @@ test('users can track an incident by tracking number via web', function () {
     $this->get(route('public.track.case', $trackingNumber))
         ->assertOk()
         ->assertSee($trackingNumber, false)
-        ->assertSee('Incident Status', false);
+        ->assertSee('Incident Status', false)
+        ->assertSee('rg-evidence-video-player', false)
+        ->assertSee('rg-evidence-video-trigger', false)
+        ->assertSee('data-rg-evidence-video', false);
 });
 
 test('users can track an incident by tracking number via json', function () {
@@ -207,6 +232,7 @@ test('users can track an incident by tracking number via json', function () {
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ],
@@ -245,6 +271,7 @@ test('report submission stores gps capture metadata', function () {
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ],
@@ -392,6 +419,7 @@ test('idempotency key prevents duplicate public reports', function () {
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ]])],
@@ -401,6 +429,8 @@ test('idempotency key prevents duplicate public reports', function () {
         'incident_type_id' => $type->id,
         'description' => 'Retry submission with the same idempotency key.',
         'is_anonymous' => true,
+        'reporter_name' => 'Joshua Montoya',
+        'reporter_phone' => '095630320351',
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
         'idempotency_key' => $key,
@@ -447,6 +477,7 @@ test('gps capture coordinates fill a blank location', function () {
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ]])],
@@ -457,24 +488,105 @@ test('gps capture coordinates fill a blank location', function () {
         ->and((float) $incident->longitude)->toBe(121.325);
 });
 
-test('a type and a gps capture are enough to send a report', function () {
+test('gps capture metadata cannot supply a location when no attached file matches it', function () {
     $type = IncidentType::factory()->create();
 
     $this->postJson(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'is_anonymous' => true,
+        'evidence' => [UploadedFile::fake()->image('different-photo.jpg')],
         'meta' => ['gps_captures' => json_encode([[
             'filename' => 'gps-123.jpg',
             'latitude' => 18.472,
             'longitude' => 121.325,
+            'location_source' => 'gps',
+            'captured_at' => now()->toIso8601String(),
+        ]])],
+    ])->assertStatus(422)->assertJsonValidationErrors(['latitude']);
+
+    expect(Incident::query()->count())->toBe(0);
+});
+
+test('map pin metadata is not accepted as a GPS camera capture', function () {
+    $type = IncidentType::factory()->create();
+
+    $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'is_anonymous' => true,
+        'evidence' => [UploadedFile::fake()->image('gps-pin.jpg')],
+        'meta' => ['gps_captures' => json_encode([[
+            'filename' => 'gps-pin.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'location_source' => 'map-pin',
+            'captured_at' => now()->toIso8601String(),
+        ]])],
+    ])->assertStatus(422)->assertJsonValidationErrors(['latitude']);
+
+    expect(Incident::query()->count())->toBe(0);
+});
+
+test('video evidence without a gps camera capture is rejected on initial and repeated submissions', function () {
+    Storage::fake('local');
+    $type = IncidentType::factory()->create();
+
+    $submit = fn () => $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'is_anonymous' => true,
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'evidence' => [UploadedFile::fake()->create('untracked.webm', 100, 'video/webm')],
+    ]);
+
+    $submit()->assertStatus(422)->assertJsonValidationErrors(['evidence.0']);
+    $submit()->assertStatus(422)->assertJsonValidationErrors(['evidence.0']);
+
+    expect(Incident::query()->count())->toBe(0);
+});
+
+test('video evidence with a matching gps camera capture can be submitted', function () {
+    Storage::fake('local');
+    $type = IncidentType::factory()->create();
+    $capturedAt = now()->toIso8601String();
+
+    $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'is_anonymous' => true,
+        'latitude' => '18.47200000',
+        'longitude' => '121.32500000',
+        'meta' => ['gps_captures' => json_encode([[
+            'filename' => 'gps-video.webm',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'location_source' => 'gps',
+            'captured_at' => $capturedAt,
+        ]])],
+        'evidence' => [UploadedFile::fake()->create('gps-video.webm', 100, 'video/webm')],
+    ])->assertCreated();
+
+    expect(Incident::query()->firstOrFail()->evidence)->toHaveCount(1);
+});
+
+test('gps capture metadata without an attached photo is rejected on initial and repeated submissions', function () {
+    $type = IncidentType::factory()->create();
+
+    $submit = fn () => $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'is_anonymous' => false,
+        'reporter_name' => 'Joshua Montoya',
+        'reporter_phone' => '09560320351',
+        'idempotency_key' => 'gps-place-pending-retry',
+        'meta' => ['gps_captures' => json_encode([[
+            'filename' => 'gps-123.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'location_source' => 'gps',
             'accuracy' => 12,
             'captured_at' => now()->toIso8601String(),
         ]])],
-    ])->assertCreated();
+    ]);
 
-    $incident = Incident::query()->first();
-    expect($incident->description)->toBe('')
-        ->and((float) $incident->latitude)->toBe(18.472)
-        ->and((float) $incident->longitude)->toBe(121.325)
-        ->and($incident->incident_type_id)->toBe($type->id);
+    $submit()->assertStatus(422)->assertJsonValidationErrors(['latitude']);
+    $submit()->assertStatus(422)->assertJsonValidationErrors(['latitude']);
+    expect(Incident::query()->count())->toBe(0);
 });

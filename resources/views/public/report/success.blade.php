@@ -32,7 +32,7 @@
                             data-org="{{ config('raniag.organization') }}">
                         <i class="bi bi-download me-2"></i>Download Image
                     </button>
-                    <a href="{{ route('public.track', ['tracking_number' => $trackingNumber]) }}"
+                    <a href="{{ route('public.track', ['tracking_number' => $trackingNumber]) }}#rg-case-lookup"
                        class="btn btn-primary">
                         <i class="bi bi-search me-2"></i>Track This Report
                     </a>

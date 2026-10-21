@@ -3,30 +3,42 @@
         {{ __('Personnel Roles') }}
     </x-slot>
 
+    <x-workspace-intro
+        eyebrow="COORDINATION / ACCOUNT CONFIGURATION"
+        title="Personnel roles"
+        description="Manage the role titles offered when creating and updating personnel accounts."
+        icon="bi-diagram-3"
+        variant="agency-directory"
+    >
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('admin.agencies.index', ['directory' => 'personnel']) }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Personnel directory
+            </a>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#roleModal" onclick="openCreateModal()">
+                <i class="bi bi-plus-lg me-1"></i>Add role
+            </button>
+        </div>
+    </x-workspace-intro>
+
 <x-kpi-strip :items="[
     ['label' => 'Role titles', 'value' => $roles->count(), 'icon' => 'bi-diagram-3', 'tone' => 'primary', 'sub' => 'Offered on personnel accounts'],
     ['label' => 'Active titles', 'value' => $roles->where('is_active', true)->count(), 'icon' => 'bi-check-circle', 'tone' => 'success'],
     ['label' => 'Assigned to someone', 'value' => $roles->filter(fn ($role) => (int) $role->personnel_count > 0)->count(), 'icon' => 'bi-person-check', 'tone' => 'warning'],
 ]" />
 
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <p class="small text-muted mb-0">Role titles offered when registering or editing a Personnel account. Manage them here instead of a fixed list.</p>
-    <div class="d-flex gap-2">
-        <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i>Back to Agencies &amp; Personnel
-        </a>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#roleModal" onclick="openCreateModal()">
-            <i class="bi bi-plus-lg me-1"></i>Add Role
-        </button>
-    </div>
-</div>
-
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+<section class="rg-table-desk" aria-labelledby="rg-role-register-heading">
+    <header class="rg-table-desk-head">
+        <div>
+            <h2 id="rg-role-register-heading">Role title register <span>{{ $roles->count() }} titles</span></h2>
+            <p>Choose active titles for agency personnel accounts.</p>
+        </div>
+        <i class="bi bi-diagram-3 text-primary fs-5" aria-hidden="true"></i>
+    </header>
+    <div class="table-responsive rg-data-table-wrap">
+        <table class="table table-hover align-middle mb-0 rg-data-table">
             <thead class="table-light">
                 <tr>
-                    <th>Role Title</th>
+                    <th><x-table-sort-link label="Role title" column="title" route="admin.personnel_roles.index" default-sort="sort_order" default-direction="asc" /></th>
                     <th class="text-center">Personnel Using It</th>
                     <th class="text-center">Status</th>
                     <th class="text-end">Actions</th>
@@ -67,7 +79,7 @@
             </tbody>
         </table>
     </div>
-</div>
+</section>
 
 {{-- Create / Edit Modal (shared) --}}
 <div class="modal fade" id="roleModal" tabindex="-1">

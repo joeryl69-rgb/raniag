@@ -4,17 +4,17 @@
      same pattern used by the GPS-camera photo popup in the public report
      form, now shared everywhere (incident evidence, case documents, etc). --}}
 <div class="modal fade" id="raniagLightbox" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content bg-dark border-0">
+    <div class="modal-dialog modal-dialog-centered rg-evidence-lightbox-dialog">
+        <div class="modal-content bg-dark border-0 rg-evidence-lightbox-content">
             <div class="modal-header border-0 py-2">
                 <span class="text-white-50 small" id="lightboxCaption"></span>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body d-flex align-items-center justify-content-center position-relative p-0" style="min-height:60vh;">
+            <div class="modal-body d-flex align-items-center justify-content-center position-relative rg-evidence-lightbox-body">
                 <button type="button" id="lightboxPrev" class="btn btn-dark position-absolute start-0 top-50 translate-middle-y ms-2 rounded-circle d-none" style="width:44px;height:44px;z-index:5;">
                     <i class="bi bi-chevron-left"></i>
                 </button>
-                <img id="lightboxImage" src="" alt="Preview" class="img-fluid" style="max-height:80vh;object-fit:contain;">
+                <img id="lightboxImage" src="" alt="Preview" class="img-fluid">
                 <button type="button" id="lightboxNext" class="btn btn-dark position-absolute end-0 top-50 translate-middle-y me-2 rounded-circle d-none" style="width:44px;height:44px;z-index:5;">
                     <i class="bi bi-chevron-right"></i>
                 </button>

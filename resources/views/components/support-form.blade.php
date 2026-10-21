@@ -147,11 +147,11 @@
 {{-- Confirm-before-send dialog. Lightweight, dependency-free overlay so it
      works identically on the public site (Bootstrap-only) and the staff
      portal layout without pulling in a second modal library. --}}
-<div class="rg-confirm-backdrop" id="supportConfirmBackdrop" role="dialog" aria-modal="true" aria-labelledby="supportConfirmTitle" hidden>
+<div class="rg-confirm-backdrop" id="supportConfirmBackdrop" role="dialog" aria-modal="true" aria-labelledby="supportConfirmTitle" aria-describedby="supportConfirmDescription" tabindex="-1" hidden>
     <div class="rg-confirm-card">
         <div class="rg-confirm-card__icon"><i class="bi bi-send-fill"></i></div>
         <h3 class="rg-confirm-card__title" id="supportConfirmTitle">Send this message?</h3>
-        <p class="rg-confirm-card__body">
+        <p class="rg-confirm-card__body" id="supportConfirmDescription">
             This will be sent to the {{ $orgLabel ?? config('raniag.organization') }} team as
             <span class="fw-semibold" id="supportConfirmCategory">your message</span>.
             @if(!$lockIdentity)
@@ -173,6 +173,8 @@
         padding: 16px;
     }
     .rg-confirm-backdrop[hidden] { display: none; }
+    html.rg-support-confirm-open,
+    body.rg-support-confirm-open { overflow: hidden; overscroll-behavior: contain; }
     .rg-confirm-card {
         background: #fff; border-radius: 16px; padding: 28px 24px;
         max-width: 420px; width: 100%; text-align: center;
@@ -186,6 +188,10 @@
     .rg-confirm-card__title { font-weight: 800; margin-bottom: 8px; }
     .rg-confirm-card__body { color: #5c6b7a; font-size: .92rem; margin-bottom: 20px; }
     .rg-confirm-card__actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .rg-confirm-backdrop :focus-visible { outline: 3px solid var(--rg-brand, #0b5ed7); outline-offset: 3px; }
+    html[data-public-theme="dark"] .rg-confirm-card { background: #142630; color: #e7f2f1; border: 1px solid #304955; }
+    html[data-public-theme="dark"] .rg-confirm-card__title { color: #f3f8f7; }
+    html[data-public-theme="dark"] .rg-confirm-card__body { color: #c5d5d8; }
 </style>
 
 <script>
@@ -218,16 +224,87 @@
     const submitBtn = document.getElementById('supportSubmitBtn');
     const backdrop = document.getElementById('supportConfirmBackdrop');
     if (form && submitBtn && backdrop) {
+        // This dialog is emitted with the form markup, which can sit inside
+        // transformed/reveal wrappers. Portal it so fixed positioning and
+        // its stacking order are always relative to the viewport.
+        if (backdrop.parentElement !== document.body) {
+            document.body.appendChild(backdrop);
+        }
         const catLabel = document.getElementById('supportConfirmCategory');
         const cancelBtn = document.getElementById('supportConfirmCancel');
         const yesBtn = document.getElementById('supportConfirmYes');
+        let returnFocus = null;
+        let savedScrollY = 0;
+        let savedStyles = null;
+
+        const focusableElements = () => Array.from(backdrop.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )).filter(element => !element.hidden && element.getAttribute('aria-hidden') !== 'true');
+
+        const lockPage = () => {
+            const root = document.documentElement;
+            const body = document.body;
+            savedScrollY = window.scrollY;
+            savedStyles = {
+                rootOverflow: root.style.overflow,
+                bodyOverflow: body.style.overflow,
+                bodyPaddingRight: body.style.paddingRight,
+                bodyPosition: body.style.position,
+                bodyTop: body.style.top,
+                bodyLeft: body.style.left,
+                bodyRight: body.style.right,
+                bodyWidth: body.style.width,
+                rootWasLocked: root.classList.contains('rg-support-confirm-open'),
+                bodyWasLocked: body.classList.contains('rg-support-confirm-open'),
+            };
+            const scrollbarWidth = Math.max(0, window.innerWidth - root.clientWidth);
+            root.classList.add('rg-support-confirm-open');
+            body.classList.add('rg-support-confirm-open');
+            root.style.overflow = 'hidden';
+            body.style.overflow = 'hidden';
+            body.style.position = 'fixed';
+            body.style.top = `-${savedScrollY}px`;
+            body.style.left = '0';
+            body.style.right = '0';
+            body.style.width = '100%';
+            if (scrollbarWidth) {
+                const currentPadding = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+                body.style.paddingRight = `${currentPadding + scrollbarWidth}px`;
+            }
+        };
+
+        const unlockPage = () => {
+            if (!savedStyles) return;
+            const root = document.documentElement;
+            const body = document.body;
+            if (!savedStyles.rootWasLocked) root.classList.remove('rg-support-confirm-open');
+            if (!savedStyles.bodyWasLocked) body.classList.remove('rg-support-confirm-open');
+            root.style.overflow = savedStyles.rootOverflow;
+            body.style.overflow = savedStyles.bodyOverflow;
+            body.style.paddingRight = savedStyles.bodyPaddingRight;
+            body.style.position = savedStyles.bodyPosition;
+            body.style.top = savedStyles.bodyTop;
+            body.style.left = savedStyles.bodyLeft;
+            body.style.right = savedStyles.bodyRight;
+            body.style.width = savedStyles.bodyWidth;
+            savedStyles = null;
+            window.scrollTo(0, savedScrollY);
+        };
 
         const openDialog = () => {
             const selected = grid ? grid.querySelector('.rg-cat-choice.is-selected') : null;
             catLabel.textContent = selected ? selected.dataset.label : 'your message';
+            returnFocus = document.activeElement;
+            lockPage();
             backdrop.hidden = false;
+            cancelBtn.focus();
         };
-        const closeDialog = () => { backdrop.hidden = true; };
+        const closeDialog = () => {
+            backdrop.hidden = true;
+            unlockPage();
+            if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
+            returnFocus = null;
+        };
 
         submitBtn.addEventListener('click', () => {
             if (!form.reportValidity()) return;
@@ -235,11 +312,41 @@
         });
         cancelBtn.addEventListener('click', closeDialog);
         backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeDialog(); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !backdrop.hidden) closeDialog(); });
+        backdrop.addEventListener('focusin', (e) => {
+            if (!backdrop.contains(e.target)) cancelBtn.focus();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (backdrop.hidden) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeDialog();
+                return;
+            }
+            if (e.key === 'Tab') {
+                const focusables = focusableElements();
+                const first = focusables[0];
+                const last = focusables[focusables.length - 1];
+                if (!first || !last) {
+                    e.preventDefault();
+                    backdrop.focus();
+                } else if (!backdrop.contains(document.activeElement)) {
+                    e.preventDefault();
+                    first.focus();
+                } else if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        });
         yesBtn.addEventListener('click', () => {
             yesBtn.disabled = true;
             yesBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending…';
-            form.submit();
+            closeDialog();
+            if (form.requestSubmit) form.requestSubmit();
+            else form.submit();
         });
     }
 })();

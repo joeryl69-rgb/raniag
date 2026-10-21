@@ -30,10 +30,12 @@ class ResponderFieldController extends Controller
 
         $assignment->update(['field_phase' => $data['field_phase']]);
 
+        $assignment->loadMissing('agency');
+        $who = $assignment->agency?->name ?: ($request->user()->display_title ?: 'A responder');
         $labels = [
-            'accepted' => 'Assignment accepted',
-            'en_route' => 'Responder en route',
-            'on_scene' => 'Responder on scene',
+            'accepted' => $who.' accepted this assignment.',
+            'en_route' => $who.' is on the way to the reported location.',
+            'on_scene' => $who.' has arrived at the reported location.',
         ];
         $label = $labels[$data['field_phase']];
 

@@ -31,19 +31,21 @@ class AppearanceSettingController extends Controller
         $data = $request->validate([
             'theme_key' => ['required', 'string', Rule::in(array_keys(ThemePresets::PRESETS))],
             'dark_mode' => ['sometimes', 'boolean'],
+            'follow_system' => ['sometimes', 'boolean'],
             'font_key' => ['required', 'string', Rule::in(array_keys(ThemePresets::FONTS))],
             'font_size' => ['required', 'string', Rule::in(array_keys(ThemePresets::FONT_SIZES))],
         ]);
 
+        $followSystem = $request->boolean('follow_system');
         $request->user()->update([
             'theme_key' => $data['theme_key'],
-            'dark_mode' => $request->boolean('dark_mode'),
-            'follow_system' => false,
+            'dark_mode' => $followSystem ? false : $request->boolean('dark_mode'),
+            'follow_system' => $followSystem,
             'font_key' => $data['font_key'],
             'font_size' => $data['font_size'],
         ]);
 
-        return back()->with('success', 'Your appearance settings have been updated.');
+        return back()->with('success', 'Your system settings have been updated.');
     }
 
     public function reset(Request $request): RedirectResponse
@@ -56,7 +58,7 @@ class AppearanceSettingController extends Controller
             'font_size' => ThemePresets::DEFAULT_FONT_SIZE,
         ]);
 
-        return back()->with('success', 'Appearance reset to the default (Ocean Blue, light mode).');
+        return back()->with('success', 'System settings reset to the default (Ocean Blue, light mode).');
     }
 
     private function currentUserOrDefaults(): array

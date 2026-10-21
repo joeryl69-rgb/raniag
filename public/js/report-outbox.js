@@ -69,31 +69,186 @@
         }
     }
 
+    function currentCsrf() {
+        return document.querySelector('meta[name="csrf-token"]')?.content || '';
+    }
+
+    async function refreshCsrfToken(url) {
+        const refreshUrl = new URL(url, window.location.href);
+        if (refreshUrl.origin !== window.location.origin) {
+            throw new Error('Cannot refresh a CSRF token for a different origin.');
+        }
+
+        const response = await fetch(refreshUrl.href, {
+            method: 'GET',
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: { Accept: 'text/html' },
+        });
+        if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
+            throw new Error(`Could not refresh the report security token (${response.status}).`);
+        }
+
+        const html = await response.text();
+        const page = new DOMParser().parseFromString(html, 'text/html');
+        const token = page.querySelector('meta[name="csrf-token"]')?.content
+            || page.querySelector('input[name="_token"]')?.value
+            || '';
+        if (!token) {
+            throw new Error('The report page did not provide a security token.');
+        }
+
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) meta.content = token;
+        const formToken = document.querySelector('#incident-report-form input[name="_token"]');
+        if (formToken) formToken.value = token;
+        return token;
+    }
+
+    function showOfflineModal(mode) {
+        const title = document.getElementById('report-offline-title');
+        const copy = document.getElementById('report-offline-copy');
+        const mark = document.getElementById('report-offline-mark');
+        const icon = document.getElementById('report-offline-icon');
+        const modalEl = document.getElementById('report-offline-modal');
+        if (!title || !copy || !modalEl) return;
+
+        const saved = mode !== 'failed';
+        title.textContent = saved ? 'Saved on this phone' : 'Could not save the report';
+        copy.textContent = saved
+            ? 'You are offline. This report stays on this device, photos included, and sends itself when the connection returns. Use this same browser.'
+            : 'This phone could not keep the report. Submit again when you have a signal.';
+        mark?.classList.toggle('is-failed', !saved);
+        if (icon) icon.className = saved ? 'bi bi-wifi-off' : 'bi bi-exclamation-lg';
+
+        const Modal = window.bootstrap && window.bootstrap.Modal;
+        if (Modal) {
+            Modal.getOrCreateInstance(modalEl).show();
+            return;
+        }
+        modalEl.classList.add('show');
+        modalEl.style.display = 'block';
+        modalEl.removeAttribute('aria-hidden');
+    }
+
+    async function reachable() {
+        if (!navigator.onLine) return false;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 2500);
+        try {
+            const res = await fetch('/up', {
+                method: 'GET',
+                cache: 'no-store',
+                signal: controller.signal,
+                headers: { Accept: 'text/plain' },
+            });
+            return res.ok;
+        } catch (e) {
+            return false;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    async function keep(form) {
+        try {
+            const pushSetup = !navigator.onLine && !savedPushToken()
+                ? prepareOfflinePushSubscription()
+                : Promise.resolve(null);
+            const keyInput = document.getElementById('idempotency_key');
+            if (keyInput && !keyInput.value) keyInput.value = uuid();
+            const serialized = await serializeForm(form);
+            const csrf = currentCsrf();
+            const entry = {
+                id: keyInput?.value || uuid(),
+                url: form.action,
+                csrf,
+                fields: serialized.fields,
+                files: serialized.files,
+                createdAt: Date.now(),
+            };
+            await putReport(entry);
+            pushSetup.then(async (subscription) => {
+                if (!subscription) return;
+                entry.pushSubscription = subscription;
+                await putReport(entry);
+                if (navigator.onLine) flushOutbox();
+            }).catch((error) => {
+                console.warn('[raniag-outbox] offline push setup failed', error);
+            });
+            await requestSync();
+            showOfflineModal('saved');
+            return true;
+        } catch (e) {
+            console.error(e);
+            showOfflineModal('failed');
+            return false;
+        } finally {
+            window.hideLoadingOverlay?.();
+            const submitButton = document.getElementById('wizard-submit');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Submit Report<i class="bi bi-send" aria-hidden="true"></i>';
+            }
+        }
+    }
+
     async function flushOutbox() {
         const items = await allReports();
         for (const item of items) {
             try {
-                const formData = new FormData();
-                Object.entries(item.fields || {}).forEach(([key, value]) => {
-                    if (value !== null && value !== undefined) {
-                        formData.append(key, value);
+                let csrf = await refreshCsrfToken(item.url);
+                let pushToken = savedPushToken();
+                if (!pushToken && item.pushSubscription) {
+                    const pushResponse = await fetch('/report/notifications', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-CSRF-TOKEN': csrf,
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(item.pushSubscription),
+                    });
+                    if (pushResponse.ok) {
+                        const pushData = await pushResponse.json();
+                        pushToken = pushData.client_token || '';
+                        rememberPushToken(pushToken);
+                    } else {
+                        console.warn(`[raniag-outbox] push subscription registration failed (${pushResponse.status})`);
                     }
-                });
-                (item.files || []).forEach((fileMeta) => {
-                    formData.append(fileMeta.field, fileMeta.blob, fileMeta.name);
-                });
-                formData.set('idempotency_key', item.id);
+                }
 
-                const res = await fetch(item.url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        Accept: 'application/json',
-                        'X-CSRF-TOKEN': item.csrf || '',
-                    },
-                    credentials: 'same-origin',
-                });
+                const sendReport = (token) => {
+                    const formData = new FormData();
+                    const fields = Object.assign({}, item.fields || {}, { _token: token });
+                    Object.entries(fields).forEach(([key, value]) => {
+                        if (value !== null && value !== undefined) formData.append(key, value);
+                    });
+                    (item.files || []).forEach((fileMeta) => {
+                        formData.append(fileMeta.field, fileMeta.blob, fileMeta.name);
+                    });
+                    formData.set('idempotency_key', item.id);
+                    formData.set('offline_delivery', '1');
+                    if (pushToken) formData.set('push_client_token', pushToken);
+
+                    return fetch(item.url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            Accept: 'application/json',
+                            'X-CSRF-TOKEN': token,
+                        },
+                        credentials: 'same-origin',
+                    });
+                };
+
+                let res = await sendReport(csrf);
+                if (res.status === 419) {
+                    csrf = await refreshCsrfToken(item.url);
+                    res = await sendReport(csrf);
+                }
 
                 if (res.ok || res.status === 201 || res.status === 200) {
                     await removeReport(item.id);
@@ -127,66 +282,13 @@
         return { fields, files };
     }
 
-    function wireForm(form) {
-        if (!form || form.dataset.outboxBound === '1') return;
-        form.dataset.outboxBound = '1';
-
-        form.addEventListener('submit', async (event) => {
-            const keyInput = document.getElementById('idempotency_key');
-            if (keyInput && !keyInput.value) {
-                keyInput.value = uuid();
-            }
-
-            if (navigator.onLine) {
-                return; // normal submit
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            try {
-                const serialized = await serializeForm(form);
-                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                await putReport({
-                    id: keyInput?.value || uuid(),
-                    url: form.action,
-                    csrf,
-                    fields: serialized.fields,
-                    files: serialized.files,
-                    createdAt: Date.now(),
-                });
-                await requestSync();
-                alert('You appear to be offline. Your report was saved on this device and will send automatically when you reconnect.');
-            } catch (e) {
-                console.error(e);
-                alert('Could not save the report offline. Please try again when you have a signal.');
-            } finally {
-                // The submit-showLoadingOverlay handler in public-report.js
-                // runs before this (registered first), so the overlay is
-                // already visible by the time we get here — this is the
-                // path that used to leave reporters stuck on the loading
-                // screen with no real network request ever going out.
-                window.hideLoadingOverlay?.();
-                const submitButton = document.getElementById('wizard-submit');
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = 'Submit Report';
-                }
-            }
-        }, true);
-
-        window.addEventListener('online', () => {
-            flushOutbox();
-        });
-
-        if (navigator.onLine) {
-            flushOutbox();
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        wireForm(document.getElementById('incident-report-form'));
+    window.addEventListener('online', () => {
+        flushOutbox();
     });
+
+    if (navigator.onLine) {
+        flushOutbox();
+    }
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', (event) => {
@@ -196,5 +298,101 @@
         });
     }
 
-    window.RANIAG_REPORT_OUTBOX = { flushOutbox, SYNC_TAG };
+    const PUSH_TOKEN_KEY = 'raniag-reporter-push';
+    let pushRegistration = null;
+
+    function savedPushToken() {
+        try {
+            return localStorage.getItem(PUSH_TOKEN_KEY) || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function rememberPushToken(token) {
+        if (!token) return;
+        try {
+            localStorage.setItem(PUSH_TOKEN_KEY, token);
+        } catch (e) {
+            // The hidden field still carries the token for this page.
+        }
+        const input = document.getElementById('push_client_token');
+        if (input) input.value = token;
+    }
+
+    function pushKeyBytes() {
+        const meta = document.querySelector('meta[name="vapid-public-key"]');
+        const value = meta ? meta.content.trim() : '';
+        if (!value) return null;
+        const padding = '='.repeat((4 - (value.length % 4)) % 4);
+        const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const raw = window.atob(base64);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        return bytes.length === 65 ? bytes : null;
+    }
+
+    async function savePushSubscription(subscription) {
+        const payload = subscription.toJSON();
+        payload.client_token = savedPushToken();
+        const res = await fetch('/report/notifications', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': currentCsrf(),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        rememberPushToken(data.client_token);
+    }
+
+    function prepareOfflinePushSubscription() {
+        if (!window.isSecureContext || !window.Notification || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            return Promise.resolve(null);
+        }
+
+        const key = pushKeyBytes();
+        if (!key) {
+            console.warn('[raniag-outbox] offline push is unavailable because the VAPID key is missing or invalid');
+            return Promise.resolve(null);
+        }
+
+        const permission = Notification.permission === 'granted'
+            ? Promise.resolve('granted')
+            : Notification.permission === 'default'
+                ? Notification.requestPermission()
+                : Promise.resolve(Notification.permission);
+
+        return permission.then((result) => {
+            if (result !== 'granted') return null;
+            return navigator.serviceWorker.ready;
+        }).then(async (registration) => {
+            if (!registration) return null;
+            const subscription = await registration.pushManager.getSubscription()
+                || await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: key,
+                });
+            return subscription.toJSON();
+        });
+    }
+
+    rememberPushToken(savedPushToken());
+
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.ready.then((registration) => {
+            pushRegistration = registration;
+            if (window.Notification && Notification.permission === 'granted') {
+                registration.pushManager.getSubscription().then((subscription) => {
+                    if (subscription) savePushSubscription(subscription);
+                }).catch(() => {});
+            }
+        }).catch(() => {});
+    }
+
+    window.RANIAG_REPORT_OUTBOX = { flushOutbox, keep, reachable, refreshCsrfToken, SYNC_TAG };
 })();

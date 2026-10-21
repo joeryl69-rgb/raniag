@@ -52,8 +52,14 @@
             </ol>
         </div>
 
-        <form class="rg-case-ticket" action="{{ route('public.track.lookup') }}" method="POST">
+        <form class="rg-case-ticket" id="rg-case-lookup" action="{{ route('public.track.lookup') }}" method="POST">
             @csrf
+            @if (!empty($prefillTrackingNumber))
+                <p class="rg-case-ready-note">
+                    <i class="bi bi-arrow-down-circle" aria-hidden="true"></i>
+                    <span>Your tracking number is already entered. The button below opens this report.</span>
+                </p>
+            @endif
             <div class="rg-case-ticket-head">
                 <span class="rg-case-ticket-index">01 / LOOKUP</span>
                 <span class="rg-case-ticket-signal"><i></i> PRIVATE CASE PAGE</span>
@@ -87,6 +93,10 @@
             </p>
         </form>
     </section>
+    <a class="rg-track-locator" id="rg-track-locator" href="#rg-case-lookup">
+        <i class="bi bi-arrow-down-circle" aria-hidden="true"></i>
+        <span>The button to open your report is below. Tap here.</span>
+    </a>
 </div>
 @endsection
 
@@ -115,7 +125,7 @@
         linear-gradient(145deg, #102b39 0%, #0a1823 72%);
     background-size:auto,32px 32px,32px 32px,auto;
 }
-.rg-case-board::after { content:"";position:absolute;z-index:-1;right:-155px;top:12%;width:430px;aspect-ratio:1;border:1px solid rgba(93,203,181,.18);border-radius:50%;box-shadow:0 0 0 35px rgba(93,203,181,.035),0 0 0 80px rgba(93,203,181,.025); }
+.rg-case-board::after { content:"";position:absolute;z-index:-1;right:-150px;top:20px;width:360px;aspect-ratio:1;border:1px solid rgba(93,203,181,.18);border-radius:50%;box-shadow:0 0 0 35px rgba(93,203,181,.035),0 0 0 80px rgba(93,203,181,.025); }
 .rg-case-radar {
     width: 84px;
     height: 84px;
@@ -167,9 +177,9 @@
 }
 .rg-case-board h1 em { color:#63d1b8;font-style:normal; }
 .rg-case-lead { position:relative;z-index:2;margin:0 0 22px;max-width:min(35rem,62%);color:#bacbd0;line-height:1.65; }
-.rg-case-map-art { position:absolute;z-index:1;right:1%;top:17%;width:43%;height:42%;pointer-events:none; }
+.rg-case-map-art { position:absolute;z-index:1;right:12px;top:20px;width:min(230px,34%);height:220px;overflow:hidden;pointer-events:none; }
 .rg-case-map-grid { position:absolute;inset:0;border:1px solid rgba(127,190,193,.2);background:linear-gradient(30deg,transparent 47%,rgba(146,203,200,.19) 48% 49%,transparent 50%),linear-gradient(-24deg,transparent 55%,rgba(146,203,200,.13) 56% 57%,transparent 58%);mask-image:radial-gradient(ellipse,#000 25%,transparent 75%); }
-.rg-case-map-art>img { position:absolute;right:2%;bottom:-12%;height:118%;width:auto;filter:drop-shadow(0 12px 18px rgba(0,0,0,.34));animation:rg-case-jo-float 5s ease-in-out infinite; }
+.rg-case-map-art>img { position:absolute;right:0;bottom:0;height:200px;width:auto;max-width:none;filter:drop-shadow(0 12px 18px rgba(0,0,0,.34));animation:rg-case-jo-float 5s ease-in-out infinite; }
 .rg-case-route { position:absolute;left:12%;top:57%;width:72%;height:25%;border-top:2px dashed #65d8b7;border-right:2px dashed #65d8b7;border-radius:0 18px 0 0;transform:rotate(-19deg);filter:drop-shadow(0 0 6px rgba(101,216,183,.6)); }
 .rg-case-locator { position:absolute;left:30%;top:46%;width:12px;height:12px;border:2px solid #d9ffe9;border-radius:50%;background:#0b806c;box-shadow:0 0 0 7px rgba(65,215,164,.18),0 0 18px #45d7a4;animation:rg-case-blip 2.4s ease-out infinite; }
 .rg-case-coordinates { position:absolute;right:0;bottom:0;padding:9px 10px;border:1px solid rgba(196,224,222,.25);background:rgba(8,25,35,.75);color:#d8e8e7;font:700 .57rem/1.45 ui-monospace,monospace;letter-spacing:.07em; }
@@ -227,7 +237,7 @@
 .rg-case-status-label~.rg-case-path li.is-live { transform:translateX(5px); }
 .rg-case-path li.is-live span { color:#c3d6d7; }
 .rg-case-ticket {
-    position:relative;display:flex;flex-direction:column;justify-content:center;margin:0;padding:clamp(28px,4vw,50px);
+    position:relative;display:flex;flex-direction:column;justify-content:center;margin:0;padding:clamp(28px,4vw,50px);scroll-margin-top:88px;
     border-left:1px solid #31505a;background:radial-gradient(ellipse at 100% 0,rgba(19,103,101,.23),transparent 48%),linear-gradient(150deg,#112a36,#0b1a24);color:#e8f0ef;
 }
 .rg-case-ticket-head {
@@ -268,6 +278,14 @@
     gap: 8px;
 }
 .rg-case-ticket button:hover { background:#0a9187;transform:translateY(-1px); }
+.rg-case-ticket button.is-ready { animation:rg-case-ready 1.3s ease-out 3; }
+.rg-case-ready-note { display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;padding:10px 12px;border:1px solid rgba(109,214,184,.5);border-radius:4px;background:rgba(8,123,120,.22);color:#e7f8f3;font-size:.84rem;line-height:1.45; }
+.rg-case-ready-note .bi { color:#7ee0c4;font-size:1.05rem;margin-top:1px; }
+.rg-track-locator { display:none; }
+@keyframes rg-case-ready {
+    0% { box-shadow:0 0 0 0 rgba(109,214,184,.7); }
+    100% { box-shadow:0 0 0 12px rgba(109,214,184,0); }
+}
 .rg-case-notes {
     list-style: none;
     display: flex;
@@ -292,9 +310,21 @@
 @media (max-width: 991.98px) {
     .rg-case { grid-template-columns:1fr;min-height:0; }
     .rg-case-board { padding:clamp(24px,5vw,42px); }
-    .rg-case-map-art { right:3%;top:10%;width:38%;height:46%; }
+    .rg-case-board::after { top:12px;right:-190px;width:280px; }
+    .rg-case-map-art { position:relative;top:auto;right:auto;width:100%;height:150px;margin:6px 0 2px;overflow:hidden; }
+    .rg-case-map-art>img { height:148px;right:0;bottom:0; }
+    .rg-case-lead,.rg-case-status-label,.rg-case-path { max-width:100%; }
     .rg-case-board h1 { max-width:11ch; }
     .rg-case-ticket { border-left:0;border-top:1px solid #31505a; }
+    .rg-track-locator {
+        display:flex;align-items:center;gap:10px;position:fixed;z-index:1080;
+        left:12px;right:78px;bottom:max(16px, env(safe-area-inset-bottom));
+        min-height:52px;padding:8px 12px;border-radius:999px;background:#087b78;color:#fff;
+        font-size:.78rem;font-weight:750;line-height:1.3;text-decoration:none;
+        box-shadow:0 10px 24px rgba(7,31,40,.35);
+    }
+    .rg-track-locator .bi { font-size:1.15rem;flex:0 0 auto; }
+    .rg-track-locator.is-hidden { display:none; }
 }
 @media (prefers-reduced-motion: reduce) {
     .rg-case-sweep,.rg-case-blip,.rg-case-map-art>img { animation:none; }
@@ -303,8 +333,8 @@
 @media (max-width:575.98px) {
     .rg-case-board { padding:24px 18px 28px; }
     .rg-case-radar { width:64px;height:64px; }
-    .rg-case-map-art { top:auto;right:-8%;bottom:57px;width:43%;height:21%;opacity:.42; }
-    .rg-case-map-art>img { height:115%; }
+    .rg-case-map-art { height:136px; }
+    .rg-case-map-art>img { height:132px; }
     .rg-case-board h1 { max-width:10ch;font-size:clamp(2.5rem,12vw,3.6rem); }
     .rg-case-lead { max-width:100%;padding-right:0;font-size:.91rem; }
     .rg-case-status-label,.rg-case-path { max-width:100%; }
@@ -320,6 +350,29 @@
 @push('scripts')
 <script>
     (function () {
+        const lookup = document.getElementById('rg-case-lookup');
+        const locator = document.getElementById('rg-track-locator');
+        const openButton = lookup?.querySelector('button[type="submit"]');
+        const prefilled = lookup?.querySelector('input[name="tracking_number"]')?.value?.trim();
+        const revealLookup = () => {
+            if (!prefilled || !lookup) return;
+            lookup.scrollIntoView({ block: 'center', behavior: 'auto' });
+            openButton?.classList.add('is-ready');
+        };
+        revealLookup();
+        window.requestAnimationFrame(revealLookup);
+        window.addEventListener('load', revealLookup);
+        locator?.addEventListener('click', (event) => {
+            event.preventDefault();
+            lookup?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            openButton?.classList.add('is-ready');
+        });
+        if (locator && openButton && 'IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                locator.classList.toggle('is-hidden', entries.some((entry) => entry.isIntersecting));
+            }, { threshold: 0.65 });
+            observer.observe(openButton);
+        }
         const steps = document.querySelectorAll('.rg-case-path li');
         if (steps.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             steps[0]?.classList.add('is-live');

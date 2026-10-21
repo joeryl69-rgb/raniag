@@ -35,6 +35,7 @@
             [cfg.map.default_lat, cfg.map.default_lng],
             cfg.map.default_zoom || 13
         );
+        window.RaniagMapScroll?.guard(map);
 
         const basemap = Mapbox ? Mapbox.addBasemap(map, cfg.map) : null;
         const mapboxToken = basemap?.token || String(cfg.map.mapbox_token || '').trim();
@@ -49,6 +50,7 @@
         const riskGroup = leaflet.layerGroup().addTo(map);
         const zoneGroup = leaflet.layerGroup().addTo(map);
         const centerGroup = leaflet.layerGroup().addTo(map);
+        const geofenceGroup = leaflet.layerGroup().addTo(map);
         const youGroup = leaflet.layerGroup().addTo(map);
         const routeGroup = leaflet.layerGroup().addTo(map);
 
@@ -79,6 +81,7 @@
         const chkZones = document.getElementById('layer-zones');
         const chkCenters = document.getElementById('layer-centers');
         const chkRisk = document.getElementById('layer-risk');
+        const chkGeofence = document.getElementById('layer-geofence');
         const chkYou = document.getElementById('layer-you');
         const locateBtn = document.getElementById('hazard-locate-you');
         const geoStatus = document.getElementById('hazard-geo-status');
@@ -92,6 +95,25 @@
         const routeDrive = document.getElementById('route-drive');
         const riskSummary = document.getElementById('risk-summary');
         const riskList = document.getElementById('risk-list');
+
+        if (cfg.boundary) {
+            leaflet.geoJSON(cfg.boundary, {
+                style: {
+                    color: '#f0c96d',
+                    weight: 3,
+                    opacity: 0.95,
+                    fill: false,
+                    dashArray: '8 6',
+                    className: 'rg-geofence-boundary',
+                },
+                interactive: false,
+            }).addTo(geofenceGroup);
+        } else if (chkGeofence) {
+            chkGeofence.disabled = true;
+            chkGeofence.title = 'Pamplona boundary data is unavailable';
+        }
+
+        if (chkGeofence && !chkGeofence.checked) map.removeLayer(geofenceGroup);
 
         if (routeProfile === 'driving' && routeDrive) {
             routeDrive.checked = true;
@@ -127,7 +149,7 @@
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
                 risk: 'Risk awareness highlights barangays with open community reports — no exact addresses are shown.',
                 you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
-                both: 'Open reports stay as barangay counts. Exact house locations stay private. Use Places for hazard zones and evacuation centers.',
+                both: 'Open reports stay as barangay counts. Exact house locations stay private. Toggle Pamplona AOR to see its geofence, and use Places for hazards and evacuation centers.',
                 route: 'Live route to the nearest open center. It updates as you move.',
                 off: 'My location is off. Turn it on to track yourself and show the route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
@@ -140,6 +162,7 @@
                 zones: !chkZones || chkZones.checked,
                 centers: !chkCenters || chkCenters.checked,
                 risk: !chkRisk || chkRisk.checked,
+                geofence: !chkGeofence || chkGeofence.checked,
                 you: !chkYou || chkYou.checked,
             };
         }
@@ -162,6 +185,9 @@
         function collectBoundsLayers() {
             const on = layersOn();
             const layers = [];
+            if (on.geofence && cfg.boundary && geofenceGroup.getLayers().length) {
+                layers.push(geofenceGroup);
+            }
             if (on.risk && riskLayer) layers.push(riskLayer);
             if (on.zones) {
                 const containing = nearestData?.hazard_zones || [];
@@ -722,6 +748,7 @@
             el.innerHTML =
                 `<span title="Hazard zone">${zoneSwatches} Hazard zone</span>` +
                 `<span title="Evacuation center">${centerSwatches} Center</span>` +
+                (cfg.boundary ? '<span title="Pamplona area of responsibility"><i style="display:inline-block;width:14px;border-top:2px dashed #f0c96d"></i> Pamplona AOR</span>' : '') +
                 '<span title="Open incident reports in this barangay"><i class="rg-hazard-swatch" style="background:#fbbf24"></i><i class="rg-hazard-swatch" style="background:#f97316"></i><i class="rg-hazard-swatch" style="background:#dc2626"></i> Open reports</span>' +
                 '<span title="Shown only while My location is on"><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0b5ed7"></i> You</span>';
         }
@@ -847,6 +874,10 @@
                 else map.removeLayer(riskGroup);
                 if (checked) updateJoTip('risk');
                 fitActiveView({ animate: true });
+            } else if (which === 'geofence') {
+                if (checked) map.addLayer(geofenceGroup);
+                else map.removeLayer(geofenceGroup);
+                fitActiveView({ animate: true });
             } else if (which === 'you') {
                 setLocationEnabled(checked);
             }
@@ -855,6 +886,7 @@
         chkZones?.addEventListener('change', (e) => onLayerToggle('zones', e.target.checked));
         chkCenters?.addEventListener('change', (e) => onLayerToggle('centers', e.target.checked));
         chkRisk?.addEventListener('change', (e) => onLayerToggle('risk', e.target.checked));
+        chkGeofence?.addEventListener('change', (e) => onLayerToggle('geofence', e.target.checked));
         chkYou?.addEventListener('change', (e) => onLayerToggle('you', e.target.checked));
 
         [routeWalk, routeDrive].forEach((el) => {

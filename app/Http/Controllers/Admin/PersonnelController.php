@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class PersonnelController extends Controller
 {
@@ -43,7 +44,8 @@ class PersonnelController extends Controller
             'role_title' => ['required', Rule::in(array_unique(array_merge(PersonnelRole::activeTitles(), [$personnel->role_title])))],
             'team_assignment' => ['required', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string', PasswordRule::min(8)->mixedCase()->numbers()->symbols()],
+            'password_confirmation' => ['required_with:password', 'same:password'],
         ]);
 
         $personnel->update([
@@ -53,7 +55,7 @@ class PersonnelController extends Controller
             'role_title' => $data['role_title'],
             'team_assignment' => $data['team_assignment'],
             'is_active' => $request->has('is_active'),
-            'password' => $data['password'] ? Hash::make($data['password']) : $personnel->password,
+            'password' => ! empty($data['password']) ? Hash::make($data['password']) : $personnel->password,
         ]);
 
         return redirect()

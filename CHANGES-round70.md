@@ -1,0 +1,6 @@
+# Round 70 — Purpose-built staff workspaces
+
+- Added named workspace variants for Hazard Map, Case Documents, Incident Types, QR Posters, Reports, Agencies & Personnel, Document Requests, SMS Alerts, Audit Trails, Feedback & Concerns, and Updates & Announcements. The shared intro keeps consistent hierarchy while each named page now receives its own operational accent and layout treatment using the active RANIAG theme tokens.
+- Tuned the map canvas and authoring desk, case-file registry, classification catalog, poster preview/print surface, report-selection studio, account directory, request decision rail, SMS and audit logs, feedback triage queue, and announcement publication list independently. Existing records, filters, controls, route actions, and role workflows remain intact.
+- Kept responsive layouts for narrow screens and protected QR print contrast while preserving the dedicated print output. Incidents were not redesigned.
+- Verification: `php artisan view:cache` succeeded, then `php artisan view:clear` succeeded. Sequential focused tests (`ReportArchiveTest`, `ReportRecordTest`, `AnnouncementEditTest`, `OutsideEvacueeTest`, `DocumentRequestGuardTest`) passed: 48 tests, 309 assertions. `git diff --check` passed.

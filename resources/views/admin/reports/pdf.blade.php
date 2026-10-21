@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Incident Report — {{ config('raniag.organization') }}</title>
+    <title>RANIAG Incident Report</title>
     <style>
         body {
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            font-size: 11pt;
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
             line-height: 1.5;
             color: #333;
             margin: 0;
@@ -88,7 +88,7 @@
 </head>
 <body>
     @include('admin.reports.partials._footer')
-    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'Incident Report — '.config('raniag.organization')])
+    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'RANIAG Incident Report'])
 
     <div class="meta-info" style="text-align:right; font-size:9pt; color:#666; margin-bottom:20px;">
         <strong>Generated:</strong> {{ $generated_at->format('M d, Y h:i A') }}

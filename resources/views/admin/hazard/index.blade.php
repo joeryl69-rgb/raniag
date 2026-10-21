@@ -1,5 +1,14 @@
 <x-app-layout>
     <x-slot name="header">{{ __('Hazard map') }}</x-slot>
+    <x-workspace-intro
+        eyebrow="INCIDENT MANAGEMENT / SITUATIONAL AWARENESS"
+        title="Hazard map & evacuation workspace"
+        description="Map active hazards, plan shelters, and keep the live community picture in sync."
+        icon="bi-map"
+        variant="hazard-map"
+    >
+        <a href="{{ $publicHazardMapUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right me-1"></i>Public map</a>
+    </x-workspace-intro>
 
 @php
     $openRegistry = request('tab') === 'registry' || old('workspace') === 'registry';
@@ -14,14 +23,7 @@
     ]);
 @endphp
 
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <p class="small text-muted mb-0">Draw hazard areas and place shelters on one map. Residents see the same shapes on the public Live Map.</p>
-    <a href="{{ $publicHazardMapUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-box-arrow-up-right me-1"></i>Open public Live Map
-    </a>
-</div>
-
-<div class="row g-2 mb-3">
+<div class="row g-2 mb-3 rg-hazard-stats">
     <div class="col-6 col-lg-3">
         <div class="hz-stat">
             <div class="value">{{ $zones->count() }}</div>
@@ -55,7 +57,7 @@
     </div>
 </div>
 
-<ul class="nav nav-tabs mb-3" role="tablist">
+<ul class="nav nav-tabs rg-workspace-tabs mb-3" role="tablist">
     <li class="nav-item">
         <button class="nav-link {{ $openRegistry ? '' : 'active' }}" data-bs-toggle="tab" data-bs-target="#tab-map" type="button">
             <i class="bi bi-map me-1"></i>Map
@@ -71,7 +73,7 @@
     </li>
 </ul>
 
-<div class="tab-content">
+<div class="tab-content rg-hazard-content">
     <div class="tab-pane fade {{ $openRegistry ? '' : 'show active' }}" id="tab-map">
         <div class="hz-workspace">
             <div>
@@ -79,9 +81,10 @@
                     <div class="btn-group btn-group-sm" role="group" aria-label="Map tools">
                         <button type="button" class="btn btn-outline-dark" id="tool-polygon"><i class="bi bi-pentagon me-1"></i>Draw area</button>
                         <button type="button" class="btn btn-outline-dark" id="tool-box"><i class="bi bi-square me-1"></i>Draw box</button>
-                        <button type="button" class="btn btn-outline-secondary" id="tool-clear">Clear drawing</button>
+                        <button type="button" class="btn btn-outline-primary" id="tool-edit" disabled><i class="bi bi-bezier2 me-1"></i>Adjust boundary</button>
+                        <button type="button" class="btn btn-outline-secondary" id="tool-clear"><i class="bi bi-eraser me-1"></i>Clear</button>
                     </div>
-                    <span class="small text-muted" id="geometry-hint">Choose Draw area or Draw box, then trace the boundary.</span>
+                    <span class="small text-muted" id="geometry-hint" role="status" aria-live="polite">Draw an area or box, adjust its corners if needed, then save it.</span>
                 </div>
                 <div class="hz-map-wrap">
                     <div id="ops-map"></div>
@@ -141,7 +144,10 @@
                             <input class="form-check-input" type="checkbox" name="is_active" value="1" id="zoneActive" @checked(old('workspace') !== 'zone' || old('is_active'))>
                             <label class="form-check-label" for="zoneActive">Show on the public Live Map</label>
                         </div>
-                        <button class="btn btn-primary w-100" type="submit" @disabled($incidentTypes->isEmpty())>Save hazard area</button>
+                        @error('geometry_json')
+                            <div class="alert alert-danger py-2 small" role="alert">{{ $message }}</div>
+                        @enderror
+                        <button class="btn btn-primary w-100" type="submit" id="zone-save" @disabled($incidentTypes->isEmpty() || ! old('geometry_json'))>Save hazard area</button>
                     </form>
 
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
@@ -245,7 +251,7 @@
     </div>
 
     <div class="tab-pane fade {{ $openRegistry ? 'show active' : '' }}" id="tab-registry">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div class="rg-evacuee-toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <p class="small text-muted mb-0">Who is inside a shelter right now. Check someone in only after their shelter exists on the map.</p>
             <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#checkInModal" @disabled($centers->isEmpty())>
                 <i class="bi bi-person-plus me-1"></i>Check in
@@ -255,20 +261,31 @@
             <div class="alert alert-light border">Pin a shelter on the map before registering evacuees.</div>
         @endif
 
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
-                <div class="fw-semibold">{{ $checkedIn->count() }} checked in · {{ $evacuees->count() }} listed</div>
-                <div class="d-flex flex-wrap gap-2">
-                    <div class="btn-group btn-group-sm" id="evac-origin-filter" role="group" aria-label="Evacuee origin">
-                        <button type="button" class="btn btn-primary" data-origin="all">All</button>
-                        <button type="button" class="btn btn-outline-secondary" data-origin="inside">Pamplona</button>
-                        <button type="button" class="btn btn-outline-secondary" data-origin="outside">Outside</button>
-                    </div>
-                    <input type="search" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter" style="max-width: 240px;">
+        <div class="card rg-evacuee-registry border-0 shadow-sm" @if($evacuees->isNotEmpty()) data-view-mode-root="evacuee-registry" data-view-mode-user="{{ auth()->id() }}" @endif>
+            <div class="card-header rg-evacuee-registry-header">
+                <div class="rg-evacuee-summary">
+                    <span class="rg-evacuee-count">{{ $checkedIn->count() }} checked in <span aria-hidden="true">·</span> {{ $evacuees->count() }} listed</span>
+                    @if($evacuees->isNotEmpty())
+                        <x-view-mode-toggle register="evacuee-registry" label="Evacuee registry" />
+                    @endif
                 </div>
+                @if($evacuees->isNotEmpty())
+                    <div class="rg-evacuee-controls">
+                        <div class="btn-group btn-group-sm" id="evac-origin-filter" role="group" aria-label="Evacuee origin">
+                            <button type="button" class="btn btn-primary" data-origin="all" aria-pressed="true">All</button>
+                            <button type="button" class="btn btn-outline-secondary" data-origin="inside" aria-pressed="false">Pamplona</button>
+                            <button type="button" class="btn btn-outline-secondary" data-origin="outside" aria-pressed="false">Outside</button>
+                        </div>
+                        <label class="rg-evacuee-search">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                            <span class="visually-hidden">Search evacuees by name or shelter</span>
+                            <input type="search" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter">
+                        </label>
+                    </div>
+                @endif
             </div>
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="evacuee-table">
+                <table class="table table-hover align-middle mb-0 rg-data-table" id="evacuee-table">
                     <thead class="table-light">
                         <tr>
                             <th>Name</th>
@@ -432,30 +449,38 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
 <style>
-.hz-stat { border: 1px solid #e5e7eb; border-radius: 1rem; padding: 1rem 1rem .9rem; background: #fff; }
-.hz-stat .value { font-size: 1.7rem; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; }
-.hz-stat-sub { font-size: .85rem; font-weight: 600; color: #6b7280; }
-.hz-stat .label { font-size: .78rem; font-weight: 600; color: #6b7280; margin-top: 4px; }
+.hz-stat { border: 1px solid var(--raniag-border); border-radius: .82rem; padding: .8rem .9rem; background: var(--raniag-card); color: var(--raniag-ink); box-shadow: 0 7px 18px color-mix(in srgb, var(--raniag-ink) 4%, transparent); }
+.hz-stat .value { font-size: 1.55rem; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; }
+.hz-stat-sub { font-size: .85rem; font-weight: 600; color: var(--raniag-muted); }
+.hz-stat .label { font-size: .78rem; font-weight: 600; color: var(--raniag-muted); margin-top: 4px; }
 .stat-trend { display:inline-flex; align-items:center; gap:2px; margin-top:6px; font-size:.75rem; font-weight:700; }
 .stat-trend.up { color:#b45309; }
 .stat-trend.down { color:#0f766e; }
-.stat-trend.flat { color:#6b7280; }
+.stat-trend.flat { color:var(--raniag-muted); }
 .hz-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .hz-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.hz-map-wrap { position: relative; height: calc(100vh - 280px); min-height: 520px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #e8eef2; }
+.hz-toolbar .btn-group { display: flex; flex-wrap: wrap; }
+.hz-toolbar #geometry-hint { flex: 1 1 15rem; }
+.hz-map-wrap { position: relative; height: calc(100vh - 280px); min-height: 520px; border-radius: 12px; overflow: hidden; border: 1px solid var(--raniag-border); background: var(--raniag-card-raised); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent); }
 #ops-map { height: 100%; width: 100%; }
-.hz-legend { position: absolute; left: 12px; bottom: 12px; z-index: 500; background: #fff; border-radius: 8px; padding: 6px 10px; display: flex; gap: 12px; font-size: .75rem; box-shadow: 0 4px 14px rgba(15,23,42,.12); }
+.hz-legend { position: absolute; left: 12px; bottom: 12px; z-index: 500; background: var(--raniag-card); color: var(--raniag-ink); border: 1px solid var(--raniag-border); border-radius: 8px; padding: 6px 10px; display: flex; gap: 12px; font-size: .75rem; box-shadow: 0 4px 14px rgba(15,23,42,.12); }
 .hz-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .hz-swatch { width: 14px; height: 10px; border-radius: 2px; background: #b45309; display: inline-block; }
 .hz-shelter-key { width: 12px; height: 12px; border-radius: 50%; background: #0f766e; display: inline-block; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #0f766e; }
-.hz-panel { max-height: calc(100vh - 230px); overflow: auto; }
+.hz-panel { max-height: calc(100vh - 230px); overflow: auto; border: 1px solid var(--raniag-border) !important; border-radius: .9rem !important; background: var(--raniag-card) !important; color: var(--raniag-ink); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent) !important; }
 .hz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .hz-type-chip { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; }
 .leaflet-draw-tooltip { font-size: 12px; }
 @media (max-width: 991.98px) {
     .hz-workspace { grid-template-columns: 1fr; }
-    .hz-map-wrap { height: 420px; min-height: 420px; }
+    .hz-map-wrap { height: clamp(22rem, 62vh, 38rem); min-height: 22rem; }
     .hz-panel { max-height: none; }
+}
+@media (max-width: 575.98px) {
+    .hz-toolbar { align-items: stretch; }
+    .hz-toolbar .btn-group { width: 100%; }
+    .hz-toolbar .btn-group .btn { flex: 1 1 auto; }
+    .hz-toolbar #geometry-hint { flex-basis: 100%; }
 }
 </style>
 @endpush
@@ -488,6 +513,8 @@
     const lngInput = document.getElementById('center_longitude');
     const coordsLabel = document.getElementById('center-coords');
     const centerSave = document.getElementById('center-save');
+    const zoneSave = document.getElementById('zone-save');
+    const editTool = document.getElementById('tool-edit');
 
     function currentColor() {
         return typeSelect?.selectedOptions?.[0]?.dataset?.color || '#b45309';
@@ -554,6 +581,7 @@
         [mapCfg.default_lat, mapCfg.default_lng],
         mapCfg.default_zoom || 13
     );
+    window.RaniagMapScroll?.guard(map);
     L.control.zoom({ position: 'topright' }).addTo(map);
     if (window.RANIAG_Mapbox) {
         window.RANIAG_Mapbox.addBasemap(map, mapCfg);
@@ -575,7 +603,9 @@
                 },
             }).bindTooltip(z.name);
             zoneLayer.addLayer(layer);
-        } catch (e) {}
+        } catch (e) {
+            console.error('Unable to render a saved hazard boundary.', e);
+        }
     });
 
     existingCenters.forEach((c) => {
@@ -589,6 +619,7 @@
     const shapeOptions = () => ({ color: currentColor(), fillColor: currentColor(), weight: 2.5, fillOpacity: 0.42 });
     let polygonDrawer = new L.Draw.Polygon(map, { allowIntersection: false, showArea: true, shapeOptions: shapeOptions() });
     let boxDrawer = new L.Draw.Rectangle(map, { shapeOptions: shapeOptions() });
+    const editDrawer = new L.EditToolbar.Edit(map, { featureGroup: drawnItems, selectedPathOptions: { maintainColor: true } });
 
     function tintDrawers() {
         [polygonDrawer, boxDrawer].forEach((drawer) => {
@@ -602,6 +633,7 @@
     function refreshDrawers() {
         polygonDrawer.disable();
         boxDrawer.disable();
+        if (editDrawer?._enabled) editDrawer.disable();
         polygonDrawer = new L.Draw.Polygon(map, { allowIntersection: false, showArea: true, shapeOptions: shapeOptions() });
         boxDrawer = new L.Draw.Rectangle(map, { shapeOptions: shapeOptions() });
     }
@@ -613,7 +645,9 @@
     function capture(layer) {
         const geo = layer.toGeoJSON();
         geometryInput.value = JSON.stringify(geo.geometry || geo);
-        if (geometryHint) geometryHint.textContent = 'Boundary captured. Save the area, or clear it and draw again.';
+        if (zoneSave) zoneSave.disabled = !typeSelect?.value;
+        if (editTool) editTool.disabled = false;
+        if (geometryHint) geometryHint.textContent = 'Boundary ready. Adjust its corners, or save the hazard area.';
     }
 
     map.on('draw:drawstart draw:drawvertex', tintDrawers);
@@ -626,26 +660,48 @@
         capture(drawnLayer);
         polygonDrawer.disable();
         boxDrawer.disable();
+        if (editDrawer._enabled) editDrawer.disable();
+    });
+
+    map.on(L.Draw.Event.EDITED, function (event) {
+        event.layers.eachLayer((layer) => {
+            drawnLayer = layer;
+            capture(layer);
+        });
     });
 
     document.getElementById('tool-polygon')?.addEventListener('click', () => {
         setMode('zone');
         refreshDrawers();
+        if (editDrawer._enabled) editDrawer.disable();
         polygonDrawer.enable();
         if (geometryHint) geometryHint.textContent = 'Click to add corners. Click the first corner again to close the area.';
     });
     document.getElementById('tool-box')?.addEventListener('click', () => {
         setMode('zone');
         refreshDrawers();
+        if (editDrawer._enabled) editDrawer.disable();
         boxDrawer.enable();
         if (geometryHint) geometryHint.textContent = 'Click one corner, then the opposite corner.';
+    });
+    editTool?.addEventListener('click', () => {
+        if (!drawnLayer) return;
+        polygonDrawer.disable();
+        boxDrawer.disable();
+        if (!editDrawer._enabled) {
+            editDrawer.enable();
+            if (geometryHint) geometryHint.textContent = 'Drag the boundary handles to refine the area, then click Save changes on the map.';
+        }
     });
     document.getElementById('tool-clear')?.addEventListener('click', () => {
         polygonDrawer.disable();
         boxDrawer.disable();
+        if (editDrawer._enabled) editDrawer.disable();
         drawnItems.clearLayers();
         drawnLayer = null;
         geometryInput.value = '';
+        if (zoneSave) zoneSave.disabled = true;
+        if (editTool) editTool.disabled = true;
         if (geometryHint) geometryHint.textContent = 'Drawing cleared. Trace the boundary again.';
     });
 
@@ -659,13 +715,22 @@
     if (geometryInput.value) {
         try {
             const geo = JSON.parse(geometryInput.value);
+            if (geo?.type !== 'Polygon' || !Array.isArray(geo.coordinates)) {
+                throw new Error('The draft geometry is not a GeoJSON polygon.');
+            }
             const restored = L.geoJSON(geo);
             restored.eachLayer((layer) => {
                 drawnLayer = layer;
                 drawnItems.addLayer(layer);
                 styleDrawn();
+                capture(layer);
             });
-        } catch (e) {}
+        } catch (e) {
+            console.error('Unable to restore the draft hazard boundary.', e);
+            geometryInput.value = '';
+            if (zoneSave) zoneSave.disabled = true;
+            if (geometryHint) geometryHint.textContent = 'Draft boundary could not be restored. Draw it again before saving.';
+        }
     }
 
     let draftMarker = null;
@@ -708,6 +773,7 @@
         if (center) {
             polygonDrawer.disable();
             boxDrawer.disable();
+            if (editDrawer._enabled) editDrawer.disable();
             if (geometryHint) geometryHint.textContent = 'Click the map to drop the shelter pin.';
         } else if (geometryHint && !geometryInput.value) {
             geometryHint.textContent = 'Choose Draw area or Draw box, then trace the boundary.';
@@ -721,9 +787,10 @@
     if (hadPin && latInput.value && lngInput.value) placeDraft(parseFloat(latInput.value), parseFloat(lngInput.value));
 
     zoneForm?.addEventListener('submit', (e) => {
-        if (!geometryInput.value) {
+        if (!geometryInput.value || !drawnLayer) {
             e.preventDefault();
-            alert('Draw the hazard boundary on the map before saving.');
+            if (geometryHint) geometryHint.textContent = 'Draw a boundary on the map before saving this hazard area.';
+            document.getElementById('tool-polygon')?.focus();
         }
     });
 
@@ -753,8 +820,10 @@
         button.addEventListener('click', () => {
             evacOrigin = button.dataset.origin || 'all';
             document.querySelectorAll('#evac-origin-filter button').forEach((item) => {
-                item.classList.toggle('btn-primary', item === button);
-                item.classList.toggle('btn-outline-secondary', item !== button);
+                const selected = item === button;
+                item.classList.toggle('btn-primary', selected);
+                item.classList.toggle('btn-outline-secondary', !selected);
+                item.setAttribute('aria-pressed', selected ? 'true' : 'false');
             });
             applyEvacueeFilter();
         });

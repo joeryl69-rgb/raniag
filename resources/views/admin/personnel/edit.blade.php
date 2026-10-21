@@ -3,11 +3,18 @@
         {{ __('Edit Personnel Account') }}
     </x-slot>
 
-    <div class="d-flex mb-4">
-        <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Accounts
-        </a>
-    </div>
+    <div class="rg-account-workspace rg-account-edit rg-account-edit-personnel">
+        <x-workspace-intro
+            eyebrow="COORDINATION / PERSONNEL PROFILE"
+            title="Edit personnel account"
+            description="Keep staff identity, role, team assignment, and access status current."
+            icon="bi-person-gear"
+            variant="agency-directory"
+        >
+            <a href="{{ route('admin.agencies.index') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to directory
+            </a>
+        </x-workspace-intro>
 
     @if ($errors->any())
         <div class="alert alert-danger mb-4">
@@ -20,13 +27,13 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.personnel.update', $personnel->id) }}" method="POST">
+    <form class="rg-account-form" action="{{ route('admin.personnel.update', $personnel->id) }}" method="POST">
         @csrf
         @method('PUT')
 
         <div class="row g-4">
             <div class="col-md-6">
-                <div class="card raniag-card shadow-sm border-0 h-100">
+                <div class="card raniag-card rg-account-form-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3 d-flex align-items-center justify-content-between">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-person-badge me-2 text-primary"></i>Personnel Details</h5>
                         <div class="form-check form-switch mb-0">
@@ -74,16 +81,16 @@
             </div>
 
             <div class="col-md-6">
-                <div class="card raniag-card shadow-sm border-0 h-100">
+                <div class="card raniag-card rg-account-form-card shadow-sm border-0 h-100">
                     <div class="card-header raniag-card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-lock-fill me-2 text-primary"></i>Account Security</h5>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Reset Password</label>
-                            <input type="text" class="form-control" id="password" name="password" placeholder="Leave blank to keep current password">
-                            <div class="form-text">Enter a new password only if you want to reset this login.</div>
-                        </div>
+                        <x-account-password-reset
+                            id="password"
+                            name="password"
+                            help="Leave blank to keep the current personnel password."
+                        />
                     </div>
                 </div>
             </div>
@@ -117,5 +124,6 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 </x-app-layout>

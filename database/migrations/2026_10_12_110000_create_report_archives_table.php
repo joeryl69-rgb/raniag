@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('report_archives', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('kind', 40);
+            $table->string('title');
+            $table->string('format', 8);
+            $table->date('date_from')->nullable();
+            $table->date('date_to')->nullable();
+            $table->string('filename');
+            $table->string('path');
+            $table->unsignedInteger('bytes')->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('report_archives');
+    }
+};

@@ -43,16 +43,16 @@ Route::middleware(['auth', 'active', 'no-cache'])->group(function () {
     });
 
     Route::prefix('push-subscriptions')->name('push_subscriptions.')->group(function () {
+        Route::get('/status', [\App\Http\Controllers\PushSubscriptionController::class, 'status'])->name('status');
         Route::post('/', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('store');
         Route::put('/options', [\App\Http\Controllers\PushSubscriptionController::class, 'updateOptions'])->name('options');
         Route::post('/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->name('test');
         Route::delete('/', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('destroy');
     });
 
-    // Appearance: theme, dark mode, follow-system, font — a per-user
-    // preference (see App\Models\User::appearance()), reachable by every
-    // authenticated role from their own profile-menu avatar dropdown.
-    // Previously this was admin-only and applied globally to every account.
+    // Per-user System Settings: theme, color mode, and typography
+    // (see App\Models\User::appearance()), reachable by every authenticated
+    // role from their own profile-menu avatar dropdown.
     Route::prefix('settings/appearance')->name('settings.appearance.')->group(function () {
         Route::get('/', [\App\Http\Controllers\AppearanceSettingController::class, 'index'])->name('index');
         Route::put('/', [\App\Http\Controllers\AppearanceSettingController::class, 'update'])->name('update');

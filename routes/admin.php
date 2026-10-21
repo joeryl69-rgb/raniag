@@ -7,13 +7,14 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\HazardEvacController;
 use App\Http\Controllers\Admin\IncidentController;
+use App\Http\Controllers\Admin\IncidentPresentationController;
 use App\Http\Controllers\Admin\IncidentDocumentController;
 use App\Http\Controllers\Admin\IncidentTypeController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PersonnelRoleController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
-use App\Http\Controllers\Admin\QrPosterController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ReportRecordController;
 use App\Http\Controllers\Admin\ResolutionController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,7 @@ Route::prefix('admin')
     ->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
+        Route::get('/dashboard/alerts.json', \App\Http\Controllers\Shared\DashboardAlertFeedController::class)->name('dashboard.alerts');
         Route::get('/dashboard/boundary.json', [DashboardController::class, 'boundary'])->name('dashboard.boundary');
         Route::get('/dashboard/barangays.json', [DashboardController::class, 'barangays'])->name('dashboard.barangays');
         Route::post('/availability', [\App\Http\Controllers\Shared\AvailabilityController::class, 'toggleSelf'])->name('availability.toggle');
@@ -37,10 +39,6 @@ Route::prefix('admin')
         Route::post('/hazard/evacuees', [HazardEvacController::class, 'storeEvacuee'])->name('hazard.evacuees.store');
         Route::patch('/hazard/evacuees/{evacuee}/check-out', [HazardEvacController::class, 'checkOutEvacuee'])->name('hazard.evacuees.checkout');
 
-        Route::get('/qr-posters', [QrPosterController::class, 'index'])->name('qr_posters.index');
-        Route::post('/qr-posters', [QrPosterController::class, 'store'])->name('qr_posters.store');
-        Route::put('/qr-posters/{qrPoster}', [QrPosterController::class, 'update'])->name('qr_posters.update');
-        Route::delete('/qr-posters/{qrPoster}', [QrPosterController::class, 'destroy'])->name('qr_posters.destroy');
         Route::get('/sms-logs', [DashboardController::class, 'smsLogs'])->name('sms-logs');
         Route::get('/audit-logs', [DashboardController::class, 'auditLogs'])->name('audit-logs');
 
@@ -117,11 +115,35 @@ Route::prefix('admin')
         });
 
         Route::prefix('reports')->name('reports.')->group(function () {
-
-            Route::get('/generate', [ReportController::class, 'index'])->name('index');
+            Route::get('/presentation/excel', [IncidentPresentationController::class, 'excel'])->name('presentation.excel');
+            Route::get('/presentation/word', [IncidentPresentationController::class, 'word'])->name('presentation.word');
+            Route::get('/presentation/pdf', [IncidentPresentationController::class, 'pdf'])->name('presentation.pdf');
+            Route::get('/presentation/print', [IncidentPresentationController::class, 'print'])->name('presentation.print');
+            Route::get('/', [ReportRecordController::class, 'index'])->name('index');
+            Route::get('/create', [ReportRecordController::class, 'create'])->name('create');
+            Route::post('/', [ReportRecordController::class, 'store'])->name('store');
+            Route::get('/quick', [ReportRecordController::class, 'quick'])->name('quick');
+            Route::post('/quick/file', [ReportRecordController::class, 'fileQuick'])->name('quick.file');
+            Route::get('/records/{record}', [ReportRecordController::class, 'show'])->name('records.show');
+            Route::get('/records/{record}/edit', [ReportRecordController::class, 'edit'])->name('records.edit');
+            Route::post('/records/{record}', [ReportRecordController::class, 'update'])->name('records.save');
+            Route::patch('/records/{record}', [ReportRecordController::class, 'update'])->name('records.update');
+            Route::delete('/records/{record}', [ReportRecordController::class, 'destroy'])->name('records.destroy');
+            Route::post('/picture', [ReportRecordController::class, 'pictureFile'])->name('picture.file');
+            Route::post('/picture/sheet', [ReportRecordController::class, 'pictureSheet'])->name('picture.sheet');
+            Route::get('/generate', fn () => redirect()->route('admin.reports.index'));
             Route::post('/generate', [ReportController::class, 'generate'])->name('generate');
             Route::post('/decision', [ReportController::class, 'decision'])->name('decision');
             Route::post('/generate-excel', [ReportController::class, 'generateExcel'])->name('generate_excel');
             Route::post('/generate-chart-summary', [ReportController::class, 'chartSummary'])->name('generate_chart_summary');
+            Route::post('/operations', [ReportController::class, 'operations'])->name('operations');
+            Route::get('/copies/{archive}', [ReportController::class, 'copy'])->name('copy');
+
+            Route::post('/{record}/file', [ReportRecordController::class, 'file'])->name('file');
+            Route::post('/{record}/duplicate', [ReportRecordController::class, 'duplicate'])->name('duplicate');
+            Route::get('/{record}/file', [ReportRecordController::class, 'download'])->name('download');
+            Route::post('/{record}/chapters/{key}/export', [ReportRecordController::class, 'export'])->name('export');
+            Route::post('/{record}', [ReportRecordController::class, 'update'])->name('update');
+            Route::delete('/{record}', [ReportRecordController::class, 'destroy'])->name('destroy');
         });
     });

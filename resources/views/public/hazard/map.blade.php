@@ -48,6 +48,8 @@
                 <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
                 <input type="checkbox" class="btn-check" id="layer-risk" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-risk">Barangay risk</label>
+                <input type="checkbox" class="btn-check" id="layer-geofence" checked autocomplete="off" @disabled(!$boundary)>
+                <label class="btn btn-sm rg-hazard-chip" for="layer-geofence" title="{{ $boundary ? 'Show or hide Pamplona’s area-of-responsibility boundary' : 'Pamplona boundary data is unavailable' }}">Pamplona AOR</label>
                 <input type="checkbox" class="btn-check" id="layer-you" autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-you">My location</label>
             </div>
@@ -105,6 +107,7 @@
 <script>
 window.RANIAG_HAZARD = {
     map: @json($map),
+    boundary: @json($boundary),
     zones: @json($zones),
     centers: @json($centers),
     risk: @json($risk),

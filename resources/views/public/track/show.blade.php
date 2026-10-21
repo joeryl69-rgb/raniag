@@ -37,6 +37,16 @@ html[data-public-theme="dark"] #rg-track-status .progress-track { background:#30
 .rg-track-nearest-copy strong { color:#153c3a;font-size:.96rem; }
 .rg-track-nearest-copy span:last-child { color:#526f70;font-size:.8rem; }
 .rg-track-nearest .btn { white-space:nowrap;font-weight:750; }
+.rg-track-facts { align-items: flex-start; }
+.rg-track-evidence-grid { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start; }
+.rg-track-evidence-grid img,
+.rg-track-evidence-grid .rg-evidence-video-player { width:min(100%, 210px); height:150px; }
+.rg-track-evidence-grid img { object-fit:cover; background:#0f172a; }
+.rg-track-evidence-grid .rg-evidence-video-trigger { height:100%; aspect-ratio:auto; }
+.rg-track-history-by { margin:2px 0 4px; color:#5d7480; font-size:.78rem; }
+.rg-track-history-copy { margin:0; color:#243d48; line-height:1.5; }
+html[data-public-theme="dark"] .rg-track-history-by { color:#a9c0c6; }
+html[data-public-theme="dark"] .rg-track-history-copy { color:#dce8e8; }
 html[data-public-theme="dark"] .rg-track-nearest { border-color:#3f6764;border-left-color:#61d0b4;background:#17332f;color:#e2f0eb; }
 html[data-public-theme="dark"] .rg-track-nearest-icon { background:#244940;color:#9ce5ce; }
 html[data-public-theme="dark"] .rg-track-nearest-kicker { color:#8bdfca; }
@@ -108,7 +118,7 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
         $isOutsideAor = $statusValue === 'outside_aor';
     @endphp
 
-    <div id="rg-track-status">
+    <div id="rg-track-status" data-live-refresh data-live-refresh-target="#rg-track-status" data-live-refresh-interval="4000">
     <section class="rg-track-detail-banner" aria-live="polite" data-rg-reveal>
         <div class="rg-track-detail-banner-copy">
             <span class="rg-track-detail-kicker">CASE MOVEMENT / {{ strtoupper(str_replace('_', ' ', $statusValue)) }}</span>
@@ -169,6 +179,7 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
             @endif
         </div>
     </div>
+    </div>
 
     @if ($incident->incidentType?->public_guidance)
         <div class="card raniag-card rg-app-card mb-4">
@@ -206,6 +217,7 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
         </div>
     @endif
 
+    <div id="case-assignment-status" data-live-refresh data-live-refresh-target="#case-assignment-status" data-live-refresh-interval="4000">
     @if ($incident->assignments->isNotEmpty())
         @php
             $phaseLabels = [
@@ -264,8 +276,10 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
             @endforeach
         </div>
     @endif
+    </div>
 
-    @if ($canReply)
+    <div id="case-reply-status" data-live-refresh data-live-refresh-target="#case-reply-status" data-live-refresh-interval="4000">
+        @if ($canReply)
         <div class="card raniag-card rg-app-card mb-4 border-warning">
             <div class="card-header raniag-card-header py-3">Reply to responders</div>
             <div class="card-body">
@@ -274,11 +288,16 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
                     <textarea name="message" class="form-control mb-2" rows="3" required maxlength="2000" placeholder="Add the information requested…"></textarea>
                     <button type="submit" class="btn btn-primary">Send reply</button>
                 </form>
-            </div>
+    </div>
         </div>
     @endif
+        </div>
 
-    <div class="row g-4" data-rg-stagger>
+    @php
+        $hasNarrative = filled(trim((string) $incident->title)) || filled(trim((string) $incident->description));
+        $reporterEvidence = $incident->evidence->whereNull('uploaded_by');
+    @endphp
+    <div class="row g-4 rg-track-facts" data-rg-stagger>
         <div class="col-lg-4">
             <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
@@ -312,7 +331,9 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
             </div>
         </div>
 
+        @if ($hasNarrative || $reporterEvidence->isNotEmpty())
         <div class="col-lg-8">
+            @if ($hasNarrative)
             <div class="card raniag-card rg-app-card mb-4">
                 <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
                     <span class="raniag-step-badge"><i class="bi bi-card-text"></i></span>
@@ -322,16 +343,13 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
                     @if ($incident->title)
                         <h2 class="h6 fw-bold">{{ $incident->title }}</h2>
                     @endif
-                    <p class="mb-0">{{ $incident->description }}</p>
+                    @if (filled(trim((string) $incident->description)))
+                        <p class="mb-0">{{ $incident->description }}</p>
+                    @endif
                 </div>
             </div>
+            @endif
 
-            @php
-                // Reporter view: only the reporter's own submission evidence.
-                // uploaded_by is null for anonymous/reporter uploads and set to a
-                // user id for agency/personnel evidence added later — exclude those.
-                $reporterEvidence = $incident->evidence->whereNull('uploaded_by');
-            @endphp
             @if ($reporterEvidence->isNotEmpty())
                 <div class="card raniag-card rg-app-card">
                     <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
@@ -339,15 +357,13 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
                         <span>Evidence ({{ $reporterEvidence->count() }})</span>
                     </div>
                     <div class="card-body p-4">
-                        <div class="row g-2">
+                        <div class="rg-track-evidence-grid">
                             @foreach ($reporterEvidence as $ev)
-                                <div class="col-6 col-md-4">
-                                    @if (str_starts_with((string) $ev->mime_type, 'video/'))
-                                        <video src="{{ route('public.track.evidence', $ev) }}" class="img-fluid rounded shadow-sm w-100" style="background:#0f172a;" controls playsinline preload="metadata"></video>
-                                    @elseif (str_starts_with((string) $ev->mime_type, 'image/'))
-                                        <img src="{{ route('public.track.evidence', $ev) }}" class="img-fluid rounded shadow-sm rg-evidence-thumb" style="cursor: zoom-in;" alt="{{ $ev->original_filename }}" loading="lazy">
-                                    @endif
-                                </div>
+                                @if (str_starts_with((string) $ev->mime_type, 'video/'))
+                                    <x-evidence-video-player :src="route('public.track.evidence', $ev)" :label="$ev->original_filename" />
+                                @elseif (str_starts_with((string) $ev->mime_type, 'image/'))
+                                    <img src="{{ route('public.track.evidence', $ev) }}" class="rounded shadow-sm rg-evidence-thumb" style="cursor: zoom-in;" alt="{{ $ev->original_filename }}" loading="lazy">
+                                @endif
                             @endforeach
                         </div>
                     </div>
@@ -391,27 +407,53 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
                 </script>
             @endif
         </div>
+        @endif
     </div>
 
-    <div class="card raniag-card rg-app-card mt-4">
+    <div class="card raniag-card rg-app-card mt-4" id="case-history" data-live-refresh data-live-refresh-target="#case-history-content" data-live-refresh-interval="4000">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
             <span class="raniag-step-badge"><i class="bi bi-list-ul"></i></span>
             <span>Full History</span>
         </div>
-        <div class="card-body p-4">
+        <div class="card-body p-4" id="case-history-content">
             @if ($incident->publicTimeline->isEmpty())
                 <p class="text-muted mb-0">No public updates yet. Please check back later.</p>
             @else
                 <div class="raniag-timeline raniag-timeline-wide">
                     @foreach ($incident->publicTimeline as $update)
-                        @php $tKey = $update->to_status->value ?? $update->to_status; @endphp
+                        @php
+                            $tKey = $update->to_status->value ?? $update->to_status;
+                            $comment = trim((string) $update->comment);
+                            $actor = $update->user?->display_title;
+                            $agencyName = $update->user?->agency?->name;
+                            $byline = collect([$actor, $agencyName])->filter()->unique()->implode(' · ');
+                            $detail = $comment;
+                            if ($comment === 'Incident report received from the public portal.') {
+                                $detail = 'The report was sent from the public form and is waiting for MDRRMO to review it.';
+                            } elseif ($comment === 'Report validated and received') {
+                                $detail = 'MDRRMO Pamplona checked the report and opened it for response.';
+                            } elseif ($comment === 'Assignment accepted and incident under active investigation') {
+                                $detail = ($agencyName ?: 'The assigned team').' accepted the assignment and started the investigation.';
+                            } elseif ($comment === 'Responder en route') {
+                                $detail = ($agencyName ?: 'A responder').' is on the way to the reported location.';
+                            } elseif ($comment === 'Responder on scene') {
+                                $detail = ($agencyName ?: 'A responder').' has arrived at the reported location.';
+                            } elseif (preg_match('/^Assigned to:?\s*(.+)$/', $comment, $assignedMatch)) {
+                                $detail = 'MDRRMO assigned this report to '.rtrim($assignedMatch[1], '.').'.';
+                            } elseif (str_starts_with($comment, 'Reporter reply:')) {
+                                $detail = 'You replied: '.trim(substr($comment, strlen('Reporter reply:')));
+                            }
+                        @endphp
                         <div class="raniag-timeline-item" data-status="{{ $tKey }}">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
                                 <x-public.status-badge :status="$update->to_status" :comment="$update->comment" />
                                 <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
                             </div>
-                            @if ($update->comment)
-                                <p class="mb-0 text-muted">{{ $update->comment }}</p>
+                            @if ($byline)
+                                <div class="rg-track-history-by">Recorded by {{ $byline }}</div>
+                            @endif
+                            @if ($detail !== '')
+                                <p class="rg-track-history-copy">{{ $detail }}</p>
                             @endif
                         </div>
                     @endforeach
@@ -419,13 +461,13 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
             @endif
         </div>
     </div>
-    </div>
 </div>
 @endsection
 
 @push('scripts')
 @if ($incident->latitude && $incident->longitude)
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
 <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
 <script src="{{ asset('js/public-track-map.js') }}?v={{ @filemtime(public_path('js/public-track-map.js')) }}"></script>
 <script>
@@ -435,6 +477,10 @@ document.addEventListener('DOMContentLoaded', function () {
         lat: {{ (float) $incident->latitude }},
         lng: {{ (float) $incident->longitude }},
         map: @json($map ?? config('raniag.map')),
+        icon: @json($incident->incidentType?->icon),
+        color: @json($incident->incidentType?->color),
+        priority: @json($incident->priority?->value ?? $incident->priority),
+        scenePopup: @json(($incident->incidentType?->name ?: 'Incident').' location'),
         unitsUrl: @json($unitsUrl ?? null),
         units: @json($liveUnits ?? []),
         statusEl: 'track-units-status',

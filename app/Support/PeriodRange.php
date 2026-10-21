@@ -5,15 +5,21 @@ namespace App\Support;
 use Carbon\Carbon;
 
 /**
- * Shared month / quarter / year windows for the community dashboard,
- * the staff dashboard, and report presets. One definition so a "quarter"
- * on the public board is the same quarter in a downloaded report.
+ * Shared week / month / year windows for the community dashboard,
+ * the staff dashboard, and report presets. One definition so a week
+ * on the public board is the same week in a downloaded report.
  */
 class PeriodRange
 {
     public static function key(?string $period): string
     {
-        return in_array($period, ['month', 'quarter', 'year'], true) ? $period : 'month';
+        // A quarter begins on the first of a month, so in January, April,
+        // July, and October it counted the same reports as the month.
+        if ($period === 'quarter') {
+            $period = 'week';
+        }
+
+        return in_array($period, ['week', 'month', 'year'], true) ? $period : 'month';
     }
 
     /**
@@ -57,26 +63,26 @@ class PeriodRange
             ];
         }
 
-        if ($key === 'quarter') {
-            $from = $now->copy()->startOfQuarter();
+        if ($key === 'week') {
+            $from = $now->copy()->startOfWeek();
             $buckets = [];
-            for ($i = 3; $i >= 0; $i--) {
-                $start = $now->copy()->subQuarters($i)->startOfQuarter();
+            for ($i = 7; $i >= 0; $i--) {
+                $start = $now->copy()->subWeeks($i)->startOfWeek();
                 $buckets[] = [
-                    'label' => 'Q'.$start->quarter.' '.$start->format('Y'),
+                    'label' => $start->format('M j'),
                     'from' => $start->copy(),
-                    'to' => $i === 0 ? $now->copy()->endOfDay() : $start->copy()->endOfQuarter(),
+                    'to' => $i === 0 ? $now->copy()->endOfDay() : $start->copy()->endOfWeek(),
                 ];
             }
 
             return [
-                'key' => $key,
-                'label' => 'Q'.$from->quarter.' '.$from->format('Y'),
-                'caption' => 'Last 4 quarters',
+                'key' => 'week',
+                'label' => 'Week of '.$from->format('M j'),
+                'caption' => 'Last 8 weeks',
                 'from' => $from,
                 'to' => $now->copy()->endOfDay(),
-                'previous_from' => $from->copy()->subQuarter(),
-                'previous_to' => $now->copy()->subQuarter()->endOfDay(),
+                'previous_from' => $from->copy()->subWeek(),
+                'previous_to' => $now->copy()->subWeek()->endOfDay(),
                 'buckets' => $buckets,
             ];
         }

@@ -6,7 +6,10 @@ use App\Enums\EvidenceType;
 use App\Models\Evidence;
 use App\Models\Incident;
 use App\Support\PrivateIncidentFiles;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -43,6 +46,7 @@ class EvidenceService
             $isGpsCapture = false;
             $latitude = null;
             $longitude = null;
+            $locationSource = 'gps';
             $timestamp = now()->toDateTimeString();
 
             // 1. Check if it matches a web camera capture
@@ -50,6 +54,7 @@ class EvidenceService
                 $isGpsCapture = true;
                 $latitude = (float) ($gpsLookup[$originalName]['latitude'] ?? null);
                 $longitude = (float) ($gpsLookup[$originalName]['longitude'] ?? null);
+                $locationSource = $this->normalizeLocationSource($gpsLookup[$originalName]['location_source'] ?? null);
                 if (! empty($gpsLookup[$originalName]['captured_at'])) {
                     $timestamp = date('Y-m-d H:i:s', strtotime($gpsLookup[$originalName]['captured_at']));
                 }
@@ -68,6 +73,7 @@ class EvidenceService
                     $isGpsCapture = true;
                     $latitude = $exifCoords['latitude'];
                     $longitude = $exifCoords['longitude'];
+                    $locationSource = 'exif';
                 }
             }
 
@@ -80,6 +86,7 @@ class EvidenceService
                     $incident->barangay,
                     $timestamp,
                     $incident->location_address,
+                    $locationSource,
                 );
 
                 // Dynamically assign incident coordinates if not already set
@@ -139,6 +146,7 @@ class EvidenceService
                     $incident->barangay,
                     $timestamp,
                     $incident->location_address,
+                    $this->normalizeLocationSource($capture['location_source'] ?? null),
                 );
 
                 if (empty($incident->latitude) || empty($incident->longitude)) {
@@ -165,6 +173,11 @@ class EvidenceService
                 'is_gps_capture' => true,
             ]);
         }
+    }
+
+    private function normalizeLocationSource(mixed $source): string
+    {
+        return in_array($source, ['gps', 'map-pin', 'exif'], true) ? $source : 'gps';
     }
 
     private function resolveType(UploadedFile $file): EvidenceType
@@ -249,7 +262,7 @@ class EvidenceService
     /**
      * Watermarks a photo using PHP GD: title, coordinates, full address
      * (barangay/municipality/province/country), formatted date/time, and a
-     * small map preview thumbnail with a pin. Uses the submitted location
+     * enlarged map preview thumbnail with a pin. Uses the submitted location
      * address or locally configured municipality details for the watermark.
      */
     private function watermarkPhoto(
@@ -259,6 +272,7 @@ class EvidenceService
         ?string $barangay,
         string $timestamp,
         ?string $locationAddress = null,
+        string $locationSource = 'gps',
     ): ?string
     {
         if (! function_exists('imagecreatefromjpeg')) {
@@ -296,7 +310,12 @@ class EvidenceService
 
             $place = $this->resolveFullAddress($barangay, $locationAddress);
 
-            $coordsText = sprintf('%f, %f', $latitude, $longitude);
+            $sourcePrefix = match ($locationSource) {
+                'map-pin' => 'Map pin (GPS unavailable) - ',
+                'exif' => 'EXIF GPS - ',
+                default => '',
+            };
+            $coordsText = $sourcePrefix.sprintf('%f, %f', $latitude, $longitude);
             $locationText = $place;
             $timeText = $this->formatWatermarkTimestamp($timestamp);
 
@@ -311,13 +330,13 @@ class EvidenceService
             switch ($mime) {
                 case 'image/jpeg':
                 case 'image/jpg':
-                    @imagejpeg($image, $absolutePath, 88);
+                    @imagejpeg($image, $absolutePath, 94);
                     break;
                 case 'image/png':
                     @imagepng($image, $absolutePath);
                     break;
                 case 'image/webp':
-                    @imagewebp($image, $absolutePath, 88);
+                    @imagewebp($image, $absolutePath, 94);
                     break;
             }
 
@@ -340,22 +359,45 @@ class EvidenceService
     private function resolveFullAddress(?string $barangay, ?string $locationAddress): string
     {
         $locationAddress = trim((string) $locationAddress);
-        if ($locationAddress !== '') {
-            return $locationAddress;
-        }
-
         $defaults = config('raniag.address', []);
         $municipality = $defaults['municipality'] ?? 'Pamplona';
         $province = $defaults['province'] ?? 'Cagayan';
         $country = $defaults['country'] ?? 'Philippines';
 
-        $parts = [];
-        if (! empty($barangay)) {
-            $parts[] = 'Barangay '.$barangay;
+        $parts = $locationAddress !== ''
+            ? array_values(array_filter(array_map('trim', explode(',', $locationAddress))))
+            : [];
+        $barangayLabel = trim((string) $barangay);
+        $barangayPartIndex = collect($parts)->search(
+            fn (string $part) => str_starts_with(mb_strtolower($part), 'barangay ')
+                || str_starts_with(mb_strtolower($part), 'brgy. ')
+        );
+        $partsContainBarangay = $barangayPartIndex !== false;
+        $matchingBarangayIndex = $barangayLabel === ''
+            ? false
+            : collect($parts)->search(fn (string $part) => str_contains(mb_strtolower($part), mb_strtolower($barangayLabel)));
+
+        if ($barangayLabel !== '' && ! $partsContainBarangay && $matchingBarangayIndex !== false) {
+            $parts[$matchingBarangayIndex] = 'Barangay '.$parts[$matchingBarangayIndex];
+        } elseif ($barangayLabel !== '' && ! $partsContainBarangay) {
+            array_unshift($parts, 'Barangay '.$barangayLabel);
+        } elseif ($barangayLabel === '' && $parts !== [] && ! $partsContainBarangay) {
+            array_unshift($parts, 'Barangay not resolved');
+        } elseif ($parts === []) {
+            $parts[] = $barangayLabel !== '' ? 'Barangay '.$barangayLabel : 'Barangay not resolved';
         }
-        $parts[] = $municipality;
-        $parts[] = $province;
-        $parts[] = $country;
+
+        if ($locationAddress === '') {
+            $parts[] = $municipality;
+        }
+
+        $addressText = mb_strtolower(implode(', ', $parts));
+        foreach ([$province, $country] as $suffix) {
+            if (! str_contains($addressText, mb_strtolower($suffix))) {
+                $parts[] = $suffix;
+                $addressText .= ', '.mb_strtolower($suffix);
+            }
+        }
 
         return implode(', ', $parts);
     }
@@ -376,71 +418,211 @@ class EvidenceService
         }
     }
 
+    private function isSupportedMapTile(string $bytes): bool
+    {
+        return str_starts_with($bytes, "\x89PNG") || str_starts_with($bytes, "\xFF\xD8\xFF");
+    }
+
     /**
-     * Fetches (and locally caches) the single OpenStreetMap tile that
-     * contains the given coordinates, plus the coordinates' fractional
-     * pixel position within that tile — used to draw the map preview
-     * thumbnail and its pin. Caching avoids re-downloading the same tile
-     * for repeat captures near the same spot, keeping the system usable
-     * offline after first load and respectful of OSM's tile usage limits.
-     * Returns null (never throws) if the tile can't be obtained, in which
-     * case the watermark simply omits the thumbnail.
+     * Builds a centered, high-resolution map crop from Mapbox satellite tiles
+     * (with OpenStreetMap fallback). Cached tiles are reused; missing neighbors
+     * are fetched concurrently so the pin remains centered in the watermark.
      *
      * @return array{image: \GdImage, px: float, py: float}|null
      */
-    private function fetchMapTile(float $latitude, float $longitude, int $zoom = 16): ?array
+    private function fetchMapTile(float $latitude, float $longitude, int $zoom = 17): ?array
     {
         try {
             $n = 2 ** $zoom;
+            $mapboxToken = trim((string) config('raniag.map.mapbox_token', ''));
+            $mapStyle = $mapboxToken !== '' ? 'satellite-streets-v12' : 'osm';
             $latRad = deg2rad($latitude);
             $xFloat = (($longitude + 180) / 360) * $n;
             $yFloat = ((1 - log(tan($latRad) + 1 / cos($latRad)) / M_PI) / 2) * $n;
             $xTile = (int) floor($xFloat);
             $yTile = (int) floor($yFloat);
+            $tileImages = [];
+            $missingTiles = [];
 
-            $cachePath = storage_path("app/map-tiles/{$zoom}/{$xTile}/{$yTile}.png");
-            $tileData = null;
+            for ($dy = -1; $dy <= 1; $dy++) {
+                for ($dx = -1; $dx <= 1; $dx++) {
+                    $tileX = (($xTile + $dx) % $n + $n) % $n;
+                    $tileY = $yTile + $dy;
+                    if ($tileY < 0 || $tileY >= $n) {
+                        continue;
+                    }
 
-            if (is_readable($cachePath)) {
-                $tileData = @file_get_contents($cachePath);
-            }
+                    $key = "{$dx}:{$dy}";
+                    $extension = $mapStyle === 'satellite-streets-v12' ? 'jpg' : 'png';
+                    $cachePath = storage_path("app/map-tiles/{$mapStyle}/{$zoom}/{$tileX}/{$tileY}.{$extension}");
+                    $tileData = is_readable($cachePath) ? @file_get_contents($cachePath) : false;
 
-            if (! $tileData) {
-                $url = "https://tile.openstreetmap.org/{$zoom}/{$xTile}/{$yTile}.png";
-                $opts = [
-                    'http' => [
-                        'method' => 'GET',
-                        'header' => "User-Agent: RANIAG/1.0\r\n",
-                        'timeout' => 5,
-                    ],
-                ];
-                $tileData = @file_get_contents($url, false, stream_context_create($opts));
+                    if (! is_string($tileData) || ! $this->isSupportedMapTile($tileData)) {
+                        $missingTiles[$key] = [
+                            'x' => $tileX,
+                            'y' => $tileY,
+                            'path' => $cachePath,
+                        ];
+                        continue;
+                    }
 
-                if ($tileData) {
-                    @mkdir(dirname($cachePath), 0755, true);
-                    @file_put_contents($cachePath, $tileData);
+                    $image = @imagecreatefromstring($tileData);
+                    if ($image) {
+                        $tileImages[$key] = $image;
+                    } else {
+                        $missingTiles[$key] = [
+                            'x' => $tileX,
+                            'y' => $tileY,
+                            'path' => $cachePath,
+                        ];
+                    }
                 }
             }
 
-            if (! $tileData) {
+            if ($missingTiles !== []) {
+                try {
+                    $failedTileCount = 0;
+                    $responses = Http::pool(function (Pool $pool) use ($missingTiles, $zoom, $mapboxToken) {
+                        foreach ($missingTiles as $key => $tile) {
+                            $request = $pool->as($key)->timeout(6);
+                            if ($mapboxToken !== '') {
+                                $request->get("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{$zoom}/{$tile['x']}/{$tile['y']}@2x", [
+                                    'access_token' => $mapboxToken,
+                                ]);
+                            } else {
+                                $request->withHeaders(['User-Agent' => 'RANIAG/1.0'])
+                                    ->get("https://tile.openstreetmap.org/{$zoom}/{$tile['x']}/{$tile['y']}.png");
+                            }
+                        }
+                    }, concurrency: 9);
+
+                    foreach ($missingTiles as $key => $tile) {
+                        $response = $responses[$key] ?? null;
+                        if (! $response instanceof Response || ! $response->ok()) {
+                            if ($mapboxToken === '') {
+                                $failedTileCount++;
+                                continue;
+                            }
+
+                            try {
+                                $response = Http::timeout(4)
+                                    ->withHeaders(['User-Agent' => 'RANIAG/1.0'])
+                                    ->get("https://tile.openstreetmap.org/{$zoom}/{$tile['x']}/{$tile['y']}.png");
+                            } catch (\Throwable) {
+                                $failedTileCount++;
+                                continue;
+                            }
+                            if (! $response->ok()) {
+                                $failedTileCount++;
+                                continue;
+                            }
+                            $tile['path'] = storage_path("app/map-tiles/osm/{$zoom}/{$tile['x']}/{$tile['y']}.png");
+                        }
+
+                        $tileData = $response->body();
+                        if (! $this->isSupportedMapTile($tileData)) {
+                            if ($mapboxToken === '') {
+                                $failedTileCount++;
+                                continue;
+                            }
+
+                            try {
+                                $response = Http::timeout(4)
+                                    ->withHeaders(['User-Agent' => 'RANIAG/1.0'])
+                                    ->get("https://tile.openstreetmap.org/{$zoom}/{$tile['x']}/{$tile['y']}.png");
+                            } catch (\Throwable) {
+                                $failedTileCount++;
+                                continue;
+                            }
+                            if (! $response->ok() || ! $this->isSupportedMapTile($response->body())) {
+                                $failedTileCount++;
+                                continue;
+                            }
+                            $tileData = $response->body();
+                            $tile['path'] = storage_path("app/map-tiles/osm/{$zoom}/{$tile['x']}/{$tile['y']}.png");
+                        }
+                        $image = @imagecreatefromstring($tileData);
+                        if (! $image) {
+                            $failedTileCount++;
+                            continue;
+                        }
+
+                        $tileImages[$key] = $image;
+                        @mkdir(dirname($tile['path']), 0755, true);
+                        @file_put_contents($tile['path'], $tileData);
+                    }
+                    if ($failedTileCount > 0) {
+                        Log::warning('Some map tiles were unavailable for evidence watermark.', [
+                            'failed_tile_count' => $failedTileCount,
+                        ]);
+                    }
+                } catch (\Throwable $exception) {
+                    Log::warning('Surrounding map tiles could not be fetched for evidence watermark.', [
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
+            }
+
+            if (! isset($tileImages['0:0'])) {
+                foreach ($tileImages as $image) {
+                    imagedestroy($image);
+                }
+
                 return null;
             }
 
-            $tileImage = @imagecreatefromstring($tileData);
-            if (! $tileImage) {
-                return null;
+            $px = $xFloat - $xTile;
+            $py = $yFloat - $yTile;
+            $centered = $this->centeredMapCrop($tileImages, $px, $py);
+            foreach ($tileImages as $image) {
+                imagedestroy($image);
             }
 
-            return [
-                'image' => $tileImage,
-                'px' => $xFloat - $xTile,
-                'py' => $yFloat - $yTile,
-            ];
+            return $centered
+                ? ['image' => $centered, 'px' => 0.5, 'py' => 0.5]
+                : null;
         } catch (\Throwable $t) {
             Log::warning('Map tile fetch failed: '.$t->getMessage());
 
             return null;
         }
+    }
+
+    /**
+     * @param  array<string, \GdImage>  $tileImages  Tiles keyed by "x-offset:y-offset"
+     */
+    private function centeredMapCrop(array $tileImages, float $px, float $py): ?\GdImage
+    {
+        $tileSize = imagesx(reset($tileImages));
+        $mosaic = imagecreatetruecolor($tileSize * 3, $tileSize * 3);
+        $background = imagecolorallocate($mosaic, 219, 230, 218);
+        imagefill($mosaic, 0, 0, $background);
+
+        foreach ($tileImages as $key => $image) {
+            [$dx, $dy] = array_map('intval', explode(':', $key));
+            imagecopyresampled(
+                $mosaic,
+                $image,
+                ($dx + 1) * $tileSize,
+                ($dy + 1) * $tileSize,
+                0,
+                0,
+                $tileSize,
+                $tileSize,
+                imagesx($image),
+                imagesy($image)
+            );
+        }
+
+        $centered = imagecrop($mosaic, [
+            'x' => (int) round($tileSize + ($px * $tileSize) - ($tileSize / 2)),
+            'y' => (int) round($tileSize + ($py * $tileSize) - ($tileSize / 2)),
+            'width' => $tileSize,
+            'height' => $tileSize,
+        ]);
+        imagedestroy($mosaic);
+
+        return $centered ?: null;
     }
 
     /**
@@ -455,7 +637,7 @@ class EvidenceService
     private function compositeWatermarkLayer($image, int $width, int $height, array $lines, ?float $latitude = null, ?float $longitude = null): void
     {
         $refWidth = 760;
-        $refBannerHeight = 130;
+        $refBannerHeight = 250;
 
         $layer = imagecreatetruecolor($refWidth, $refBannerHeight);
         imagealphablending($layer, false);
@@ -463,11 +645,10 @@ class EvidenceService
         $transparent = imagecolorallocatealpha($layer, 0, 0, 0, 127);
         imagefilledrectangle($layer, 0, 0, $refWidth, $refBannerHeight, $transparent);
 
-        // Soft top-to-bottom gradient (transparent -> semi-opaque), matching the
-        // live CSS overlay: linear-gradient(to top, rgba(15,23,42,.85), rgba(15,23,42,.15))
+        // Soft top-to-bottom gradient matching the live and recorded overlays.
         for ($y = 0; $y < $refBannerHeight; $y++) {
             $t = $y / max(1, $refBannerHeight - 1);
-            $opacity = 0.18 + (0.72 - 0.18) * $t;
+            $opacity = 0.3 + (0.92 - 0.3) * $t;
             $gdAlpha = (int) round(127 * (1 - $opacity));
             $gdAlpha = max(0, min(127, $gdAlpha));
             $rowColor = imagecolorallocatealpha($layer, 15, 23, 42, $gdAlpha);
@@ -476,22 +657,25 @@ class EvidenceService
 
         imagealphablending($layer, true);
 
-        $accentColor = imagecolorallocate($layer, 61, 139, 253);
+        $accentColor = imagecolorallocate($layer, 147, 197, 253);
+        $pinColor = imagecolorallocate($layer, 61, 139, 253);
         $textColor = imagecolorallocate($layer, 255, 255, 255);
 
         $pad = 14;
         $textStartX = $pad;
 
-        // Map preview thumbnail — a single OSM tile scaled into a square
-        // box on the left of the banner, with a pin at the fix's exact
-        // fractional position within that tile. Text shifts right to make
-        // room for it; if the tile can't be fetched (offline, blocked
-        // network), the thumbnail is simply skipped and text keeps its
-        // original position — the watermark never breaks either way.
+        // Keep the map and pin visible even if the map tile service is offline.
         if ($latitude !== null && $longitude !== null) {
             $tile = $this->fetchMapTile($latitude, $longitude);
+            $boxSize = $refBannerHeight - (2 * $pad);
+            $mapBackground = imagecolorallocate($layer, 219, 230, 218);
+            imagefilledrectangle($layer, $pad, $pad, $pad + $boxSize - 1, $pad + $boxSize - 1, $mapBackground);
+            $roadColor = imagecolorallocate($layer, 255, 255, 255);
+            $minorRoadColor = imagecolorallocate($layer, 155, 177, 158);
+            imageline($layer, $pad, $pad + (int) ($boxSize * 0.34), $pad + $boxSize - 1, $pad + (int) ($boxSize * 0.69), $roadColor);
+            imageline($layer, $pad + (int) ($boxSize * 0.7), $pad, $pad + (int) ($boxSize * 0.28), $pad + $boxSize - 1, $roadColor);
+            imageline($layer, $pad, $pad + (int) ($boxSize * 0.82), $pad + $boxSize - 1, $pad + (int) ($boxSize * 0.53), $minorRoadColor);
             if ($tile) {
-                $boxSize = $refBannerHeight - (2 * $pad);
                 $tileSize = imagesx($tile['image']);
 
                 imagecopyresampled(
@@ -507,33 +691,40 @@ class EvidenceService
                     $tileSize
                 );
                 imagedestroy($tile['image']);
-
-                $border = imagecolorallocatealpha($layer, 255, 255, 255, 60);
-                imagerectangle($layer, $pad, $pad, $pad + $boxSize - 1, $pad + $boxSize - 1, $border);
-
-                $pinX = (int) round($pad + ($tile['px'] * $boxSize));
-                $pinY = (int) round($pad + ($tile['py'] * $boxSize));
-                $pinWhite = imagecolorallocate($layer, 255, 255, 255);
-                imagefilledellipse($layer, $pinX, $pinY, 10, 10, $pinWhite);
-                imagefilledellipse($layer, $pinX, $pinY, 6, 6, $accentColor);
-
-                $textStartX = $pad + $boxSize + 10;
             }
+            $border = imagecolorallocatealpha($layer, 255, 255, 255, 35);
+            imagerectangle($layer, $pad, $pad, $pad + $boxSize - 1, $pad + $boxSize - 1, $border);
+
+            $pinX = (int) round($pad + (($tile['px'] ?? 0.5) * $boxSize));
+            $pinY = (int) round($pad + (($tile['py'] ?? 0.5) * $boxSize));
+            $pinWhite = imagecolorallocate($layer, 255, 255, 255);
+            imagefilledellipse($layer, $pinX, $pinY, 28, 28, $pinWhite);
+            imagefilledellipse($layer, $pinX, $pinY, 18, 18, $pinColor);
+
+            $textStartX = $pad + $boxSize + 10;
         }
 
-        $y = 14;
+        $y = $pad + 5;
+        $detailScale = 24 / imagefontheight(3);
+        $maxCharacters = max(1, (int) floor(($refWidth - $textStartX - $pad) / (imagefontwidth(3) * $detailScale)));
         foreach ($lines as $index => $line) {
             $font = $index === 0 ? 5 : 3;
+            $fontScale = $index === 0 ? 32 / imagefontheight(5) : $detailScale;
             $color = ! empty($line['accent']) ? $accentColor : $textColor;
-            imagestring($layer, $font, $textStartX, $y, $line['text'], $color);
-            $y += $index === 0 ? 22 : 20;
+            $wrappedLines = $index === 0
+                ? [$line['text']]
+                : explode("\n", wordwrap($line['text'], $maxCharacters, "\n", true));
+            foreach ($wrappedLines as $wrappedLine) {
+                $this->drawScaledBitmapText($layer, $font, $textStartX, $y, $wrappedLine, $color, $fontScale);
+                $y += $index === 0 ? 40 : 30;
+            }
         }
 
         // Scale proportionally to the actual photo width so the watermark stays
         // legible on any device resolution, capped so it can never dominate a
         // very short/cropped image.
         $targetBannerHeight = (int) round($refBannerHeight * ($width / $refWidth));
-        $targetBannerHeight = max(60, min($targetBannerHeight, (int) round($height * 0.35)));
+        $targetBannerHeight = max(90, min($targetBannerHeight, (int) round($height * 0.48)));
 
         imagealphablending($image, true);
         imagecopyresampled(
@@ -550,5 +741,38 @@ class EvidenceService
         );
 
         imagedestroy($layer);
+    }
+
+    private function drawScaledBitmapText($target, int $font, int $x, int $y, string $text, int $color, float $scale): void
+    {
+        if ($text === '') {
+            return;
+        }
+
+        $width = imagefontwidth($font) * strlen($text);
+        $height = imagefontheight($font);
+        $glyph = imagecreatetruecolor($width, $height);
+        imagealphablending($glyph, false);
+        imagesavealpha($glyph, true);
+        $transparent = imagecolorallocatealpha($glyph, 0, 0, 0, 127);
+        imagefill($glyph, 0, 0, $transparent);
+        imagealphablending($glyph, true);
+        $rgb = imagecolorsforindex($target, $color);
+        $glyphColor = imagecolorallocate($glyph, $rgb['red'], $rgb['green'], $rgb['blue']);
+        imagestring($glyph, $font, 0, 0, $text, $glyphColor);
+
+        imagecopyresampled(
+            $target,
+            $glyph,
+            $x,
+            $y,
+            0,
+            0,
+            (int) ceil($width * $scale),
+            (int) ceil($height * $scale),
+            $width,
+            $height
+        );
+        imagedestroy($glyph);
     }
 }

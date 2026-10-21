@@ -76,6 +76,7 @@
         const target = document.querySelector(targetSelector);
         if (!target) return;
         if (target.querySelector('input:focus, textarea:focus, select:focus')) return;
+        if (target.querySelector('details[open]')) return;
 
         const url = window.location.href;
 

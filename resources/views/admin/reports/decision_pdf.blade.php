@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Decision report — {{ config('raniag.organization') }}</title>
     <style>
-        body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.45; color: #333; margin: 0; padding: 20px 20px 45px; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.45; color: #333; margin: 0; padding: 20px 20px 45px; }
         .filters { background: #f8fafc; padding: 10px 15px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-left: 4px solid #1a365d; font-size: 10pt; }
         .filters strong { color: #1a365d; }
         .section-title { font-size: 12pt; font-weight: bold; color: #1a365d; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 22px; margin-bottom: 10px; text-transform: uppercase; }

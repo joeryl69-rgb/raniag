@@ -40,11 +40,29 @@
         }
     }
 
-    async function isSubscribed() {
-        const reg = await getRegistration();
-        if (!reg) return false;
-        const sub = await reg.pushManager.getSubscription();
-        return !!sub;
+    async function accountStatus(endpoint) {
+        const res = await fetch('/push-subscriptions/status?endpoint=' + encodeURIComponent(endpoint), {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (!res.ok) return { subscribed: false, sound: true, vibrate: true };
+        return res.json();
+    }
+
+    function saveExistingSubscription(subscription) {
+        return fetch('/push-subscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(subscription.toJSON()),
+        }).then(function (res) {
+            if (!res.ok) throw new Error('Server responded with ' + res.status);
+            return true;
+        }).catch(function (err) {
+            console.error('Saving push subscription failed', err);
+            alert('This account could not be attached to notifications on this browser. Please try again.');
+            return false;
+        });
     }
 
     // Service workers only activate on secure origins (https, or localhost).
@@ -102,34 +120,23 @@
         const subscription = await reg.pushManager.getSubscription();
         if (!subscription) return true;
 
-        await fetch('/push-subscriptions', {
+        const res = await fetch('/push-subscriptions', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
+        const data = await res.json().catch(function () { return {}; });
 
-        return subscription.unsubscribe();
+        // Drop the browser subscription only when no other account on this
+        // device still wants notifications. Turning it off for one login
+        // must not turn it off for the next account.
+        if (data.release) return subscription.unsubscribe();
+        return true;
     }
 
     let alertSound = true;
     let alertVibrate = true;
-
-    function playAlertTone() {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        const ctx = new Ctx();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 880;
-        gain.gain.value = 0.06;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-        osc.stop(ctx.currentTime + 0.4);
-        osc.onended = function () { ctx.close(); };
-    }
 
     function saveAlertOptions() {
         return fetch('/push-subscriptions/options', {
@@ -146,7 +153,15 @@
         const options = document.getElementById('pushAlertOptions');
         if (!toggle) return;
 
-        const subscribed = await isSubscribed();
+        const reg = await getRegistration();
+        const browserSub = reg ? await reg.pushManager.getSubscription() : null;
+        let subscribed = false;
+        if (browserSub) {
+            const status = await accountStatus(browserSub.endpoint);
+            subscribed = !!status.subscribed;
+            if (typeof status.sound === 'boolean') alertSound = status.sound;
+            if (typeof status.vibrate === 'boolean') alertVibrate = status.vibrate;
+        }
         const permission = Notification.permission || 'default';
         const blocked = permission === 'denied';
 
@@ -178,6 +193,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        const unlockAlertSound = () => window.RANIAGAlertSound?.unlock();
+        document.addEventListener('pointerdown', unlockAlertSound, { once: true, passive: true });
+        document.addEventListener('keydown', unlockAlertSound, { once: true });
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js?v=19')
                 .then(() => navigator.serviceWorker.ready)
@@ -189,7 +208,6 @@
 
             navigator.serviceWorker.addEventListener('message', function (event) {
                 if (!event.data || event.data.type !== 'raniag-push') return;
-                if (event.data.sound && alertSound) playAlertTone();
                 document.dispatchEvent(new CustomEvent('rg:request-live-refresh'));
                 document.dispatchEvent(new CustomEvent('rg:poll-notifications'));
             });
@@ -226,19 +244,27 @@
                     return;
                 }
 
+                function attachThisAccount() {
+                    return Promise.resolve(swRegistration.pushManager.getSubscription()).then(function (subscription) {
+                        if (subscription) return saveExistingSubscription(subscription);
+                        return subscribeNow(swRegistration);
+                    }).finally(refreshToggleLabel);
+                }
+
                 if (Notification.permission !== 'granted') {
                     const box = this;
                     Notification.requestPermission().then(function (permission) {
-                        box.checked = false;
-                        if (permission === 'granted') {
-                            alert('Notifications are allowed. Turn Push notifications on again.');
+                        if (permission !== 'granted') {
+                            box.checked = false;
+                            refreshToggleLabel();
+                            return;
                         }
-                        refreshToggleLabel();
+                        attachThisAccount();
                     });
                     return;
                 }
 
-                subscribeNow(swRegistration).finally(refreshToggleLabel);
+                attachThisAccount();
             });
         }
 
@@ -275,10 +301,6 @@
                     testBtn.disabled = false;
                 });
             });
-        }
-
-        if (label) {
-            label.dataset.subscribed = '0';
         }
 
         refreshToggleLabel();

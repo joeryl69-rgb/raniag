@@ -33,6 +33,7 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://fonts.bunny.net",
             "font-src 'self' https://fonts.bunny.net data:",
             "img-src 'self' data: blob: https:",
+            "media-src 'self' blob: data:",
             // Map tiles load as images (img-src). Directions and reverse
             // geocoding are fetch() requests, so their hosts must be allowed
             // here or the browser blocks them before they reach the API.

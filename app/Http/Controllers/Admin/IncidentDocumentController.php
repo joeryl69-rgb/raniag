@@ -48,7 +48,14 @@ class IncidentDocumentController extends Controller
             $query->has('incidentDocuments', '<', count(IncidentDocumentType::cases()));
         }
 
-        $incidents = $query->orderByDesc('created_at')->paginate(12)->appends($request->query());
+        $sort = $request->string('sort')->value() ?: 'created_at';
+        $direction = $request->string('direction')->value() === 'asc' ? 'asc' : 'desc';
+        $sortable = ['tracking_number', 'status', 'priority', 'reported_at', 'created_at'];
+        $sortColumn = in_array($sort, $sortable, true) ? $sort : 'created_at';
+        $incidents = $query->orderBy($sortColumn, $direction)
+            ->orderByDesc('id')
+            ->paginate(12)
+            ->appends($request->query());
 
         $documentTypes = IncidentDocumentType::cases();
 

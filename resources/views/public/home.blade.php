@@ -4,7 +4,6 @@
 
 @section('content')
 <div class="container rg-home-container">
-    <div class="rg-cursor-field" aria-hidden="true"></div>
     <section class="rg-home-hero" aria-labelledby="home-title">
         <div class="rg-home-hero-photo" aria-hidden="true"></div>
         <div class="rg-home-hero-content">
@@ -24,7 +23,10 @@
         <div class="rg-home-coordinate" aria-hidden="true">
             <span>17° 27′ N</span><i></i><span>121° 28′ E</span><b>PAMPLONA · CAGAYAN</b>
         </div>
-        <div class="rg-home-orbit" aria-hidden="true"><span></span><i></i><b></b></div>
+        <div class="rg-home-orbit" aria-hidden="true">
+            <img src="/images/icons/raniag-master.svg" alt="" width="54" height="54">
+            <span></span><i></i><b></b>
+        </div>
     </section>
 
     <nav class="rg-home-shortcuts" aria-label="Public information">
@@ -42,6 +44,19 @@
         </a>
     </nav>
 
+    <section class="rg-home-qr" aria-labelledby="home-qr-title">
+        <div class="rg-home-qr-copy">
+            <p class="rg-section-index"><span>REPORT</span> <i></i> SCAN</p>
+            <h2 id="home-qr-title">Scan to start a report.</h2>
+            <p>This opens the same form as Report an incident. It does not choose a barangay. Use the GPS camera on the form so the location is the place you are reporting.</p>
+            <a href="{{ route('public.report.create') }}">Open the form <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+        </div>
+        <div class="rg-home-qr-actions">
+            <div id="home-report-qr" class="rg-home-qr-code" data-report-qr data-qr-url="{{ route('public.report.create') }}" aria-label="QR code for the public report form"></div>
+            <button type="button" class="rg-home-qr-download" data-report-qr-download="home-report-qr">Download QR image</button>
+        </div>
+    </section>
+
     <section class="rg-report-journey" id="how-it-works" aria-labelledby="rg-how-title" data-rg-journey>
         <header class="rg-journey-heading">
             <p class="rg-section-index"><span>FIELD GUIDE</span> <i></i> 01 — 04</p>
@@ -52,7 +67,7 @@
             <div class="rg-journey-visual">
                 <div class="rg-journey-visual-top"><span><i></i> REPORT PATH</span><span id="rg-journey-counter">01 / 04</span></div>
                 <div class="rg-journey-map" aria-hidden="true">
-                    <span class="rg-map-grid"></span><span class="rg-map-contour contour-one"></span><span class="rg-map-contour contour-two"></span>
+                    <span class="rg-map-contour contour-one"></span><span class="rg-map-contour contour-two"></span>
                     <span class="rg-map-road road-one"></span><span class="rg-map-road road-two"></span><span class="rg-map-route"></span>
                     <span class="rg-map-point point-one"></span><span class="rg-map-point point-two"></span><span class="rg-map-point point-three"></span>
                     <span class="rg-map-axis axis-x">121° 28′ E</span><span class="rg-map-axis axis-y">17° 27′ N</span>
@@ -84,43 +99,6 @@
         </div>
         <button type="button" class="rg-journey-tour" id="jo-start-tour-home"><i class="bi bi-compass" aria-hidden="true"></i> Take a quick site tour <span>JO can show you around</span></button>
     </section>
-
-    {{-- ===================== UPDATES & ANNOUNCEMENTS ===================== --}}
-    <div class="mt-4" id="updates" data-rg-reveal data-rg-stagger>
-        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-            <div>
-                <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>UPDATES</span>
-                <h2 class="h4 fw-bold mb-0">{{ __('Updates and announcements') }}</h2>
-            </div>
-        </div>
-
-        <div data-live-refresh data-live-refresh-target="#rg-public-announcements" data-live-refresh-interval="4000">
-        <div id="rg-public-announcements">
-        @if($announcements->isNotEmpty())
-            <div class="rg-log">
-                @foreach($announcements as $item)
-                    <article class="rg-log-item rg-announce-card">
-                        <time datetime="{{ optional($item->published_at)->toDateString() }}">{{ optional($item->published_at)->format('M d') }}</time>
-                        <div>
-                            <div class="rg-log-meta">
-                                <i class="bi {{ $item->icon ?? 'bi-megaphone-fill' }}"></i>
-                                @if($item->badge)<span>{{ $item->badge }}</span>@endif
-                            </div>
-                            <h3>{{ $item->title }}</h3>
-                            <p>{{ Str::limit($item->body, 160) }}</p>
-                        </div>
-                    </article>
-                @endforeach
-            </div>
-        @else
-            <div class="rg-support-card text-center text-muted py-4">
-                <i class="bi bi-megaphone fs-2 d-block mb-2"></i>
-                {{ __('No announcements yet. Check back soon for the latest updates from :org.', ['org' => config('raniag.organization')]) }}
-            </div>
-        @endif
-        </div>
-        </div>
-    </div>
 
     <section class="rg-home-briefing" aria-labelledby="rg-briefing-title">
         <header class="rg-home-briefing-head" data-rg-reveal>
@@ -231,8 +209,11 @@
 
             <aside class="rg-home-aside" id="help" aria-label="Install the app or contact support">
                 <article class="rg-download-cta">
-                    <div class="rg-app-orbit" aria-hidden="true"><span></span><i></i><b></b></div>
-                    <div class="rg-app-label"><i></i> RANIAG FIELD TOOL</div>
+                    <div class="rg-app-stage" aria-hidden="true">
+                        <div class="rg-app-orbit"><span></span><i></i><b></b></div>
+                        <img class="rg-app-mark" src="/images/icons/raniag-master.svg" alt="" width="48" height="48">
+                    </div>
+                    <div class="rg-app-label"><img src="/images/icons/raniag-master.svg" alt="" width="18" height="18"><i></i> RANIAG FIELD TOOL</div>
                     <img src="/images/guide/jo-phone.png?v=1" alt="JO holding a phone with the location ready" width="180" height="240" loading="lazy">
                     <div class="rg-app-copy">
                         <span class="rg-app-index">APP / 01</span>
@@ -245,7 +226,7 @@
                     </div>
                 </article>
                 <article class="rg-home-support-card">
-                    <div class="rg-support-orbit" aria-hidden="true"><i class="bi bi-headset"></i></div>
+                    <div class="rg-support-orbit" aria-hidden="true"><img src="/images/icons/raniag-master.svg" alt="" width="26" height="26"></div>
                     <span class="rg-app-index">HUMAN SUPPORT / 02</span>
                     <h2>{{ __('Need help or have a concern?') }}</h2>
                     <p>A problem with the site, a suggestion, or a response concern goes straight to the team.</p>
@@ -261,11 +242,7 @@
 @push('styles')
 <style>
 .rg-home-hero { min-height: 610px; position: relative; isolation: isolate; display: flex; align-items: end; overflow: hidden; margin: 0 calc((100vw - min(100vw - 2rem, 1320px))/ -2); padding: clamp(26px, 7vw, 88px) max(24px, calc((100vw - min(100vw - 2rem, 1320px))/2)); background: #0b1726; color: #f4f7f6; }
-.rg-home-container { position: relative; isolation: isolate; }
-.rg-home-container > :not(.rg-cursor-field) { position: relative; z-index: 2; }
-.rg-cursor-field { position: fixed; inset: 0; z-index: 1; opacity: 0; pointer-events: none; background: radial-gradient(420px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(13,132,118,.24), transparent 74%), radial-gradient(120px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(72,200,179,.12), transparent 78%); transition: opacity .24s ease; }
-.rg-cursor-field.is-active { opacity: 1; }
-html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(460px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(47,205,173,.3), transparent 74%), radial-gradient(130px circle at var(--rg-pointer-x, 50vw) var(--rg-pointer-y, 50vh), rgba(107,242,211,.16), transparent 78%); }
+.rg-home-container { position: relative; }
 .rg-home-hero-photo { position: absolute; z-index: -2; inset: 0; background: linear-gradient(90deg, rgba(7,20,31,.96) 0%, rgba(7,20,31,.83) 34%, rgba(7,20,31,.32) 72%, rgba(7,20,31,.12) 100%), linear-gradient(0deg, rgba(7,20,31,.52), transparent 54%), url('/images/pamplona-landmark.jpg') center 54% / cover no-repeat; transform: scale(1.025); }
 .rg-home-hero::before { content:""; position:absolute; z-index:-1; inset:0; opacity:.32; background-image:linear-gradient(rgba(173,213,218,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(173,213,218,.12) 1px,transparent 1px); background-size:44px 44px; mask-image:linear-gradient(90deg,#000 0%,transparent 76%); }
 .rg-home-hero-content { width: min(760px, 68%); position:relative; z-index:1; padding-bottom:24px; }
@@ -285,7 +262,8 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
 .rg-home-coordinate { position:absolute; right:28px; bottom:24px; display:grid; grid-template-columns:auto auto; align-items:center; gap:6px 12px; padding:12px 15px; border:1px solid rgba(236,246,246,.35); background:rgba(9,26,39,.68); color:#e2edef; font:700 .66rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.08em; backdrop-filter:blur(8px); }
 .rg-home-coordinate i { height:1px; width:23px; background:#e9bd5c; }
 .rg-home-coordinate b { grid-column:1/-1; padding-top:7px; border-top:1px solid rgba(255,255,255,.17); color:#8fb2bd; font-size:.58rem; letter-spacing:.16em; }
-.rg-home-orbit { position:absolute; right:15%; top:17%; width:clamp(130px,18vw,245px); aspect-ratio:1; border:1px solid rgba(99,209,190,.55); border-radius:50%; opacity:.72; }
+.rg-home-orbit { position:absolute; right:max(28px, 7%); top:36px; width:min(200px, 22vw); aspect-ratio:1; border:1px solid rgba(99,209,190,.55); border-radius:50%; opacity:.9; pointer-events:none; }
+.rg-home-orbit img { position:absolute; z-index:2; left:50%; top:50%; width:34%; height:auto; transform:translate(-50%, -50%); border-radius:10px; background:rgba(11,23,38,.78); padding:5px; box-shadow:0 0 0 6px rgba(11,23,38,.28); }
 .rg-home-orbit::before,.rg-home-orbit::after { content:""; position:absolute; inset:14%; border:1px dashed rgba(199,232,225,.34); border-radius:50%; }
 .rg-home-orbit::after { inset:32%; border-style:solid; border-color:rgba(233,189,92,.62); }
 .rg-home-orbit span { position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 320deg,transparent 0 72%,rgba(58,216,170,.4) 88%,transparent 100%); animation:rg-orbit 9s linear infinite; }
@@ -301,6 +279,20 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
 .rg-home-shortcuts small { margin-bottom:4px; color:#627983; font:700 .61rem/1.1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; }
 .rg-home-shortcuts strong { font-size:.94rem; }
 .rg-home-shortcuts .rg-shortcut-arrow { color:#6f858f; font-size:.85rem; }
+.rg-home-qr { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:28px; margin-top:28px; padding:22px 24px; border:1px solid #b9c8ca; border-radius:8px; background:#f7fbfa; }
+.rg-home-qr-copy h2 { margin:8px 0 8px; color:#102638; font-size:clamp(1.6rem,3vw,2.2rem); letter-spacing:-.04em; }
+.rg-home-qr-copy p:last-of-type { max-width:52ch; margin:0; color:#586e79; line-height:1.6; }
+.rg-home-qr-copy a { display:inline-flex; align-items:center; gap:8px; margin-top:14px; color:#075f65; font-weight:750; text-decoration:none; }
+.rg-home-qr-actions { display:flex; flex-direction:column; align-items:center; gap:12px; }
+.rg-home-qr-code { display:grid; place-items:center; width:244px; min-height:244px; padding:12px; border:1px solid #d5e2e4; border-radius:8px; background:#fff; }
+.rg-home-qr-code img, .rg-home-qr-code canvas { display:block; width:220px; height:220px; }
+.rg-home-qr-download { min-height:40px; padding:0 14px; border:1px solid #1a365d; border-radius:4px; background:#1a365d; color:#fff; font-size:.78rem; font-weight:750; }
+.rg-home-qr-download:hover { background:#24497a; color:#fff; }
+html[data-public-theme="dark"] .rg-home-qr { border-color:#38525e; background:#122833; }
+html[data-public-theme="dark"] .rg-home-qr-copy h2 { color:#edf4f3; }
+html[data-public-theme="dark"] .rg-home-qr-copy p:last-of-type { color:#adc0c5; }
+html[data-public-theme="dark"] .rg-home-qr-copy a { color:#8ce0ce; }
+html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; background:#fff; }
 .rg-report-journey { padding:clamp(64px,9vw,118px) 0 70px; }
 .rg-journey-heading { max-width:690px; margin-bottom:40px; }
 .rg-section-index { margin:0 0 18px; color:#607682; }
@@ -314,8 +306,8 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
 .rg-journey-visual-top,.rg-journey-visual-foot { position:relative; z-index:3; display:flex; align-items:center; justify-content:space-between; padding:15px 18px; color:#adc4ca; font:700 .62rem/1.2 ui-monospace,monospace; letter-spacing:.12em; }
 .rg-journey-visual-top { border-bottom:1px solid rgba(203,227,229,.14); }
 .rg-journey-visual-top>span:first-child { display:flex; align-items:center; gap:9px; }
-.rg-journey-map { position:absolute; inset:46px 0 45px; overflow:hidden; opacity:.84; background:#102b38; }
-.rg-map-grid { position:absolute;inset:0;background-image:linear-gradient(rgba(134,183,188,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(134,183,188,.12) 1px,transparent 1px);background-size:31px 31px; }
+.rg-journey-map { position:absolute; inset:46px 0 45px; overflow:hidden; opacity:.84; background:radial-gradient(ellipse at 24% 65%,rgba(36,115,102,.36),transparent 34%),radial-gradient(ellipse at 79% 38%,rgba(177,133,58,.18),transparent 27%),linear-gradient(145deg,#102b38,#143846 58%,#0e2936); }
+.rg-journey-map::before { content:"";position:absolute;inset:-12%;background:radial-gradient(ellipse at 50% 48%,transparent 0 23%,rgba(129,195,178,.08) 23.2% 23.5%,transparent 23.8% 37%,rgba(129,195,178,.07) 37.2% 37.5%,transparent 37.8% 53%,rgba(129,195,178,.05) 53.2% 53.5%,transparent 53.8%);transform:rotate(-18deg); }
 .rg-map-contour { position:absolute;width:110%;height:70%;left:-5%;top:12%;border:1px solid rgba(101,189,175,.24);border-radius:46% 54% 66% 34% / 52% 42% 58% 48%;transform:rotate(-22deg); }
 .contour-two { width:91%;height:53%;left:9%;top:26%;border-color:rgba(233,189,92,.3);transform:rotate(23deg); }
 .rg-map-road { position:absolute;width:120%;height:14px;left:-10%;top:47%;border-top:2px solid rgba(197,224,223,.35);border-bottom:1px dashed rgba(197,224,223,.22);transform:rotate(-28deg); }
@@ -393,18 +385,21 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
 .rg-home-faq .rg-faq-accordion .accordion-button:not(.collapsed) { background:#173b40;color:#8ce0ce; }
 .rg-home-faq .rg-faq-accordion .accordion-body { padding:14px 15px;color:#b8cbd0;font-size:.84rem;line-height:1.6; }
 .rg-home-faq .rg-faq-accordion .accordion-button::after { filter:brightness(0) saturate(100%) invert(75%) sepia(26%) saturate(714%) hue-rotate(113deg); }
-.rg-home-aside { display:grid;grid-template-rows:minmax(310px,1.15fr) minmax(245px,.85fr);gap:14px;min-width:0; }
+.rg-home-aside { display:flex; flex-direction:column; gap:16px; align-self:start; min-width:0; }
 .rg-download-cta,.rg-home-support-card { position:relative;isolation:isolate;overflow:hidden;margin:0;border:1px solid #3a5663;border-radius:7px;background:#102b38;color:#e7f1f1; }
 .rg-download-cta { min-height:330px;padding:22px; }
 .rg-download-cta::before { content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(140deg,rgba(10,91,92,.38),transparent 58%),linear-gradient(rgba(141,197,203,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(141,197,203,.06) 1px,transparent 1px);background-size:auto,28px 28px,28px 28px; }
 .rg-app-label,.rg-app-index { display:flex;align-items:center;gap:8px;color:#a9c4ca;font:700 .58rem/1.25 ui-monospace,monospace;letter-spacing:.13em; }
-.rg-app-orbit { position:absolute;right:-28px;top:39px;width:195px;aspect-ratio:1;border:1px solid rgba(94,211,187,.34);border-radius:50%;animation:rg-orbit 24s linear infinite; }
+.rg-app-label img { width:18px; height:18px; border-radius:4px; background:#e7f3ef; padding:1px; }
+.rg-app-stage { position:absolute; z-index:2; right:10px; top:12px; width:112px; aspect-ratio:1; pointer-events:none; }
+.rg-app-orbit { position:absolute; inset:0; border:1px solid rgba(94,211,187,.34); border-radius:50%; animation:rg-orbit 24s linear infinite; }
+.rg-app-mark { position:absolute; z-index:2; left:50%; top:50%; width:38px; height:38px; transform:translate(-50%, -50%); border-radius:9px; background:#e7f3ef; padding:4px; box-shadow:0 8px 18px rgba(0,0,0,.28); }
 .rg-app-orbit::before,.rg-app-orbit::after { content:"";position:absolute;inset:15%;border:1px dashed rgba(170,217,214,.24);border-radius:50%; }
 .rg-app-orbit::after { inset:34%;border-style:solid;border-color:rgba(233,189,92,.34); }
 .rg-app-orbit span,.rg-app-orbit i,.rg-app-orbit b { position:absolute;display:block;width:7px;height:7px;border-radius:50%;background:#69ddba;box-shadow:0 0 14px #69ddba;top:14%;left:54%; }
 .rg-app-orbit i { top:68%;left:78%;background:#f2ca6e;box-shadow:0 0 14px #f2ca6e; }
 .rg-app-orbit b { top:48%;left:8%; }
-.rg-download-cta>img { position:absolute;right:12px;bottom:-8px;z-index:0;width:clamp(150px,17vw,210px);height:auto;max-height:255px;object-fit:contain;filter:drop-shadow(0 12px 18px rgba(0,0,0,.3));animation:rg-jo-hover 4.8s ease-in-out infinite; }
+.rg-download-cta>img { position:absolute;right:6px;bottom:-6px;z-index:0;width:clamp(132px,16vw,176px);height:auto;max-height:210px;object-fit:contain;filter:drop-shadow(0 12px 18px rgba(0,0,0,.3));animation:rg-jo-hover 4.8s ease-in-out infinite; }
 .rg-app-copy { position:relative;z-index:1;width:64%;margin-top:34px; }
 .rg-app-index { margin-bottom:11px;color:#6ad4bb; }
 .rg-app-copy h2 { max-width:12ch;margin:0;color:#f0f6f3;font-size:clamp(1.35rem,2vw,1.9rem);font-weight:750;line-height:1.05;letter-spacing:-.04em; }
@@ -413,7 +408,8 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
 .rg-install-button:hover,.rg-home-support-button:hover { transform:translateY(-2px);border-color:#9cebd9;background:#0b9187;color:#fff; }
 .rg-install-button .bi:last-child { margin-left:3px;font-size:.7rem; }
 .rg-home-support-card { display:grid;align-content:start;justify-items:start;padding:22px; }
-.rg-support-orbit { position:absolute;right:22px;top:17px;display:grid;place-items:center;width:44px;height:44px;border:1px solid #426371;border-radius:50%;color:#77dbc5;font-size:1.1rem; }
+.rg-support-orbit { position:absolute;right:22px;top:17px;display:grid;place-items:center;width:48px;height:48px;border:1px solid #426371;border-radius:50%;background:rgba(8,28,38,.72); }
+.rg-support-orbit img { width:26px; height:26px; }
 .rg-home-support-card h2 { max-width:18ch;margin:14px 0 7px;color:#f1f6f3;font-size:1.2rem;font-weight:750;line-height:1.15; }
 .rg-home-support-card p { max-width:38ch;margin:0 0 16px;color:#afc3c8;font-size:.8rem;line-height:1.55; }
 .rg-home-support-button { min-height:42px; }
@@ -423,24 +419,26 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
 @media(max-width:991.98px) {
     .rg-home-hero { min-height:560px; }
     .rg-home-hero-content { width:min(700px,82%); }
-    .rg-home-orbit { right:9%;top:12%; }
+    .rg-home-orbit { right:24px; top:28px; }
     .rg-journey-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px; }
     .rg-journey-visual { top:calc(50vh - 220px);min-height:440px; }
     .rg-journey-mascot img { width:156px; }
     .rg-home-briefing-grid { grid-template-columns:1fr; }
-    .rg-home-aside { grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:1fr; }
-    .rg-download-cta { min-height:320px; }
+    .rg-home-aside { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; }
+    .rg-download-cta { min-height:300px; }
 }
 @media(max-width:767.98px) {
     .rg-home-hero { min-height:600px;margin-inline:-.75rem;padding:44px 24px;align-items:center; }
     .rg-home-hero-photo { background-position:62% center;background-image:linear-gradient(90deg,rgba(7,20,31,.93),rgba(7,20,31,.65) 66%,rgba(7,20,31,.4)),linear-gradient(0deg,rgba(7,20,31,.38),transparent 70%),url('/images/pamplona-landmark.jpg'); }
     .rg-home-hero-content { width:100%;padding:0 0 52px; }
     .rg-home-hero h1 { margin-top:27px;font-size:clamp(3.1rem,13vw,5rem); }
-    .rg-home-orbit { top:auto;bottom:11%;right:9%;width:112px;opacity:.5; }
+    .rg-home-orbit { top:16px; right:14px; bottom:auto; width:92px; opacity:.92; }
     .rg-home-coordinate { right:15px;bottom:15px;padding:8px 10px;font-size:.56rem; }
     .rg-home-shortcuts { grid-template-columns:1fr;margin-top:14px; }
     .rg-home-shortcuts>a { min-height:75px;grid-template-columns:25px 24px minmax(0,1fr) 18px;padding:11px 8px; }
     .rg-home-shortcuts>a+a { border-left:0;border-top:1px solid #cbd6d7; }
+    .rg-home-qr { grid-template-columns:1fr; justify-items:start; }
+    .rg-home-qr-actions { align-items:flex-start; }
     .rg-report-journey { padding-top:70px; }
     .rg-journey-heading { margin-bottom:24px; }
     .rg-journey-layout { grid-template-columns:1fr;gap:8px; }
@@ -453,7 +451,7 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
     .rg-home-briefing-grid { gap:14px; }
     .rg-home-briefing-main { gap:14px; }
     .rg-home-updates,.rg-home-faq { padding:17px 15px; }
-    .rg-home-aside { grid-template-columns:1fr; }
+    .rg-home-aside { display:flex; flex-direction:column; grid-template-columns:1fr; }
     .rg-download-cta { min-height:310px; }
 }
 @media(max-width:420px) {
@@ -472,12 +470,13 @@ html[data-public-theme="dark"] .rg-cursor-field { background: radial-gradient(46
 @media (prefers-reduced-motion: reduce) {
     .rg-home-orbit span,.rg-signal-bars i,.rg-app-orbit,.rg-download-cta>img,.rg-journey-mascot img { animation:none; }
     .rg-home-hero-photo { transform:none; }
-    .rg-cursor-field { display:none; }
 }
 </style>
 @endpush
 
 @push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous"></script>
+<script src="{{ asset('js/report-qr.js') }}?v={{ @filemtime(public_path('js/report-qr.js')) }}"></script>
 <script>
     // PWA install prompt for the "Download App" button.
     let rgDeferredPrompt = null;

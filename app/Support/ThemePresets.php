@@ -3,8 +3,8 @@
 namespace App\Support;
 
 /**
- * Sample color themes for the admin "System Settings" screen
- * (resources/views/admin/settings/index.blade.php). Every value maps
+ * Sample color themes for the per-account "System Settings" screen
+ * (resources/views/settings/appearance.blade.php). Every value maps
  * 1:1 to a --raniag-* CSS custom property already used throughout
  * public/css/public.css (109 usages across every layout — public,
  * admin, agency, personnel), so switching a preset re-colors the
@@ -17,7 +17,7 @@ class ThemePresets
     public const DEFAULT_FONT_SIZE = 'normal';
 
     /**
-     * Font choices for the System Settings "Appearance" screen. Each stack
+     * Font choices for the System Settings screen. Each stack
      * leads with a bunny.net-hosted webfont already safe to load (no new
      * <link> needed beyond what's already in layouts/app.blade.php for
      * Figtree) and falls back to sensible system fonts.
@@ -145,6 +145,24 @@ class ThemePresets
         ],
     ];
 
+    /**
+     * Dark page colors for each preset. The sidebar and buttons keep the
+     * theme's own accent; these only darken the page, cards, and fields.
+     */
+    public const DARK_SURFACES = [
+        'ocean' => ['surface' => '#0b1220', 'card' => '#121a2c', 'raised' => '#182338', 'border' => '#2a3b56'],
+        'emerald' => ['surface' => '#071412', 'card' => '#0e2220', 'raised' => '#14302c', 'border' => '#1f4741'],
+        'sunset' => ['surface' => '#160d08', 'card' => '#24160e', 'raised' => '#321f14', 'border' => '#5a341c'],
+        'crimson' => ['surface' => '#140808', 'card' => '#221010', 'raised' => '#301616', 'border' => '#5a2424'],
+        'royal' => ['surface' => '#100818', 'card' => '#1a1028', 'raised' => '#241638', 'border' => '#3d2860'],
+        'slate' => ['surface' => '#0e141b', 'card' => '#17202a', 'raised' => '#1e2a36', 'border' => '#334155'],
+    ];
+
+    public static function darkPalette(string $key): array
+    {
+        return self::DARK_SURFACES[$key] ?? self::DARK_SURFACES[self::DEFAULT_KEY];
+    }
+
     public static function vars(string $key): array
     {
         return self::PRESETS[$key]['vars'] ?? self::PRESETS[self::DEFAULT_KEY]['vars'];
@@ -175,12 +193,24 @@ class ThemePresets
         return self::FONT_SIZES[$key]['root_px'] ?? self::FONT_SIZES[self::DEFAULT_FONT_SIZE]['root_px'];
     }
 
-    /** Renders the current theme's variables (plus dark-mode / font adjustments) as a <style> body. */
-    public static function cssVariables(string $key, bool $darkMode = false, string $fontKey = self::DEFAULT_FONT_KEY, string $fontSize = self::DEFAULT_FONT_SIZE): string
+    /** Renders the current theme's variables (plus color-mode / font adjustments) as a <style> body. */
+    public static function cssVariables(string $key, bool $darkMode = false, string $fontKey = self::DEFAULT_FONT_KEY, string $fontSize = self::DEFAULT_FONT_SIZE, bool $followSystem = false): string
     {
         $vars = self::vars($key);
+        $vars['--raniag-card'] = '#ffffff';
+        $vars['--raniag-card-raised'] = '#f8fafc';
+        $vars['--raniag-ink'] = '#0f172a';
+        $vars['--raniag-muted'] = '#64748b';
+        $vars['--raniag-card-shadow'] = '0 0.5rem 1.5rem rgba(15, 23, 42, 0.08)';
         $vars['--raniag-font-family'] = self::fontStack($fontKey);
         $vars['--raniag-font-root'] = self::fontRootPx($fontSize);
+        $vars['--bs-body-color'] = '#1e293b';
+        $vars['--bs-body-bg'] = $vars['--raniag-surface'];
+        $vars['--bs-secondary-color'] = '#64748b';
+        $vars['--bs-secondary-bg'] = '#ffffff';
+        $vars['--bs-tertiary-bg'] = '#f8fafc';
+        $vars['--bs-emphasis-color'] = '#0f172a';
+        $vars['color-scheme'] = 'light';
 
         $lines = [];
         foreach ($vars as $name => $value) {
@@ -189,11 +219,25 @@ class ThemePresets
 
         $css = ":root {\n".implode("\n", $lines)."\n}";
 
-        if ($darkMode) {
-            // Keep the chosen theme's sidebar and accent. Only the page
-            // surface goes dark, so Ocean and Emerald still look different
-            // after dark mode is turned on.
-            $css .= "\n:root {\n    --raniag-surface: #0f172a;\n    --raniag-border: #253449;\n    --raniag-primary-light: rgba(255, 255, 255, 0.06);\n    --raniag-card-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.45);\n}";
+        if ($darkMode || $followSystem) {
+            $dark = self::darkPalette($key);
+            $css .= "\n:root[data-theme=\"dark\"] {\n"
+                ."    --raniag-surface: {$dark['surface']};\n"
+                ."    --raniag-border: {$dark['border']};\n"
+                ."    --raniag-card: {$dark['card']};\n"
+                ."    --raniag-card-raised: {$dark['raised']};\n"
+                ."    --raniag-ink: #e8eef6;\n"
+                ."    --raniag-muted: #c5d4e4;\n"
+                ."    --raniag-primary-light: rgba(255, 255, 255, 0.08);\n"
+                ."    --raniag-card-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.45);\n"
+                ."    --bs-body-color: #e8eef6;\n"
+                ."    --bs-body-bg: {$dark['surface']};\n"
+                ."    --bs-secondary-color: #c5d4e4;\n"
+                ."    --bs-secondary-bg: {$dark['card']};\n"
+                ."    --bs-tertiary-bg: {$dark['raised']};\n"
+                ."    --bs-emphasis-color: #f8fafc;\n"
+                ."    color-scheme: dark;\n"
+                ."}";
         }
 
         return $css;

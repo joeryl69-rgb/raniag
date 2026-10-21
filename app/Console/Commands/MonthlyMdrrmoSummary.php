@@ -45,7 +45,7 @@ class MonthlyMdrrmoSummary extends Command
             'byType' => $byType,
             'byStatus' => $byStatus,
             'generatedAt' => now(),
-        ]);
+        ])->setPaper('a4', 'portrait');
         $pdfPath = "{$dir}/raniag-{$month}.pdf";
         Storage::disk('local')->put($pdfPath, $pdf->output());
 

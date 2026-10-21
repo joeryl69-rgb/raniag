@@ -6,6 +6,7 @@ use App\Models\Incident;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Support\Filters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 
 class IncidentRepository implements IncidentRepositoryInterface
 {
@@ -95,7 +96,14 @@ class IncidentRepository implements IncidentRepositoryInterface
     {
         // Dispatches are based on assignments (one-to-many), not on incidents.agency_id.
         $query = Incident::query()
-            ->with(['incidentType', 'agency'])
+            ->with([
+                'incidentType',
+                'agency',
+                'currentAssignments' => fn ($q) => $q
+                    ->where('assignments.agency_id', $agencyId)
+                    ->where('assignments.is_active', true)
+                    ->latest('assignments.created_at'),
+            ])
             ->whereHas('assignments', function ($q) use ($agencyId) {
                 $q->where('assignments.agency_id', $agencyId);
             });
@@ -126,10 +134,7 @@ class IncidentRepository implements IncidentRepositoryInterface
 
         Filters::dateRange($query, 'reported_at', $filters);
 
-        $sort = $filters['sort'] ?? 'reported_at';
-        $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
-        $sortable = ['reported_at', 'priority', 'status', 'barangay'];
-        $query->orderBy(in_array($sort, $sortable, true) ? $sort : 'reported_at', $direction);
+        $this->applyQueueOrdering($query, $filters);
 
         return $query->paginate($perPage)->withQueryString();
     }
@@ -138,7 +143,20 @@ class IncidentRepository implements IncidentRepositoryInterface
     {
         // Dispatches are based on assignments (one-to-many), not on incidents.assigned_to.
         $query = Incident::query()
-            ->with(['incidentType', 'agency'])
+            ->with([
+                'incidentType',
+                'agency',
+                'currentAssignments' => function ($q) use ($personnelId, $filters) {
+                    $q->where('assignments.is_active', true)
+                        ->where(function ($w) use ($personnelId, $filters) {
+                            $w->where('assignments.assigned_to', $personnelId);
+                            if ($agencyId = $filters['viewer_agency_id'] ?? null) {
+                                $w->orWhere('assignments.agency_id', $agencyId);
+                            }
+                        })
+                        ->latest('assignments.created_at');
+                },
+            ])
             ->whereHas('assignments', function ($q) use ($personnelId, $filters) {
                 $agencyId = $filters['viewer_agency_id'] ?? null;
                 $q->where(function ($w) use ($personnelId, $agencyId) {
@@ -175,10 +193,7 @@ class IncidentRepository implements IncidentRepositoryInterface
 
         Filters::dateRange($query, 'reported_at', $filters);
 
-        $sort = $filters['sort'] ?? 'reported_at';
-        $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
-        $sortable = ['reported_at', 'priority', 'status', 'barangay'];
-        $query->orderBy(in_array($sort, $sortable, true) ? $sort : 'reported_at', $direction);
+        $this->applyQueueOrdering($query, $filters);
 
         return $query->paginate($perPage)->withQueryString();
     }
@@ -205,6 +220,10 @@ class IncidentRepository implements IncidentRepositoryInterface
             $query->where('incident_type_id', (int) $filters['incident_type_id']);
         }
 
+        if (! empty($filters['priority'] ?? null) && $filters['priority'] !== 'all') {
+            $query->where('priority', $filters['priority']);
+        }
+
         if (! empty($filters['jurisdiction'] ?? null)) {
             if ($filters['jurisdiction'] === 'outside') {
                 $query->where('meta->within_jurisdiction', false);
@@ -215,6 +234,38 @@ class IncidentRepository implements IncidentRepositoryInterface
 
         Filters::dateRange($query, 'reported_at', $filters);
 
-        return $query->latest('reported_at')->paginate($perPage);
+        $this->applyQueueOrdering($query, $filters, true);
+
+        return $query->paginate($perPage)
+            ->withQueryString();
+    }
+
+    private function applyQueueOrdering(Builder $query, array $filters, bool $admin = false): void
+    {
+        $sort = $filters['sort'] ?? 'reported_at';
+        $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $sortable = ['reported_at', 'priority', 'status', 'barangay'];
+        if ($admin) {
+            $sortable[] = 'tracking_number';
+        }
+        if (! in_array($sort, $sortable, true)) {
+            $sort = 'reported_at';
+        }
+
+        $priorityOrder = "CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END";
+
+        if ($sort === 'priority') {
+            $query->orderByRaw($priorityOrder)
+                ->orderBy('reported_at', $direction);
+
+            return;
+        }
+
+        $query->orderBy($sort, $direction)
+            ->orderByRaw($priorityOrder);
+
+        if ($sort !== 'reported_at') {
+            $query->orderBy('reported_at', 'desc');
+        }
     }
 }

@@ -10,7 +10,6 @@ use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
@@ -27,6 +26,7 @@ class HazardMapController extends Controller
 
         return view('public.hazard.map', [
             'map' => config('raniag.map'),
+            'boundary' => $this->geofence->boundaryGeometry(),
             'zones' => $snapshot['zones'],
             'centers' => $snapshot['centers'],
             'risk' => $snapshot['risk'],
@@ -74,31 +74,77 @@ class HazardMapController extends Controller
     }
 
     /**
-     * Same-origin map tile so the GPS camera can draw it into a video.
-     * A direct OpenStreetMap image cannot be painted onto a recording.
+     * Same-origin map tile so the GPS camera can safely draw it into a video.
      */
     public function mapTile(int $z, int $x, int $y): Response
     {
-        abort_unless($z === 16 && $x >= 0 && $x < 65536 && $y >= 0 && $y < 65536, 404);
+        abort_unless($z === 17 && $x >= 0 && $x < 131072 && $y >= 0 && $y < 131072, 404);
 
-        $bytes = Cache::get("osm-tile-{$z}-{$x}-{$y}");
-        if (! is_string($bytes) || $bytes === '') {
+        $token = trim((string) config('raniag.map.mapbox_token', ''));
+        $mapStyle = $token !== '' ? 'satellite-streets-v12' : 'osm';
+        $extension = $mapStyle === 'satellite-streets-v12' ? 'jpg' : 'png';
+        $path = storage_path("app/map-tiles/{$mapStyle}/{$z}/{$x}/{$y}.{$extension}");
+        if (is_readable($path)) {
+            $cached = file_get_contents($path);
+            if (is_string($cached) && $this->isSupportedMapTile($cached)) {
+                return response($cached, 200, [
+                    'Content-Type' => $this->mapTileContentType($cached),
+                    'Cache-Control' => 'public, max-age=86400',
+                ]);
+            }
+        }
+
+        try {
+            $remote = $token !== ''
+                ? Http::timeout(8)->get("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{$z}/{$x}/{$y}@2x", [
+                    'access_token' => $token,
+                ])
+                : Http::timeout(6)
+                    ->withHeaders(['User-Agent' => 'RANIAG-MDRRMO-Pamplona/1.0 (gps camera map)'])
+                    ->get("https://tile.openstreetmap.org/{$z}/{$x}/{$y}.png");
+        } catch (\Throwable) {
+            $remote = null;
+        }
+
+        if ((! $remote || ! $remote->ok() || ! $this->isSupportedMapTile($remote->body())) && $token !== '') {
+            $mapStyle = 'osm';
+            $path = storage_path("app/map-tiles/{$mapStyle}/{$z}/{$x}/{$y}.png");
             try {
-                $remote = Http::timeout(4)
+                $remote = Http::timeout(6)
                     ->withHeaders(['User-Agent' => 'RANIAG-MDRRMO-Pamplona/1.0 (gps camera map)'])
                     ->get("https://tile.openstreetmap.org/{$z}/{$x}/{$y}.png");
             } catch (\Throwable) {
-                abort(404);
+                $remote = null;
             }
-            abort_unless($remote->ok(), 404);
-            $bytes = $remote->body();
-            Cache::put("osm-tile-{$z}-{$x}-{$y}", $bytes, now()->addDay());
+        }
+
+        abort_unless($remote && $remote->ok(), 404);
+        $bytes = $remote->body();
+        abort_unless($this->isSupportedMapTile($bytes), 404);
+
+        try {
+            if (! is_dir(dirname($path))) {
+                mkdir(dirname($path), 0755, true);
+            }
+            file_put_contents($path, $bytes);
+        } catch (\Throwable) {
+            // A failed disk write must still return the tile to the camera.
         }
 
         return response($bytes, 200, [
-            'Content-Type' => 'image/png',
+            'Content-Type' => $this->mapTileContentType($bytes),
             'Cache-Control' => 'public, max-age=86400',
         ]);
+    }
+
+    private function isSupportedMapTile(string $bytes): bool
+    {
+        return str_starts_with($bytes, "\x89PNG") || str_starts_with($bytes, "\xFF\xD8\xFF");
+    }
+
+    private function mapTileContentType(string $bytes): string
+    {
+        return str_starts_with($bytes, "\xFF\xD8\xFF") ? 'image/jpeg' : 'image/png';
     }
 
     /**
@@ -134,13 +180,13 @@ class HazardMapController extends Controller
         }
 
         $addr = $response->json('address') ?? [];
-        $barangay = $addr['village'] ?? $addr['suburb'] ?? $addr['hamlet'] ?? $addr['neighbourhood'] ?? null;
-        $municipality = $addr['city'] ?? $addr['town'] ?? $addr['municipality'] ?? null;
+        $barangay = $addr['village'] ?? $addr['suburb'] ?? $addr['hamlet'] ?? $addr['neighbourhood'] ?? $addr['city_district'] ?? $addr['quarter'] ?? $addr['locality'] ?? null;
+        $municipality = $addr['municipality'] ?? $addr['town'] ?? $addr['city'] ?? $addr['county'] ?? null;
 
         return [
             'barangay' => is_string($barangay) ? $barangay : null,
             'municipality' => is_string($municipality) ? $municipality : null,
-            'province' => is_string($addr['state'] ?? null) ? $addr['state'] : (is_string($addr['province'] ?? null) ? $addr['province'] : null),
+            'province' => is_string($addr['state'] ?? null) ? $addr['state'] : (is_string($addr['province'] ?? null) ? $addr['province'] : (is_string($addr['state_district'] ?? null) ? $addr['state_district'] : null)),
             'country' => is_string($addr['country'] ?? null) ? $addr['country'] : null,
         ];
     }

@@ -24,6 +24,7 @@
     </script>
 </head>
 <body>
+    <div class="rg-cursor-field" aria-hidden="true"></div>
     <div class="auth-shell">
         <div class="auth-panel">
             <div class="auth-panel__glow"></div>
@@ -55,6 +56,7 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="{{ asset('js/public-home-pointer.js') }}?v={{ @filemtime(public_path('js/public-home-pointer.js')) }}"></script>
     <script>
         // System-wide consistent submit indicator for every auth form
         // (login, forgot-password, reset-password) — pages don't need to
@@ -62,13 +64,44 @@
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.auth-form-side form').forEach(function (form) {
                 const btn = form.querySelector('button[type="submit"].auth-submit');
-                if (!btn || btn.querySelector('.spinner-border')) return; // already has its own
+                if (!btn || btn.dataset.authSubmitBound === '1') return;
+                btn.dataset.authSubmitBound = '1';
                 form.addEventListener('submit', function (event) {
-                    if (event.defaultPrevented || form.dataset.rgSubmitting === '1') return;
-                    event.preventDefault();
+                    if (event.defaultPrevented) return;
+                    if (form.dataset.rgSubmitting === '1') {
+                        event.preventDefault();
+                        return;
+                    }
                     form.dataset.rgSubmitting = '1';
-                    HTMLFormElement.prototype.submit.call(form);
+                    btn.setAttribute('aria-busy', 'true');
+                    const spinner = btn.querySelector('[data-submit-spinner]');
+                    const icon = btn.querySelector('[data-submit-icon]');
+                    const label = btn.querySelector('[data-submit-label]');
+                    if (spinner) spinner.classList.remove('d-none');
+                    if (icon) icon.classList.add('d-none');
+                    if (label) label.textContent = btn.dataset.loadingText || 'Please wait…';
+
+                    queueMicrotask(function () {
+                        if (!event.defaultPrevented) return;
+
+                        delete form.dataset.rgSubmitting;
+                        btn.removeAttribute('aria-busy');
+                        if (spinner) spinner.classList.add('d-none');
+                        if (icon) icon.classList.remove('d-none');
+                        if (label) label.textContent = btn.dataset.submitText || 'Continue';
+                    });
                 });
+                form.addEventListener('invalid', function () {
+                    delete form.dataset.rgSubmitting;
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-busy');
+                    const spinner = btn.querySelector('[data-submit-spinner]');
+                    const icon = btn.querySelector('[data-submit-icon]');
+                    const label = btn.querySelector('[data-submit-label]');
+                    if (spinner) spinner.classList.add('d-none');
+                    if (icon) icon.classList.remove('d-none');
+                    if (label) label.textContent = btn.dataset.submitText || 'Continue';
+                }, true);
             });
         });
     </script>

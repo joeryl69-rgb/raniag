@@ -116,13 +116,13 @@ class HazardEvacController extends Controller
             'incident_type_id' => ['required', 'exists:incident_types,id'],
             'name' => ['required', 'string', 'max:120'],
             'barangay' => ['nullable', 'string', 'max:100'],
-            'geometry_json' => ['required', 'string'],
+            'geometry_json' => ['required', 'string', 'json', 'max:100000'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
         $geometry = json_decode($data['geometry_json'], true);
-        if (! is_array($geometry) || empty($geometry['type'])) {
-            return back()->withErrors(['geometry_json' => 'Draw the hazard boundary on the map before saving.'])->withInput();
+        if (! $this->isValidHazardPolygon($geometry)) {
+            return back()->withErrors(['geometry_json' => 'Draw a valid closed hazard boundary on the map before saving.'])->withInput();
         }
 
         $incidentType = IncidentType::query()->findOrFail($data['incident_type_id']);
@@ -142,6 +142,58 @@ class HazardEvacController extends Controller
         HazardZone::create($payload);
 
         return back()->with('success', 'Hazard area saved. It appears on the public Live Map.');
+    }
+
+    private function isValidHazardPolygon(mixed $geometry): bool
+    {
+        if (! is_array($geometry) || ($geometry['type'] ?? null) !== 'Polygon') {
+            return false;
+        }
+
+        $rings = $geometry['coordinates'] ?? null;
+        if (! is_array($rings) || ! array_is_list($rings) || $rings === []) {
+            return false;
+        }
+
+        foreach ($rings as $ring) {
+            if (! is_array($ring) || ! array_is_list($ring) || count($ring) < 4 || count($ring) > 1000) {
+                return false;
+            }
+
+            $normalized = [];
+            foreach ($ring as $coordinate) {
+                if (! is_array($coordinate) || count($coordinate) !== 2) {
+                    return false;
+                }
+
+                [$longitude, $latitude] = $coordinate;
+                if ((! is_int($longitude) && ! is_float($longitude))
+                    || (! is_int($latitude) && ! is_float($latitude))
+                    || ! is_finite((float) $longitude)
+                    || ! is_finite((float) $latitude)
+                    || $longitude < -180 || $longitude > 180
+                    || $latitude < -90 || $latitude > 90) {
+                    return false;
+                }
+
+                $normalized[] = [(float) $longitude, (float) $latitude];
+            }
+
+            if ($normalized[0] !== $normalized[count($normalized) - 1]) {
+                return false;
+            }
+
+            $area = 0.0;
+            for ($index = 0, $last = count($normalized) - 1; $index < $last; $index++) {
+                $area += ($normalized[$index][0] * $normalized[$index + 1][1])
+                    - ($normalized[$index + 1][0] * $normalized[$index][1]);
+            }
+            if (abs($area) < 1.0e-12) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function updateZone(Request $request, HazardZone $zone): RedirectResponse

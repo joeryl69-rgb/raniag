@@ -1,11 +1,19 @@
 <x-app-layout>
     <x-slot name="header">{{ __('My Document Requests') }}</x-slot>
 
+    <x-workspace-intro
+        eyebrow="COORDINATION / CASE FILE ACCESS"
+        title="My document requests"
+        description="Request printable case records and follow their review and delivery status."
+        icon="bi-file-earmark-pdf"
+        variant="document-workbench"
+    />
+
     <x-kpi-strip :items="[
         ['label' => 'Document requests', 'value' => $documentRequests->total(), 'icon' => 'bi-file-earmark-pdf', 'tone' => 'primary', 'sub' => 'Matching the filters'],
     ]" />
 
-    <div class="card raniag-card shadow-sm border-0">
+    <div class="card raniag-card rg-table-desk shadow-sm border-0">
         <div class="card-header raniag-card-header border-0 py-3">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 flex-wrap">
                 <div>
@@ -16,6 +24,7 @@
                     :action="route('agency.document_requests.index')"
                     search-placeholder="Search tracking # or note"
                     :clear-url="route('agency.document_requests.index')"
+                    :compact="true"
                 >
                     @php
                         $currentStatus = request()->query('status', 'all');
@@ -331,20 +340,26 @@
             @endif
         </div>
         <div class="card-body">
+            <div class="rg-table-desk-head mb-3">
+                <div>
+                    <h2>Request history <span>{{ $documentRequests->total() }} requests</span></h2>
+                    <p>Review request type, decision status, and document delivery.</p>
+                </div>
+            </div>
             @if($documentRequests->isEmpty())
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-file-earmark-x display-4"></i>
                     <p class="mt-2 mb-0">No document requests found.</p>
                 </div>
             @else
-                <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-agency-doc-requests-tbody" data-live-refresh-interval="4000">
-                    <table class="table table-hover align-middle mb-0">
+                <div class="table-responsive rg-data-table-wrap" data-live-refresh data-live-refresh-target="#rg-agency-doc-requests-tbody" data-live-refresh-interval="4000">
+                    <table class="table table-hover align-middle mb-0 rg-data-table">
                         <thead class="table-light text-muted">
                             <tr>
                                 <th class="px-3 py-3">Tracking #</th>
-                                <th class="py-3">Request Type</th>
+                                <th class="py-3">Request type</th>
                                 <th class="py-3">Status</th>
-                                <th class="py-3">Requested At</th>
+                                <th class="py-3"><x-table-sort-link label="Requested at" column="created_at" route="agency.document_requests.index" /></th>
                                 <th class="py-3">Request Details</th>
                                 <th class="px-3 py-3 text-end">Action</th>
                             </tr>

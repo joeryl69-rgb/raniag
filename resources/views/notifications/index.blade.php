@@ -3,9 +3,18 @@
 @section('title', 'Notifications')
 
 @section('content')
-<x-kpi-strip :items="[
-    ['label' => 'Notifications', 'value' => $notifications->total(), 'icon' => 'bi-bell', 'tone' => 'primary', 'sub' => 'Matching this list'],
-]" />
+<x-workspace-intro
+    eyebrow="PERSONAL WORKSPACE / INBOX"
+    title="Notifications"
+    description="Review case updates and system messages, then clear items you no longer need."
+    icon="bi-bell"
+    variant="notifications"
+/>
+<div id="notification-kpi">
+    <x-kpi-strip :items="[
+        ['label' => 'Notifications', 'value' => $notifications->total(), 'icon' => 'bi-bell', 'tone' => 'primary', 'sub' => 'Matching this list'],
+    ]" />
+</div>
 
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-2">
@@ -30,12 +39,12 @@
     </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-2">
-        <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+<div class="card rg-notification-filter mb-3" id="notification-filter">
+    <div class="card-body">
+        <form method="GET" class="rg-notification-filter-form">
             <div class="btn-group btn-group-sm" role="group">
-                <a href="{{ route('notifications.index') }}" class="btn btn-outline-secondary {{ request('status') ? '' : 'active' }}">All</a>
-                <a href="{{ route('notifications.index', ['status' => 'unread']) }}" class="btn btn-outline-secondary {{ request('status') === 'unread' ? 'active' : '' }}">Unread</a>
+                <a href="{{ route('notifications.index', array_filter(['type' => request('type')])) }}" data-notification-filter class="btn btn-outline-secondary {{ request('status') === 'unread' ? '' : 'active' }}">All</a>
+                <a href="{{ route('notifications.index', array_filter(['status' => 'unread', 'type' => request('type')])) }}" data-notification-filter class="btn btn-outline-secondary {{ request('status') === 'unread' ? 'active' : '' }}">Unread</a>
             </div>
 
             @if($types->isNotEmpty())
@@ -56,16 +65,17 @@
     </div>
 </div>
 
-@if($notifications->isNotEmpty())
-    <div class="form-check mb-2">
-        <input type="checkbox" class="form-check-input" id="notifSelectAllPage" onchange="toggleSelectAllNotifs(this)">
-        <label class="form-check-label small fw-semibold" for="notifSelectAllPage">Select all</label>
-    </div>
-@endif
+<div id="notification-results" aria-live="polite">
+    @if($notifications->isNotEmpty())
+        <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" id="notifSelectAllPage" onchange="toggleSelectAllNotifs(this)">
+            <label class="form-check-label small fw-semibold" for="notifSelectAllPage">Select all</label>
+        </div>
+    @endif
 
-<div class="card border-0 shadow-sm">
-    <div class="list-group list-group-flush">
-        @forelse($notifications as $notification)
+    <div class="card border-0 shadow-sm">
+        <div class="list-group list-group-flush">
+            @forelse($notifications as $notification)
             <div class="list-group-item d-flex gap-3 py-3 align-items-start {{ $notification->isRead() ? '' : 'bg-light' }}">
                 <input type="checkbox" class="form-check-input notif-select-checkbox mt-1 flex-shrink-0" value="{{ $notification->id }}" onchange="syncNotifSelection()">
                 <a href="{{ route('notifications.mark_read', $notification) }}"
@@ -94,20 +104,21 @@
             <form id="read-form-{{ $notification->id }}" method="POST" action="{{ route('notifications.mark_read', $notification) }}" class="d-none">
                 @csrf
             </form>
-        @empty
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-bell-slash fs-1 d-block mb-2"></i>
-                Nothing here yet.
-            </div>
-        @endforelse
+            @empty
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-bell-slash fs-1 d-block mb-2"></i>
+                    Nothing here yet.
+                </div>
+            @endforelse
+        </div>
     </div>
-</div>
 
-@if($notifications->hasPages())
-<div class="mt-3">
-    {{ $notifications->links('pagination::bootstrap-5') }}
+    @if($notifications->hasPages())
+    <div class="mt-3">
+        {{ $notifications->links('pagination::bootstrap-5') }}
+    </div>
+    @endif
 </div>
-@endif
 
 <form id="notif-bulk-delete-form" method="POST" action="{{ route('notifications.destroy_selected') }}" class="d-none">
     @csrf

@@ -47,6 +47,63 @@ function documentRequestFixture(): array
     return [$user, $incident, $agency];
 }
 
+test('resolved incident document actions use the compact responsive action layout', function () {
+    [$user, $incident] = documentRequestFixture();
+
+    DocumentRequest::query()->create([
+        'incident_id' => $incident->id,
+        'requesting_agency_id' => $user->agency_id,
+        'requested_by' => $user->id,
+        'request_type' => 'single',
+        'status' => 'sent',
+        'generated_path' => 'incident-documents/approved-copy.pdf',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('agency.incidents.show', $incident))
+        ->assertOk()
+        ->assertSee('class="rg-print-request-actions"', false)
+        ->assertSee('class="rg-print-request-form"', false)
+        ->assertSee('rg-print-request-button', false)
+        ->assertSee('View Printable PDF')
+        ->assertSee('Check Gmail for Approved Report')
+        ->assertSee('Why do you need another copy?')
+        ->assertSee('Request another copy');
+});
+
+test('agency case file shows the latest approved follow-up document when requests share a timestamp', function () {
+    [$user, $incident] = documentRequestFixture();
+
+    $previous = DocumentRequest::query()->create([
+        'incident_id' => $incident->id,
+        'requesting_agency_id' => $user->agency_id,
+        'requested_by' => $user->id,
+        'request_type' => 'single',
+        'status' => 'sent',
+        'generated_path' => 'document_requests/previous-copy.pdf',
+    ]);
+    $followUp = DocumentRequest::query()->create([
+        'incident_id' => $incident->id,
+        'requesting_agency_id' => $user->agency_id,
+        'requested_by' => $user->id,
+        'request_type' => 'single',
+        'request_note' => 'A second copy is required for the records office.',
+        'status' => 'sent',
+        'generated_path' => 'document_requests/follow-up-copy.pdf',
+    ]);
+
+    $sameTimestamp = now()->startOfSecond();
+    $previous->forceFill(['created_at' => $sameTimestamp])->saveQuietly();
+    $followUp->forceFill(['created_at' => $sameTimestamp])->saveQuietly();
+
+    $this->actingAs($user)
+        ->get(route('agency.incidents.show', $incident))
+        ->assertOk()
+        ->assertSee('document_requests/follow-up-copy.pdf', false)
+        ->assertDontSee('document_requests/previous-copy.pdf', false)
+        ->assertSee('Check Gmail for Approved Report');
+});
+
 test('an approved copy can be requested again when the agency explains why', function () {
     [$user, $incident] = documentRequestFixture();
 
@@ -130,4 +187,60 @@ test('an approved document request cannot be cancelled', function () {
         ->assertStatus(422);
 
     expect($sent->fresh()->status)->toBe('sent');
+});
+
+test('document request status type date search filters remain scoped to the signed-in agency', function () {
+    [$user, $incident, $agency] = documentRequestFixture();
+    $recent = now()->subDays(2);
+    $pending = DocumentRequest::query()->create([
+        'incident_id' => $incident->id,
+        'requesting_agency_id' => $agency->id,
+        'requested_by' => $user->id,
+        'request_type' => 'single',
+        'status' => 'pending',
+    ]);
+    $pending->forceFill(['created_at' => $recent, 'updated_at' => $recent])->saveQuietly();
+
+    DocumentRequest::query()->create([
+        'incident_id' => $incident->id,
+        'requesting_agency_id' => $agency->id,
+        'requested_by' => $user->id,
+        'request_type' => 'bulk',
+        'status' => 'sent',
+    ]);
+
+    $otherAgency = Agency::query()->create([
+        'name' => 'Other response office',
+        'code' => 'OTHER'.uniqid(),
+        'is_active' => true,
+    ]);
+    $otherUser = User::factory()->create([
+        'role' => UserRole::Agency,
+        'agency_id' => $otherAgency->id,
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+    DocumentRequest::query()->create([
+        'incident_id' => $incident->id,
+        'requesting_agency_id' => $otherAgency->id,
+        'requested_by' => $otherUser->id,
+        'request_type' => 'single',
+        'status' => 'pending',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('agency.document_requests.index', [
+            'q' => $incident->tracking_number,
+            'status' => 'pending',
+            'request_type' => 'single',
+            'date_from' => now()->subDays(3)->toDateString(),
+            'date_to' => now()->subDay()->toDateString(),
+        ]))
+        ->assertOk()
+        ->assertSee('name="request_type"', false)
+        ->assertSee('name="date_from"', false)
+        ->assertSee('name="date_to"', false);
+
+    expect($response->viewData('documentRequests')->getCollection()->modelKeys())
+        ->toBe([$pending->id]);
 });

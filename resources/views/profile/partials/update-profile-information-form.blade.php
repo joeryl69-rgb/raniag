@@ -1,10 +1,4 @@
 <section>
-    <header class="mb-4">
-        <p class="text-muted small mb-0">
-            {{ __("Update your account's profile information and email address.") }}
-        </p>
-    </header>
-
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
         @csrf
     </form>
@@ -16,7 +10,7 @@
         <!-- Avatar -->
         <div class="mb-4">
             <label class="form-label fw-semibold text-dark d-block">{{ __('Profile Photo') }}</label>
-            <div class="d-flex align-items-center gap-3">
+            <div class="profile-photo-row">
                 <div id="avatarPreviewWrap" class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center flex-shrink-0 bg-primary text-white fw-bold" style="width:72px;height:72px;font-size:1.4rem;">
                     @if($user->avatar_url)
                         <img id="avatarPreviewImg" src="{{ $user->avatar_url }}" alt="Profile photo" class="w-100 h-100" style="object-fit:cover;">
@@ -25,7 +19,7 @@
                     @endif
                 </div>
                 <div>
-                    <input type="file" name="avatar" id="avatarInput" class="form-control form-control-sm @error('avatar') is-invalid @enderror" accept="image/png,image/jpeg,image/webp" onchange="previewAvatar(this)">
+                    <input type="file" name="avatar" id="avatarInput" class="profile-photo-input form-control form-control-sm @error('avatar') is-invalid @enderror" accept="image/png,image/jpeg,image/webp" onchange="previewAvatar(this)">
                     <div class="form-text">JPG, PNG or WEBP. Max 4MB.</div>
                     @error('avatar')
                         <div class="invalid-feedback d-block">{{ $message }}</div>

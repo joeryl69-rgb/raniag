@@ -11,8 +11,8 @@
             </div>
             <h1 class="h3 fw-bold text-dark mb-3">You are offline</h1>
             <p class="text-muted mb-4">
-                It looks like you are not connected to the internet. 
-                RANIAG requires an active internet connection to submit new reports or track updates.
+                It looks like you are not connected to the internet.
+                A report you already started on this phone is kept here and sends when you reconnect. Tracking a report still needs a connection.
             </p>
             <div class="d-grid gap-2">
                 <button onclick="window.location.reload();" class="btn btn-primary btn-lg">

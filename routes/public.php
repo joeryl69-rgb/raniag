@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\IncidentReportController;
+use App\Http\Controllers\Public\ReporterPushController;
 use App\Http\Controllers\Public\IncidentTrackController;
 use App\Http\Controllers\Public\PublicDashboardController;
 use App\Http\Controllers\Public\FeedbackController;
@@ -39,6 +40,9 @@ Route::name('public.')->group(function () {
         Route::post('/', [IncidentReportController::class, 'store'])
             ->middleware('throttle:10,1')
             ->name('store');
+        Route::post('/notifications', [ReporterPushController::class, 'store'])
+            ->middleware('throttle:20,1')
+            ->name('notifications');
         Route::get('/{trackingNumber}/success', [IncidentReportController::class, 'success'])
             ->name('success');
     });

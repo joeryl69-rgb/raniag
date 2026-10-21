@@ -430,6 +430,23 @@ class NotificationService
         // credentials/config lying around) — see CHANGES-round13.md.
         $provider = strtolower(trim((string) config('services.sms.provider', env('SMS_PROVIDER', 'philsms'))));
 
+        if (in_array($provider, ['disabled', 'off', 'none'], true)) {
+            $smsLog->update([
+                'status' => SmsLogStatus::Failed->value,
+                'failed_at' => now(),
+                'provider_response' => [
+                    'error' => 'SMS delivery is disabled by configuration; no provider request was made.',
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+
+            Log::info('SMS dispatch skipped because SMS is disabled', [
+                'sms_log_id' => $smsLog->id,
+            ]);
+
+            return;
+        }
+
         if ($provider === 'philsms') {
             $this->sendViaPhilSms($smsLog);
         } elseif (app()->environment('local')) {

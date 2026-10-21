@@ -114,12 +114,30 @@ test('agency and assigned personnel both retain case access when multiple agency
     $this->actingAs($personnel)
         ->get(route('personnel.incidents.index'))
         ->assertOk()
-        ->assertSee('RAN-ASN-0004');
+        ->assertSee('RAN-ASN-0004')
+        ->assertSee('Acknowledge RAN-ASN-0004');
+
+    $this->actingAs($agencyUser)
+        ->get(route('agency.incidents.index'))
+        ->assertOk()
+        ->assertSee('RAN-ASN-0004')
+        ->assertSee('Acknowledge RAN-ASN-0004');
 
     $this->actingAs($personnel)
         ->get(route('personnel.incidents.show', $incident->id))
         ->assertOk()
-        ->assertSee('RAN-ASN-0004');
+        ->assertSee('RAN-ASN-0004')
+        ->assertSee('INCIDENT COMMAND / CASE FILE')
+        ->assertSee('Current state')
+        ->assertSee('Case dossier sections');
+
+    $this->actingAs($agencyUser)
+        ->get(route('agency.incidents.show', $incident->id))
+        ->assertOk()
+        ->assertSee('RAN-ASN-0004')
+        ->assertSee('INCIDENT COMMAND / CASE FILE')
+        ->assertSee('Current state')
+        ->assertSee('Case dossier sections');
 });
 
 test('acknowledging assignment moves assigned incident to in_progress', function () {

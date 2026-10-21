@@ -30,8 +30,8 @@
         <div class="rg-period-bar">
             <span class="rg-community-label" id="pd-period-label">This month</span>
             <div class="rg-period-switch" role="group" aria-label="Chart period">
+                <button type="button" data-period="week" aria-pressed="false">Week to date</button>
                 <button type="button" class="is-on" data-period="month" aria-pressed="true">Month to date</button>
-                <button type="button" data-period="quarter" aria-pressed="false">Quarter to date</button>
                 <button type="button" data-period="year" aria-pressed="false">Year to date</button>
             </div>
         </div>

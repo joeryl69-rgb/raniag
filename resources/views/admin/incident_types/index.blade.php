@@ -2,26 +2,37 @@
     <x-slot name="header">
         {{ __('Incident Types') }}
     </x-slot>
+<x-workspace-intro
+    eyebrow="INCIDENT MANAGEMENT / CLASSIFICATION"
+    title="Incident types"
+    description="Maintain the shared categories, icons, and default priorities used in public reports and response dashboards."
+    icon="bi-tags"
+        variant="incident-types"
+/>
 
 <x-kpi-strip :items="[
     ['label' => 'Incident types', 'value' => $types->count(), 'icon' => 'bi-tags', 'tone' => 'primary'],
     ['label' => 'Reports using them', 'value' => $types->sum('incidents_count'), 'icon' => 'bi-clipboard2-pulse', 'tone' => 'warning'],
 ]" />
 
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <p class="small text-muted mb-0">Types used for incident reporting, dashboard breakdowns, and map markers.</p>
-    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#typeModal" onclick="openCreateModal()">
-        <i class="bi bi-plus-lg me-1"></i>Add Incident Type
-    </button>
-</div>
-
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+<section class="rg-table-desk rg-incident-type-catalog" aria-labelledby="rg-type-catalog-heading">
+    <header class="rg-table-desk-head">
+        <div>
+            <h2 id="rg-type-catalog-heading">Classification catalog <span>{{ $types->count() }} types</span></h2>
+            <p>Types power public intake, dashboard breakdowns, and map markers.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 rg-register-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#typeModal" onclick="openCreateModal()">
+                <i class="bi bi-plus-lg me-1"></i>Add incident type
+            </button>
+        </div>
+    </header>
+    <div class="table-responsive rg-data-table-wrap">
+        <table class="table table-hover align-middle mb-0 rg-data-table">
             <thead class="table-light">
                 <tr>
                     <th style="width:60px;">Icon</th>
-                    <th>Name</th>
+                    <th><x-table-sort-link label="Name" column="name" route="admin.incident_types.index" default-sort="sort_order" default-direction="asc" /></th>
                     <th>Description</th>
                     <th>Default Priority</th>
                     <th class="text-center">In Use</th>
@@ -71,11 +82,11 @@
             </tbody>
         </table>
     </div>
-</div>
+</section>
 
 {{-- Create / Edit Modal (shared) --}}
-<div class="modal fade" id="typeModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="typeModal" tabindex="-1" aria-labelledby="typeModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" id="typeForm">
                 @csrf

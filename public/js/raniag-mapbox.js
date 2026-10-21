@@ -1,7 +1,6 @@
 /**
  * Shared Mapbox / Leaflet helpers for RANIAG maps.
- * Uses Mapbox Streets raster tiles + Directions when a pk.* token is set;
- * otherwise falls back to OpenStreetMap.
+ * Satellite imagery is the default basemap; street tiles remain selectable.
  */
 (function (global) {
     'use strict';
@@ -19,7 +18,7 @@
     leafletLib();
 
     function normalizeStyle(style) {
-        return String(style || 'mapbox/streets-v12').replace(/^mapbox:\/\//, '');
+        return String(style || 'mapbox/satellite-streets-v12').replace(/^mapbox:\/\//, '');
     }
 
     function addBasemap(map, mapConfig, options) {
@@ -28,28 +27,77 @@
 
         const opts = options || {};
         const token = String(mapConfig?.mapbox_token || '').trim();
-        const style = normalizeStyle(mapConfig?.mapbox_style);
-
-        if (token) {
-            const layer = L.tileLayer(
-                `https://api.mapbox.com/styles/v1/${style}/tiles/{z}/{x}/{y}?access_token=${encodeURIComponent(token)}`,
-                {
-                    tileSize: 512,
-                    zoomOffset: -1,
-                    maxZoom: 22,
-                    attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-                }
+        const configuredStyle = normalizeStyle(mapConfig?.mapbox_style);
+        const satelliteStyle = configuredStyle.includes('satellite') ? configuredStyle : 'mapbox/satellite-streets-v12';
+        const attribution = '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
+        const satelliteLayer = token
+            ? L.tileLayer(
+                `https://api.mapbox.com/styles/v1/${satelliteStyle}/tiles/{z}/{x}/{y}?access_token=${encodeURIComponent(token)}`,
+                { tileSize: 512, zoomOffset: -1, maxZoom: 22, attribution }
+            )
+            : L.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { maxZoom: 19, attribution: '&copy; Esri' }
             );
-            if (opts.addTo !== false) layer.addTo(map);
-            return { kind: 'mapbox', layer, token, style };
+        const streetLayer = token
+            ? L.tileLayer(
+                `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${encodeURIComponent(token)}`,
+                { tileSize: 512, zoomOffset: -1, maxZoom: 22, attribution }
+            )
+            : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OSM',
+            });
+
+        let activeStyle = 'satellite';
+        if (opts.addTo !== false) satelliteLayer.addTo(map);
+
+        function setStyle(style) {
+            activeStyle = style === 'street' ? 'street' : 'satellite';
+            const activeLayer = activeStyle === 'street' ? streetLayer : satelliteLayer;
+            const inactiveLayer = activeStyle === 'street' ? satelliteLayer : streetLayer;
+            if (map.hasLayer(inactiveLayer)) map.removeLayer(inactiveLayer);
+            if (!map.hasLayer(activeLayer)) activeLayer.addTo(map);
+            return activeStyle;
         }
 
-        const layer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OSM',
-        });
-        if (opts.addTo !== false) layer.addTo(map);
-        return { kind: 'osm', layer, token: '', style };
+        if (opts.control !== false && L.control) {
+            const control = L.control({ position: opts.controlPosition || 'topright' });
+            control.onAdd = function () {
+                const container = L.DomUtil.create('div', 'leaflet-control rg-map-style-control');
+                container.setAttribute('role', 'group');
+                container.setAttribute('aria-label', 'Map style');
+                container.innerHTML = `
+                    <button type="button" class="rg-map-style-option is-active" data-map-style="satellite" aria-pressed="true">Satellite</button>
+                    <button type="button" class="rg-map-style-option" data-map-style="street" aria-pressed="false">Street</button>
+                `;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                container.querySelectorAll('[data-map-style]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const selectedStyle = setStyle(button.dataset.mapStyle);
+                        container.querySelectorAll('[data-map-style]').forEach((option) => {
+                            const selected = option.dataset.mapStyle === selectedStyle;
+                            option.classList.toggle('is-active', selected);
+                            option.setAttribute('aria-pressed', String(selected));
+                        });
+                    });
+                });
+                return container;
+            };
+            control.addTo(map);
+        }
+
+        return {
+            kind: token ? 'mapbox' : 'fallback',
+            layer: satelliteLayer,
+            satelliteLayer,
+            streetLayer,
+            token,
+            style: satelliteStyle,
+            setStyle,
+            getStyle: () => activeStyle,
+        };
     }
 
     function formatDistance(meters) {

@@ -40,6 +40,7 @@ class DispatchWebPushJob implements ShouldQueue
             $notification->title,
             $notification->message,
             $notification->url(),
+            ['notification_id' => $notification->id],
         );
     }
 }

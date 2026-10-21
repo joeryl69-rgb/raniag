@@ -25,8 +25,7 @@ class DocumentRequestController extends Controller
 
         $query = DocumentRequest::query()
             ->with(['incident'])
-            ->where('requesting_agency_id', $agencyId)
-            ->orderByDesc('created_at');
+            ->where('requesting_agency_id', $agencyId);
 
         $status = $request->input('status');
         if ($status === 'archived') {
@@ -55,7 +54,14 @@ class DocumentRequestController extends Controller
 
         \App\Support\Filters::dateRange($query, 'created_at', $filters);
 
-        $documentRequests = $query->paginate(10)->withQueryString();
+        $sort = $request->string('sort')->value() ?: 'created_at';
+        $direction = $request->string('direction')->value() === 'asc' ? 'asc' : 'desc';
+        $sortable = ['created_at', 'status', 'request_type'];
+        $documentRequests = $query
+            ->orderBy(in_array($sort, $sortable, true) ? $sort : 'created_at', $direction)
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->withQueryString();
 
         $requestedIncidentIds = DocumentRequest::query()
             ->where('requesting_agency_id', $agencyId)

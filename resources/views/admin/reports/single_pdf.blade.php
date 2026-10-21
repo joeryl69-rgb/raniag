@@ -5,8 +5,8 @@
     <title>Official Incident Report - {{ $tracking_number }}</title>
     <style>
         body { 
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; 
-            font-size: 11pt; 
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
             color: #333;
             line-height: 1.5;
             margin: 0;
@@ -123,7 +123,7 @@
 <body>
 
     @include('admin.reports.partials._footer')
-    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'OFFICIAL INCIDENT REPORT'])
+    @include('admin.reports.partials._letterhead', ['rgLetterheadTitle' => 'RANIAG Incident Report'])
 
     <div class="meta-info">
         <strong>Generated:</strong> {{ $generated_at->format('M d, Y h:i A') }}<br>
@@ -285,4 +285,3 @@
 
 </body>
 </html>
-

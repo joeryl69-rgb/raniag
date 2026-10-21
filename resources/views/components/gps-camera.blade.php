@@ -24,7 +24,7 @@
             <span class="rg-icon-tile"><i class="bi bi-camera-video"></i></span>
             <div>
                 <h3 class="h6 fw-bold mb-1">GPS Camera</h3>
-                <p class="text-muted small mb-0">Swipe between photo and a 1-minute video. Both are tagged with this device’s GPS. Videos stay on the case and are left out of printed reports.</p>
+                <p class="text-muted small mb-0">Swipe between photo and a 1-minute video. Both show this device’s GPS, place, and time. Allow microphone access to include audio. Videos stay on the case and are left out of printed reports.</p>
             </div>
         </div>
         <span class="badge rounded-pill bg-secondary" id="gps-camera-status">Camera off</span>
@@ -70,6 +70,7 @@
                             </div>
                         </div>
                         <span class="badge bg-light text-dark gps-accuracy-pill" id="gps-camera-accuracy">Waiting for signal…</span>
+                        <div class="gps-camera-readiness d-none" id="gps-camera-readiness" role="status" aria-live="polite"></div>
                     </div>
 
                     <div id="gps-camera-review" class="d-none gps-camera-review-step">
@@ -126,7 +127,7 @@
     </div>
 
     <p class="small text-muted mt-2 mb-0">
-        Photo and video both carry the live coordinates, place, and time. A video stops at 1 minute. Printed reports include photos only.
+        Photos and videos carry the coordinates, place, and time. Video includes microphone audio when permission is allowed and stops at 1 minute. Printed reports include photos only.
     </p>
 
     <div class="row g-2 mt-2" id="gps-camera-preview"></div>

@@ -17,7 +17,11 @@
                 <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}" placeholder="name@example.com" required autofocus>
             </div>
         </div>
-        <button type="submit" class="auth-submit"><i class="bi bi-send me-2"></i>Email Password Reset Link</button>
+        <button type="submit" class="auth-submit" data-submit-text="Email Password Reset Link" data-loading-text="Sending reset link…">
+            <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true" data-submit-spinner></span>
+            <i class="bi bi-send me-2" data-submit-icon></i>
+            <span data-submit-label>Email Password Reset Link</span>
+        </button>
     </form>
     <x-slot name="footer"><a href="{{ route('login') }}"><i class="bi bi-arrow-left me-1"></i>Back to Sign In</a></x-slot>
 </x-auth-split>

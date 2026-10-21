@@ -1,5 +1,14 @@
 <x-app-layout>
     <x-slot name="header">{{ __('Updates and announcements') }}</x-slot>
+    <x-workspace-intro
+        eyebrow="OVERSIGHT / PUBLIC INFORMATION"
+        title="Updates & announcements"
+        description="Publish timely notices and safety updates to the RANIAG landing page."
+        icon="bi-megaphone"
+        variant="announcement-studio"
+    >
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#annModal" onclick="openCreateModal()"><i class="bi bi-plus-lg me-1"></i>New update</button>
+    </x-workspace-intro>
 
     <x-kpi-strip :items="[
         ['label' => 'Announcements', 'value' => $announcements->total(), 'icon' => 'bi-megaphone', 'tone' => 'primary', 'sub' => 'Published and drafts in this list'],
@@ -7,36 +16,35 @@
 
     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
         <p class="small text-muted mb-0">Published items appear in the Updates and announcements section on the public landing page.</p>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#annModal" onclick="openCreateModal()">
-            <i class="bi bi-plus-lg me-1"></i>New Announcement
-        </button>
     </div>
 
-    <div class="card border-0 shadow-sm" data-live-refresh data-live-refresh-target="#rg-announcements-list" data-live-refresh-interval="4000">
-        <div class="list-group list-group-flush" id="rg-announcements-list">
+    <div class="rg-announcement-surface" data-live-refresh data-live-refresh-target="#rg-announcements-list" data-live-refresh-interval="4000">
+        <div class="list-group list-group-flush rg-announcement-list" id="rg-announcements-list">
             @forelse($announcements as $item)
-                <div class="list-group-item py-3">
-                    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                        <div class="d-flex align-items-start gap-2">
-                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 text-primary" style="width:38px;height:38px;flex-shrink:0;">
+                <article class="list-group-item rg-announcement-item">
+                    <div class="rg-announcement-content">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="rg-announcement-icon">
                                 <i class="bi {{ $item->icon ?? 'bi-megaphone-fill' }}"></i>
                             </span>
-                            <div>
-                                <div class="fw-semibold">
+                            <div class="rg-announcement-copy">
+                                <div class="rg-announcement-title">
                                     {{ $item->title }}
-                                    @if($item->badge)<span class="badge bg-light text-dark border ms-1">{{ $item->badge }}</span>@endif
+                                    @if($item->badge)<span class="badge">{{ $item->badge }}</span>@endif
                                 </div>
-                                <div class="small text-muted">
+                                <div class="rg-announcement-meta">
                                     {{ optional($item->published_at)->format('M d, Y') ?? '—' }}
                                     @if($item->author) · by {{ $item->author->name }} @endif
                                 </div>
-                                <p class="small mb-0 mt-1 text-muted">{{ Str::limit($item->body, 140) }}</p>
+                                <p class="rg-announcement-excerpt">{{ Str::limit($item->body, 180) }}</p>
                             </div>
                         </div>
-                        <span class="badge {{ $item->is_published ? 'bg-success' : 'bg-secondary' }}">{{ $item->is_published ? 'Published' : 'Hidden' }}</span>
+                        <span class="rg-announcement-state {{ $item->is_published ? 'is-published' : 'is-hidden' }}">
+                            <span aria-hidden="true"></span>{{ $item->is_published ? 'Published' : 'Hidden' }}
+                        </span>
                     </div>
-                    <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-ann-edit="{{ json_encode($item->only(['id', 'title', 'body', 'badge', 'icon', 'is_published'])) }}"><i class="bi bi-pencil"></i> Edit</button>
+                    <div class="rg-announcement-actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-ann-edit="{{ json_encode($item->only(['id', 'title', 'body', 'badge', 'icon', 'is_published'])) }}"><i class="bi bi-pencil me-1"></i>Edit</button>
                         <form method="POST" action="{{ route('admin.announcements.toggle', $item) }}" class="d-inline">
                             @csrf
                             <button type="submit" class="btn btn-sm {{ $item->is_published ? 'btn-outline-secondary' : 'btn-outline-success' }}">
@@ -45,10 +53,10 @@
                         </form>
                         <form method="POST" action="{{ route('admin.announcements.destroy', $item) }}" class="d-inline" onsubmit="return confirm('Delete this announcement?');">
                             @csrf @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete {{ $item->title }}"><i class="bi bi-trash"></i></button>
                         </form>
                     </div>
-                </div>
+                </article>
             @empty
                 <div class="text-center text-muted py-4">No announcements yet. Create one to show it on the landing page.</div>
             @endforelse
@@ -61,8 +69,8 @@
     @endif
 
     {{-- Create / Edit Modal --}}
-    <div class="modal fade" id="annModal" tabindex="-1">
-        <div class="modal-dialog">
+    <div class="modal fade" id="annModal" tabindex="-1" aria-labelledby="annModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <form method="POST" id="annForm" action="{{ route('admin.announcements.store') }}">
                     @csrf

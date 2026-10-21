@@ -20,25 +20,19 @@ class LiveUnitsController extends Controller
     {
         Gate::authorize('view', $incident);
 
-        try {
-            $units = $this->situational->liveUnitsForIncident($incident, forPublic: false);
-            $assigned = Assignment::query()
-                ->with('agency')
-                ->where('incident_id', $incident->id)
-                ->where('is_active', true)
-                ->get()
-                ->map(fn (Assignment $assignment) => [
-                    'label' => $assignment->agency?->name ?: 'Assigned agency',
-                    'field_phase' => $assignment->field_phase ?: 'assigned',
-                ])
-                ->unique('label')
-                ->values()
-                ->all();
-        } catch (\Throwable $e) {
-            report($e);
-            $units = [];
-            $assigned = [];
-        }
+        $units = $this->situational->liveUnitsForIncident($incident, forPublic: false);
+        $assigned = Assignment::query()
+            ->with(['agency', 'assignee'])
+            ->where('incident_id', $incident->id)
+            ->where('is_active', true)
+            ->get()
+            ->map(fn (Assignment $assignment) => [
+                'label' => $assignment->agency?->name ?: $assignment->assignee?->name ?: 'Assigned responder',
+                'field_phase' => $assignment->field_phase ?: 'assigned',
+            ])
+            ->unique('label')
+            ->values()
+            ->all();
 
         return response()->json([
             'units' => $units,

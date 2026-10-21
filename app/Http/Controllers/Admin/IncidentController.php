@@ -31,15 +31,18 @@ class IncidentController extends Controller
 
     public function index(Request $request): View|JsonResponse
     {
-        $perPage = (int) $request->integer('per_page', 15);
+        $perPage = min(100, max(5, (int) $request->integer('per_page', 10)));
 
         $filters = [
             'q' => $request->string('q')->trim()->value(),
             'status' => $request->string('status')->value(),
             'incident_type_id' => $request->integer('incident_type_id') ?: null,
+            'priority' => $request->string('priority')->value(),
             'jurisdiction' => $request->string('jurisdiction')->value(),
             'date_from' => $request->string('date_from')->trim()->value(),
             'date_to' => $request->string('date_to')->trim()->value(),
+            'sort' => $request->string('sort')->value(),
+            'direction' => $request->string('direction')->value(),
         ];
 
         $incidents = $this->incidents->paginateAll(array_filter($filters), $perPage);
@@ -63,6 +66,7 @@ class IncidentController extends Controller
         };
         $incidentKpis = [
             'total' => (int) $statusCounts->sum(),
+            'submitted' => $countStatus(IncidentStatus::Submitted),
             'open' => $countStatus(IncidentStatus::Submitted)
                 + $countStatus(IncidentStatus::Received)
                 + $countStatus(IncidentStatus::Assigned)
@@ -71,6 +75,7 @@ class IncidentController extends Controller
             'in_progress' => $countStatus(IncidentStatus::InProgress),
             'resolved' => $countStatus(IncidentStatus::Resolved) + $countStatus(IncidentStatus::Closed),
         ];
+        $incidentKpis['outside'] = Incident::query()->where('meta->within_jurisdiction', false)->count();
 
         return view('admin.incidents.index', compact('incidents', 'incidentTypes', 'incidentKpis'));
     }

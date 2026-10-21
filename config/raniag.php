@@ -51,9 +51,9 @@ return [
         'default_lat' => (float) env('RANIAG_MAP_LAT', 18.4720),
         'default_lng' => (float) env('RANIAG_MAP_LNG', 121.3250),
         'default_zoom' => (int) env('RANIAG_MAP_ZOOM', 13),
-        // Public Mapbox token (pk.*) for hazard-map tiles + Directions. Leave empty to use OSM.
+        // Public Mapbox token (pk.*) for satellite/street tiles + Directions.
         'mapbox_token' => env('MAPBOX_ACCESS_TOKEN', ''),
-        'mapbox_style' => env('MAPBOX_STYLE', 'mapbox/streets-v12'),
+        'mapbox_style' => env('MAPBOX_STYLE', 'mapbox/satellite-streets-v12'),
         'directions_profile' => env('MAPBOX_DIRECTIONS_PROFILE', 'walking'),
     ],
 
@@ -90,7 +90,7 @@ return [
 
     'evidence' => [
         'max_files' => (int) env('RANIAG_EVIDENCE_MAX_FILES', 5),
-        'max_size_kb' => (int) env('RANIAG_EVIDENCE_MAX_SIZE_KB', 10240),
+        'max_size_kb' => (int) env('RANIAG_EVIDENCE_MAX_SIZE_KB', 35000),
         'allowed_mimes' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mp4', 'mov', 'webm'],
     ],
 
@@ -101,7 +101,7 @@ return [
     ],
 
     'gps_camera' => [
-        'jpeg_quality' => 0.88,
+        'jpeg_quality' => 0.94,
         'max_captures' => (int) env('RANIAG_GPS_MAX_CAPTURES', 5),
         'video_max_seconds' => 60,
     ],

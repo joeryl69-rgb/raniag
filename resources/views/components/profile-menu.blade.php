@@ -52,7 +52,7 @@
 
             <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('settings.appearance.index') }}">
                 <span class="profile-item-icon"><i class="bi bi-gear-fill"></i></span>
-                <span>Appearance</span>
+                <span>System Settings</span>
             </a>
         </div>
 

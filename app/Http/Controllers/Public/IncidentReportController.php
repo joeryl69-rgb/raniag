@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreIncidentReportRequest;
 use App\Models\IncidentType;
+use App\Models\Incident;
 use App\Services\GeofenceService;
 use App\Services\IncidentService;
+use App\Services\WebPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
@@ -43,6 +45,7 @@ class IncidentReportController extends Controller
             'gpsConfig' => [
                 'max_captures' => config('raniag.gps_camera.max_captures'),
                 'jpeg_quality' => config('raniag.gps_camera.jpeg_quality'),
+                'mapbox_token' => config('raniag.map.mapbox_token'),
                 'geolocation' => [
                     'enableHighAccuracy' => config('raniag.geolocation.enable_high_accuracy'),
                     'timeout' => config('raniag.geolocation.timeout_ms'),
@@ -76,6 +79,8 @@ class IncidentReportController extends Controller
             ], now()->addDay());
         }
 
+        $this->notifyOfflineDelivery($request, $incident, $idempotencyKey);
+
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => 'Incident report submitted successfully.',
@@ -97,8 +102,49 @@ class IncidentReportController extends Controller
         ]);
     }
 
+    private function notifyOfflineDelivery(
+        StoreIncidentReportRequest $request,
+        Incident $incident,
+        ?string $idempotencyKey = null,
+    ): void
+    {
+        if (! $request->boolean('offline_delivery')) {
+            return;
+        }
+
+        $notificationKey = $idempotencyKey ? 'report:idem:push-notified:'.$idempotencyKey : null;
+        $token = trim((string) $request->input('push_client_token', ''));
+        if ($token === '') {
+            return;
+        }
+
+        if ($notificationKey && ! Cache::add($notificationKey, true, now()->addDay())) {
+            return;
+        }
+
+        app(WebPushService::class)->sendToReporter(
+            $token,
+            'Report submitted',
+            'RANIAG received '.$incident->tracking_number.'. Open this notice to see the tracking page.',
+            route('public.report.success', $incident->tracking_number),
+        );
+    }
+
     private function duplicateResponse(StoreIncidentReportRequest $request, array $cached): JsonResponse|RedirectResponse
     {
+        if ($request->boolean('offline_delivery')) {
+            $incident = Incident::query()
+                ->where('tracking_number', $cached['tracking_number'])
+                ->first();
+            if ($incident) {
+                $this->notifyOfflineDelivery(
+                    $request,
+                    $incident,
+                    $request->input('idempotency_key'),
+                );
+            }
+        }
+
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => 'Incident report already submitted.',

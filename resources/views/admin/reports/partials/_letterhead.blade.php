@@ -10,29 +10,77 @@
     $rgLeftLogoData = file_exists($rgLeftLogo) ? 'data:image/png;base64,'.base64_encode(file_get_contents($rgLeftLogo)) : null;
     $rgRightLogoData = file_exists($rgRightLogo) ? 'data:image/png;base64,'.base64_encode(file_get_contents($rgRightLogo)) : null;
 @endphp
-<table class="rg-letterhead-table" style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+@php
+    $rgLetterhead = \App\Services\ReportLetterhead::templateData();
+    $rgMargins = $rgPageMargins ?? $rgLetterhead['page_margins_mm'];
+    $rgColors = $rgLetterhead['colors'];
+    $rgColumns = $rgLetterhead['columns'];
+    $rgFontSizes = $rgLetterhead['font_sizes_pt'];
+    $rgLineHeights = $rgLetterhead['line_heights'];
+@endphp
+<style>
+    @page { margin: {{ $rgMargins['top'] }}mm {{ $rgMargins['horizontal'] }}mm {{ $rgMargins['bottom'] }}mm; }
+    body { margin: 0 !important; padding: 0 !important; color: #1c2b36; font-family: {{ $rgLetterhead['font_family'] }}, sans-serif; font-size: {{ $rgLetterhead['body_font_size_pt'] }}pt; }
+    table:not(.rg-letterhead-table) {
+        width: 100% !important;
+        max-width: 100% !important;
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+    table:not(.rg-letterhead-table) th,
+    table:not(.rg-letterhead-table) td {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        vertical-align: top;
+    }
+    table.rg-letterhead-table,
+    table.rg-letterhead-table tr,
+    table.rg-letterhead-table td {
+        border: none !important;
+        border-width: 0 !important;
+        background: transparent !important;
+    }
+    table.rg-letterhead-table {
+        width: 100% !important;
+        max-width: 100% !important;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin: 0 0 {{ $rgLetterhead['table_to_rule_gap_px'] }}px;
+    }
+    table.rg-letterhead-table td { padding: 0 {{ $rgLetterhead['cell_padding_px'] }}px; }
+    .rg-letterhead-institution { color: #{{ $rgColors['ink'] }}; font-family: {{ $rgLetterhead['font_family'] }}, sans-serif; font-size: {{ $rgFontSizes['institution'] }}pt; line-height: {{ $rgLineHeights['institution'] }}; }
+    .rg-letterhead-institution .rg-letterhead-country { color: #{{ $rgColors['muted'] }}; font-family: {{ $rgLetterhead['font_family'] }}, sans-serif; font-size: {{ $rgFontSizes['country'] }}pt; letter-spacing: .06em; }
+    .rg-letterhead-institution .rg-letterhead-locality { font-family: {{ $rgLetterhead['font_family'] }}, sans-serif; font-weight: 700; }
+    .rg-letterhead-institution .rg-letterhead-office { color: #{{ $rgColors['office'] }}; font-family: {{ $rgLetterhead['font_family'] }}, sans-serif; font-size: {{ $rgFontSizes['office'] }}pt; font-weight: 700; }
+</style>
+<table class="rg-letterhead-table" style="width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; margin-bottom:{{ $rgLetterhead['table_to_rule_gap_px'] }}px; border:none;">
+    <colgroup>
+        @foreach($rgColumns as $column)
+            <col style="width:{{ $column }}%;">
+        @endforeach
+    </colgroup>
     <tr>
-        <td style="width:70px; vertical-align:middle;">
+        <td style="width:{{ $rgColumns[0] }}%; vertical-align:middle; border:none; text-align:center;">
             @if($rgLeftLogoData)
-                <img src="{{ $rgLeftLogoData }}" alt="MDRRMO Pamplona" style="width:60px; height:60px;">
+                <img src="{{ $rgLeftLogoData }}" alt="MDRRMO Pamplona" style="width:{{ $rgLetterhead['seal_size_px'] }}px; height:{{ $rgLetterhead['seal_size_px'] }}px; object-fit:contain;">
             @endif
         </td>
-        <td style="text-align:center; vertical-align:middle;">
-            <div style="font-size:9.5pt; text-transform:uppercase; line-height:1.35; color:#333;">
-                Republic of the Philippines<br>
-                Province of Cagayan<br>
-                Municipality of Pamplona<br>
-                <strong>MDRRMO Pamplona / RANIAG Operations Center</strong>
+        <td style="width:{{ $rgColumns[1] }}%; text-align:center; vertical-align:middle; border:none; padding:0 {{ $rgLetterhead['cell_padding_px'] }}px;">
+            <div class="rg-letterhead-institution">
+                <span class="rg-letterhead-country">{{ $rgLetterhead['country'] }}</span><br>
+                <span class="rg-letterhead-locality">{{ $rgLetterhead['province'] }}</span><br>
+                <span class="rg-letterhead-locality">{{ $rgLetterhead['municipality'] }}</span><br>
+                <span class="rg-letterhead-office">{{ $rgLetterhead['office'] }}</span>
             </div>
             @isset($rgLetterheadTitle)
-                <div style="font-size:15pt; font-weight:bold; margin-top:10px; color:#1a365d;">{{ $rgLetterheadTitle }}</div>
+                <div class="rg-letterhead-title" style="font-family:{{ $rgLetterhead['font_family'] }}, sans-serif; font-size:{{ $rgFontSizes['title'] }}pt; line-height:{{ $rgLineHeights['title'] }}; font-weight:700; margin-top:{{ $rgLetterhead['title_gap_px'] }}px; color:#{{ $rgColors['office'] }};">{{ $rgLetterheadTitle }}</div>
             @endisset
         </td>
-        <td style="width:70px; vertical-align:middle; text-align:right;">
+        <td style="width:{{ $rgColumns[2] }}%; vertical-align:middle; text-align:center; border:none;">
             @if($rgRightLogoData)
-                <img src="{{ $rgRightLogoData }}" alt="Bayan ng Pamplona" style="width:60px; height:60px;">
+                <img src="{{ $rgRightLogoData }}" alt="Bayan ng Pamplona" style="width:{{ $rgLetterhead['seal_size_px'] }}px; height:{{ $rgLetterhead['seal_size_px'] }}px; object-fit:contain;">
             @endif
         </td>
     </tr>
 </table>
-<hr style="border:none; border-top:2px solid #1a365d; margin:0 0 16px;">
+<hr class="rg-letterhead-rule" style="border:none; border-top:{{ $rgLetterhead['rule_width_px'] }}px solid #{{ $rgColors['rule'] }}; margin:0 0 {{ $rgLetterhead['rule_gap_px'] }}px;">

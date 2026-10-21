@@ -1,46 +1,72 @@
+@php
+    $activeDirectory = request('directory') === 'personnel' ? 'personnel' : 'agencies';
+@endphp
+
 <x-app-layout>
     <x-slot name="header">
-        {{ __('Government Agencies Management') }}
+        {{ $activeDirectory === 'personnel' ? __('Personnel directory') : __('Agency directory') }}
     </x-slot>
+    <x-workspace-intro
+        eyebrow="COORDINATION / RESPONSE NETWORK"
+        :title="$activeDirectory === 'personnel' ? 'Personnel directory' : 'Agency directory'"
+        :description="$activeDirectory === 'personnel' ? 'Manage response staff accounts, role titles, and team assignments.' : 'Manage organizations and the primary accounts used to coordinate incident response.'"
+        :icon="$activeDirectory === 'personnel' ? 'bi-person-badge' : 'bi-building'"
+        variant="agency-directory"
+    >
+        <div class="d-flex flex-wrap gap-2">
+            @if ($activeDirectory === 'personnel')
+                <a href="{{ route('admin.personnel_roles.index') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-diagram-3 me-1"></i>Manage roles
+                </a>
+            @endif
+            <a href="{{ route('admin.agencies.create') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Add {{ $activeDirectory === 'personnel' ? 'personnel' : 'agency' }}
+            </a>
+        </div>
+    </x-workspace-intro>
 
     <x-kpi-strip :items="[
-        ['label' => 'Agency accounts', 'value' => $agencies->total(), 'icon' => 'bi-building', 'tone' => 'primary', 'sub' => 'Matching this list'],
-        ['label' => 'Personnel accounts', 'value' => $personnelAccounts->total(), 'icon' => 'bi-person-badge', 'tone' => 'success', 'sub' => 'Matching this list'],
+        [
+            'label' => $activeDirectory === 'personnel' ? 'Personnel accounts' : 'Agency accounts',
+            'value' => $activeDirectory === 'personnel' ? $personnelAccounts->total() : $agencies->total(),
+            'icon' => $activeDirectory === 'personnel' ? 'bi-person-badge' : 'bi-building',
+            'tone' => $activeDirectory === 'personnel' ? 'success' : 'primary',
+            'sub' => 'Matching this directory',
+        ],
     ]" />
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-body py-3 bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="rg-directory-workspace">
+        @if ($activeDirectory === 'agencies')
+            <div class="row">
+                <div class="col-12">
+            <div class="card raniag-card rg-table-desk rg-filter-host shadow-sm border-0">
+                <div class="rg-table-desk-head">
                     <div>
-                        <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-people-fill me-2 text-primary"></i>Manage Accounts</h5>
-                        <p class="text-muted small mb-0">Create and manage agency accounts as well as internal personnel response accounts.</p>
+                        <h2>Agency directory <span>{{ $agencies->total() }} accounts</span></h2>
+                        <p>Organization profiles and their primary login accounts.</p>
                     </div>
-                    <a href="{{ route('admin.agencies.create') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-lg me-1"></i>Add New Account
-                    </a>
+                    <div class="d-flex align-items-center gap-2 rg-register-actions">
+                        <i class="bi bi-building text-primary fs-5" aria-hidden="true"></i>
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-12">
-            <div class="card raniag-card shadow-sm border-0">
                 <div class="p-3 border-bottom bg-light-subtle">
                     <x-filters.toolbar
                         search-placeholder="Search name, code, email"
                         search-name="agency_q"
                         date-from-name="agency_date_from"
                         date-to-name="agency_date_to"
-                        :clear-url="route('admin.agencies.index')"
+                        :action="route('admin.agencies.index', ['directory' => 'agencies'])"
+                        :clear-url="route('admin.agencies.index', ['directory' => 'agencies'])"
+                        :compact="true"
                     />
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-agencies-tbody" data-live-refresh-interval="4000">
-                        <table class="table table-hover table-striped mb-0 align-middle">
+                    <div class="table-responsive rg-data-table-wrap" data-live-refresh data-live-refresh-target="#rg-agencies-tbody" data-live-refresh-interval="4000">
+                        <table class="table table-hover table-striped mb-0 align-middle rg-data-table">
                             <thead class="table-light text-muted">
                                 <tr>
                                     <th class="px-4 py-3">Code</th>
-                                    <th class="py-3">Name</th>
+                                    <th class="py-3"><x-table-sort-link label="Agency" column="name" route="admin.agencies.index" sort-name="agency_sort" direction-name="agency_direction" default-sort="created_at" default-direction="asc" /></th>
                                     <th class="py-3">Phone</th>
                                     <th class="py-3">Email Address</th>
                                     <th class="py-3">Login Name</th>
@@ -120,14 +146,20 @@
                     </div>
                 @endif
             </div>
-        </div>
+            </div>
+        @endif
 
-        <div class="col-12">
-            <div class="card raniag-card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        @if ($activeDirectory === 'personnel')
+            <div class="row">
+                <div class="col-12">
+            <div class="card raniag-card rg-table-desk rg-filter-host shadow-sm border-0 mb-4">
+                <div class="rg-table-desk-head">
                     <div>
-                        <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-person-badge me-2 text-primary"></i>Personnel Accounts</h5>
-                        <p class="text-muted small mb-0">View active internal personnel accounts and their team assignments.</p>
+                        <h2>Personnel directory <span>{{ $personnelAccounts->total() }} accounts</span></h2>
+                        <p>Internal response staff, roles, and team assignments.</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 rg-register-actions">
+                        <i class="bi bi-person-badge text-primary fs-5" aria-hidden="true"></i>
                     </div>
                 </div>
                 <div class="p-3 border-bottom bg-light-subtle">
@@ -136,18 +168,20 @@
                         search-name="personnel_q"
                         date-from-name="personnel_date_from"
                         date-to-name="personnel_date_to"
-                        :clear-url="route('admin.agencies.index')"
+                        :action="route('admin.agencies.index', ['directory' => 'personnel'])"
+                        :clear-url="route('admin.agencies.index', ['directory' => 'personnel'])"
+                        :compact="true"
                     />
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive" data-live-refresh data-live-refresh-target="#rg-personnel-tbody" data-live-refresh-interval="4000">
-                        <table class="table table-hover table-striped mb-0 align-middle">
+                    <div class="table-responsive rg-data-table-wrap" data-live-refresh data-live-refresh-target="#rg-personnel-tbody" data-live-refresh-interval="4000">
+                        <table class="table table-hover table-striped mb-0 align-middle rg-data-table">
                             <thead class="table-light text-muted">
                                 <tr>
-                                    <th class="px-4 py-3">Name</th>
+                                    <th class="px-4 py-3"><x-table-sort-link label="Name" column="name" route="admin.agencies.index" sort-name="personnel_sort" direction-name="personnel_direction" default-sort="created_at" default-direction="asc" /></th>
                                     <th class="py-3">Email</th>
-                                    <th class="py-3">Role Title</th>
-                                    <th class="py-3">Team Assignment</th>
+                                    <th class="py-3">Role title</th>
+                                    <th class="py-3">Team assignment</th>
                                     <th class="py-3">Phone</th>
                                     <th class="py-3">Status</th>
                                     <th class="px-4 py-3 text-end">Actions</th>
@@ -217,5 +251,7 @@
                 @endif
             </div>
         </div>
+            </div>
+        @endif
     </div>
 </x-app-layout>
