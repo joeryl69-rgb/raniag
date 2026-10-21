@@ -463,9 +463,16 @@
             ? `Map pin (GPS unavailable) - ${coordinates}`
             : coordinates;
         if (source === 'gps' && placeEl) {
-            placeEl.textContent = 'GPS fix acquired — resolving place…';
-            placeResolutionPending = true;
-            resolvedPlaceCoordinates = null;
+            const stillNearResolvedPlace = resolvedPlaceCoordinates
+                && distanceBetweenCoordinates(
+                    resolvedPlaceCoordinates,
+                    { latitude, longitude }
+                ) <= MAP_THUMB_LOCATION_TOLERANCE_METERS;
+            if (!stillNearResolvedPlace) {
+                placeEl.textContent = 'GPS fix acquired — resolving place…';
+                placeResolutionPending = true;
+                resolvedPlaceCoordinates = null;
+            }
         }
         if (accuracyEl) {
             accuracyEl.textContent = source === 'map-pin'
@@ -1297,14 +1304,9 @@
                 mediaStream.getTracks().forEach((track) => track.stop());
             }
 
-            const portrait = window.matchMedia('(orientation: portrait)').matches;
             mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: facingMode },
-                    width: { ideal: portrait ? 1080 : 1920 },
-                    height: { ideal: portrait ? 1920 : 1080 },
-                    aspectRatio: { ideal: portrait ? 9 / 16 : 16 / 9 },
-                    frameRate: { ideal: 30, max: 30 },
                 },
                 audio: false,
             });
@@ -1468,39 +1470,15 @@
             return;
         }
 
-        const nativeWidth = videoEl.videoWidth;
-        const nativeHeight = videoEl.videoHeight;
-        if (!nativeWidth || !nativeHeight) {
+        const crop = frameCrop();
+        if (!crop) {
             videoEl.play().catch(() => {});
             setError('Camera preview is still starting. Wait for the picture, then capture.');
             return;
         }
 
-        // The live preview is shown with CSS object-fit: cover, so it's
-        // cropped to the viewport's aspect ratio — but the native camera
-        // frame is usually a different (often wider) ratio. Capturing the
-        // full native frame here made the saved photo noticeably wider
-        // than what was actually framed on screen. Crop the source frame
-        // to match the displayed aspect ratio before drawing, so the
-        // capture matches what the person saw when they tapped the button.
-        const displayWidth = videoEl.clientWidth || nativeWidth;
-        const displayHeight = videoEl.clientHeight || nativeHeight;
-        const displayRatio = displayWidth / displayHeight;
-        const nativeRatio = nativeWidth / nativeHeight;
-
-        let sx = 0, sy = 0, sWidth = nativeWidth, sHeight = nativeHeight;
-        if (nativeRatio > displayRatio) {
-            // Native frame is relatively wider — crop the sides.
-            sWidth = Math.round(nativeHeight * displayRatio);
-            sx = Math.round((nativeWidth - sWidth) / 2);
-        } else if (nativeRatio < displayRatio) {
-            // Native frame is relatively taller — crop top/bottom.
-            sHeight = Math.round(nativeWidth / displayRatio);
-            sy = Math.round((nativeHeight - sHeight) / 2);
-        }
-
-        const width = sWidth;
-        const height = sHeight;
+        const width = crop.width;
+        const height = crop.height;
         const capturePosition = lastPosition;
         const captureSource = locationSource;
         if (!capturePosition || !isPlaceResolvedFor(capturePosition.coords)) {
@@ -1520,7 +1498,7 @@
             context.translate(width, 0);
             context.scale(-1, 1);
         }
-        context.drawImage(videoEl, sx, sy, sWidth, sHeight, 0, 0, width, height);
+        context.drawImage(videoEl, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, width, height);
         context.restore();
 
         canvasEl.toBlob(
@@ -1663,21 +1641,10 @@
         const nativeWidth = videoEl.videoWidth;
         const nativeHeight = videoEl.videoHeight;
         if (!nativeWidth || !nativeHeight) return null;
-        const displayWidth = videoEl.clientWidth || nativeWidth;
-        const displayHeight = videoEl.clientHeight || nativeHeight;
-        const displayRatio = displayWidth / displayHeight;
-        const nativeRatio = nativeWidth / nativeHeight;
         let sx = 0;
         let sy = 0;
         let sWidth = nativeWidth;
         let sHeight = nativeHeight;
-        if (nativeRatio > displayRatio) {
-            sWidth = Math.round(nativeHeight * displayRatio);
-            sx = Math.round((nativeWidth - sWidth) / 2);
-        } else if (nativeRatio < displayRatio) {
-            sHeight = Math.round(nativeWidth / displayRatio);
-            sy = Math.round((nativeHeight - sHeight) / 2);
-        }
         let width = sWidth;
         let height = sHeight;
         const maxEdge = 1920;

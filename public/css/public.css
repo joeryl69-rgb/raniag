@@ -740,7 +740,8 @@ body.raniag-public {
 .gps-camera-viewport video {
     display: block;
     max-height: 420px;
-    object-fit: cover;
+    object-fit: contain;
+    background: #000;
 }
 
 .rg-map-style-control {
@@ -819,7 +820,8 @@ html[data-public-theme="dark"] .rg-map-style-option.is-active {
 .gps-modal-video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: #000;
     display: block;
 }
 

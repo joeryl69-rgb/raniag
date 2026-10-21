@@ -63,8 +63,9 @@
             const image = target.querySelector('img');
             if (image) {
                 image.src = canvas.toDataURL('image/png');
+                image.style.display = 'block';
+                canvas.style.display = 'none';
             }
-            canvas.style.display = 'none';
             markReady(target);
         };
         logo.onerror = () => markReady(target);

@@ -198,7 +198,7 @@
         document.addEventListener('keydown', unlockAlertSound, { once: true });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=19')
+            navigator.serviceWorker.register('/sw.js?v=20')
                 .then(() => navigator.serviceWorker.ready)
                 .then((reg) => {
                     swRegistration = reg;

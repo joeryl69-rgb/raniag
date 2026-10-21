@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v27';
+const CACHE_NAME = 'raniag-cache-dev-v28';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [
@@ -97,18 +97,11 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((clientList) => {
-                const dashboardIsFocused = clientList.some((client) => {
-                    if (client.type !== 'window' || client.visibilityState !== 'visible' || !client.focused) {
-                        return false;
-                    }
-                    const path = new URL(client.url).pathname;
-                    return /^\/(?:admin|agency|personnel)\/dashboard\/?$/.test(path);
-                });
                 const options = {
                     body: payload.body,
                     icon: payload.icon || '/images/icons/icon-192.png',
                     badge: payload.badge || '/images/icons/icon-72.png',
-                    silent: payload.silent === true || (payload.sound !== false && dashboardIsFocused),
+                    silent: payload.silent === true,
                     data: { url: payload.url || '/' },
                     renotify: false,
                 };

@@ -378,9 +378,23 @@
                 },
             }));
         } else if (withinMunicipality === false && !lastResolvedLabel) {
-            // First-ever tick with no prior resolution: show a status right
-            // away, but still don't touch lastResolved/dispatch yet.
+            // A pin just outside the drawn boundary is still a real place.
+            // Resolve it immediately so the GPS camera can stay ready while
+            // the street lookup fills in the neighboring barangay.
             setResolveStatus('Outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
+            setOutsideBanner(true, null);
+            lastResolvedLabel = 'Outside Pamplona municipality limits';
+            window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                detail: {
+                    placeResolved: true,
+                    lat, lng,
+                    barangay: null,
+                    municipality: 'Outside Pamplona',
+                    province: addressDefaults.province,
+                    country: addressDefaults.country,
+                    label: lastResolvedLabel,
+                },
+            }));
         }
 
         geocodeTimer = setTimeout(async () => {
