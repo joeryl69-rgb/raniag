@@ -1007,7 +1007,7 @@
             }
 
             function playAlertTone() {
-                if (document.hidden || !document.hasFocus()) return;
+                if (document.hidden) return;
                 window.RANIAGAlertSound?.play();
             }
 
@@ -1035,7 +1035,7 @@
             }
 
             function remindIncidentAlert() {
-                if (!currentIncidentAlert || document.hidden || !document.hasFocus()) return;
+                if (!currentIncidentAlert || document.hidden) return;
                 restartAlertAnimation();
                 playAlertTone();
             }

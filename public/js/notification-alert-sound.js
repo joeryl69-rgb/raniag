@@ -18,13 +18,14 @@
     }
 
     async function play() {
-        if (audioContext?.state !== 'running') return false;
+        const unlocked = await unlock();
+        if (!unlocked || audioContext?.state !== 'running') return false;
 
         const notes = [
-            { frequency: 660, start: 0 },
-            { frequency: 880, start: 0.16 },
-            { frequency: 660, start: 0.42 },
-            { frequency: 880, start: 0.58 },
+            { frequency: 880, start: 0 },
+            { frequency: 1175, start: 0.2 },
+            { frequency: 880, start: 0.46 },
+            { frequency: 1175, start: 0.66 },
         ];
         const now = audioContext.currentTime + 0.02;
 
@@ -32,15 +33,15 @@
             const oscillator = audioContext.createOscillator();
             const gain = audioContext.createGain();
             const noteStart = now + start;
-            oscillator.type = 'triangle';
+            oscillator.type = 'square';
             oscillator.frequency.value = frequency;
             gain.gain.setValueAtTime(0.0001, noteStart);
-            gain.gain.exponentialRampToValueAtTime(0.09, noteStart + 0.018);
-            gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.13);
+            gain.gain.exponentialRampToValueAtTime(0.42, noteStart + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.18);
             oscillator.connect(gain);
             gain.connect(audioContext.destination);
             oscillator.start(noteStart);
-            oscillator.stop(noteStart + 0.15);
+            oscillator.stop(noteStart + 0.2);
         });
 
         return true;

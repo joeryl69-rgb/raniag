@@ -119,19 +119,19 @@
                             @foreach ($incident->evidence as $ev)
                                 <div class="col-6 col-md-4">
                                     <div class="card h-100 border">
+                                        <div class="evidence-img-container {{ str_starts_with((string) $ev->mime_type, 'video/') ? 'evidence-video-container' : '' }}">
                                         @if (str_starts_with($ev->mime_type, 'image/'))
                                             <a href="{{ $ev->url() }}" class="js-lightbox" data-group="evidence-{{ $incident->id }}" data-caption="{{ str_starts_with((string) $ev->mime_type, 'image/') ? ($ev->is_gps_capture ? 'GPS Photo' : 'Attached photo') : ($ev->is_gps_capture ? 'GPS Video' : $ev->original_filename) }}">
-                                                <img src="{{ $ev->url() }}" class="card-img-top evidence-thumb" alt="Evidence">
+                                                <img src="{{ $ev->url() }}" class="card-img-top" alt="Evidence">
                                             </a>
                                         @elseif (str_starts_with((string) $ev->mime_type, 'video/'))
-                                            <div class="evidence-video-container">
-                                                <x-evidence-video-player :src="$ev->url()" :label="$ev->original_filename" variant="compact" />
-                                            </div>
+                                            <x-evidence-video-player :src="$ev->url()" :label="$ev->original_filename" variant="compact" />
                                         @else
-                                            <div class="d-flex align-items-center justify-content-center bg-light text-secondary card-img-top evidence-thumb">
+                                            <div class="d-flex align-items-center justify-content-center bg-light text-secondary w-100 h-100">
                                                 <i class="bi bi-file-earmark fs-1"></i>
                                             </div>
                                         @endif
+                                        </div>
                                         <div class="card-body p-2 small">
                                             <div class="text-truncate">{{ str_starts_with((string) $ev->mime_type, 'image/') ? ($ev->is_gps_capture ? 'GPS Photo' : 'Attached photo') : ($ev->is_gps_capture ? 'GPS Video' : $ev->original_filename) }}</div>
                                             <div class="text-muted" style="font-size: 0.75rem;">
@@ -283,7 +283,7 @@
                                 <div class="mb-3">
                                     <x-gps-camera />
                                     <label for="evidence" class="form-label">Resolution Photos / Reports <span class="text-muted">(optional)</span></label>
-                                    <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.pdf">
+                                    <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
                                     <div class="form-text">Use the GPS Camera above for a geotagged, watermarked photo, or attach files directly here.</div>
                                 </div>
 
@@ -432,7 +432,7 @@
 
                                                     <div class="mb-3">
                                                         <label for="edit_evidence" class="form-label">Attach More Evidence <span class="text-muted">(optional)</span></label>
-                                                        <input class="form-control" type="file" name="evidence[]" id="edit_evidence" multiple accept=".jpg,.jpeg,.png,.pdf">
+                                                        <input class="form-control" type="file" name="evidence[]" id="edit_evidence" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">

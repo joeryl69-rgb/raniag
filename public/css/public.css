@@ -1101,7 +1101,7 @@ html[data-public-theme="dark"] #evidence::file-selector-button { color: #d8fffa;
         min-height: 200px;
     }
 
-    .gps-camera-viewport video {
+    .gps-camera-viewport:not(.gps-camera-viewport-full) video {
         max-height: 60vh;
     }
 
@@ -1117,7 +1117,7 @@ html[data-public-theme="dark"] #evidence::file-selector-button { color: #d8fffa;
 }
 
 @media (orientation: portrait) and (max-width: 575.98px) {
-    .gps-camera-viewport video {
+    .gps-camera-viewport:not(.gps-camera-viewport-full) video {
         max-height: 50vh;
     }
 }

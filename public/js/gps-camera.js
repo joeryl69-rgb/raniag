@@ -638,11 +638,15 @@
     }
 
     function isMapPreviewReady() {
+        if (!mapThumbImg || mapThumbState === 'error') {
+            return true;
+        }
+        if (!lastPosition?.coords) return false;
         return mapThumbState === 'ready'
-            && (!mapThumbImg || distanceBetweenCoordinates(lastMapThumbCoordinates, {
+            && distanceBetweenCoordinates(lastMapThumbCoordinates, {
                 latitude: lastPosition.coords.latitude,
                 longitude: lastPosition.coords.longitude,
-            }) < MAP_THUMB_LOCATION_TOLERANCE_METERS);
+            }) < MAP_THUMB_LOCATION_TOLERANCE_METERS;
     }
 
     function isCameraFrameReady() {
@@ -687,7 +691,6 @@
         if (!isGpsFixDisplayed()) return 'Waiting for your GPS coordinates and accuracy to appear.';
         if (!isPlaceResolvedFor(lastPosition.coords)) return 'Resolving the GPS location. Wait until the place is confirmed before capturing or recording.';
         if (mapThumbState === 'loading' || mapThumbState === 'idle') return 'Loading the satellite preview for this GPS fix…';
-        if (mapThumbState === 'error') return 'Satellite preview is unavailable. Reopen the camera after checking your connection.';
         if (!isMapPreviewReady()) return 'Updating the satellite preview for your latest location…';
         if (!isCameraFrameReady()) return 'Camera preview is still starting…';
         if (!canAddMoreCaptures()) return `Maximum of ${maxCaptures} evidence files allowed.`;
@@ -1274,6 +1277,23 @@
         }
     }
 
+    async function openCameraStream() {
+        const attempts = [
+            { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+            { facingMode: { ideal: facingMode } },
+            true,
+        ];
+        let lastError = null;
+        for (const video of attempts) {
+            try {
+                return await navigator.mediaDevices.getUserMedia({ video, audio: false });
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        throw lastError || new Error('Unable to start the camera.');
+    }
+
     async function startCamera() {
         if (!supportsCamera()) {
             setError('Camera is not supported on this browser.');
@@ -1304,12 +1324,7 @@
                 mediaStream.getTracks().forEach((track) => track.stop());
             }
 
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: { ideal: facingMode },
-                },
-                audio: false,
-            });
+            mediaStream = await openCameraStream();
             cameraOpen = true;
             clearInterval(readinessTimer);
             readinessTimer = setInterval(updateCaptureReadiness, 1000);
