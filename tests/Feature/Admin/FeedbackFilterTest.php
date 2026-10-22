@@ -56,3 +56,38 @@ test('feedback status category source search and date filters combine correctly'
     expect($response->viewData('submissions')->getCollection()->modelKeys())
         ->toBe([$matching->id]);
 });
+
+test('every feedback card stays inside the list', function () {
+    $administrator = User::factory()->administrator()->create();
+
+    foreach (range(1, 5) as $index) {
+        FeedbackSubmission::query()->create([
+            'category' => 'account',
+            'submitted_via' => 'public',
+            'subject' => "Feedback card {$index}",
+            'message' => "Message {$index}",
+            'submitter_name' => 'Community member',
+            'submitter_email' => 'member@example.com',
+            'status' => 'reviewed',
+        ]);
+    }
+
+    $html = $this->actingAs($administrator)
+        ->get(route('admin.feedback.index'))
+        ->assertOk()
+        ->getContent();
+
+    $document = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $document->loadHTML($html);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($document);
+    $insideList = $xpath->query('//*[@id="rg-feedback-list"]/article[contains(@class, "rg-fb-case")]');
+    $anywhere = $xpath->query('//article[contains(@class, "rg-fb-case")]');
+    $besideContent = $xpath->query('//*[@id="wrapper"]/*[contains(@class, "rg-fb-case")]');
+
+    expect($insideList->length)->toBe(5)
+        ->and($anywhere->length)->toBe(5)
+        ->and($besideContent->length)->toBe(0);
+});

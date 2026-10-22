@@ -108,40 +108,40 @@
                         <i class="bi bi-chevron-down rg-fb-manage-chevron" aria-hidden="true"></i>
                     </summary>
                     <div class="rg-fb-manage-panel" id="fb-response-{{ $item->id }}">
-                    <div class="rg-fb-desk">
-                    <form method="POST" action="{{ route('admin.feedback.update', $item) }}">
-                        @csrf
-                        @method('PUT')
-                        <fieldset class="rg-fb-status">
-                            <legend>Update status</legend>
-                            @foreach(['new' => 'New', 'reviewed' => 'Reviewed', 'resolved' => 'Resolved'] as $value => $label)
-                                <label class="rg-fb-choice">
-                                    <input type="radio" name="status" value="{{ $value }}" @checked($item->status === $value)>
-                                    <span>{{ $label }}</span>
+                        <div class="rg-fb-desk">
+                            <form method="POST" action="{{ route('admin.feedback.update', $item) }}">
+                                @csrf
+                                @method('PUT')
+                                <fieldset class="rg-fb-status">
+                                    <legend>Update status</legend>
+                                    @foreach(['new' => 'New', 'reviewed' => 'Reviewed', 'resolved' => 'Resolved'] as $value => $label)
+                                        <label class="rg-fb-choice">
+                                            <input type="radio" name="status" value="{{ $value }}" @checked($item->status === $value)>
+                                            <span>{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </fieldset>
+                                <label class="rg-fb-note">
+                                    <span>Internal note <em>not emailed</em></span>
+                                    <input type="text" name="admin_notes" maxlength="2000" value="{{ $item->admin_notes }}" placeholder="Visible only to staff">
                                 </label>
-                            @endforeach
-                        </fieldset>
-                        <label class="rg-fb-note">
-                            <span>Internal note <em>not emailed</em></span>
-                            <input type="text" name="admin_notes" maxlength="2000" value="{{ $item->admin_notes }}" placeholder="Visible only to staff">
-                        </label>
-                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                    </form>
-                    <div class="rg-fb-mail">
-                        @if($item->reviewed_at)
-                            <p>Last saved {{ $item->reviewed_at->diffForHumans() }} by {{ $item->reviewer?->name ?? '—' }}</p>
-                        @endif
-                        @if($item->submitter_email)
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="openReplyModal({{ $item->id }}, @js($item->subject), @js($item->submitter_email), @js($item->admin_reply ?? ''))">
-                                <i class="bi bi-envelope"></i>{{ $item->admin_reply ? 'Edit and resend email' : 'Email a reply' }}
-                            </button>
-                        @else
-                            <p><i class="bi bi-envelope-slash"></i> No email on this message, so a reply cannot be sent.</p>
-                        @endif
+                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                            </form>
+                            <div class="rg-fb-mail">
+                                @if($item->reviewed_at)
+                                    <p>Last saved {{ $item->reviewed_at->diffForHumans() }} by {{ $item->reviewer?->name ?? '—' }}</p>
+                                @endif
+                                @if($item->submitter_email)
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="openReplyModal({{ $item->id }}, @js($item->subject), @js($item->submitter_email), @js($item->admin_reply ?? ''))">
+                                        <i class="bi bi-envelope"></i>{{ $item->admin_reply ? 'Edit and resend email' : 'Email a reply' }}
+                                    </button>
+                                @else
+                                    <p><i class="bi bi-envelope-slash"></i> No email on this message, so a reply cannot be sent.</p>
+                                @endif
+                            </div>
                         </div>
-                        </div>
-                        </details>
-                </div>
+                    </div>
+                </details>
             </article>
         @empty
             <div class="text-center text-muted py-5">
