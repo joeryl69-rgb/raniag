@@ -98,10 +98,6 @@ jobs:
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
-            echo "==> sms health"
-            php artisan raniag:sms-health || true
-            echo "==> user crontab"
-            crontab -l || echo "no crontab"
             echo "==> deploy done $(date -u +%Y-%m-%dT%H:%M:%SZ) at $(git rev-parse --short HEAD)"
 
       - name: Upload frontend build to Hostinger
