@@ -33,3 +33,19 @@ test('an administrator can open and save an existing announcement', function () 
 
     expect($announcement->fresh()->title)->toBe('Updated reporting process');
 });
+
+test('the public homepage shows the full announcement text', function () {
+    $body = 'In our best efforts to provide an excellent service to all of our users, we are planning to perform system upgrade on Monday at 8:00 PM. The process will continue until the upgrade window closes and services return.';
+
+    Announcement::create([
+        'title' => 'System Upgrade Notification Letter',
+        'badge' => 'Maintenance',
+        'body' => $body,
+        'is_published' => true,
+    ]);
+
+    $this->get(route('public.home'))
+        ->assertOk()
+        ->assertSee($body, false)
+        ->assertDontSee('The process wi...', false);
+});

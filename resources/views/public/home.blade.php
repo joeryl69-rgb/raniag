@@ -129,7 +129,7 @@
                                                 @if($item->badge)<span>{{ $item->badge }}</span>@endif
                                             </div>
                                             <h3>{{ $item->title }}</h3>
-                                            <p>{{ Str::limit($item->body, 160) }}</p>
+                                            <p class="rg-announce-body">{{ $item->body }}</p>
                                         </div>
                                     </article>
                                 @endforeach
@@ -378,6 +378,7 @@ html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; backgrou
 .rg-home-updates .rg-log-item.rg-announce-card { padding:15px 0 14px;border:0;border-top:1px solid #344e58;border-radius:0;background:transparent;color:#e9f0f0;box-shadow:none; }
 .rg-home-updates .rg-log-item time { color:#72d9c3;font:700 .68rem/1.3 ui-monospace,monospace; }
 .rg-home-updates .rg-log-item p,.rg-home-updates .rg-log-meta { color:#a9bec4; }
+.rg-home-updates .rg-announce-body { white-space:pre-wrap; overflow-wrap:anywhere; }
 .rg-home-updates .rg-log-item h3 { color:#eff6f4;font-size:.92rem; }
 .rg-home-updates .rg-announce-badge,.rg-home-faq .rg-announce-badge { color:#88dfcc; }
 .rg-home-faq .rg-faq-accordion .accordion-item { border:1px solid #304955!important;border-radius:4px!important;background:#102631; }
