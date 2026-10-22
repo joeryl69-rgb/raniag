@@ -41,6 +41,8 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          PHILSMS_API_TOKEN: ${{ secrets.PHILSMS_API_TOKEN }}
+          PHILSMS_SENDER_ID: ${{ secrets.PHILSMS_SENDER_ID }}
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
@@ -50,7 +52,7 @@ jobs:
           timeout: 60s
           command_timeout: 30m
           script_stop: true
-          envs: MAPBOX_ACCESS_TOKEN
+          envs: MAPBOX_ACCESS_TOKEN,PHILSMS_API_TOKEN,PHILSMS_SENDER_ID
           script: |
             set -euxo pipefail
             echo "==> deploy start $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -82,6 +84,41 @@ jobs:
                 printf '\nMAPBOX_ACCESS_TOKEN=%s\n' "${MAPBOX_ACCESS_TOKEN}" >> .env
               fi
             fi
+            echo "==> enable PhilSMS in production .env"
+            set +x
+            php -r '
+            $path = ".env";
+            if (!is_file($path)) { fwrite(STDERR, ".env missing\n"); exit(1); }
+            $raw = file_get_contents($path);
+            $lines = preg_split("/\r\n|\n|\r/", $raw);
+            $before = "missing";
+            foreach ($lines as $line) {
+                if (preg_match("/^SMS_PROVIDER=(.*)$/", $line, $m)) { $before = $m[1]; break; }
+            }
+            $token = getenv("PHILSMS_API_TOKEN") ?: "";
+            $sender = getenv("PHILSMS_SENDER_ID") ?: "PhilSMS";
+            $updates = ["SMS_PROVIDER" => "PhilSMS", "PHILSMS_SENDER_ID" => $sender];
+            if ($token !== "") { $updates["PHILSMS_API_TOKEN"] = $token; }
+            $seen = [];
+            $out = [];
+            foreach ($lines as $line) {
+                if (preg_match("/^([A-Z0-9_]+)=/", $line, $m) && isset($updates[$m[1]])) {
+                    $out[] = $m[1]."=".$updates[$m[1]];
+                    $seen[$m[1]] = true;
+                } else {
+                    $out[] = $line;
+                }
+            }
+            foreach ($updates as $key => $value) {
+                if (!isset($seen[$key])) { $out[] = $key."=".$value; }
+            }
+            file_put_contents($path, implode("\n", $out)."\n");
+            echo "SMS_PROVIDER was ".$before."\n";
+            echo "SMS_PROVIDER is PhilSMS\n";
+            echo "PHILSMS_API_TOKEN ".($token !== "" ? "updated" : "left unchanged")."\n";
+            echo "PHILSMS_SENDER_ID is ".$sender."\n";
+            '
+            set -x
             echo "==> artisan"
             php artisan optimize:clear
             php artisan migrate --force
