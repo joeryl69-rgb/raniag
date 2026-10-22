@@ -221,11 +221,7 @@ class IncidentRepository implements IncidentRepositoryInterface
         }
 
         if (! empty($filters['jurisdiction'] ?? null)) {
-            if ($filters['jurisdiction'] === 'outside') {
-                $query->where('meta->within_jurisdiction', false);
-            } elseif ($filters['jurisdiction'] === 'inside') {
-                $query->where('meta->within_jurisdiction', true);
-            }
+            \App\Support\PlaceScope::applyBarangayFilter($query, $filters['jurisdiction']);
         }
 
         Filters::dateRange($query, 'reported_at', $filters);

@@ -123,23 +123,20 @@
 
                     <details class="mt-3" @if(old('barangay') || old('agency_id') || old('incident_type_id') || old('aor_scope', 'aor_only') !== 'aor_only') open @endif>
                         <summary class="small fw-semibold">Limit the incident rows</summary>
-                        <p class="small text-muted mt-2 mb-0">Leave these as they are to include every barangay, office, and incident type inside Pamplona.</p>
+                        <p class="small text-muted mt-2 mb-0">Leave these as they are to include every report, office, and incident type.</p>
                         <div class="row g-3 mt-1">
                             <div class="col-md-6 col-xl-3">
                                 <label for="aor_scope" class="form-label">Which reports</label>
                                 <select class="form-select @error('aor_scope') is-invalid @enderror" id="aor_scope" name="aor_scope">
-                                    <option value="aor_only" {{ old('aor_scope', 'aor_only') == 'aor_only' ? 'selected' : '' }}>Inside Pamplona</option>
-                                    <option value="outside_aor_only" {{ old('aor_scope') == 'outside_aor_only' ? 'selected' : '' }}>Outside Pamplona only</option>
-                                    <option value="all" {{ old('aor_scope') == 'all' ? 'selected' : '' }}>Inside and outside</option>
+                                    <option value="all" {{ old('aor_scope') == 'all' ? 'selected' : '' }}>All barangays</option>
+                                    <option value="outside_aor_only" {{ old('aor_scope') == 'outside_aor_only' ? 'selected' : '' }}>All outside Pamplona</option>
+                                    <option value="aor_only" {{ old('aor_scope', 'aor_only') == 'aor_only' ? 'selected' : '' }}>All inside Pamplona</option>
                                 </select>
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <label for="barangay" class="form-label">Barangay</label>
                                 <select class="form-select @error('barangay') is-invalid @enderror" id="barangay" name="barangay">
-                                    <option value="">All barangays</option>
-                                    @foreach($barangays as $barangay)
-                                        <option value="{{ $barangay }}" {{ old('barangay') == $barangay ? 'selected' : '' }}>{{ $barangay }}</option>
-                                    @endforeach
+                                    <x-place-filter-options :selected="old('barangay', '')" all-value="" />
                                 </select>
                             </div>
                             <div class="col-md-6 col-xl-3">

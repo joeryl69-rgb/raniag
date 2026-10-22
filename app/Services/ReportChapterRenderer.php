@@ -150,7 +150,7 @@ class ReportChapterRenderer
     {
         $query = $this->incidents($from, $to, (string) ($options['aor_scope'] ?? 'aor_only'));
         if (! empty($options['barangay'])) {
-            $query->where('barangay', $options['barangay']);
+            \App\Support\PlaceScope::applyBarangayFilter($query, (string) $options['barangay']);
         }
         if (! empty($options['agency_id'])) {
             $agencyId = $options['agency_id'];

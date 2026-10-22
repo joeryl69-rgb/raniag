@@ -30,11 +30,7 @@
         <label class="report-presentation-filter">
             <span>Barangay</span>
             <select name="barangay" class="form-select" data-filter-default="">
-                <option value="">All barangays</option>
-                <option value="outside" @selected(request('barangay') === 'outside')>Outside Pamplona</option>
-                @foreach($barangays as $barangay)
-                    <option value="{{ $barangay }}" @selected(request('barangay') === $barangay)>{{ $barangay }}</option>
-                @endforeach
+                <x-place-filter-options :selected="request('barangay')" all-value="" />
             </select>
         </label>
         <label class="report-presentation-filter" data-presentation-type @class(['d-none' => request('dataset') === 'evacuees'])>

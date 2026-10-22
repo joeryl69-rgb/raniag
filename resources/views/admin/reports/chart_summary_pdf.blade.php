@@ -83,15 +83,15 @@
             <strong>AOR Scope:</strong>
             <span class="aor-badge">
                 @switch($filters['aor_scope'])
-                    @case('outside_aor_only') Outside-AOR Only @break
-                    @case('all') AOR + Outside-AOR @break
-                    @default MDRRMO Pamplona AOR Only
+                    @case('outside_aor_only') All outside Pamplona @break
+                    @case('all') All barangays @break
+                    @default All inside Pamplona
                 @endswitch
             </span>
         </p>
         <p><strong>Report View:</strong> {{ ucfirst($viewMode) }}{{ $viewMode !== 'periodic' ? ' (grouped by '.match ($viewMode) { 'monthly' => 'calendar month', 'yearly' => 'calendar year', default => 'calendar week' }.')' : '' }}</p>
         @if(!empty($filters['barangay']))
-            <p><strong>Barangay:</strong> {{ $filters['barangay'] }}</p>
+            <p><strong>Barangay:</strong> {{ \App\Support\PlaceScope::label($filters['barangay']) }}</p>
         @endif
         @if(!empty($filters['agency_id']))
             <p><strong>Agency:</strong> {{ $agencyName ?? 'N/A' }}</p>

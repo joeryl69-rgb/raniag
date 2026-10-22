@@ -32,13 +32,13 @@
         @if($compareFilters)
             <p><strong>Compared with:</strong> {{ \Carbon\Carbon::parse($compareFilters['date_from'])->format('F d, Y') }} — {{ \Carbon\Carbon::parse($compareFilters['date_to'])->format('F d, Y') }}</p>
         @endif
-        @if(!empty($filters['barangay']))<p><strong>Barangay:</strong> {{ $filters['barangay'] }}</p>@endif
+        @if(!empty($filters['barangay']))<p><strong>Barangay:</strong> {{ \App\Support\PlaceScope::label($filters['barangay']) }}</p>@endif
         @if(!empty($filters['agency_id']))<p><strong>Office:</strong> {{ $agencyName ?? 'N/A' }}</p>@endif
         <p><strong>Area:</strong>
             @switch($filters['aor_scope'])
-                @case('outside_aor_only') Referred outside Pamplona @break
-                @case('all') Inside and outside Pamplona @break
-                @default Inside Pamplona
+                @case('outside_aor_only') All outside Pamplona @break
+                @case('all') All barangays @break
+                @default All inside Pamplona
             @endswitch
         </p>
     </div>

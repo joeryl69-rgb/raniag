@@ -39,14 +39,7 @@ class IncidentController extends Controller
             return response()->json($incidents);
         }
 
-        $barangays = \App\Models\Incident::query()
-            ->whereHas('assignments', fn ($q) => $q->where('assignments.agency_id', $agencyId))
-            ->whereNotNull('barangay')
-            ->distinct()
-            ->orderBy('barangay')
-            ->pluck('barangay');
-
-        return view('agency.incidents.index', compact('incidents', 'filters', 'barangays'));
+        return view('agency.incidents.index', compact('incidents', 'filters'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse

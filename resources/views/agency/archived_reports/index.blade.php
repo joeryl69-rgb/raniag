@@ -34,7 +34,7 @@
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Barangay</label>
                     <select name="barangay" class="form-select" data-filter-default="all">
-                        <x-place-filter-options :barangays="$barangays" :selected="request('barangay', 'all')" />
+                        <x-place-filter-options :selected="request('barangay', 'all')" />
                     </select>
                 </div>
                 <div class="col-md-2">

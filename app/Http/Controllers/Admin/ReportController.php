@@ -579,7 +579,7 @@ class ReportController extends Controller
         $rules = [
             'date_from' => 'required|date|before_or_equal:today',
             'date_to' => 'required|date|after_or_equal:date_from|before_or_equal:today',
-            'barangay' => 'nullable|string|in:'.implode(',', config('raniag.barangays')),
+            'barangay' => ['nullable', 'string', \Illuminate\Validation\Rule::in(array_merge(config('raniag.barangays'), ['inside', 'outside', 'all']))],
             'agency_id' => 'nullable|exists:agencies,id',
             'incident_type_id' => 'nullable|exists:incident_types,id',
             'aor_scope' => 'nullable|string|in:aor_only,outside_aor_only,all',
@@ -633,9 +633,7 @@ class ReportController extends Controller
             default => $query->where('status', '!=', $outsideAor),
         };
 
-        if (! empty($validated['barangay'])) {
-            $query->where('barangay', $validated['barangay']);
-        }
+        \App\Support\PlaceScope::applyBarangayFilter($query, $validated['barangay'] ?? null);
 
         if (! empty($validated['agency_id'])) {
             $query->where(function ($q) use ($validated) {

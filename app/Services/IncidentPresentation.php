@@ -77,7 +77,7 @@ class IncidentPresentation
         $validated = $request->validate([
             'dataset' => ['required', 'string', Rule::in(['incidents', 'evacuees'])],
             'q' => ['nullable', 'string', 'max:100'],
-            'barangay' => ['nullable', 'string', Rule::in(array_merge(config('raniag.barangays'), [self::OUTSIDE]))],
+            'barangay' => ['nullable', 'string', Rule::in(array_merge(config('raniag.barangays'), [self::OUTSIDE, 'inside', 'all']))],
             'incident_type_id' => ['nullable', 'integer', 'exists:incident_types,id'],
             'date_from' => ['nullable', 'date', 'before_or_equal:today'],
             'date_to' => ['nullable', 'date', 'before_or_equal:today', Rule::when($request->filled('date_from'), 'after_or_equal:date_from')],
@@ -191,6 +191,8 @@ class IncidentPresentation
 
         if ($filters['barangay'] === self::OUTSIDE) {
             $query->where('origin_scope', 'outside');
+        } elseif ($filters['barangay'] === 'inside') {
+            $query->where('origin_scope', '!=', 'outside');
         } elseif ($filters['barangay']) {
             $query->where('origin_scope', 'inside')->where('barangay', $filters['barangay']);
         }
@@ -249,24 +251,7 @@ class IncidentPresentation
      */
     private function incidentPlace($query, ?string $barangay): void
     {
-        if ($barangay === self::OUTSIDE) {
-            $known = config('raniag.barangays', []);
-            $query->where(function ($inner) use ($known) {
-                $inner->where('status', IncidentStatus::OutsideAor->value)
-                    ->orWhere('meta->within_jurisdiction', false)
-                    ->orWhere(function ($place) use ($known) {
-                        $place->whereNotNull('barangay')
-                            ->where('barangay', '!=', '')
-                            ->whereNotIn('barangay', $known);
-                    });
-            });
-
-            return;
-        }
-
-        if ($barangay) {
-            $query->where('barangay', $barangay);
-        }
+        \App\Support\PlaceScope::applyBarangayFilter($query, $barangay);
     }
 
     private function incidentPlaceLabel(Incident $incident): string
@@ -318,9 +303,12 @@ class IncidentPresentation
      */
     public function summaryLine(array $filters, int $count): string
     {
-        $place = $filters['barangay'] === self::OUTSIDE
-            ? 'Outside Pamplona'
-            : ($filters['barangay'] ?: 'All places');
+        $place = match ($filters['barangay']) {
+            self::OUTSIDE => 'All outside Pamplona',
+            'inside' => 'All inside Pamplona',
+            null, '' => 'All barangays',
+            default => (string) $filters['barangay'],
+        };
         $records = $count === 1 ? 'record' : 'records';
         $search = $filters['q'] !== '' ? ' · Search: '.$filters['q'] : '';
 

@@ -97,7 +97,7 @@
     <div class="filters">
         <p><strong>Date Range:</strong> {{ \Carbon\Carbon::parse($filters['date_from'])->format('F d, Y') }} — {{ \Carbon\Carbon::parse($filters['date_to'])->format('F d, Y') }}</p>
         @if(!empty($filters['barangay']))
-            <p><strong>Barangay:</strong> {{ $filters['barangay'] }}</p>
+            <p><strong>Barangay:</strong> {{ \App\Support\PlaceScope::label($filters['barangay']) }}</p>
         @endif
         @if(!empty($filters['agency_id']))
             <p><strong>Agency:</strong> {{ $agencyName ?? 'N/A' }}</p>

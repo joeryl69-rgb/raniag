@@ -40,20 +40,7 @@ class IncidentController extends Controller
             return response()->json($incidents);
         }
 
-        $agencyId = $request->user()?->agency_id;
-        $barangays = Incident::query()
-            ->whereHas('assignments', function ($q) use ($personnelId, $agencyId) {
-                $q->where('assignments.assigned_to', $personnelId);
-                if ($agencyId) {
-                    $q->orWhere('assignments.agency_id', $agencyId);
-                }
-            })
-            ->whereNotNull('barangay')
-            ->distinct()
-            ->orderBy('barangay')
-            ->pluck('barangay');
-
-        return view('personnel.incidents.index', compact('incidents', 'filters', 'barangays'));
+        return view('personnel.incidents.index', compact('incidents', 'filters'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse

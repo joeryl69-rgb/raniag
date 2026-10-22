@@ -10,10 +10,7 @@
         <div class="col-md-4">
             <label class="form-label">Barangay</label>
             <select class="form-select form-select-sm" name="chapters[{{ $index }}][options][barangay]" @disabled($locked)>
-                <option value="">All barangays</option>
-                @foreach($barangays as $barangay)
-                    <option value="{{ $barangay }}" @selected(($options['barangay'] ?? '') === $barangay)>{{ $barangay }}</option>
-                @endforeach
+                <x-place-filter-options :selected="$options['barangay'] ?? ''" all-value="" />
             </select>
         </div>
         <div class="col-md-4">

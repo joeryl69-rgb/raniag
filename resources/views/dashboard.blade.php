@@ -627,6 +627,8 @@
                     </select>
                     <select id="filter-barangay" aria-label="Filter by barangay">
                         <option value="">All barangays</option>
+                        <option value="outside">All outside Pamplona</option>
+                        <option value="inside">All inside Pamplona</option>
                     </select>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="filter-clear">Clear</button>
                 </div>
@@ -928,10 +930,19 @@
                 const brgyFilter = document.getElementById('filter-barangay');
                 if (brgyFilter) {
                     brgyFilter.addEventListener('change', function () {
-                        if (this.value) showBarangayInsight(this.value);
-                        else closeMapInsight();
+                        if (!this.value) closeMapInsight();
                     });
                 }
+            }
+
+            const officialBarangays = @json(config('raniag.barangays', []));
+
+            function pointIsInsidePamplona(point) {
+                const name = String(point?.barangay || '');
+                if (!officialBarangays.includes(name)) return false;
+                if (String(point?.status || '') === 'outside_aor') return false;
+                if (point?.within_jurisdiction === false) return false;
+                return true;
             }
 
             function applyMapFilters() {
@@ -941,20 +952,18 @@
                 const filtered = rawPoints.filter((p) => {
                     if (status && String(p.status || '') !== status) return false;
                     if (priority && String(p.priority || '').toLowerCase() !== priority) return false;
-                    if (barangay && String(p.barangay || '') !== barangay) return false;
+                    if (barangay === 'inside' && !pointIsInsidePamplona(p)) return false;
+                    if (barangay === 'outside' && pointIsInsidePamplona(p)) return false;
                     return true;
                 });
                 plotPoints(filtered);
             }
 
-            function populateBarangayFilter(counts) {
+            function populateBarangayFilter() {
                 const sel = document.getElementById('filter-barangay');
                 if (!sel) return;
                 const current = sel.value;
-                const names = Object.keys(counts || {}).sort((a, b) => a.localeCompare(b));
-                sel.innerHTML = '<option value="">All barangays</option>' +
-                    names.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)} (${counts[n]})</option>`).join('');
-                if (current && names.includes(current)) sel.value = current;
+                if ([...sel.options].some((option) => option.value === current)) sel.value = current;
             }
 
             function showBarangayInsight(name) {

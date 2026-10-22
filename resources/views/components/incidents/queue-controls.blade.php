@@ -35,7 +35,7 @@
                             <option value="{{ $type->id }}" @selected((string) request('incident_type_id') === (string) $type->id)>{{ $type->name }}</option>
                         @endforeach
                     @else
-                        <x-place-filter-options :barangays="$barangays ?? collect()" :selected="request('barangay')" all-value="" all-label="All locations" />
+                        <x-place-filter-options :selected="request('barangay')" all-value="" />
                     @endif
                 </select>
             </label>
@@ -43,9 +43,9 @@
                 <label>
                     <span>Location</span>
                     <select name="jurisdiction">
-                        <option value="">All locations</option>
-                        <option value="inside" @selected(request('jurisdiction') === 'inside')>Inside Pamplona</option>
-                        <option value="outside" @selected(request('jurisdiction') === 'outside')>Outside Pamplona</option>
+                        <option value="">All barangays</option>
+                        <option value="outside" @selected(request('jurisdiction') === 'outside')>All outside Pamplona</option>
+                        <option value="inside" @selected(request('jurisdiction') === 'inside')>All inside Pamplona</option>
                     </select>
                 </label>
                 <label>

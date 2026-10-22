@@ -2,9 +2,13 @@
 
 namespace App\Support;
 
+use App\Enums\IncidentStatus;
+
 class PlaceScope
 {
     public const OUTSIDE = 'outside';
+
+    public const INSIDE = 'inside';
 
     /**
      * @return list<string>
@@ -12,6 +16,16 @@ class PlaceScope
     public static function officialBarangays(): array
     {
         return array_values(config('raniag.barangays', []));
+    }
+
+    public static function label(?string $scope): string
+    {
+        return match (trim((string) $scope)) {
+            '', 'all' => 'All barangays',
+            self::OUTSIDE => 'All outside Pamplona',
+            self::INSIDE => 'All inside Pamplona',
+            default => trim((string) $scope),
+        };
     }
 
     public static function isOfficial(?string $barangay): bool
@@ -65,16 +79,50 @@ class PlaceScope
         }
 
         if ($barangay === self::OUTSIDE) {
-            $official = self::officialBarangays();
-            $query->where(function ($inner) use ($official, $column) {
-                $inner->whereNull($column)
-                    ->orWhere($column, '')
-                    ->orWhereNotIn($column, $official);
-            });
+            self::whereOutside($query, $column);
+
+            return;
+        }
+
+        if ($barangay === self::INSIDE) {
+            self::whereInside($query, $column);
 
             return;
         }
 
         $query->where($column, $barangay);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<*>|\Illuminate\Database\Query\Builder  $query
+     */
+    private static function whereOutside($query, string $column): void
+    {
+        $official = self::officialBarangays();
+        $outsideStatus = IncidentStatus::OutsideAor->value;
+
+        $query->where(function ($inner) use ($official, $column, $outsideStatus) {
+            $inner->where('status', $outsideStatus)
+                ->orWhere('meta->within_jurisdiction', false)
+                ->orWhereNull($column)
+                ->orWhere($column, '')
+                ->orWhereNotIn($column, $official);
+        });
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<*>|\Illuminate\Database\Query\Builder  $query
+     */
+    private static function whereInside($query, string $column): void
+    {
+        $official = self::officialBarangays();
+        $outsideStatus = IncidentStatus::OutsideAor->value;
+
+        $query->whereIn($column, $official)
+            ->where('status', '!=', $outsideStatus)
+            ->where(function ($inner) {
+                $inner->whereNull('meta->within_jurisdiction')
+                    ->orWhere('meta->within_jurisdiction', true);
+            });
     }
 }

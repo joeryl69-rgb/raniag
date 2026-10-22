@@ -128,7 +128,7 @@ test('presentation exports share one masthead and omit the redundant metadata bl
 
     $query = ['applied' => '1'];
     $template = \App\Services\ReportLetterhead::templateData();
-    $metadata = ['All dates', 'Incident reports · All places · All incident types · 60 records', 'Generated'];
+    $metadata = ['All dates', 'Incident reports · All barangays · All incident types · 60 records', 'Generated'];
     $html = $this->actingAs($admin)
         ->get(route('admin.reports.presentation.print', $query))
         ->assertOk()

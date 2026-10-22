@@ -54,15 +54,7 @@ class ArchivedReportController extends Controller
 
         $reports = $query->paginate(12)->withQueryString();
 
-        $barangays = Incident::query()
-            ->whereIn('status', self::VALID_STATUSES)
-            ->whereHas('currentAssignments', fn ($q) => $q->where('agency_id', $agencyId))
-            ->whereNotNull('barangay')
-            ->distinct()
-            ->orderBy('barangay')
-            ->pluck('barangay');
-
-        return view('agency.archived_reports.index', compact('reports', 'barangays'));
+        return view('agency.archived_reports.index', compact('reports'));
     }
 
     public function show(Request $request, Incident $incident): View

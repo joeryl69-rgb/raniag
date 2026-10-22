@@ -59,15 +59,24 @@ test('agency resolved reports separate official barangays from places outside Pa
     $this->actingAs($agencyUser)
         ->get(route('agency.archived_reports.index'))
         ->assertOk()
-        ->assertSee('<optgroup label="Pamplona">', false)
-        ->assertSee('<option value="Bidduang"', false)
-        ->assertSee('<optgroup label="Outside Pamplona">', false)
+        ->assertSeeInOrder([
+            'All barangays',
+            'All outside Pamplona',
+            'All inside Pamplona',
+        ])
+        ->assertDontSee('<option value="Bidduang"', false)
+        ->assertDontSee('<option value="Langagan"', false)
         ->assertSee('<option value="outside"', false)
-        ->assertSee('All outside Pamplona')
-        ->assertSee('<option value="Langagan"', false)
+        ->assertSee('<option value="inside"', false)
         ->assertSee('rg-place-outside-tag', false)
         ->assertSee('RAN-INSIDE')
         ->assertSee('RAN-OUTSIDE');
+
+    $this->actingAs($agencyUser)
+        ->get(route('agency.archived_reports.index', ['barangay' => 'inside']))
+        ->assertOk()
+        ->assertSee('RAN-INSIDE')
+        ->assertDontSee('RAN-OUTSIDE');
 
     $this->actingAs($agencyUser)
         ->get(route('agency.archived_reports.index', ['barangay' => 'outside']))

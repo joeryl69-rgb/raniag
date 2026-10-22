@@ -186,8 +186,9 @@ class ReportRecordRequest extends FormRequest
     {
         $this->validateIn($validator, $index, $options, 'aor_scope', ['aor_only', 'outside_aor_only', 'all'], $label.': choose which reports to include.');
         $barangay = $options['barangay'] ?? null;
-        if ($barangay !== null && $barangay !== '' && ! in_array($barangay, config('raniag.barangays'), true)) {
-            $validator->errors()->add("chapters.$index.options.barangay", $label.': that barangay is not in Pamplona.');
+        $places = array_merge(config('raniag.barangays'), ['inside', 'outside', 'all']);
+        if ($barangay !== null && $barangay !== '' && ! in_array($barangay, $places, true)) {
+            $validator->errors()->add("chapters.$index.options.barangay", $label.': choose all barangays, all inside Pamplona, or all outside Pamplona.');
         }
         $this->existsOrEmpty($validator, $index, $options, 'agency_id', 'agencies', 'id', $label.': that office is not on file.');
         $this->existsOrEmpty($validator, $index, $options, 'incident_type_id', 'incident_types', 'id', $label.': that incident type is not on file.');
