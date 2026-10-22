@@ -36,7 +36,7 @@ class SmsHealth extends Command
             $this->line('balance_http='.$response->status());
             $this->line('balance_status='.(string) ($json['status'] ?? ''));
             $this->line('balance_message='.$this->redact((string) ($json['message'] ?? '')));
-            $this->line('remaining_balance='.(string) ($data['remaining_balance'] ?? ''));
+            $this->line('balance_amount='.$this->ascii((string) ($data['remaining_balance'] ?? '')));
         } catch (\Throwable $e) {
             $this->line('balance_error='.$this->redact($e->getMessage()));
         }
@@ -55,21 +55,51 @@ class SmsHealth extends Command
                 $this->line('sms_'.$status.'='.$count);
             }
 
-            SmsLog::query()->latest('id')->limit(8)->get()->each(function (SmsLog $log): void {
+            $recent = SmsLog::query()->latest('id')->limit(8)->get();
+            $recent->each(function (SmsLog $log): void {
+                $phone = preg_replace('/\D+/', '', (string) $log->recipient_phone) ?? '';
+                $prefix = str_starts_with($phone, '63') ? '63' : (str_starts_with($phone, '0') ? '0' : 'other');
+                $message = (string) $log->message;
                 $response = $log->provider_response;
                 $detail = '';
+                $bodyStatus = '';
+                $shape = '';
                 if (is_array($response)) {
-                    $detail = (string) ($response['error'] ?? ($response['body']['message'] ?? json_encode($response)));
+                    $detail = (string) ($response['error'] ?? ($response['body']['message'] ?? ''));
+                    $body = $response['body']['data'] ?? null;
+                    if (is_array($body)) {
+                        $shape = array_is_list($body)
+                            ? 'list:'.count($body)
+                            : 'keys:'.implode(',', array_slice(array_keys($body), 0, 8));
+                        $record = array_is_list($body) ? ($body[0] ?? []) : $body;
+                        if (is_array($record)) {
+                            $bodyStatus = (string) ($record['status'] ?? $record['customer_status'] ?? '');
+                        }
+                    } else {
+                        $shape = gettype($body);
+                    }
                 }
                 $this->line(sprintf(
-                    'log id=%s status=%s provider=%s at=%s detail=%s',
+                    'log id=%s status=%s at=%s phone_prefix=%s phone_len=%d msg_len=%d unicode=%s has_url=%s provider_id=%s data=%s body_status=%s detail=%s',
                     $log->id,
                     $log->status?->value ?? $log->getRawOriginal('status'),
-                    $log->provider,
                     $log->created_at,
+                    $prefix,
+                    strlen($phone),
+                    strlen($message),
+                    preg_match('/[^\x00-\x7F]/', $message) ? 'yes' : 'no',
+                    str_contains($message, 'http') ? 'yes' : 'no',
+                    $this->redact((string) $log->provider_message_id),
+                    $shape,
+                    $this->redact($bodyStatus),
                     $this->redact($detail),
                 ));
             });
+
+            $latestId = (string) ($recent->first()?->provider_message_id ?? '');
+            if ($latestId !== '' && ! str_starts_with($latestId, 'philsms_')) {
+                $this->reportRemoteMessage($token, $latestId);
+            }
         }
 
         if (Schema::hasTable('jobs')) {
@@ -87,6 +117,36 @@ class SmsHealth extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function reportRemoteMessage(string $token, string $uid): void
+    {
+        try {
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->timeout(20)
+                ->get('https://dashboard.philsms.com/api/v3/sms/'.$uid);
+            $json = $response->json() ?? [];
+            $this->line('remote_http='.$response->status());
+            $this->line('remote_status='.$this->redact((string) ($json['status'] ?? '')));
+            $this->line('remote_message='.$this->redact((string) ($json['message'] ?? '')));
+            $data = $json['data'] ?? null;
+            if (is_array($data)) {
+                foreach ($data as $key => $value) {
+                    if (! is_scalar($value) || in_array($key, ['recipient', 'to', 'phone', 'message'], true)) {
+                        continue;
+                    }
+                    $this->line('remote_'.$key.'='.$this->redact($this->ascii((string) $value)));
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->line('remote_error='.$this->redact($e->getMessage()));
+        }
+    }
+
+    private function ascii(string $value): string
+    {
+        return preg_replace('/[^\x20-\x7E]/', '', $value) ?? '';
     }
 
     private function reportEnvFile(): void
