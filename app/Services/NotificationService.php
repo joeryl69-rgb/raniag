@@ -483,13 +483,16 @@ class NotificationService
             }
 
             $recipient = $this->normalizePhilippineNumber($smsLog->recipient_phone);
+            $textType = $this->philSmsTextType($smsLog->message);
 
             $response = Http::withToken($apiToken)
                 ->acceptJson()
+                ->asJson()
                 ->post('https://dashboard.philsms.com/api/v3/sms/send', [
                     'recipient' => $recipient,
                     'sender_id' => $senderId,
-                    'type' => 'plain',
+                    'type' => $textType,
+                    'sms_type' => $textType,
                     'message' => $smsLog->message,
                 ]);
 
@@ -497,12 +500,31 @@ class NotificationService
                 throw new \Exception('PhilSMS API response failed: '.$response->body());
             }
 
+            $messageId = (string) ($response->json('data.uid') ?? '');
+            $savedType = strtolower((string) ($response->json('data.sms_type') ?? ''));
+            if ($savedType === '' && $messageId !== '') {
+                try {
+                    $saved = Http::withToken($apiToken)
+                        ->acceptJson()
+                        ->timeout(20)
+                        ->get('https://dashboard.philsms.com/api/v3/sms/'.$messageId);
+                    $savedType = strtolower((string) ($saved->json('data.sms_type') ?? ''));
+                } catch (\Throwable) {
+                    $savedType = '';
+                }
+            }
+
+            if ($savedType === 'voice') {
+                throw new \Exception('PhilSMS routed this alert as a voice call. A text message was requested.');
+            }
+
             $smsLog->update([
                 'status' => SmsLogStatus::Sent->value,
                 'sent_at' => now(),
-                'provider_message_id' => $response->json('data.uid') ?? 'philsms_'.uniqid(),
+                'provider_message_id' => $messageId !== '' ? $messageId : 'philsms_'.uniqid(),
                 'provider_response' => [
                     'body' => $response->json(),
+                    'sms_type' => $savedType !== '' ? $savedType : $textType,
                     'timestamp' => now()->toIso8601String(),
                 ],
             ]);
@@ -521,6 +543,15 @@ class NotificationService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Plain and unicode are both handset texts. Voice, and the language
+     * and gender fields that go with it, are never sent.
+     */
+    private function philSmsTextType(string $message): string
+    {
+        return preg_match('/[^\x00-\x7F]/', $message) === 1 ? 'unicode' : 'plain';
     }
 
     /**
