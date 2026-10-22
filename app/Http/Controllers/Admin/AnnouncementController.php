@@ -10,9 +10,13 @@ use Illuminate\View\View;
 
 class AnnouncementController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $announcements = Announcement::with('author')->latest('published_at')->paginate(15);
+        $announcements = Announcement::with('author')
+            ->applyListFilters($request)
+            ->latest('published_at')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('admin.announcements.index', compact('announcements'));
     }

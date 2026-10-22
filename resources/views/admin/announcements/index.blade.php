@@ -11,11 +11,19 @@
     </x-workspace-intro>
 
     <x-kpi-strip :items="[
-        ['label' => 'Announcements', 'value' => $announcements->total(), 'icon' => 'bi-megaphone', 'tone' => 'primary', 'sub' => 'Published and drafts in this list'],
+        ['label' => 'Announcements', 'value' => $announcements->total(), 'icon' => 'bi-megaphone', 'tone' => 'primary', 'sub' => 'Matching the filters'],
     ]" />
 
     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
         <p class="small text-muted mb-0">Published items appear in the Updates and announcements section on the public landing page.</p>
+    </div>
+
+    <div class="card rg-filter-host border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <x-filters.toolbar search-placeholder="Search title or message" :action="route('admin.announcements.index')" :compact="true">
+                <x-announcement-filter-fields :include-status="true" />
+            </x-filters.toolbar>
+        </div>
     </div>
 
     <div class="rg-announcement-surface" data-live-refresh data-live-refresh-target="#rg-announcements-list" data-live-refresh-interval="4000">
@@ -58,7 +66,13 @@
                     </div>
                 </article>
             @empty
-                <div class="text-center text-muted py-4">No announcements yet. Create one to show it on the landing page.</div>
+                <div class="text-center text-muted py-4">
+                    @if(\App\Models\Announcement::listFiltersActive(request(), true))
+                        No announcements match these filters.
+                    @else
+                        No announcements yet. Create one to show it on the landing page.
+                    @endif
+                </div>
             @endforelse
         </div>
     </div>
