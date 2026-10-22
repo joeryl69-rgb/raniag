@@ -116,9 +116,6 @@
                         </div>
                         <span class="rg-home-live-tag"><i></i> LOCAL DESK</span>
                     </div>
-                    <x-filters.toolbar search-placeholder="Search title or message" :action="route('public.home').'#updates'" :clear-url="route('public.home').'#updates'" :compact="true">
-                        <x-announcement-filter-fields />
-                    </x-filters.toolbar>
                     <div data-live-refresh data-live-refresh-target="#rg-public-announcements" data-live-refresh-interval="4000">
                         <div id="rg-public-announcements">
                         @if($announcements->isNotEmpty())
@@ -136,11 +133,6 @@
                                         </div>
                                     </article>
                                 @endforeach
-                            </div>
-                        @elseif(\App\Models\Announcement::listFiltersActive(request()))
-                            <div class="rg-home-empty-update">
-                                <span class="bi bi-funnel" aria-hidden="true"></span>
-                                <div><strong>No matching updates</strong><p>Try another type, date, or search.</p></div>
                             </div>
                         @else
                             <div class="rg-home-empty-update">
@@ -363,7 +355,6 @@ html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; backgrou
 .rg-log-item h3 { margin: 2px 0; font-size: 1rem; font-weight: 800; }
 .rg-log-item p { margin: 0; color: #5b6780; font-size: .86rem; }
 .rg-home-briefing { position:relative;isolation:isolate;overflow:hidden;margin:clamp(60px,9vw,116px) calc((100vw - min(100vw - 2rem, 1320px))/ -2) 0;padding:clamp(32px,6vw,76px) max(24px, calc((100vw - min(100vw - 2rem, 1320px))/2));background:#0b1c28;color:#e7f1f1; }
-.rg-home-briefing:has(.rg-filter-menu[open]) { overflow:visible; }
 .rg-home-briefing::before { content:"";position:absolute;z-index:-1;inset:0;opacity:.42;background:radial-gradient(ellipse at 90% 0%,rgba(11,107,105,.38),transparent 42%),linear-gradient(rgba(145,191,197,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(145,191,197,.06) 1px,transparent 1px);background-size:auto,32px 32px,32px 32px; }
 .rg-home-briefing-head { max-width:710px;margin:0 0 34px; }
 .rg-home-briefing-head .rg-section-index { color:#a2bbc2; }
@@ -373,40 +364,6 @@ html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; backgrou
 .rg-home-briefing-grid { display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);align-items:stretch;gap:clamp(18px,3vw,34px); }
 .rg-home-briefing-main { display:grid;align-content:start;gap:24px;min-width:0; }
 .rg-home-updates,.rg-home-faq { min-width:0;padding:22px 24px;border:1px solid #2d4652;border-radius:7px;background:rgba(16,39,51,.8); }
-.rg-home-updates {
-    --raniag-card: #12303c;
-    --raniag-ink: #e7f1f1;
-    --raniag-border: #3a5663;
-    --raniag-muted: #a9bec4;
-    --raniag-primary: #62d2ba;
-    --raniag-primary-light: rgba(98,210,186,.16);
-    --raniag-primary-dark: #d7fff4;
-}
-.rg-home-updates .rg-filter-bar { margin: 0 0 14px; }
-.rg-home-updates .rg-filter-toolbar { position:relative; display:flex; align-items:center; gap:.48rem; min-width:0; }
-.rg-home-updates .rg-filter-toolbar-search { position:relative; display:flex; align-items:center; flex:1 1 12rem; min-width:0; height:2.55rem; color:var(--raniag-primary); }
-.rg-home-updates .rg-filter-toolbar-search > i { position:absolute; left:.72rem; z-index:1; font-size:.86rem; }
-.rg-home-updates .rg-filter-toolbar-search .form-control { height:100%; padding-left:2.15rem; border-color:var(--raniag-border); border-radius:.62rem; background:var(--raniag-card); color:var(--raniag-ink); font-size:.76rem; }
-.rg-home-updates .rg-filter-menu { position:relative; flex:0 0 auto; }
-.rg-home-updates .rg-filter-menu > summary,
-.rg-home-updates .rg-filter-search-submit { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; min-height:2.55rem; padding:0 .76rem; border:1px solid var(--raniag-border); border-radius:.62rem; background:var(--raniag-card); color:var(--raniag-ink); font-size:.72rem; font-weight:720; cursor:pointer; list-style:none; }
-.rg-home-updates .rg-filter-menu > summary::-webkit-details-marker { display:none; }
-.rg-home-updates .rg-filter-menu > summary > i { color:var(--raniag-primary); }
-.rg-home-updates .rg-filter-search-submit { width:2.55rem; padding:0; border-color:var(--raniag-primary); background:var(--raniag-primary); color:#06241f; font-size:.95rem; }
-.rg-home-updates .rg-filter-popover { position:absolute; z-index:30; top:calc(100% + .48rem); right:0; width:min(30rem, calc(100vw - 2rem)); padding:.9rem; border:1px solid var(--raniag-border); border-radius:.85rem; background:#102631; box-shadow:0 18px 44px rgba(0,0,0,.35); }
-.rg-home-updates .rg-filter-popover-fields { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.7rem; }
-.rg-home-updates .rg-filter-popover-fields > .col-md-2 { width:auto; max-width:none; padding:0; }
-.rg-home-updates .rg-filter-popover-fields .form-label,
-.rg-home-updates .rg-filter-date > span { display:block; margin-bottom:.3rem; color:var(--raniag-muted); font-size:.65rem; font-weight:750; }
-.rg-home-updates .rg-filter-popover-fields .form-select,
-.rg-home-updates .rg-filter-date .form-control,
-.rg-home-updates .rg-filter-popover-fields .rg-select-trigger { min-height:2.35rem; border-radius:.55rem; background-color:var(--raniag-card); color:var(--raniag-ink); font-size:.73rem; }
-.rg-home-updates .rg-filter-popover-actions { display:flex; justify-content:flex-end; gap:.45rem; margin-top:.8rem; padding-top:.75rem; border-top:1px solid var(--raniag-border); }
-.rg-home-updates .rg-filter-chips { border-top-color:#344e58; }
-@media (max-width: 767.98px) {
-    .rg-home-updates .rg-filter-toolbar { flex-wrap:wrap; }
-    .rg-home-updates .rg-filter-popover-fields { grid-template-columns:1fr; }
-}
 .rg-home-module-head { display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:17px;padding-bottom:13px;border-bottom:1px solid #344e58; }
 .rg-home-module-head h2 { margin:6px 0 0;color:#eef5f3;font-size:1.06rem;font-weight:750; }
 .rg-home-module-head>a { color:#7bd9c3;font-size:.78rem;font-weight:700;text-decoration:none; }
@@ -519,8 +476,6 @@ html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; backgrou
 @endpush
 
 @push('scripts')
-<script src="{{ asset('js/filter-bar.js') }}?v={{ @filemtime(public_path('js/filter-bar.js')) }}"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" integrity="sha384-X9kJyAubVxnP0hcA+AMMs21U445qsnqhnUF8EBlEpP3a42Kh/JwWjlv2ZcvGfphb" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous"></script>
 <script src="{{ asset('js/report-qr.js') }}?v={{ @filemtime(public_path('js/report-qr.js')) }}"></script>
 <script>

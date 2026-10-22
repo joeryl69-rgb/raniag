@@ -66,11 +66,11 @@ test('admin announcement filters combine search type status and dates', function
         ->assertDontSee('Old maintenance note');
 });
 
-test('the public updates list uses the same filters and keeps the latest three by default', function () {
-    $older = makeFilteredAnnouncement([
+test('the public homepage shows the latest three announcements without a filter', function () {
+    makeFilteredAnnouncement([
         'title' => 'Earlier maintenance letter',
         'badge' => 'Maintenance',
-        'body' => 'The earlier maintenance letter stays available when that type is selected.',
+        'body' => 'The earlier maintenance letter stays off the homepage.',
     ], 30);
     makeFilteredAnnouncement(['title' => 'Newest update', 'badge' => 'Update'], 1);
     makeFilteredAnnouncement(['title' => 'Middle alert', 'badge' => 'Safety Alert'], 2);
@@ -78,8 +78,8 @@ test('the public updates list uses the same filters and keeps the latest three b
 
     $this->get(route('public.home'))
         ->assertOk()
-        ->assertSee('Search title or message')
-        ->assertSee('All types')
+        ->assertDontSee('Search title or message')
+        ->assertDontSee('name="type"', false)
         ->assertSee('Newest update')
         ->assertSee('Middle alert')
         ->assertSee('Recent reminder')
@@ -87,8 +87,6 @@ test('the public updates list uses the same filters and keeps the latest three b
 
     $this->get(route('public.home', ['type' => 'Maintenance']))
         ->assertOk()
-        ->assertSee($older->body, false)
-        ->assertSee('Earlier maintenance letter')
-        ->assertDontSee('Newest update')
-        ->assertDontSee('Middle alert');
+        ->assertSee('Newest update')
+        ->assertDontSee('Earlier maintenance letter');
 });
