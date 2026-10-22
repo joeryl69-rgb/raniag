@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\StoreIncidentDocumentRequest;
 use App\Models\Incident;
 use App\Models\IncidentDocument;
 use App\Services\IncidentDocumentService;
+use App\Support\FilterOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,8 +59,26 @@ class IncidentDocumentController extends Controller
             ->appends($request->query());
 
         $documentTypes = IncidentDocumentType::cases();
+        $caseScope = Incident::query()->whereIn('status', $validStatuses);
+        $statusOptions = FilterOptions::enums(
+            [IncidentStatus::Resolved, IncidentStatus::Closed],
+            (clone $caseScope)->distinct()->pluck('status'),
+            $statusFilter === 'all' ? null : $statusFilter
+        );
+        $requiredForms = count($documentTypes);
+        $completionStates = [];
+        if ((clone $caseScope)->has('incidentDocuments', '>=', $requiredForms)->exists()) {
+            $completionStates[] = 'complete';
+        }
+        if ((clone $caseScope)->has('incidentDocuments', '<', $requiredForms)->exists()) {
+            $completionStates[] = 'missing';
+        }
+        $completionOptions = FilterOptions::present([
+            'complete' => 'All '.$requiredForms.' forms',
+            'missing' => 'Missing a form',
+        ], $completionStates, $request->input('completion'));
 
-        return view('admin.incident_documents.index', compact('incidents', 'documentTypes'));
+        return view('admin.incident_documents.index', compact('incidents', 'documentTypes', 'statusOptions', 'completionOptions'));
     }
 
     public function show(Incident $incident): View

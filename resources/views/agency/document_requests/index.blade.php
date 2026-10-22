@@ -34,21 +34,21 @@
                         <label class="form-label small text-muted mb-1">Status</label>
                         <select name="status" class="form-select" data-filter-default="all">
                             <option value="all" @selected($currentStatus === 'all')>All Statuses</option>
-                            <option value="pending" @selected($currentStatus === 'pending')>Pending</option>
-                            <option value="approved" @selected($currentStatus === 'approved')>Approved</option>
-                            <option value="sent" @selected($currentStatus === 'sent')>Sent</option>
-                            <option value="failed" @selected($currentStatus === 'failed')>Failed</option>
-                            <option value="rejected" @selected($currentStatus === 'rejected')>Rejected</option>
-                            <option value="cancelled" @selected($currentStatus === 'cancelled')>Cancelled</option>
-                            <option value="archived" @selected($currentStatus === 'archived')>Archived</option>
+                            @foreach ($statusOptions as $value => $label)
+                                <option value="{{ $value }}" @selected($currentStatus === $value)>{{ $label }}</option>
+                            @endforeach
+                            @if ($includeArchivedStatus)
+                                <option value="archived" @selected($currentStatus === 'archived')>Archived</option>
+                            @endif
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small text-muted mb-1">Type</label>
                         <select name="request_type" class="form-select" data-filter-default="all">
                             <option value="all" @selected($currentType === 'all')>All Types</option>
-                            <option value="single" @selected($currentType === 'single')>Single</option>
-                            <option value="bulk" @selected($currentType === 'bulk')>Bulk</option>
+                            @foreach ($typeOptions as $value => $label)
+                                <option value="{{ $value }}" @selected($currentType === $value)>{{ $label }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </x-filters.toolbar>

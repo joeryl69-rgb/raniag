@@ -7,6 +7,7 @@ use App\Http\Requests\Agency\StoreDocumentRequestRequest;
 use App\Models\DocumentRequest;
 use App\Models\Incident;
 use App\Services\DocumentRequestService;
+use App\Support\FilterOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -101,7 +102,31 @@ class DocumentRequestController extends Controller
             ->unique()
             ->all();
 
-        return view('agency.document_requests.index', compact('documentRequests', 'eligibleIncidents', 'incompleteIncidents', 'documentAvailability', 'issuedIncidentIds'));
+        $statusOptions = FilterOptions::present([
+            'pending' => 'Pending',
+            'approved' => 'Approved',
+            'sent' => 'Sent',
+            'failed' => 'Failed',
+            'rejected' => 'Rejected',
+            'cancelled' => 'Cancelled',
+        ], DocumentRequest::query()
+            ->where('requesting_agency_id', $agencyId)
+            ->whereNull('archived_at')
+            ->distinct()
+            ->pluck('status'), $request->input('status'));
+        $includeArchivedStatus = DocumentRequest::query()
+            ->where('requesting_agency_id', $agencyId)
+            ->whereNotNull('archived_at')
+            ->exists() || $request->input('status') === 'archived';
+        $typeOptions = FilterOptions::present([
+            'single' => 'Single',
+            'bulk' => 'Bulk',
+        ], DocumentRequest::query()
+            ->where('requesting_agency_id', $agencyId)
+            ->distinct()
+            ->pluck('request_type'), $request->input('request_type'));
+
+        return view('agency.document_requests.index', compact('documentRequests', 'eligibleIncidents', 'incompleteIncidents', 'documentAvailability', 'issuedIncidentIds', 'statusOptions', 'includeArchivedStatus', 'typeOptions'));
     }
 
     public function store(StoreDocumentRequestRequest $request, int $incident): RedirectResponse|JsonResponse

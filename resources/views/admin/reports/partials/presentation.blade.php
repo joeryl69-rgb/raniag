@@ -37,7 +37,7 @@
             <span>Incident type</span>
             <select name="incident_type_id" class="form-select" data-filter-default="" @disabled(request('dataset') === 'evacuees')>
                 <option value="">All incident types</option>
-                @foreach($incidentTypes as $type)
+                @foreach(($presentationTypes ?? $incidentTypes) as $type)
                     <option value="{{ $type->id }}" @selected((string) request('incident_type_id') === (string) $type->id)>{{ $type->name }}</option>
                 @endforeach
             </select>

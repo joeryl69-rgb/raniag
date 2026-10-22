@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Agency;
 use App\Enums\IncidentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Incident;
+use App\Support\FilterOptions;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -53,8 +54,17 @@ class ArchivedReportController extends Controller
         $query->orderBy(in_array($sort, $sortable, true) ? $sort : 'reported_at', $direction);
 
         $reports = $query->paginate(12)->withQueryString();
+        $archiveStatuses = FilterOptions::enums(
+            [IncidentStatus::Resolved, IncidentStatus::Closed],
+            Incident::query()
+                ->whereIn('status', self::VALID_STATUSES)
+                ->whereHas('currentAssignments', fn ($assignment) => $assignment->where('agency_id', $agencyId))
+                ->distinct()
+                ->pluck('status'),
+            $request->input('status')
+        );
 
-        return view('agency.archived_reports.index', compact('reports'));
+        return view('agency.archived_reports.index', compact('reports', 'archiveStatuses'));
     }
 
     public function show(Request $request, Incident $incident): View

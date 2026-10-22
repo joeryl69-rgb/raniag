@@ -64,10 +64,9 @@
                     <label class="form-label small text-muted mb-1">Status</label>
                     <select name="status" id="status" class="form-select" data-filter-default="0">
                         <option value="0" @selected($selected === '0')>Waiting for review</option>
-                        <option value="sent" @selected($selected === 'sent')>Emailed</option>
-                        <option value="approved" @selected($selected === 'approved')>PDF ready</option>
-                        <option value="failed" @selected($selected === 'failed')>Email failed</option>
-                        <option value="rejected" @selected($selected === 'rejected')>Rejected</option>
+                        @foreach ($statusOptions as $value => $label)
+                            <option value="{{ $value }}" @selected($selected === $value)>{{ $label }}</option>
+                        @endforeach
                         <option value="all" @selected($selected === 'all')>All</option>
                     </select>
                 </div>

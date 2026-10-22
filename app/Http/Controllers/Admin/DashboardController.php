@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\IncidentPriority;
 use App\Enums\IncidentStatus;
 use App\Enums\SmsLogStatus;
 use App\Http\Controllers\Controller;
@@ -12,6 +13,7 @@ use App\Models\Incident;
 use App\Models\SmsLog;
 use App\Services\DashboardAlertFeed;
 use App\Services\SituationalMapService;
+use App\Support\FilterOptions;
 use App\Support\PeriodRange;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -29,9 +31,29 @@ class DashboardController extends Controller
 
     public function index(Request $request): View
     {
+        $openStatuses = [
+            IncidentStatus::Submitted->value,
+            IncidentStatus::Received->value,
+            IncidentStatus::Assigned->value,
+            IncidentStatus::InProgress->value,
+            IncidentStatus::PendingInfo->value,
+        ];
+        $openIncidents = Incident::query()->whereIn('status', $openStatuses);
+
         return view('dashboard', [
             'mapConfig' => config('raniag.map'),
             'alertCursor' => $this->dashboardAlerts->cursorFor($request->user()),
+            'mapStatuses' => FilterOptions::present([
+                IncidentStatus::Submitted->value => 'Submitted',
+                IncidentStatus::Received->value => 'Received',
+                IncidentStatus::Assigned->value => 'Assigned',
+                IncidentStatus::InProgress->value => 'In progress',
+                IncidentStatus::PendingInfo->value => 'Pending info',
+            ], (clone $openIncidents)->distinct()->pluck('status')),
+            'mapPriorities' => FilterOptions::enums(
+                IncidentPriority::cases(),
+                (clone $openIncidents)->distinct()->pluck('priority')
+            ),
         ]);
     }
 

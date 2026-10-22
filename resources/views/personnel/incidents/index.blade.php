@@ -17,7 +17,7 @@
             </div>
             <span class="rg-refresh-note"><span aria-hidden="true"></span>Live queue</span>
         </header>
-        <x-incidents.queue-controls :action="route('personnel.incidents.index')" />
+        <x-incidents.queue-controls :action="route('personnel.incidents.index')" :statuses="$queueStatuses" />
         <div class="rg-docket-region" data-live-refresh data-live-refresh-target="#rg-personnel-incident-docket" data-live-refresh-interval="4000">
             <ol class="rg-docket-list" id="rg-personnel-incident-docket" aria-label="Assigned incidents ordered by {{ request('sort', 'reported_at') === 'priority' ? 'priority rank, critical then high, medium and low; report time '.(request('direction', 'desc') === 'asc' ? 'ascending' : 'descending') : (request('sort', 'reported_at') === 'reported_at' ? 'report time ' : request('sort').' ').(request('direction', 'desc') === 'asc' ? 'ascending' : 'descending') }}">
                 @forelse ($incidents as $inc)

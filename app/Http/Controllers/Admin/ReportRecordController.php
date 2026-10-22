@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\ReportRecordRequest;
 use App\Models\ActivityLog;
 use App\Models\Agency;
 use App\Models\FeedbackSubmission;
+use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\ReportRecord;
 use App\Services\QuickOperationalReport;
@@ -136,6 +137,20 @@ class ReportRecordController extends Controller
             }
         }
 
+        $presentationTypes = collect();
+        if ($view === 'home') {
+            $usedTypeIds = Incident::query()->whereNotNull('incident_type_id')->distinct()->pluck('incident_type_id');
+            $presentationTypes = IncidentType::query()
+                ->where(function ($query) use ($usedTypeIds, $request) {
+                    $query->whereIn('id', $usedTypeIds);
+                    if ($request->filled('incident_type_id')) {
+                        $query->orWhere('id', $request->integer('incident_type_id'));
+                    }
+                })
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        }
+
         return view('admin.reports.record', [
             'records' => $records,
             'record' => $record,
@@ -156,6 +171,7 @@ class ReportRecordController extends Controller
             'periodKey' => $window['key'],
             'periodLabel' => $window['label'],
             'incidentTypes' => ($needsBuilderOptions || $view === 'home') ? IncidentType::query()->orderBy('name')->get(['id', 'name']) : collect(),
+            'presentationTypes' => $presentationTypes,
             'presentation' => $presentation,
             'agencies' => $needsBuilderOptions ? Agency::query()->orderBy('name')->get(['id', 'name', 'code']) : collect(),
             'barangays' => config('raniag.barangays'),

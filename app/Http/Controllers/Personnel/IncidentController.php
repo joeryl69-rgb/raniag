@@ -10,6 +10,7 @@ use App\Models\Incident;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Services\GeofenceService;
 use App\Services\IncidentService;
+use App\Support\FilterOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,7 +41,28 @@ class IncidentController extends Controller
             return response()->json($incidents);
         }
 
-        return view('personnel.incidents.index', compact('incidents', 'filters'));
+        $queueStatuses = FilterOptions::enums(
+            array_values(array_filter(
+                IncidentStatus::cases(),
+                fn (IncidentStatus $status) => ! in_array($status->value, ['resolved', 'closed'], true)
+            )),
+            Incident::query()
+                ->whereHas('assignments', function ($query) use ($personnelId, $filters) {
+                    $agencyId = $filters['viewer_agency_id'] ?? null;
+                    $query->where(function ($assignment) use ($personnelId, $agencyId) {
+                        $assignment->where('assignments.assigned_to', $personnelId);
+                        if ($agencyId) {
+                            $assignment->orWhere('assignments.agency_id', $agencyId);
+                        }
+                    });
+                })
+                ->whereNotIn('status', ['resolved', 'closed'])
+                ->distinct()
+                ->pluck('status'),
+            $request->input('status')
+        );
+
+        return view('personnel.incidents.index', compact('incidents', 'filters', 'queueStatuses'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse

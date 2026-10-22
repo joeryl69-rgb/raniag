@@ -6,9 +6,11 @@ use App\Enums\IncidentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agency\UpdateStatusRequest;
 use App\Models\Assignment;
+use App\Models\Incident;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Services\GeofenceService;
 use App\Services\IncidentService;
+use App\Support\FilterOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,7 +41,20 @@ class IncidentController extends Controller
             return response()->json($incidents);
         }
 
-        return view('agency.incidents.index', compact('incidents', 'filters'));
+        $queueStatuses = FilterOptions::enums(
+            array_values(array_filter(
+                IncidentStatus::cases(),
+                fn (IncidentStatus $status) => ! in_array($status->value, ['resolved', 'closed'], true)
+            )),
+            Incident::query()
+                ->whereHas('assignments', fn ($query) => $query->where('assignments.agency_id', $agencyId))
+                ->whereNotIn('status', ['resolved', 'closed'])
+                ->distinct()
+                ->pluck('status'),
+            $request->input('status')
+        );
+
+        return view('agency.incidents.index', compact('incidents', 'filters', 'queueStatuses'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse

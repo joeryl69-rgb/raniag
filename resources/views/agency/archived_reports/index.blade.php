@@ -41,8 +41,9 @@
                     <label class="form-label small text-muted mb-1">Status</label>
                     <select name="status" class="form-select" data-filter-default="all">
                         <option value="all" @selected(request('status', 'all') === 'all')>All</option>
-                        <option value="resolved" @selected(request('status') === 'resolved')>Resolved</option>
-                        <option value="closed" @selected(request('status') === 'closed')>Closed</option>
+                        @foreach ($archiveStatuses as $value => $label)
+                            <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
             </x-filters.toolbar>

@@ -27,7 +27,7 @@
                 <span class="rg-refresh-note"><span aria-hidden="true"></span>Live queue</span>
             </div>
         </header>
-        <x-incidents.queue-controls :action="route('admin.incidents.index')" :admin="true" :incident-types="$incidentTypes" />
+        <x-incidents.queue-controls :action="route('admin.incidents.index')" :admin="true" :incident-types="$incidentTypes" :statuses="$queueStatuses" :priorities="$queuePriorities" />
         <div class="rg-table-wrap" data-live-refresh data-live-refresh-target="#rg-admin-incident-rows" data-live-refresh-interval="4000">
             <table class="rg-incidents-table">
                 <thead>

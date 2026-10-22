@@ -2,6 +2,8 @@
     'action',
     'admin' => false,
     'incidentTypes' => collect(),
+    'statuses' => [],
+    'priorities' => [],
 ])
 
 <div x-data="raniagFilterBar()" x-init="init()">
@@ -19,10 +21,8 @@
                 <span>Status</span>
                 <select name="status">
                     <option value="">All statuses</option>
-                    @foreach (\App\Enums\IncidentStatus::cases() as $status)
-                        @if ($admin || ! in_array($status->value, ['resolved', 'closed'], true))
-                            <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
-                        @endif
+                    @foreach ($statuses as $value => $label)
+                        <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
@@ -52,8 +52,8 @@
                     <span>Priority</span>
                     <select name="priority">
                         <option value="">All priorities</option>
-                        @foreach (\App\Enums\IncidentPriority::cases() as $priority)
-                            <option value="{{ $priority->value }}" @selected(request('priority') === $priority->value)>{{ $priority->label() }}</option>
+                        @foreach ($priorities as $value => $label)
+                            <option value="{{ $value }}" @selected(request('priority') === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </label>

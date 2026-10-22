@@ -25,16 +25,16 @@
                 <label class="form-label small text-muted mb-1">Status</label>
                 <select name="status" class="form-select" data-filter-default="all">
                     <option value="all" @selected(request('status', 'all') === 'all')>All statuses</option>
-                    <option value="new" @selected(request('status')==='new')>New</option>
-                    <option value="reviewed" @selected(request('status')==='reviewed')>Reviewed</option>
-                    <option value="resolved" @selected(request('status')==='resolved')>Resolved</option>
+                    @foreach (\App\Models\FeedbackSubmission::usedFilterStatuses() as $value => $label)
+                        <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label small text-muted mb-1">Category</label>
                 <select name="category" class="form-select" data-filter-default="all">
                     <option value="all" @selected(request('category', 'all') === 'all')>All categories</option>
-                    @foreach(\App\Models\FeedbackSubmission::filterableCategories() as $key => $cat)
+                    @foreach(\App\Models\FeedbackSubmission::usedFilterCategories() as $key => $cat)
                         <option value="{{ $key }}" @selected(request('category')===$key)>{{ $cat['label'] }}</option>
                     @endforeach
                 </select>
@@ -43,8 +43,9 @@
                 <label class="form-label small text-muted mb-1">Source</label>
                 <select name="source" class="form-select" data-filter-default="all">
                     <option value="all" @selected(request('source', 'all') === 'all')>All sources</option>
-                    <option value="public" @selected(request('source')==='public')>Public (Landing Page)</option>
-                    <option value="agency" @selected(request('source')==='agency')>Support Center (Agency/Personnel)</option>
+                    @foreach (\App\Models\FeedbackSubmission::usedFilterSources() as $value => $label)
+                        <option value="{{ $value }}" @selected(request('source') === $value)>{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
         </x-filters.toolbar>

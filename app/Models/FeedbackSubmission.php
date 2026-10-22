@@ -45,6 +45,40 @@ class FeedbackSubmission extends Model
         return array_intersect_key(self::CATEGORIES, array_flip(self::CURRENT_CATEGORY_KEYS));
     }
 
+    /** @return array<string, string> */
+    public static function usedFilterStatuses(): array
+    {
+        return \App\Support\FilterOptions::present([
+            'new' => 'New',
+            'reviewed' => 'Reviewed',
+            'resolved' => 'Resolved',
+        ], static::query()->distinct()->pluck('status'), request('status'));
+    }
+
+    /** @return array<string, array{label: string, hint: string, icon: string}> */
+    public static function usedFilterCategories(): array
+    {
+        $present = static::query()->distinct()->pluck('category')->filter()->all();
+        $selected = request('category');
+        $options = [];
+        foreach (self::CATEGORIES as $key => $category) {
+            if (in_array($key, $present, true) || (is_string($selected) && $selected === $key)) {
+                $options[$key] = $category;
+            }
+        }
+
+        return $options;
+    }
+
+    /** @return array<string, string> */
+    public static function usedFilterSources(): array
+    {
+        return \App\Support\FilterOptions::present([
+            'public' => 'Public (Landing Page)',
+            'agency' => 'Support Center (Agency/Personnel)',
+        ], static::query()->distinct()->pluck('submitted_via'), request('source'));
+    }
+
     protected $fillable = [
         'category',
         'submitted_via',

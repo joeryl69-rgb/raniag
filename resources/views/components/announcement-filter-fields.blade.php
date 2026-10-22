@@ -14,8 +14,9 @@
         <label class="form-label small text-muted mb-1">Status</label>
         <select name="status" class="form-select" data-filter-default="all">
             <option value="all" @selected(request('status', 'all') === 'all')>All statuses</option>
-            <option value="published" @selected(request('status') === 'published')>Published</option>
-            <option value="hidden" @selected(request('status') === 'hidden')>Hidden</option>
+            @foreach (\App\Models\Announcement::filterablePublicationStatuses() as $value => $label)
+                <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+            @endforeach
         </select>
     </div>
 @endif

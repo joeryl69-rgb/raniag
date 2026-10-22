@@ -33,16 +33,18 @@
                     <label class="form-label small text-muted mb-1">Status</label>
                     <select name="status" class="form-select" data-filter-default="all">
                         <option value="all" @selected(request('status', 'all') === 'all')>Resolved and closed</option>
-                        <option value="resolved" @selected(request('status') === 'resolved')>Resolved</option>
-                        <option value="closed" @selected(request('status') === 'closed')>Closed</option>
+                        @foreach ($statusOptions as $value => $label)
+                            <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">File completion</label>
                     <select name="completion" class="form-select" data-filter-default="">
                         <option value="" @selected(! request('completion'))>Any completion</option>
-                        <option value="complete" @selected(request('completion') === 'complete')>All 4 forms</option>
-                        <option value="missing" @selected(request('completion') === 'missing')>Missing a form</option>
+                        @foreach ($completionOptions as $value => $label)
+                            <option value="{{ $value }}" @selected(request('completion') === $value)>{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
             </x-filters.toolbar>

@@ -125,13 +125,40 @@ class Announcement extends Model
             $query->published();
         }
 
-        $extras = $query->distinct()->pluck('badge')
+        $stored = $query->distinct()->pluck('badge')->filter()->values()->all();
+        $selected = request('type');
+        $selected = is_string($selected) && $selected !== '' && $selected !== 'all' ? $selected : null;
+        $ordered = array_values(array_filter(
+            $presets,
+            fn (string $badge) => in_array($badge, $stored, true) || $badge === $selected
+        ));
+        $extras = collect($stored)
             ->reject(fn ($badge) => in_array($badge, $presets, true))
             ->sort()
             ->values()
             ->all();
+        if ($selected && ! in_array($selected, $ordered, true) && ! in_array($selected, $extras, true)) {
+            $extras[] = $selected;
+        }
 
-        return array_merge($presets, $extras);
+        return array_merge($ordered, $extras);
+    }
+
+    /** @return array<string, string> */
+    public static function filterablePublicationStatuses(): array
+    {
+        $states = [];
+        if (static::query()->where('is_published', true)->exists()) {
+            $states[] = 'published';
+        }
+        if (static::query()->where('is_published', false)->exists()) {
+            $states[] = 'hidden';
+        }
+
+        return \App\Support\FilterOptions::present([
+            'published' => 'Published',
+            'hidden' => 'Hidden',
+        ], $states, request('status'));
     }
 
     public static function typeLabel(string $badge): string

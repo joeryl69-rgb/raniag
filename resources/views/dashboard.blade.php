@@ -613,18 +613,15 @@
                     @if($isAdmin)
                     <select id="filter-status" aria-label="Filter by status">
                         <option value="">All statuses</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="received">Received</option>
-                        <option value="assigned">Assigned</option>
-                        <option value="in_progress">In progress</option>
-                        <option value="pending_info">Pending info</option>
+                        @foreach (($mapStatuses ?? []) as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
                     </select>
                     <select id="filter-priority" aria-label="Filter by priority">
                         <option value="">All priorities</option>
-                        <option value="critical">Critical</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
+                        @foreach (($mapPriorities ?? []) as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
                     </select>
                     @endif
                     <select id="filter-barangay" aria-label="Filter by barangay">

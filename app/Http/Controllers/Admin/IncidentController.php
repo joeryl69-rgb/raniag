@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\IncidentPriority;
 use App\Enums\IncidentStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Services\AssignmentService;
 use App\Services\IncidentService;
 use App\Services\NotificationService;
+use App\Support\FilterOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,8 +56,16 @@ class IncidentController extends Controller
             return response()->json($incidents);
         }
 
-        // Provide incident types for filter dropdown
-        $incidentTypes = IncidentType::orderBy('name')->get();
+        $usedTypeIds = Incident::query()->whereNotNull('incident_type_id')->distinct()->pluck('incident_type_id');
+        $incidentTypes = IncidentType::query()
+            ->where(function ($query) use ($usedTypeIds, $request) {
+                $query->whereIn('id', $usedTypeIds);
+                if ($request->filled('incident_type_id')) {
+                    $query->orWhere('id', $request->integer('incident_type_id'));
+                }
+            })
+            ->orderBy('name')
+            ->get();
 
         $statusCounts = Incident::query()
             ->selectRaw('status, COUNT(*) as aggregate')
@@ -76,8 +86,14 @@ class IncidentController extends Controller
             'resolved' => $countStatus(IncidentStatus::Resolved) + $countStatus(IncidentStatus::Closed),
         ];
         $incidentKpis['outside'] = Incident::query()->where('meta->within_jurisdiction', false)->count();
+        $queueStatuses = FilterOptions::enums(IncidentStatus::cases(), $statusCounts->keys(), $request->input('status'));
+        $queuePriorities = FilterOptions::enums(
+            IncidentPriority::cases(),
+            Incident::query()->distinct()->pluck('priority'),
+            $request->input('priority')
+        );
 
-        return view('admin.incidents.index', compact('incidents', 'incidentTypes', 'incidentKpis'));
+        return view('admin.incidents.index', compact('incidents', 'incidentTypes', 'incidentKpis', 'queueStatuses', 'queuePriorities'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse

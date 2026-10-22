@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ApproveDocumentRequestRequest;
 use App\Models\DocumentRequest;
 use App\Services\PrintableReportService;
+use App\Support\FilterOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,8 +63,16 @@ class PrintableReportRequestController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        $statusOptions = FilterOptions::present([
+            'sent' => 'Emailed',
+            'approved' => 'PDF ready',
+            'failed' => 'Email failed',
+            'rejected' => 'Rejected',
+        ], DocumentRequest::query()->distinct()->pluck('status'), $request->input('status'));
+
         return view('admin.document_requests.index', [
             'documentRequests' => $documentRequests,
+            'statusOptions' => $statusOptions,
         ]);
     }
 
