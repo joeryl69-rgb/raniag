@@ -335,8 +335,8 @@
             .map-referred .ref-track { font-weight: 800; }
 
             #dashboard-map { width: 100%; z-index: 1; }
-            #dashboard-map.h-admin { height: clamp(520px, 64vh, 760px); }
-            #dashboard-map.h-role { height: 360px; }
+            #dashboard-map.h-admin,
+            #dashboard-map.h-role { height: clamp(520px, 64vh, 760px); }
             @media (max-width: 767.98px) { #dashboard-map.h-admin, #dashboard-map.h-role { height: 300px; } }
 
             .layer-panel {
