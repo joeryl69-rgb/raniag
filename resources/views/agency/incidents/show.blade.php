@@ -254,6 +254,9 @@
                                     const ackCheckbox = document.getElementById('resolutionReviewAck');
                                     const confirmBtn = document.getElementById('resolutionConfirmSubmitBtn');
                                     const reviewModalEl = document.getElementById('resolutionReviewModal');
+                                    if (reviewModalEl && reviewModalEl.parentElement !== document.body) {
+                                        document.body.appendChild(reviewModalEl);
+                                    }
 
                                     function setConfirmReady(ready) {
                                         confirmBtn.disabled = !ready;
