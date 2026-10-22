@@ -40,7 +40,7 @@
             <p class="rg-docket-summary">{{ \Illuminate\Support\Str::limit(strip_tags($incident->description), 150) }}</p>
         @endif
         <div class="rg-docket-facts">
-            <span><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ $incident->barangay ?: 'Location not provided' }}</span>
+            <span><i class="bi bi-geo-alt" aria-hidden="true"></i>@if ($incident->barangay)<x-place-label :barangay="$incident->barangay" />@else Location not provided @endif</span>
             <span>
                 <i class="bi bi-clock" aria-hidden="true"></i>
                 <time datetime="{{ $incident->reported_at?->toIso8601String() }}">Reported {{ $incident->reported_at?->diffForHumans() ?? 'time unknown' }}</time>

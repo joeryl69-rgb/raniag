@@ -29,8 +29,8 @@
                     <div class="fw-semibold">{{ $incident->incidentType?->name }}</div>
                 </div>
                 <div class="col-md-4">
-                    <div class="text-muted small">Barangay</div>
-                    <div class="fw-semibold">{{ $incident->barangay }}</div>
+                    <div class="text-muted small">{{ \App\Support\PlaceScope::isOfficial($incident->barangay) ? 'Barangay' : 'Place' }}</div>
+                    <div class="fw-semibold"><x-place-label :barangay="$incident->barangay" /></div>
                 </div>
                 <div class="col-md-4">
                     <div class="text-muted small">Reported At</div>

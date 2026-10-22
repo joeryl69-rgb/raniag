@@ -2056,3 +2056,23 @@ html[data-theme="dark"] .container-fluid:has(.rg-workspace-intro--feedback-triag
         min-width: 0;
     }
 }
+
+.rg-place-outside {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .35rem;
+}
+.rg-place-outside-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: .08rem .42rem;
+    border-radius: 999px;
+    background: #fff4e8;
+    color: #9a3412;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    line-height: 1.3;
+    white-space: nowrap;
+}

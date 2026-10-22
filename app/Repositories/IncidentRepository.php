@@ -120,9 +120,7 @@ class IncidentRepository implements IncidentRepositoryInterface
             $query->where('priority', $filters['priority']);
         }
 
-        if (! empty($filters['barangay'] ?? null) && $filters['barangay'] !== 'all') {
-            $query->where('barangay', $filters['barangay']);
-        }
+        \App\Support\PlaceScope::applyBarangayFilter($query, $filters['barangay'] ?? null);
 
         if (! empty($filters['q'] ?? null)) {
             $q = trim($filters['q']);
@@ -179,9 +177,7 @@ class IncidentRepository implements IncidentRepositoryInterface
             $query->where('priority', $filters['priority']);
         }
 
-        if (! empty($filters['barangay'] ?? null) && $filters['barangay'] !== 'all') {
-            $query->where('barangay', $filters['barangay']);
-        }
+        \App\Support\PlaceScope::applyBarangayFilter($query, $filters['barangay'] ?? null);
 
         if (! empty($filters['q'] ?? null)) {
             $q = trim($filters['q']);

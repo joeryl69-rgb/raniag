@@ -40,10 +40,7 @@ class ArchivedReportController extends Controller
             'date_to' => $request->string('date_to')->trim()->value(),
         ]);
 
-        $barangay = $request->string('barangay')->value();
-        if ($barangay !== '' && $barangay !== 'all') {
-            $query->where('barangay', $barangay);
-        }
+        \App\Support\PlaceScope::applyBarangayFilter($query, $request->string('barangay')->value());
 
         $status = $request->string('status')->value();
         if ($status !== '' && $status !== 'all' && in_array($status, self::VALID_STATUSES, true)) {

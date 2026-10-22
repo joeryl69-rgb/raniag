@@ -34,10 +34,7 @@
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Barangay</label>
                     <select name="barangay" class="form-select" data-filter-default="all">
-                        <option value="all">All Barangays</option>
-                        @foreach($barangays as $b)
-                            <option value="{{ $b }}" @selected(request('barangay') === $b)>{{ $b }}</option>
-                        @endforeach
+                        <x-place-filter-options :barangays="$barangays" :selected="request('barangay', 'all')" />
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -83,7 +80,7 @@
                                 <x-incident-type-badge :type="$incident->incidentType" size="30" />
                                 {{ $incident->incidentType?->name }}
                             </td>
-                            <td class="d-none d-md-table-cell">{{ $incident->barangay }}</td>
+                            <td class="d-none d-md-table-cell"><x-place-label :barangay="$incident->barangay" /></td>
                             <td>
                                 <span class="badge {{ $incident->status->value === 'resolved' ? 'bg-success' : 'bg-secondary' }}">
                                     {{ $incident->status->label() }}

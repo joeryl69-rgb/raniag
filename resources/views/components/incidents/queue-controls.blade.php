@@ -35,10 +35,7 @@
                             <option value="{{ $type->id }}" @selected((string) request('incident_type_id') === (string) $type->id)>{{ $type->name }}</option>
                         @endforeach
                     @else
-                        <option value="">All locations</option>
-                        @foreach (($barangays ?? collect()) as $barangay)
-                            <option value="{{ $barangay }}" @selected(request('barangay') === $barangay)>{{ $barangay }}</option>
-                        @endforeach
+                        <x-place-filter-options :barangays="$barangays ?? collect()" :selected="request('barangay')" all-value="" all-label="All locations" />
                     @endif
                 </select>
             </label>
