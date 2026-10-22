@@ -20,10 +20,11 @@ class SmsHealth extends Command
 
         $this->line('env='.app()->environment());
         $this->line('queue='.(string) config('queue.default'));
-        $this->line('provider='.(string) config('services.sms.provider'));
+        $this->line('config_cached='.(is_file(base_path('bootstrap/cache/config.php')) ? 'yes' : 'no'));
+        $this->classify('config_provider', (string) config('services.sms.provider'));
+        $this->classify('config_sender', (string) config('services.philsms.sender_id'));
         $this->line('token_present='.($token !== '' ? 'yes' : 'no'));
         $this->line('token_length='.strlen($token));
-        $this->line('sender_id='.(string) config('services.philsms.sender_id'));
         $this->reportEnvFile();
 
         try {
@@ -158,25 +159,39 @@ class SmsHealth extends Command
             return;
         }
 
-        $wanted = ['APP_ENV', 'QUEUE_CONNECTION', 'SMS_PROVIDER', 'PHILSMS_SENDER_ID'];
+        $counts = [];
         $found = [];
         foreach (file($path, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
             if (! preg_match('/^([A-Z0-9_]+)=(.*)$/', $line, $match)) {
                 continue;
             }
-            if ($match[1] === 'PHILSMS_API_TOKEN') {
-                $value = trim($match[2], " \t\"'");
-                $this->line('env_token_present='.($value !== '' ? 'yes' : 'no'));
-                $this->line('env_token_length='.strlen($value));
-            }
-            if (in_array($match[1], $wanted, true)) {
-                $found[$match[1]] = trim($match[2], " \t\"'");
-            }
+            $counts[$match[1]] = ($counts[$match[1]] ?? 0) + 1;
+            $found[$match[1]] = trim($match[2], " \t\"'");
         }
 
-        foreach ($wanted as $key) {
-            $this->line('env_'.$key.'='.($found[$key] ?? 'missing'));
+        foreach (['SMS_PROVIDER', 'PHILSMS_SENDER_ID', 'PHILSMS_API_TOKEN'] as $key) {
+            $this->line('env_'.$key.'_lines='.($counts[$key] ?? 0));
         }
+        $this->line('env_APP_ENV='.($found['APP_ENV'] ?? 'missing'));
+        $this->line('env_QUEUE_CONNECTION='.($found['QUEUE_CONNECTION'] ?? 'missing'));
+        $this->classify('env_provider', (string) ($found['SMS_PROVIDER'] ?? ''));
+        $this->classify('env_sender', (string) ($found['PHILSMS_SENDER_ID'] ?? ''));
+        $tokenValue = (string) ($found['PHILSMS_API_TOKEN'] ?? '');
+        $this->line('env_token_present='.($tokenValue !== '' ? 'yes' : 'no'));
+        $this->line('env_token_length='.strlen($tokenValue));
+        $this->line('config_matches_env_provider='.(
+            strtolower(trim((string) config('services.sms.provider'))) === strtolower(trim((string) ($found['SMS_PROVIDER'] ?? '')))
+                ? 'yes'
+                : 'no'
+        ));
+    }
+
+    private function classify(string $label, string $value): void
+    {
+        $normalized = strtolower(trim($value, " \t\"'"));
+        $this->line($label.'_disabled='.(in_array($normalized, ['disabled', 'off', 'none', ''], true) ? 'yes' : 'no'));
+        $this->line($label.'_is_philsms='.($normalized === 'philsms' ? 'yes' : 'no'));
+        $this->line($label.'_length='.strlen($normalized));
     }
 
     private function redact(string $value): string
