@@ -86,38 +86,9 @@ jobs:
             fi
             echo "==> enable PhilSMS in production .env"
             set +x
-            php -r '
-            $path = ".env";
-            if (!is_file($path)) { fwrite(STDERR, ".env missing\n"); exit(1); }
-            $raw = file_get_contents($path);
-            $lines = preg_split("/\r\n|\n|\r/", $raw);
-            $before = "missing";
-            foreach ($lines as $line) {
-                if (preg_match("/^SMS_PROVIDER=(.*)$/", $line, $m)) { $before = $m[1]; break; }
-            }
-            $token = getenv("PHILSMS_API_TOKEN") ?: "";
-            $sender = getenv("PHILSMS_SENDER_ID") ?: "PhilSMS";
-            $updates = ["SMS_PROVIDER" => "PhilSMS", "PHILSMS_SENDER_ID" => $sender];
-            if ($token !== "") { $updates["PHILSMS_API_TOKEN"] = $token; }
-            $seen = [];
-            $out = [];
-            foreach ($lines as $line) {
-                if (preg_match("/^([A-Z0-9_]+)=/", $line, $m) && isset($updates[$m[1]])) {
-                    $out[] = $m[1]."=".$updates[$m[1]];
-                    $seen[$m[1]] = true;
-                } else {
-                    $out[] = $line;
-                }
-            }
-            foreach ($updates as $key => $value) {
-                if (!isset($seen[$key])) { $out[] = $key."=".$value; }
-            }
-            file_put_contents($path, implode("\n", $out)."\n");
-            echo "SMS_PROVIDER was ".$before."\n";
-            echo "SMS_PROVIDER is PhilSMS\n";
-            echo "PHILSMS_API_TOKEN ".($token !== "" ? "updated" : "left unchanged")."\n";
-            echo "PHILSMS_SENDER_ID is ".$sender."\n";
-            '
+            php -r 'file_put_contents("storage/framework/philsms-env.php", base64_decode("PD9waHAKJHBhdGggPSAiLmVudiI7CmlmICghaXNfZmlsZSgkcGF0aCkpIHsgZndyaXRlKFNUREVSUiwgIi5lbnYgbWlzc2luZ1xuIik7IGV4aXQoMSk7IH0KJHJhdyA9IGZpbGVfZ2V0X2NvbnRlbnRzKCRwYXRoKTsKJGxpbmVzID0gcHJlZ19zcGxpdCgiL1xyXG58XG58XHIvIiwgJHJhdyk7CiRiZWZvcmUgPSAibWlzc2luZyI7CmZvcmVhY2ggKCRsaW5lcyBhcyAkbGluZSkgewogICAgaWYgKHByZWdfbWF0Y2goIi9eU01TX1BST1ZJREVSPSguKikkLyIsICRsaW5lLCAkbSkpIHsgJGJlZm9yZSA9ICRtWzFdOyBicmVhazsgfQp9CiR0b2tlbiA9IGdldGVudigiUEhJTFNNU19BUElfVE9LRU4iKSA/OiAiIjsKJHNlbmRlciA9IGdldGVudigiUEhJTFNNU19TRU5ERVJfSUQiKSA/OiAiUGhpbFNNUyI7CiR1cGRhdGVzID0gWyJTTVNfUFJPVklERVIiID0+ICJQaGlsU01TIiwgIlBISUxTTVNfU0VOREVSX0lEIiA9PiAkc2VuZGVyXTsKaWYgKCR0b2tlbiAhPT0gIiIpIHsgJHVwZGF0ZXNbIlBISUxTTVNfQVBJX1RPS0VOIl0gPSAkdG9rZW47IH0KJHNlZW4gPSBbXTsKJG91dCA9IFtdOwpmb3JlYWNoICgkbGluZXMgYXMgJGxpbmUpIHsKICAgIGlmIChwcmVnX21hdGNoKCIvXihbQS1aMC05X10rKT0vIiwgJGxpbmUsICRtKSAmJiBpc3NldCgkdXBkYXRlc1skbVsxXV0pKSB7CiAgICAgICAgJG91dFtdID0gJG1bMV0uIj0iLiR1cGRhdGVzWyRtWzFdXTsKICAgICAgICAkc2VlblskbVsxXV0gPSB0cnVlOwogICAgfSBlbHNlIHsKICAgICAgICAkb3V0W10gPSAkbGluZTsKICAgIH0KfQpmb3JlYWNoICgkdXBkYXRlcyBhcyAka2V5ID0+ICR2YWx1ZSkgewogICAgaWYgKCFpc3NldCgkc2Vlblska2V5XSkpIHsgJG91dFtdID0gJGtleS4iPSIuJHZhbHVlOyB9Cn0KZmlsZV9wdXRfY29udGVudHMoJHBhdGgsIGltcGxvZGUoIlxuIiwgJG91dCkuIlxuIik7CmVjaG8gIlNNU19QUk9WSURFUiB3YXMgIi4kYmVmb3JlLiJcbiI7CmVjaG8gIlNNU19QUk9WSURFUiBpcyBQaGlsU01TXG4iOwplY2hvICJQSElMU01TX0FQSV9UT0tFTiAiLigkdG9rZW4gIT09ICIiID8gInVwZGF0ZWQiIDogImxlZnQgdW5jaGFuZ2VkIikuIlxuIjsKZWNobyAiUEhJTFNNU19TRU5ERVJfSUQgaXMgIi4kc2VuZGVyLiJcbiI7"));'
+            php storage/framework/philsms-env.php
+            rm -f storage/framework/philsms-env.php
             set -x
             echo "==> artisan"
             php artisan optimize:clear
