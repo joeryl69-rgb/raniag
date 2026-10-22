@@ -487,6 +487,9 @@
     @push('scripts')
         <script>
             window.RANIAG_GPS = @json($gpsConfig);
+            window.RANIAG_ADDRESS = @json($addressConfig ?? ['municipality' => 'Pamplona', 'province' => 'Cagayan', 'country' => 'Philippines']);
+            window.RANIAG_BOUNDARY = @json($boundaryGeometry ?? null);
+            window.RANIAG_BARANGAY_BOUNDARIES = @json($barangayBoundaries ?? null);
         </script>
         <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
         <script src="{{ asset('js/field-outbox.js') }}?v={{ @filemtime(public_path('js/field-outbox.js')) }}"></script>

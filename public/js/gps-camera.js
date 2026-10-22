@@ -500,12 +500,93 @@
         }
     }
 
+    // Same ray-cast as the public report form and GeofenceService.
+    // Staff pages do not load public-report.js, so the camera has to do
+    // this itself or the place line waits on a network lookup.
+    function pointInRing(lng, lat, ring) {
+        let inside = false;
+        const count = ring?.length || 0;
+        if (count < 3) return false;
+        for (let i = 0, j = count - 1; i < count; j = i++) {
+            const [lngI, latI] = ring[i];
+            const [lngJ, latJ] = ring[j];
+            const intersects = (latI > lat) !== (latJ > lat)
+                && lng < ((lngJ - lngI) * (lat - latI)) / (latJ - latI) + lngI;
+            if (intersects) inside = !inside;
+        }
+        return inside;
+    }
+
+    function pointInGeometry(lng, lat, geometry) {
+        if (!geometry) return null;
+        const coordinates = geometry.coordinates || [];
+        const polygons = geometry.type === 'MultiPolygon' ? coordinates : [coordinates];
+        for (const rings of polygons) {
+            if (!rings || !rings.length || !pointInRing(lng, lat, rings[0])) continue;
+            let inHole = false;
+            for (const hole of rings.slice(1)) {
+                if (pointInRing(lng, lat, hole)) { inHole = true; break; }
+            }
+            if (!inHole) return true;
+        }
+        return false;
+    }
+
+    function resolvePlaceFromBoundaries(lat, lng) {
+        const boundaries = window.RANIAG_BARANGAY_BOUNDARIES;
+        const boundary = window.RANIAG_BOUNDARY;
+        const address = window.RANIAG_ADDRESS || { municipality: 'Pamplona', province: 'Cagayan', country: 'Philippines' };
+        if (!boundaries?.features && !boundary) return null;
+        if (boundaries?.features) {
+            for (const feature of boundaries.features) {
+                const name = feature.properties && feature.properties.adm4_en;
+                if (name && pointInGeometry(lng, lat, feature.geometry)) {
+                    return {
+                        inside: true,
+                        barangay: name,
+                        municipality: address.municipality || 'Pamplona',
+                        province: address.province || 'Cagayan',
+                        country: address.country || 'Philippines',
+                    };
+                }
+            }
+        }
+        if (boundary && pointInGeometry(lng, lat, boundary) === false) {
+            return {
+                inside: false,
+                barangay: null,
+                municipality: 'Outside Pamplona',
+                province: address.province || 'Cagayan',
+                country: address.country || 'Philippines',
+            };
+        }
+        return null;
+    }
+
+    function publishResolvedPlace(lat, lng, place) {
+        window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+            detail: {
+                placeResolved: true,
+                lat,
+                lng,
+                barangay: place.barangay,
+                municipality: place.municipality,
+                province: place.province,
+                country: place.country,
+            },
+        }));
+    }
+
     // Do not label the shot "Pamplona" until a boundary check says the
     // point is inside a Pamplona barangay. A fix in Langagan (Sanchez Mira)
     // was being stamped as Pamplona, and the shared GPS watch was dropping
     // the accuracy reading, so the camera looked fixed and "Accuracy unknown".
     function resolvePlaceLocally(lat, lng) {
-        if (!lastResolved) {
+        const localPlace = resolvePlaceFromBoundaries(lat, lng);
+        if (localPlace) {
+            publishResolvedPlace(lat, lng, localPlace);
+            if (localPlace.inside) return;
+        } else if (!lastResolved) {
             window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                 detail: { lat, lng, coordinatesOnly: true },
             }));
@@ -1231,36 +1312,54 @@
             return;
         }
 
-        // Request a fresh high-accuracy fix while the watch keeps refining it.
-        navigator.geolocation.getCurrentPosition(
-            onGeoSuccess,
-            onGeoError,
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-        );
-
-        if (watchId !== null) {
-            return;
-        }
-
-        // The case page already watches GPS for the live route. A second
-        // watchPosition on the same phone drops updates, so the map moved
-        // while this camera stayed on "Waiting for GPS" until a tab switch
-        // woke the browser up.
-        if (window.RANIAG_LocationPing?.watching?.()) {
+        const pingWatching = !!window.RANIAG_LocationPing?.watching?.();
+        if (pingWatching) {
+            // The case map already holds the phone's GPS. A second
+            // high-accuracy watch drops updates, so reuse that fix and
+            // only ask for a cached reading on top of it.
             cameraOwnsWatch = false;
             window.RANIAG_GpsOwner = 'ping';
             if (!sharedGpsBound) {
                 document.addEventListener('raniag:gps', onSharedGps);
                 sharedGpsBound = true;
             }
-            setStatus('Using the case GPS…', 'warning');
+            const shared = window.RANIAG_LocationPing.latest?.();
+            if (shared) onSharedGps({ detail: shared });
+            setStatus(shared ? 'GPS location found' : 'Using the case GPS…', shared ? 'success' : 'warning');
+        }
+
+        // A cached or network fix shows coordinates immediately. The precise
+        // request below refines it. maximumAge 0 alone waits on a cold
+        // satellite lock, which is why the case camera sat on "Waiting for GPS".
+        navigator.geolocation.getCurrentPosition(
+            onGeoSuccess,
+            () => {},
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
+        );
+        navigator.geolocation.getCurrentPosition(
+            onGeoSuccess,
+            (error) => {
+                if (!hasFreshGpsFix() && !pingWatching) onGeoError(error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: geoOptions.timeout || 20000,
+                maximumAge: pingWatching ? 15000 : 0,
+            }
+        );
+
+        if (watchId !== null || pingWatching) {
             return;
         }
 
         setStatus('Acquiring GPS…', 'warning');
         cameraOwnsWatch = true;
         window.RANIAG_GpsOwner = 'camera';
-        watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, geoOptions);
+        watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {
+            enableHighAccuracy: geoOptions.enableHighAccuracy !== false,
+            timeout: geoOptions.timeout || 20000,
+            maximumAge: 5000,
+        });
     }
 
     function stopGeolocationWatch() {

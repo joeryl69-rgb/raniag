@@ -19,6 +19,7 @@
         let stopped = false;
         let lastPost = 0;
         let arrivalSent = false;
+        let lastFix = null;
 
         function currentPhase() {
             const fromDom = document.getElementById('field-phase-strip')?.dataset?.fieldPhase || '';
@@ -133,8 +134,14 @@
                     setStatus('Live location is on. The case map and public tracking page update as you move.', 'live');
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
+                    lastFix = {
+                        lat,
+                        lng,
+                        accuracy: pos.coords.accuracy,
+                        timestamp: pos.timestamp || Date.now(),
+                    };
                     document.dispatchEvent(new CustomEvent('raniag:gps', {
-                        detail: { lat, lng, accuracy: pos.coords.accuracy },
+                        detail: lastFix,
                     }));
                     post(lat, lng);
                     maybeArrive(lat, lng);
@@ -166,6 +173,9 @@
             },
             watching() {
                 return watchId != null;
+            },
+            latest() {
+                return lastFix;
             },
             note(lat, lng) {
                 if (stopped) return;
@@ -237,6 +247,9 @@
         enableFromGesture,
         watching() {
             return !!(active && active.watching());
+        },
+        latest() {
+            return active && active.latest ? active.latest() : null;
         },
         refresh() {
             if (active) active.refresh();

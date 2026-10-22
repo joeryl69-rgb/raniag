@@ -8,6 +8,7 @@ use App\Http\Requests\Agency\UpdateStatusRequest;
 use App\Models\Assignment;
 use App\Models\Incident;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
+use App\Services\GeofenceService;
 use App\Services\IncidentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -84,8 +85,13 @@ class IncidentController extends Controller
             return response()->json($record);
         }
 
+        $geofence = app(GeofenceService::class);
+
         return view('personnel.incidents.show', [
             'incident' => $record,
+            'boundaryGeometry' => $geofence->boundaryGeometry(),
+            'barangayBoundaries' => $geofence->barangayBoundaries(),
+            'addressConfig' => config('raniag.address'),
             'gpsConfig' => [
                 'max_captures' => config('raniag.gps_camera.max_captures'),
                 'jpeg_quality' => config('raniag.gps_camera.jpeg_quality'),
