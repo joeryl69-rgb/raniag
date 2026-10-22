@@ -321,6 +321,7 @@
             .map-mode-switch button.active { background: #fff; color: var(--raniag-primary); box-shadow: 0 1px 4px rgba(15,23,42,.12); }
             .map-legend { display: flex; align-items: center; gap: .9rem; font-size: .74rem; color: var(--raniag-muted); flex-wrap: wrap; }
             .map-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: .3rem; }
+            .map-legend .legend-outside { width: 11px; height: 11px; border-radius: 50%; border: 2px dashed #c2410c; display: inline-block; margin-right: .3rem; }
             .legend-line { display: inline-block; width: 16px; height: 0; border-top-width: 3px; border-top-style: solid; margin-right: .35rem; vertical-align: middle; }
             .legend-muni { border-top-color: #0b3a8c; }
             .legend-brgy { border-top-color: #0f766e; border-top-style: dashed; }
@@ -607,9 +608,9 @@
                         </button>
                     </div>
                 </div>
-                @if($isAdmin)
                 <div class="map-filters" id="map-filters">
                     <span class="small text-muted fw-semibold text-uppercase" style="letter-spacing:.04em;font-size:.68rem;">Filters</span>
+                    @if($isAdmin)
                     <select id="filter-status" aria-label="Filter by status">
                         <option value="">All statuses</option>
                         <option value="submitted">Submitted</option>
@@ -625,6 +626,7 @@
                         <option value="medium">Medium</option>
                         <option value="low">Low</option>
                     </select>
+                    @endif
                     <select id="filter-barangay" aria-label="Filter by barangay">
                         <option value="">All barangays</option>
                         <option value="outside">All outside Pamplona</option>
@@ -632,7 +634,6 @@
                     </select>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="filter-clear">Clear</button>
                 </div>
-                @endif
                 <div class="map-wrap">
                     <div id="dashboard-map" class="{{ $isAdmin ? 'h-admin' : 'h-role' }}" data-role="{{ $role }}"></div>
                     <div class="map-insight-panel" id="map-insight-panel" aria-live="polite">
@@ -683,6 +684,7 @@
                     <span><span class="dot" style="background:#dc3545"></span>High</span>
                     <span><span class="dot" style="background:#f59e0b"></span>Medium</span>
                     <span><span class="dot" style="background:#0d6efd"></span>Low</span>
+                    <span><i class="legend-outside"></i>Outside Pamplona</span>
                     <span class="ms-auto small" id="map-count-label">— points plotted</span>
                 </div>
                 <div class="map-referred d-none" id="map-referred">
@@ -690,7 +692,7 @@
                         <i class="bi bi-signpost-split"></i>
                         <div>
                             <strong>Referred outside Pamplona</strong>
-                            <span>These reports are not drawn on the map. The map stays on the municipal boundary.</span>
+                            <span>Open reports with a location are pinned on the map. This list is for referrals that are no longer an open case.</span>
                         </div>
                     </div>
                     <div id="map-referred-list"></div>
@@ -758,7 +760,7 @@
         {{-- ===================== ADMIN ANALYTICS ===================== --}}
         <div class="section-head">
             <h5><i class="bi bi-lightning-charge text-primary"></i> Open incidents</h5>
-            <p class="section-sub">Cases still open inside Pamplona, same set as the situational map</p>
+            <p class="section-sub">Open cases on the situational map, including reports outside Pamplona</p>
         </div>
         <div class="row g-3 mb-4">
             <div class="col-12 col-lg-7">
@@ -875,6 +877,7 @@
             let alertCursor = Number(@json($alertCursor ?? 0)) || 0;
 
             let map, streetLayer, satLayer, mapBasemap, boundaryLayer, barangayLayer, markerLayer, hazardLayer, evacLayer, jurisdictionBounds;
+            let mapFrameSet = false;
             let charts = {};
             let currentPoints = [];
             let rawPoints = [];
@@ -909,6 +912,13 @@
             });
 
             function bindMapFilters() {
+                const brgyFilter = document.getElementById('filter-barangay');
+                if (brgyFilter) {
+                    brgyFilter.addEventListener('change', function () {
+                        mapFrameSet = false;
+                        if (!this.value) closeMapInsight();
+                    });
+                }
                 ['filter-status', 'filter-priority', 'filter-barangay'].forEach((id) => {
                     const el = document.getElementById(id);
                     if (el) el.addEventListener('change', applyMapFilters);
@@ -920,19 +930,36 @@
                             const el = document.getElementById(id);
                             if (el) el.value = '';
                         });
+                        mapFrameSet = false;
                         applyMapFilters();
                         closeMapInsight();
                     });
                 }
                 const closeInsight = document.getElementById('map-insight-close');
                 if (closeInsight) closeInsight.addEventListener('click', closeMapInsight);
+            }
 
-                const brgyFilter = document.getElementById('filter-barangay');
-                if (brgyFilter) {
-                    brgyFilter.addEventListener('change', function () {
-                        if (!this.value) closeMapInsight();
+            function frameMapToPins(points, lock) {
+                if (!map || mapFrameSet) return;
+                let bounds = jurisdictionBounds
+                    ? L.latLngBounds(jurisdictionBounds.getSouthWest(), jurisdictionBounds.getNorthEast())
+                    : null;
+                const scope = document.getElementById('filter-barangay')?.value || '';
+                const center = bounds ? bounds.getCenter() : L.latLng(CENTER[0], CENTER[1]);
+                if (scope !== 'inside') {
+                    (points || []).forEach((point) => {
+                        if (pointIsInsidePamplona(point)) return;
+                        const lat = parseFloat(point.latitude);
+                        const lng = parseFloat(point.longitude);
+                        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+                        if (metersBetween(center.lat, center.lng, lat, lng) > 25000) return;
+                        if (!bounds) bounds = L.latLngBounds([lat, lng], [lat, lng]);
+                        else bounds.extend([lat, lng]);
                     });
                 }
+                if (!bounds) return;
+                map.fitBounds(bounds, { padding: [36, 36], maxZoom: 13 });
+                if (lock && jurisdictionBounds) mapFrameSet = true;
             }
 
             const officialBarangays = @json(config('raniag.barangays', []));
@@ -1294,7 +1321,10 @@
                         boundaryLayer.eachLayer((layer) => {
                             layer.bindTooltip('Pamplona area of responsibility', { sticky: true });
                         });
-                        try { map.fitBounds(boundaryLayer.getBounds(), { padding: [24, 24] }); jurisdictionBounds = boundaryLayer.getBounds(); } catch (e) {}
+                        try {
+                            jurisdictionBounds = boundaryLayer.getBounds();
+                            frameMapToPins(currentPoints, currentPoints.length > 0);
+                        } catch (e) {}
                     })
                     .catch(() => {});
 
@@ -1394,6 +1424,18 @@
                 // Centralized icon+color resolution (see public/js/incident-map-icons.js)
                 // keeps this pin visually identical to every other incident map
                 // in the system, driven by the incident type's own configured icon.
+                const outside = !pointIsInsidePamplona(pt);
+                if (outside) {
+                    L.circleMarker([lat, lng], {
+                        radius: 16,
+                        color: '#c2410c',
+                        weight: 2,
+                        dashArray: '3 3',
+                        fillColor: '#fdba74',
+                        fillOpacity: 0.35,
+                        interactive: false,
+                    }).addTo(markerLayer);
+                }
                 const marker = L.marker([lat, lng], {
                     icon: window.RaniagIcons.buildDivIcon({
                         icon: typeObj.icon,
@@ -1404,11 +1446,14 @@
                 });
 
                 const typeName = typeObj.name || 'Incident';
+                const placeLine = outside
+                    ? `<br><small class="text-muted">${escapeHtml(pt.barangay ? pt.barangay + ' · ' : '')}Outside Pamplona</small>`
+                    : (pt.barangay ? `<br><small class="text-muted">${escapeHtml(pt.barangay)}</small>` : '');
                 marker.bindPopup(
                     `<strong>${escapeHtml(pt.tracking_number || ('#' + pt.id))}</strong><br>` +
                     `${escapeHtml(typeName)}<br>` +
                     `<span class="text-capitalize">${escapeHtml((pt.status || '').replace(/_/g, ' '))}</span>` +
-                    (pt.barangay ? `<br><small class="text-muted">${escapeHtml(pt.barangay)}</small>` : '') +
+                    placeLine +
                     `<br><a class="popup-view-btn" href="${INCIDENT_URL_BASE}/${pt.id}"><i class="bi bi-box-arrow-up-right"></i> View</a>`
                 );
                 marker.on('click', function () {
@@ -1512,6 +1557,7 @@
                 const plotted = points.filter(p => p.latitude && p.longitude && !Number.isNaN(parseFloat(p.latitude)) && !Number.isNaN(parseFloat(p.longitude))).length;
                 const label = document.getElementById('map-count-label');
                 if (label) label.textContent = `${plotted} point${plotted === 1 ? '' : 's'} plotted`;
+                frameMapToPins(points, true);
             }
 
             function escapeHtml(str) {
@@ -1829,7 +1875,7 @@
                             <span><span class="d-block fw-semibold">${escapeHtml(typeName)}</span><span class="ops-meta">${escapeHtml(r.barangay || '—')} · ${escapeHtml((r.status || '').replaceAll('_', ' '))}</span></span>
                             <span class="ops-age"><span class="badge badge-priority-${priority} text-capitalize">${escapeHtml(priority)}</span></span>
                         </a>`;
-                    }).join('') : '<div class="empty-note">No open incidents inside Pamplona.</div>';
+                    }).join('') : '<div class="empty-note">No open incidents on the map.</div>';
                 }
                 if (places) {
                     const counts = {};
@@ -1864,7 +1910,8 @@
                 setText('kpi-progress-count', sb.in_progress ?? 0);
                 setText('kpi-sms', data.sms_alerts_this_week ?? 0);
 
-                plotPoints(data.situational_incidents || data.active_dispatches || []);
+                rawPoints = data.situational_incidents || data.active_dispatches || [];
+                applyMapFilters();
                 renderReferred(data.referred_outside);
                 renderDispatchTable(data.active_dispatches || []);
                 renderMeters('role-status-meters', Object.entries(sb).map(([label, value]) => ({

@@ -146,7 +146,7 @@ test('admin live units shows the agency account and personnel who are sharing lo
     expect($labels)->toContain('Pamplona Rescue — Field Responder');
 });
 
-test('agency situational map excludes outside jurisdiction reports while keeping them in dispatches', function () {
+test('agency situational map pins outside reports beside inside ones', function () {
     $agency = Agency::query()->create([
         'name' => 'Pamplona Response',
         'code' => 'PRSP',
@@ -186,8 +186,9 @@ test('agency situational map excludes outside jurisdiction reports while keeping
     $this->actingAs($agencyUser)
         ->getJson(route('agency.dashboard.api'))
         ->assertOk()
-        ->assertJsonCount(1, 'situational_incidents')
-        ->assertJsonPath('situational_incidents.0.tracking_number', 'RAN-MAP-INSIDE')
+        ->assertJsonCount(2, 'situational_incidents')
+        ->assertJsonFragment(['tracking_number' => 'RAN-MAP-INSIDE', 'within_jurisdiction' => true])
+        ->assertJsonFragment(['tracking_number' => 'RAN-MAP-OUTSIDE', 'within_jurisdiction' => false])
         ->assertJsonCount(2, 'active_dispatches');
 });
 

@@ -146,7 +146,7 @@ class SituationalMapService
     {
         $openValues = array_map(fn (IncidentStatus $s) => $s->value, self::OPEN_STATUSES);
 
-        $query = $this->insidePamplona(Incident::with(['incidentType', 'agency']))
+        $query = Incident::with(['incidentType', 'agency'])
             ->whereIn('status', $openValues);
 
         if ($agencyId !== null || $personnelId !== null) {
@@ -169,6 +169,10 @@ class SituationalMapService
             ->get()
             ->map(function (Incident $inc) {
                 $hazardZones = $inc->meta['hazard_zones'] ?? [];
+                $status = $inc->status instanceof \BackedEnum ? $inc->status->value : (string) $inc->status;
+                $inside = $status !== IncidentStatus::OutsideAor->value
+                    && ($inc->meta['within_jurisdiction'] ?? null) !== false
+                    && \App\Support\PlaceScope::isOfficial($inc->barangay);
 
                 return [
                     'id' => $inc->id,
@@ -176,9 +180,10 @@ class SituationalMapService
                     'incidentType' => $inc->incidentType,
                     'incident_type' => $inc->incidentType,
                     'priority' => $inc->priority instanceof \BackedEnum ? $inc->priority->value : $inc->priority,
-                    'status' => $inc->status instanceof \BackedEnum ? $inc->status->value : (string) $inc->status,
+                    'status' => $status,
                     'reported_at' => $inc->reported_at?->toDateTimeString(),
                     'barangay' => $inc->barangay,
+                    'within_jurisdiction' => $inside,
                     'latitude' => $inc->latitude,
                     'longitude' => $inc->longitude,
                     'agency' => $inc->agency,
@@ -284,8 +289,8 @@ class SituationalMapService
     }
 
     /**
-     * Reports referred outside Pamplona. They are not drawn on the
-     * municipal map, because that map is framed on the boundary.
+     * Reports whose status is referred outside Pamplona. Open cases
+     * with a map location are pinned on the situational map instead.
      *
      * @return list<array<string, mixed>>
      */
