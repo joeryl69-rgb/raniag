@@ -119,7 +119,7 @@ test('feedback filters omit statuses categories and sources with no messages', f
         ->assertOk()
         ->getContent();
 
-    preg_match('/<select name="status" class="form-select" data-filter-default="all">.*?<\/select>/s', $html, $status);
+    preg_match('/<select name="status" class="form-select" data-filter-default="new">.*?<\/select>/s', $html, $status);
     preg_match('/<select name="category" class="form-select" data-filter-default="all">.*?<\/select>/s', $html, $category);
     preg_match('/<select name="source" class="form-select" data-filter-default="all">.*?<\/select>/s', $html, $source);
 

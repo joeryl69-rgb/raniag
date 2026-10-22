@@ -52,7 +52,7 @@ class FeedbackSubmission extends Model
             'new' => 'New',
             'reviewed' => 'Reviewed',
             'resolved' => 'Resolved',
-        ], static::query()->distinct()->pluck('status'), request('status'));
+        ], static::query()->distinct()->pluck('status'), request()->has('status') && request('status') !== '' ? request('status') : 'new');
     }
 
     /** @return array<string, array{label: string, hint: string, icon: string}> */

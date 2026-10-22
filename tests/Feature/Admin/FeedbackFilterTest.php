@@ -57,6 +57,34 @@ test('feedback status category source search and date filters combine correctly'
         ->toBe([$matching->id]);
 });
 
+test('feedback opens on new messages', function () {
+    $administrator = User::factory()->administrator()->create();
+
+    FeedbackSubmission::query()->create([
+        'category' => 'login',
+        'submitted_via' => 'public',
+        'subject' => 'New sign-in concern',
+        'message' => 'I cannot sign in.',
+        'submitter_name' => 'Community member',
+        'status' => 'new',
+    ]);
+    FeedbackSubmission::query()->create([
+        'category' => 'technical',
+        'submitted_via' => 'public',
+        'subject' => 'Already reviewed concern',
+        'message' => 'This one was already looked at.',
+        'submitter_name' => 'Community member',
+        'status' => 'reviewed',
+    ]);
+
+    $this->actingAs($administrator)
+        ->get(route('admin.feedback.index'))
+        ->assertOk()
+        ->assertSee('New sign-in concern')
+        ->assertDontSee('Already reviewed concern')
+        ->assertSee('value="new" selected', false);
+});
+
 test('every feedback card stays inside the list', function () {
     $administrator = User::factory()->administrator()->create();
 
@@ -73,7 +101,7 @@ test('every feedback card stays inside the list', function () {
     }
 
     $html = $this->actingAs($administrator)
-        ->get(route('admin.feedback.index'))
+        ->get(route('admin.feedback.index', ['status' => 'all']))
         ->assertOk()
         ->getContent();
 

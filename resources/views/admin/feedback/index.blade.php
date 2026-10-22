@@ -23,10 +23,10 @@
         <x-filters.toolbar search-placeholder="Search subject, message, name, email" :action="route('admin.feedback.index')" :compact="true">
             <div class="col-md-2">
                 <label class="form-label small text-muted mb-1">Status</label>
-                <select name="status" class="form-select" data-filter-default="all">
-                    <option value="all" @selected(request('status', 'all') === 'all')>All statuses</option>
+                <select name="status" class="form-select" data-filter-default="new">
+                    <option value="all" @selected(request('status') === 'all')>All statuses</option>
                     @foreach (\App\Models\FeedbackSubmission::usedFilterStatuses() as $value => $label)
-                        <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected(request('status', 'new') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
@@ -147,7 +147,11 @@
         @empty
             <div class="text-center text-muted py-5">
                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                No feedback submissions yet.
+                @if(request('status', 'new') === 'new' && ! request()->filled('q') && ! request()->filled('date_from') && ! request()->filled('date_to') && in_array(request('category', 'all'), ['', 'all'], true) && in_array(request('source', 'all'), ['', 'all'], true))
+                    No new feedback right now.
+                @else
+                    No messages match these filters.
+                @endif
             </div>
         @endforelse
     </div>

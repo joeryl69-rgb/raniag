@@ -37,8 +37,11 @@ class FeedbackController extends Controller
             $query->whereDate('created_at', '<=', $request->string('date_to')->value());
         }
 
-        if ($request->filled('status') && $request->string('status')->value() !== 'all') {
-            $query->where('status', $request->string('status')->value());
+        $status = $request->has('status') && $request->string('status')->value() !== ''
+            ? $request->string('status')->value()
+            : 'new';
+        if ($status !== 'all') {
+            $query->where('status', $status);
         }
 
         if ($request->filled('category') && $request->string('category')->value() !== 'all') {
