@@ -586,6 +586,7 @@ test('the evacuee registry uses the same filters and exports', function () {
         'age' => 34,
         'sex' => 'Female',
         'checked_in_at' => now(),
+        'checked_out_at' => now(),
     ]);
     \App\Models\Evacuee::query()->create([
         'evacuation_center_id' => $center->id,
@@ -603,6 +604,7 @@ test('the evacuee registry uses the same filters and exports', function () {
         ]))
         ->assertOk()
         ->assertSee('Maria Cruz', false)
+        ->assertSee('Left '.now()->format('M j, Y'), false)
         ->assertSee('Centro, Abulug', false)
         ->assertSee('Pamplona Municipal Gymnasium', false)
         ->assertSee('data-view-mode-root="incident-presentation"', false)

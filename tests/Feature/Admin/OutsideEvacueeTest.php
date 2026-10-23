@@ -47,6 +47,9 @@ test('hazard counters show change and an outside evacuee stays distinct', functi
         ->assertSee('data-view-mode-root="evacuee-registry"', false)
         ->assertSee('id="evacuee-search"', false)
         ->assertSee('id="evac-origin-filter"', false)
+        ->assertSee('id="evac-stay-filter"', false)
+        ->assertSee('data-stay="inside"', false)
+        ->assertSee('Still inside', false)
         ->assertSee('data-origin="all"', false)
         ->assertSee('data-origin="inside"', false)
         ->assertSee('data-origin="outside"', false);

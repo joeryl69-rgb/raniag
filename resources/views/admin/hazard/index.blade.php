@@ -271,6 +271,11 @@
                 </div>
                 @if($evacuees->isNotEmpty())
                     <div class="rg-evacuee-controls">
+                        <div class="btn-group btn-group-sm" id="evac-stay-filter" role="group" aria-label="Evacuee stay">
+                            <button type="button" class="btn btn-primary" data-stay="inside" aria-pressed="true">Still inside</button>
+                            <button type="button" class="btn btn-outline-secondary" data-stay="left" aria-pressed="false">Checked out</button>
+                            <button type="button" class="btn btn-outline-secondary" data-stay="all" aria-pressed="false">Everyone</button>
+                        </div>
                         <div class="btn-group btn-group-sm" id="evac-origin-filter" role="group" aria-label="Evacuee origin">
                             <button type="button" class="btn btn-primary" data-origin="all" aria-pressed="true">All</button>
                             <button type="button" class="btn btn-outline-secondary" data-origin="inside" aria-pressed="false">Pamplona</button>
@@ -299,7 +304,7 @@
                     </thead>
                     <tbody>
                         @forelse ($evacuees as $evacuee)
-                            <tr data-origin="{{ $evacuee->origin_scope === 'outside' ? 'outside' : 'inside' }}" data-search="{{ strtolower($evacuee->full_name.' '.($evacuee->center?->name ?? '').' '.$evacuee->homeLabel()) }}">
+                            <tr data-origin="{{ $evacuee->origin_scope === 'outside' ? 'outside' : 'inside' }}" data-stay="{{ $evacuee->checked_out_at ? 'left' : 'inside' }}" data-search="{{ strtolower($evacuee->full_name.' '.($evacuee->center?->name ?? '').' '.$evacuee->homeLabel()) }}">
                                 <td>
                                     <div class="fw-semibold">{{ $evacuee->full_name }}</div>
                                     @if ($evacuee->isOutsideMunicipality())
@@ -333,6 +338,9 @@
                         @empty
                             <tr><td colspan="7" class="text-center text-muted py-4">No one is registered yet.</td></tr>
                         @endforelse
+                        @if ($evacuees->isNotEmpty())
+                            <tr id="evacuee-filter-empty" class="d-none"><td colspan="7" class="text-center text-muted py-4">No one matches this filter.</td></tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
@@ -807,27 +815,43 @@
     });
 
     let evacOrigin = 'all';
+    let evacStay = 'inside';
+    function selectEvacueeFilter(group, button, attribute) {
+        group.querySelectorAll('button').forEach((item) => {
+            const selected = item === button;
+            item.classList.toggle('btn-primary', selected);
+            item.classList.toggle('btn-outline-secondary', !selected);
+            item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+        return button.dataset[attribute];
+    }
     function applyEvacueeFilter() {
         const q = (document.getElementById('evacuee-search')?.value || '').trim().toLowerCase();
+        let visible = 0;
         document.querySelectorAll('#evacuee-table tbody tr[data-search]').forEach((row) => {
             const originOk = evacOrigin === 'all' || row.dataset.origin === evacOrigin;
+            const stayOk = evacStay === 'all' || row.dataset.stay === evacStay;
             const textOk = q === '' || row.dataset.search.includes(q);
-            row.classList.toggle('d-none', !(originOk && textOk));
+            const show = originOk && stayOk && textOk;
+            row.classList.toggle('d-none', !show);
+            if (show) visible += 1;
         });
+        document.getElementById('evacuee-filter-empty')?.classList.toggle('d-none', visible !== 0);
     }
     document.getElementById('evacuee-search')?.addEventListener('input', applyEvacueeFilter);
     document.querySelectorAll('#evac-origin-filter button').forEach((button) => {
         button.addEventListener('click', () => {
-            evacOrigin = button.dataset.origin || 'all';
-            document.querySelectorAll('#evac-origin-filter button').forEach((item) => {
-                const selected = item === button;
-                item.classList.toggle('btn-primary', selected);
-                item.classList.toggle('btn-outline-secondary', !selected);
-                item.setAttribute('aria-pressed', selected ? 'true' : 'false');
-            });
+            evacOrigin = selectEvacueeFilter(document.getElementById('evac-origin-filter'), button, 'origin') || 'all';
             applyEvacueeFilter();
         });
     });
+    document.querySelectorAll('#evac-stay-filter button').forEach((button) => {
+        button.addEventListener('click', () => {
+            evacStay = selectEvacueeFilter(document.getElementById('evac-stay-filter'), button, 'stay') || 'inside';
+            applyEvacueeFilter();
+        });
+    });
+    applyEvacueeFilter();
 
     const insideFields = document.getElementById('origin-inside-fields');
     const outsideFields = document.getElementById('origin-outside-fields');
