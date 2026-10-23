@@ -78,35 +78,44 @@
         <div class="hz-workspace">
             <div>
                 <div class="hz-toolbar mb-2">
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Map tools">
-                        <button type="button" class="btn btn-outline-dark" id="tool-polygon"><i class="bi bi-pentagon me-1"></i>Draw area</button>
-                        <button type="button" class="btn btn-outline-dark" id="tool-box"><i class="bi bi-square me-1"></i>Draw box</button>
-                        <button type="button" class="btn btn-outline-primary" id="tool-edit" disabled><i class="bi bi-bezier2 me-1"></i>Adjust boundary</button>
-                        <button type="button" class="btn btn-outline-secondary" id="tool-clear"><i class="bi bi-eraser me-1"></i>Clear</button>
+                    <div class="hz-toolbar-copy">
+                        <span class="hz-kicker">Map the boundary</span>
+                        <strong id="geometry-hint" role="status" aria-live="polite">Draw an area or a box, then name it in the panel.</strong>
                     </div>
-                    <span class="small text-muted" id="geometry-hint" role="status" aria-live="polite">Draw an area or box, adjust its corners if needed, then save it.</span>
+                    <div class="hz-tool-group" role="group" aria-label="Boundary tools">
+                        <button type="button" class="hz-tool" id="tool-polygon"><i class="bi bi-pentagon" aria-hidden="true"></i><span>Draw area</span></button>
+                        <button type="button" class="hz-tool" id="tool-box"><i class="bi bi-square" aria-hidden="true"></i><span>Draw box</span></button>
+                        <button type="button" class="hz-tool" id="tool-edit" disabled><i class="bi bi-bezier2" aria-hidden="true"></i><span>Adjust boundary</span></button>
+                        <button type="button" class="hz-tool hz-tool-quiet" id="tool-clear"><i class="bi bi-eraser" aria-hidden="true"></i><span>Clear</span></button>
+                    </div>
                 </div>
                 <div class="hz-map-wrap">
                     <div id="ops-map"></div>
                     <div class="hz-legend" id="hz-legend">
-                        <span><i class="hz-swatch" id="legend-swatch"></i> Next area</span>
+                        <span><i class="hz-swatch" id="legend-swatch"></i> New area</span>
                         <span><i class="hz-shelter-key"></i> Evacuation shelter</span>
                     </div>
                 </div>
             </div>
 
             <aside class="hz-panel card border-0 shadow-sm">
+                <div class="hz-panel-head">
+                    <span class="hz-kicker" id="hz-mode-kicker">{{ $openCenter ? 'New shelter' : 'New hazard area' }}</span>
+                    <h2 id="hz-mode-title">{{ $openCenter ? 'Drop a pin for the shelter' : 'Trace the area, then name it' }}</h2>
+                    <p id="hz-mode-lead">{{ $openCenter ? 'Click the map to place the shelter, then fill in who it can hold.' : 'Choose the incident type, draw the boundary, then save. Residents see the type color on the public map.' }}</p>
+                </div>
                 <div class="card-body">
-                    <div class="btn-group w-100 mb-3" role="group" aria-label="What to add">
-                        <button type="button" class="btn btn-sm {{ $openCenter ? 'btn-outline-primary' : 'btn-primary' }}" id="mode-zone">Hazard area</button>
-                        <button type="button" class="btn btn-sm {{ $openCenter ? 'btn-primary' : 'btn-outline-primary' }}" id="mode-center">Shelter pin</button>
+                    <div class="hz-mode-switch" role="group" aria-label="What to add">
+                        <button type="button" class="{{ $openCenter ? '' : 'is-selected' }}" id="mode-zone"><i class="bi bi-pentagon" aria-hidden="true"></i> Hazard area</button>
+                        <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center"><i class="bi bi-geo-alt" aria-hidden="true"></i> Shelter pin</button>
                     </div>
 
                     <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form" class="{{ $openCenter ? 'd-none' : '' }}">
                         @csrf
                         <input type="hidden" name="workspace" value="zone">
                         <input type="hidden" name="geometry_json" id="geometry_json" value="{{ old('workspace') === 'center' ? '' : old('geometry_json') }}">
-                        <div class="mb-2">
+                        <section class="hz-section">
+                            <span class="hz-kicker">1 · Type</span>
                             <label class="form-label" for="incident_type_id">Incident type</label>
                             @if ($incidentTypes->isEmpty())
                                 <div class="alert alert-warning small mb-0">Add an incident type first. Hazard areas use that same list.</div>
@@ -120,30 +129,36 @@
                                         <option value="{{ $type->id }}" data-color="{{ $typeColor }}" data-icon="{{ $typeIcon }}" @selected(old('incident_type_id') == $type->id)>{{ $type->name }}</option>
                                     @endforeach
                                 </select>
-                                <div class="form-text">Same types used when a report is filed. The area color follows the type.</div>
+                                <div class="form-text">Uses the same types as a filed report. The boundary takes that type’s color.</div>
                             @endif
-                        </div>
-                        <div class="d-flex align-items-center gap-2 mb-3" id="type-preview">
-                            <span class="hz-type-chip" id="type-chip"><i class="bi bi-exclamation-triangle-fill" id="type-icon"></i></span>
-                            <span class="small text-muted" id="type-color-note">Residents see this color on new areas of this type.</span>
-                        </div>
-                        <div class="mb-2">
+                            <div class="hz-type-preview" id="type-preview">
+                                <span class="hz-type-chip" id="type-chip"><i class="bi bi-exclamation-triangle-fill" id="type-icon"></i></span>
+                                <span id="type-color-note">Residents see this color on new areas of this type.</span>
+                            </div>
+                        </section>
+                        <section class="hz-section">
+                            <span class="hz-kicker">2 · Place</span>
                             <label class="form-label" for="zone-name">Area name</label>
                             <input name="name" id="zone-name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'zone' ? old('name') : '' }}" placeholder="e.g. Pamplona riverside">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label" for="zone-barangay">Barangay</label>
+                            <label class="form-label mt-2" for="zone-barangay">Barangay</label>
                             <select name="barangay" id="zone-barangay" class="form-select">
                                 <option value="">Covers more than one</option>
                                 @foreach ($barangays as $b)
                                     <option value="{{ $b }}" @selected(old('workspace') === 'zone' && old('barangay') === $b)>{{ $b }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="zoneActive" @checked(old('workspace') !== 'zone' || old('is_active'))>
-                            <label class="form-check-label" for="zoneActive">Show on the public Live Map</label>
-                        </div>
+                        </section>
+                        <section class="hz-section" id="boundary-step">
+                            <span class="hz-kicker">3 · Boundary</span>
+                            <p id="boundary-note">No boundary yet. Use Draw area or Draw box on the map.</p>
+                        </section>
+                        <section class="hz-section">
+                            <span class="hz-kicker">4 · Public map</span>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="zoneActive" @checked(old('workspace') !== 'zone' || old('is_active'))>
+                                <label class="form-check-label" for="zoneActive">Show on the public Live Map</label>
+                            </div>
+                        </section>
                         @error('geometry_json')
                             <div class="alert alert-danger py-2 small" role="alert">{{ $message }}</div>
                         @enderror
@@ -153,46 +168,44 @@
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
                         @csrf
                         <input type="hidden" name="workspace" value="center">
-                        <p class="small text-muted">Click the map to drop the shelter. Drag the pin if you need to adjust it. The map stays on Pamplona.</p>
-                        <div class="mb-2">
+                        <section class="hz-section" id="pin-step">
+                            <span class="hz-kicker">1 · Pin</span>
+                            <p id="center-coords">Pin not placed yet. Click the map, then drag the pin if it needs to move.</p>
                             <label class="form-label" for="center-color">Pin color</label>
                             <input type="color" name="color" id="center-color" class="form-control form-control-color" value="{{ old('color', '#0f766e') }}" title="Color residents see on the live map">
                             <div class="form-text">This is the shelter pin color on the public Live Map.</div>
-                        </div>
-                        <div class="mb-2">
+                        </section>
+                        <section class="hz-section">
+                            <span class="hz-kicker">2 · Place</span>
                             <label class="form-label" for="center-name">Shelter name</label>
                             <input name="name" id="center-name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'center' ? old('name') : '' }}" placeholder="e.g. Tabba elementary school">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label" for="center-barangay">Barangay</label>
+                            <label class="form-label mt-2" for="center-barangay">Barangay</label>
                             <select name="barangay" id="center-barangay" class="form-select">
-                                <option value="">—</option>
+                                <option value="">Covers more than one</option>
                                 @foreach ($barangays as $b)
                                     <option value="{{ $b }}" @selected(old('workspace') === 'center' && old('barangay') === $b)>{{ $b }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label" for="center-address">Address</label>
-                            <input name="address" id="center-address" class="form-control" maxlength="255" value="{{ old('workspace') === 'center' ? old('address') : '' }}">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label" for="center-capacity">Capacity</label>
-                            <input name="capacity" id="center-capacity" type="number" min="1" class="form-control" value="{{ old('workspace') === 'center' ? old('capacity') : '' }}" placeholder="People it can hold">
-                        </div>
-                        <input type="hidden" name="latitude" id="center_latitude" value="{{ old('latitude', $map['default_lat']) }}">
-                        <input type="hidden" name="longitude" id="center_longitude" value="{{ old('longitude', $map['default_lng']) }}">
-                        <div class="small text-muted mb-2" id="center-coords">Pin not placed yet.</div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="is_open" value="1" id="centerOpen" @checked(old('workspace') !== 'center' || old('is_open'))>
-                            <label class="form-check-label" for="centerOpen">Open for evacuees</label>
-                        </div>
+                            <label class="form-label mt-2" for="center-address">Address</label>
+                            <input name="address" id="center-address" class="form-control" maxlength="255" value="{{ old('workspace') === 'center' ? old('address') : '' }}" placeholder="Street or landmark">
+                        </section>
+                        <section class="hz-section">
+                            <span class="hz-kicker">3 · Capacity</span>
+                            <label class="form-label" for="center-capacity">People it can hold</label>
+                            <input name="capacity" id="center-capacity" type="number" min="1" class="form-control" value="{{ old('workspace') === 'center' ? old('capacity') : '' }}" placeholder="Leave blank if unknown">
+                            <input type="hidden" name="latitude" id="center_latitude" value="{{ old('latitude', $map['default_lat']) }}">
+                            <input type="hidden" name="longitude" id="center_longitude" value="{{ old('longitude', $map['default_lng']) }}">
+                            <div class="form-check mt-3 mb-0">
+                                <input class="form-check-input" type="checkbox" name="is_open" value="1" id="centerOpen" @checked(old('workspace') !== 'center' || old('is_open'))>
+                                <label class="form-check-label" for="centerOpen">Open for evacuees</label>
+                            </div>
+                        </section>
                         <button class="btn btn-primary w-100" type="submit" id="center-save" disabled>Save shelter</button>
                     </form>
                 </div>
 
                 <div class="list-group list-group-flush border-top" id="zone-list">
-                    <div class="list-group-item bg-light small fw-semibold text-uppercase text-muted">Saved areas</div>
+                    <div class="list-group-item hz-list-label">Saved areas</div>
                     @forelse ($zones as $zone)
                         <div class="list-group-item">
                             <div class="d-flex justify-content-between gap-2">
@@ -219,7 +232,7 @@
                 </div>
 
                 <div class="list-group list-group-flush border-top d-none" id="center-list">
-                    <div class="list-group-item bg-light small fw-semibold text-uppercase text-muted">Saved shelters</div>
+                    <div class="list-group-item hz-list-label">Saved shelters</div>
                     @forelse ($centers as $c)
                         <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
                             <div class="min-w-0">
@@ -466,9 +479,29 @@
 .stat-trend.down { color:#0f766e; }
 .stat-trend.flat { color:var(--raniag-muted); }
 .hz-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
-.hz-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.hz-toolbar .btn-group { display: flex; flex-wrap: wrap; }
-.hz-toolbar #geometry-hint { flex: 1 1 15rem; }
+.hz-kicker { display: block; margin: 0 0 .35rem; font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--raniag-primary); }
+.hz-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: .7rem .8rem; }
+.hz-toolbar-copy { flex: 1 1 16rem; min-width: 0; }
+.hz-toolbar-copy .hz-kicker { margin-bottom: .15rem; }
+.hz-toolbar #geometry-hint { display: block; font-size: .92rem; font-weight: 650; line-height: 1.35; color: var(--raniag-ink); }
+.hz-tool-group { display: flex; flex-wrap: wrap; gap: .35rem; }
+.hz-tool { display: inline-flex; align-items: center; gap: .4rem; min-height: 2.35rem; padding: .35rem .7rem; border: 1px solid var(--raniag-border); border-radius: .6rem; background: var(--raniag-card); color: var(--raniag-ink); font-size: .82rem; font-weight: 650; line-height: 1; }
+.hz-tool:hover { border-color: color-mix(in srgb, var(--raniag-primary) 45%, var(--raniag-border)); color: var(--raniag-primary); }
+.hz-tool.is-selected { border-color: var(--raniag-primary); background: color-mix(in srgb, var(--raniag-primary) 12%, var(--raniag-card)); color: var(--raniag-primary); }
+.hz-tool:disabled { opacity: .45; }
+.hz-tool-quiet { color: var(--raniag-muted); }
+.hz-panel-head { padding: 1rem 1rem .2rem; }
+.hz-panel-head h2 { margin: 0 0 .3rem; font-size: 1.05rem; font-weight: 750; letter-spacing: -.02em; }
+.hz-panel-head p { margin: 0; font-size: .82rem; line-height: 1.45; color: var(--raniag-muted); }
+.hz-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; margin-bottom: .9rem; padding: .28rem; border: 1px solid var(--raniag-border); border-radius: .75rem; background: color-mix(in srgb, var(--raniag-ink) 4%, var(--raniag-card)); }
+.hz-mode-switch button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.3rem; border: 0; border-radius: .55rem; background: transparent; color: var(--raniag-muted); font-size: .82rem; font-weight: 700; }
+.hz-mode-switch button.is-selected { background: var(--raniag-card); color: var(--raniag-primary); box-shadow: 0 1px 4px color-mix(in srgb, var(--raniag-ink) 10%, transparent); }
+.hz-section { margin: 0 0 .85rem; padding-bottom: .85rem; border-bottom: 1px solid var(--raniag-border); }
+.hz-section p { margin: 0; font-size: .82rem; line-height: 1.4; color: var(--raniag-muted); }
+.hz-section.is-ready { border-bottom-color: color-mix(in srgb, var(--raniag-primary) 35%, var(--raniag-border)); }
+.hz-section.is-ready p { color: var(--raniag-ink); font-weight: 650; }
+.hz-type-preview { display: flex; align-items: center; gap: .6rem; margin-top: .7rem; font-size: .8rem; line-height: 1.35; color: var(--raniag-muted); }
+.hz-list-label { background: color-mix(in srgb, var(--raniag-ink) 4%, var(--raniag-card)) !important; color: var(--raniag-muted) !important; font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .hz-map-wrap { position: relative; height: calc(100vh - 280px); min-height: 520px; border-radius: 12px; overflow: hidden; border: 1px solid var(--raniag-border); background: var(--raniag-card-raised); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent); }
 #ops-map { height: 100%; width: 100%; }
 .hz-legend { position: absolute; left: 12px; bottom: 12px; z-index: 500; background: var(--raniag-card); color: var(--raniag-ink); border: 1px solid var(--raniag-border); border-radius: 8px; padding: 6px 10px; display: flex; gap: 12px; font-size: .75rem; box-shadow: 0 4px 14px rgba(15,23,42,.12); }
@@ -486,9 +519,8 @@
 }
 @media (max-width: 575.98px) {
     .hz-toolbar { align-items: stretch; }
-    .hz-toolbar .btn-group { width: 100%; }
-    .hz-toolbar .btn-group .btn { flex: 1 1 auto; }
-    .hz-toolbar #geometry-hint { flex-basis: 100%; }
+    .hz-tool-group { width: 100%; }
+    .hz-tool { flex: 1 1 auto; justify-content: center; }
 }
 </style>
 @endpush
@@ -523,6 +555,24 @@
     const centerSave = document.getElementById('center-save');
     const zoneSave = document.getElementById('zone-save');
     const editTool = document.getElementById('tool-edit');
+    const boundaryNote = document.getElementById('boundary-note');
+    const boundaryStep = document.getElementById('boundary-step');
+    const pinStep = document.getElementById('pin-step');
+    const modeKicker = document.getElementById('hz-mode-kicker');
+    const modeTitle = document.getElementById('hz-mode-title');
+    const modeLead = document.getElementById('hz-mode-lead');
+
+    function say(message, ready) {
+        if (geometryHint) geometryHint.textContent = message;
+        if (boundaryNote) boundaryNote.textContent = message;
+        boundaryStep?.classList.toggle('is-ready', !!ready);
+    }
+
+    function markTool(id) {
+        document.querySelectorAll('.hz-tool').forEach((button) => {
+            button.classList.toggle('is-selected', button.id === id);
+        });
+    }
 
     function currentColor() {
         return typeSelect?.selectedOptions?.[0]?.dataset?.color || '#b45309';
@@ -542,7 +592,7 @@
         if (typeIcon) typeIcon.className = 'bi ' + icon;
         if (note) {
             const name = opt?.textContent?.trim() || 'this type';
-            note.textContent = 'Residents see this color on new ' + name + ' areas. Areas already on the map keep their own type color.';
+            note.textContent = 'New ' + name + ' areas use this color. Areas already saved keep their own type color.';
         }
         if (drawnLayer && drawnLayer.setStyle) styleDrawn();
         tintDrawers();
@@ -655,7 +705,8 @@
         geometryInput.value = JSON.stringify(geo.geometry || geo);
         if (zoneSave) zoneSave.disabled = !typeSelect?.value;
         if (editTool) editTool.disabled = false;
-        if (geometryHint) geometryHint.textContent = 'Boundary ready. Adjust its corners, or save the hazard area.';
+        markTool('');
+        say('Boundary ready. Adjust the corners, or save the hazard area.', true);
     }
 
     map.on('draw:drawstart draw:drawvertex', tintDrawers);
@@ -683,14 +734,16 @@
         refreshDrawers();
         if (editDrawer._enabled) editDrawer.disable();
         polygonDrawer.enable();
-        if (geometryHint) geometryHint.textContent = 'Click to add corners. Click the first corner again to close the area.';
+        markTool('tool-polygon');
+        say('Click to add corners. Click the first corner again to close the area.', false);
     });
     document.getElementById('tool-box')?.addEventListener('click', () => {
         setMode('zone');
         refreshDrawers();
         if (editDrawer._enabled) editDrawer.disable();
         boxDrawer.enable();
-        if (geometryHint) geometryHint.textContent = 'Click one corner, then the opposite corner.';
+        markTool('tool-box');
+        say('Click one corner, then the opposite corner.', false);
     });
     editTool?.addEventListener('click', () => {
         if (!drawnLayer) return;
@@ -698,7 +751,8 @@
         boxDrawer.disable();
         if (!editDrawer._enabled) {
             editDrawer.enable();
-            if (geometryHint) geometryHint.textContent = 'Drag the boundary handles to refine the area, then click Save changes on the map.';
+            markTool('tool-edit');
+            say('Drag the handles, then click Save on the map.', true);
         }
     });
     document.getElementById('tool-clear')?.addEventListener('click', () => {
@@ -710,7 +764,8 @@
         geometryInput.value = '';
         if (zoneSave) zoneSave.disabled = true;
         if (editTool) editTool.disabled = true;
-        if (geometryHint) geometryHint.textContent = 'Drawing cleared. Trace the boundary again.';
+        markTool('');
+        say('Drawing cleared. Trace the boundary again.', false);
     });
 
     typeSelect?.addEventListener('change', () => {
@@ -737,7 +792,7 @@
             console.error('Unable to restore the draft hazard boundary.', e);
             geometryInput.value = '';
             if (zoneSave) zoneSave.disabled = true;
-            if (geometryHint) geometryHint.textContent = 'Draft boundary could not be restored. Draw it again before saving.';
+            say('Draft boundary could not be restored. Draw it again before saving.', false);
         }
     }
 
@@ -757,7 +812,10 @@
         }
         pinPlaced = true;
         centerSave.disabled = false;
-        coordsLabel.textContent = 'Pin placed at ' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5);
+        pinStep?.classList.add('is-ready');
+        const pinMessage = 'Pin placed at ' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5) + '. Drag it if it needs to move.';
+        coordsLabel.textContent = pinMessage;
+        if (geometryHint && !centerForm.classList.contains('d-none')) geometryHint.textContent = pinMessage;
     }
 
     colorInput?.addEventListener('input', () => {
@@ -776,15 +834,23 @@
         zoneList.classList.toggle('d-none', center);
         centerForm.classList.toggle('d-none', !center);
         centerList.classList.toggle('d-none', !center);
-        document.getElementById('mode-zone').className = 'btn btn-sm ' + (center ? 'btn-outline-primary' : 'btn-primary');
-        document.getElementById('mode-center').className = 'btn btn-sm ' + (center ? 'btn-primary' : 'btn-outline-primary');
+        document.getElementById('mode-zone')?.classList.toggle('is-selected', !center);
+        document.getElementById('mode-center')?.classList.toggle('is-selected', center);
+        if (modeKicker) modeKicker.textContent = center ? 'New shelter' : 'New hazard area';
+        if (modeTitle) modeTitle.textContent = center ? 'Drop a pin for the shelter' : 'Trace the area, then name it';
+        if (modeLead) modeLead.textContent = center
+            ? 'Click the map to place the shelter, then fill in who it can hold.'
+            : 'Choose the incident type, draw the boundary, then save. Residents see the type color on the public map.';
         if (center) {
             polygonDrawer.disable();
             boxDrawer.disable();
             if (editDrawer._enabled) editDrawer.disable();
-            if (geometryHint) geometryHint.textContent = 'Click the map to drop the shelter pin.';
-        } else if (geometryHint && !geometryInput.value) {
-            geometryHint.textContent = 'Choose Draw area or Draw box, then trace the boundary.';
+            markTool('');
+            if (geometryHint) geometryHint.textContent = pinPlaced ? 'Shelter pin is on the map. Drag it if it needs to move.' : 'Click the map to drop the shelter pin.';
+        } else if (!geometryInput.value) {
+            say('Draw an area or a box, then name it in the panel.', false);
+        } else {
+            say('Boundary ready. Adjust the corners, or save the hazard area.', true);
         }
         setTimeout(() => map.invalidateSize(), 50);
     }
@@ -797,7 +863,7 @@
     zoneForm?.addEventListener('submit', (e) => {
         if (!geometryInput.value || !drawnLayer) {
             e.preventDefault();
-            if (geometryHint) geometryHint.textContent = 'Draw a boundary on the map before saving this hazard area.';
+            say('Draw a boundary on the map before saving this hazard area.', false);
             document.getElementById('tool-polygon')?.focus();
         }
     });

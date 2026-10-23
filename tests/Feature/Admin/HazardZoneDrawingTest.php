@@ -4,6 +4,24 @@ use App\Models\HazardZone;
 use App\Models\IncidentType;
 use App\Models\User;
 
+test('hazard map creation uses the stepped authoring panel', function () {
+    $administrator = User::factory()->administrator()->create();
+
+    $this->actingAs($administrator)
+        ->get(route('admin.hazard.index'))
+        ->assertOk()
+        ->assertSee('Map the boundary')
+        ->assertSee('Trace the area, then name it')
+        ->assertSee('1 · Type')
+        ->assertSee('2 · Place')
+        ->assertSee('3 · Boundary')
+        ->assertSee('4 · Public map')
+        ->assertSee('id="tool-polygon"', false)
+        ->assertSee('id="tool-box"', false)
+        ->assertSee('id="boundary-note"', false)
+        ->assertSee('hz-mode-switch', false);
+});
+
 test('hazard area creation rejects incomplete or non polygon geojson', function () {
     $administrator = User::factory()->administrator()->create();
     $incidentType = IncidentType::factory()->create();

@@ -361,10 +361,8 @@
     background: linear-gradient(145deg, color-mix(in srgb, var(--raniag-primary) 6%, var(--raniag-card)), var(--raniag-card) 78%);
 }
 .container-fluid:has(.rg-workspace-intro--hazard-map) .hz-toolbar {
-    min-height: 3rem;
-    padding: .45rem .6rem;
     border: 1px solid var(--raniag-border);
-    border-radius: .75rem;
+    border-radius: .85rem;
     background: var(--raniag-card);
 }
 
@@ -1372,8 +1370,7 @@
     box-shadow: 0 5px 15px color-mix(in srgb, var(--raniag-ink) 4%, transparent);
 }
 .container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-stats .hz-stat .value { font-size: 1.4rem; }
-.container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-toolbar { justify-content: space-between; gap: .55rem; }
-.container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-toolbar .btn-group { flex-wrap: wrap; }
+.container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-toolbar { align-items: center; }
 .container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-panel .card-body { padding: .9rem; }
 .container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-panel .form-label { margin-bottom: .28rem; font-size: .72rem; font-weight: 700; }
 .container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-panel .form-control,
