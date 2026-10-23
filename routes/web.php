@@ -35,11 +35,11 @@ Route::middleware(['auth', 'active', 'no-cache'])->group(function () {
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
         Route::get('/poll', [NotificationController::class, 'poll'])->name('poll');
-        Route::post('/{notification}/read', [NotificationController::class, 'markRead'])->name('mark_read');
         Route::post('/read-all', [NotificationController::class, 'markAllRead'])->name('mark_all_read');
-        Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
         Route::delete('/bulk/delete', [NotificationController::class, 'destroySelected'])->name('destroy_selected');
         Route::delete('/bulk/delete-all', [NotificationController::class, 'destroyAll'])->name('destroy_all');
+        Route::post('/{notification}/read', [NotificationController::class, 'markRead'])->name('mark_read');
+        Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('push-subscriptions')->name('push_subscriptions.')->group(function () {

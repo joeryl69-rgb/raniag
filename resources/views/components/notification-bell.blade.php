@@ -21,16 +21,6 @@
             </div>
         </div>
 
-        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom notif-bulkbar d-none" id="notifBulkBar">
-            <div class="form-check mb-0">
-                <input type="checkbox" class="form-check-input" id="notifSelectAll">
-                <label class="form-check-label small" for="notifSelectAll">Select all</label>
-            </div>
-            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-danger d-none" id="notifDeleteSelectedBtn" disabled>
-                <i class="bi bi-trash me-1"></i>Move to bin <span id="notifSelectedCount"></span>
-            </button>
-        </div>
-
         <div id="notifList" class="notif-list">
             <div class="text-center text-muted small py-5" id="notifEmptyState">
                 <i class="bi bi-bell-slash fs-1 d-block mb-2 opacity-50"></i>
@@ -38,14 +28,7 @@
             </div>
         </div>
 
-        <a href="{{ route('notifications.index') }}" class="d-block text-center small py-2 border-top text-decoration-none">
-            View all notifications
-        </a>
         <form id="notifClearAllForm" method="POST" action="{{ route('notifications.destroy_all') }}" class="d-none">
-            @csrf
-            @method('DELETE')
-        </form>
-        <form id="notifBulkDeleteForm" method="POST" action="{{ route('notifications.destroy_selected') }}" class="d-none">
             @csrf
             @method('DELETE')
         </form>
@@ -134,50 +117,6 @@
     const clearAllBtn = document.getElementById('notifClearAllBtn');
     const closeBtn = document.getElementById('notifCloseBtn');
     const bellToggle = document.getElementById('notifBellToggle');
-    const bulkBar = document.getElementById('notifBulkBar');
-    const selectAllCb = document.getElementById('notifSelectAll');
-    const deleteSelectedBtn = document.getElementById('notifDeleteSelectedBtn');
-    const bulkDeleteForm = document.getElementById('notifBulkDeleteForm');
-
-    function syncBellSelection() {
-        const boxes = Array.from(list.querySelectorAll('.notif-bell-checkbox'));
-        const checked = boxes.filter(function (b) { return b.checked; });
-        deleteSelectedBtn.classList.toggle('d-none', checked.length === 0);
-        deleteSelectedBtn.disabled = checked.length === 0;
-        document.getElementById('notifSelectedCount').textContent = checked.length > 0 ? '(' + checked.length + ')' : '';
-        selectAllCb.checked = boxes.length > 0 && checked.length === boxes.length;
-        selectAllCb.indeterminate = checked.length > 0 && checked.length < boxes.length;
-    }
-
-    if (selectAllCb) {
-        selectAllCb.addEventListener('change', function () {
-            list.querySelectorAll('.notif-bell-checkbox').forEach(function (b) { b.checked = selectAllCb.checked; });
-            syncBellSelection();
-        });
-    }
-
-    if (deleteSelectedBtn) {
-        deleteSelectedBtn.addEventListener('click', function () {
-            const ids = Array.from(list.querySelectorAll('.notif-bell-checkbox:checked')).map(function (b) { return b.value; });
-            if (!ids.length || !confirm('Move ' + ids.length + ' selected notification(s) to the bin?')) return;
-            bulkDeleteForm.querySelectorAll('input[name="ids[]"]').forEach(function (el) { el.remove(); });
-            ids.forEach(function (id) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'ids[]';
-                input.value = id;
-                bulkDeleteForm.appendChild(input);
-            });
-            fetch(bulkDeleteForm.action, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-HTTP-Method-Override': 'DELETE' },
-                body: new FormData(bulkDeleteForm),
-            }).finally(function () {
-                selectAllCb.checked = false;
-                poll();
-            });
-        });
-    }
 
     // The panel is portaled to <body> so the sticky navbar cannot clip it,
     // and it stays a card under the bell instead of covering the page.
@@ -293,19 +232,13 @@
         if (!data.notifications.length) {
             list.innerHTML = '';
             list.appendChild(emptyState);
-            bulkBar.classList.add('d-none');
             return;
         }
-
-        bulkBar.classList.remove('d-none');
 
         list.innerHTML = data.notifications.map(function (n) {
             const unreadDot = n.is_read ? '' : '<span class="rounded-circle bg-primary d-inline-block flex-shrink-0" style="width:8px;height:8px;margin-top:6px;"></span>';
             return '<div class="notif-item-row d-flex align-items-stretch border-bottom' + (n.is_read ? '' : ' bg-light') + '">' +
-                '<label class="d-flex align-items-center px-2 flex-shrink-0">' +
-                    '<input type="checkbox" class="form-check-input notif-bell-checkbox m-0" value="' + n.id + '" data-delete-url="' + n.delete_url + '">' +
-                '</label>' +
-                '<a href="#" class="notif-item text-decoration-none d-flex gap-2 py-2 pe-2 text-dark flex-grow-1 min-w-0" ' +
+                '<a href="#" class="notif-item text-decoration-none d-flex gap-2 py-2 ps-3 pe-2 text-dark flex-grow-1 min-w-0" ' +
                 'data-read-url="' + n.read_url + '" data-target-url="' + (n.target_url || '') + '">' +
                 '<div class="text-' + n.color + ' fs-5 flex-shrink-0">' + timeIcon(n.icon) + '</div>' +
                 '<div class="flex-grow-1 min-w-0">' +
@@ -318,8 +251,6 @@
                 '<button type="button" class="btn btn-sm btn-link text-danger notif-delete-btn px-2" data-delete-url="' + n.delete_url + '" title="Move to bin"><i class="bi bi-trash"></i></button>' +
             '</div>';
         }).join('');
-
-        syncBellSelection();
     }
 
     function poll() {
@@ -328,12 +259,6 @@
             .then(function (data) { if (data) render(data); })
             .catch(function () { /* silent — notifications are non-critical, next poll retries */ });
     }
-
-    list.addEventListener('change', function (e) {
-        if (e.target.classList.contains('notif-bell-checkbox')) {
-            syncBellSelection();
-        }
-    });
 
     list.addEventListener('click', function (e) {
         const item = e.target.closest('.notif-item');
