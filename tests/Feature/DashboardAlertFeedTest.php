@@ -137,14 +137,24 @@ test('staff dashboards render the current account alert cursor and the notificat
         ->assertSee('incident-toast-sweep', false)
         ->assertSee('incident-alert-ring', false)
         ->assertSee('setInterval(remindIncidentAlert, 30000)', false)
+        ->assertSee('playAlertChime();', false)
+        ->assertSee('RANIAGAlertSound?.play()', false)
         ->assertDontSee('playAlertTone', false)
-        ->assertDontSee('RANIAGAlertSound?.play()', false)
         ->assertSee('acknowledgeIncidentAlert(false)', false)
         ->assertDontSee('setTimeout(hideIncidentAlert', false)
         ->assertSee('let alertCursor = Number(1)', false)
         ->assertSee('dashboard/alerts.json', false)
         ->assertSee('loadAlertFeed()', false)
         ->assertSee('setInterval(loadAlertFeed, 10000)', false);
+});
+
+test('live command alert chime is a short soft tone', function () {
+    $sound = file_get_contents(public_path('js/notification-alert-sound.js'));
+
+    expect($sound)
+        ->toContain("oscillator.type = 'sine'")
+        ->not->toContain("oscillator.type = 'square'")
+        ->not->toContain('1175');
 });
 
 test('dashboard alert feed replays unread alerts after the initial cursor until acknowledged', function () {

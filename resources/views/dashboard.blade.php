@@ -1060,6 +1060,23 @@
                 document.getElementById('map-insight-panel')?.classList.remove('is-open');
             }
 
+            let alertChimePending = false;
+
+            function playAlertChime() {
+                if (document.hidden) {
+                    alertChimePending = true;
+                    return;
+                }
+                const played = window.RANIAGAlertSound?.play();
+                if (!played || typeof played.then !== 'function') {
+                    alertChimePending = true;
+                    return;
+                }
+                played.then(function (ok) {
+                    alertChimePending = !ok;
+                });
+            }
+
             function bindIncidentAlert() {
                 const dismiss = document.getElementById('incident-alert-dismiss');
                 const open = document.getElementById('incident-alert-link');
@@ -1071,6 +1088,14 @@
                     event.preventDefault();
                     acknowledgeIncidentAlert(true);
                 });
+                const playPendingChime = function () {
+                    if (!alertChimePending || document.hidden) return;
+                    alertChimePending = false;
+                    playAlertChime();
+                };
+                document.addEventListener('pointerdown', playPendingChime, { passive: true });
+                document.addEventListener('keydown', playPendingChime);
+                document.addEventListener('visibilitychange', playPendingChime);
             }
 
             function updateAlertBacklog() {
@@ -1135,6 +1160,7 @@
                 updateAlertBacklog();
                 banner.classList.add('is-visible');
                 restartAlertAnimation();
+                playAlertChime();
                 startAlertReminders();
             }
 

@@ -17,32 +17,29 @@
         }
     }
 
+    function chime(frequency, start, duration, peak) {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const noteStart = audioContext.currentTime + 0.02 + start;
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, noteStart);
+        gain.gain.exponentialRampToValueAtTime(peak, noteStart + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + duration);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(noteStart);
+        oscillator.stop(noteStart + duration + 0.02);
+    }
+
     async function play() {
         const unlocked = await unlock();
         if (!unlocked || audioContext?.state !== 'running') return false;
 
-        const notes = [
-            { frequency: 880, start: 0 },
-            { frequency: 1175, start: 0.2 },
-            { frequency: 880, start: 0.46 },
-            { frequency: 1175, start: 0.66 },
-        ];
-        const now = audioContext.currentTime + 0.02;
-
-        notes.forEach(({ frequency, start }) => {
-            const oscillator = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            const noteStart = now + start;
-            oscillator.type = 'square';
-            oscillator.frequency.value = frequency;
-            gain.gain.setValueAtTime(0.0001, noteStart);
-            gain.gain.exponentialRampToValueAtTime(0.42, noteStart + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.18);
-            oscillator.connect(gain);
-            gain.connect(audioContext.destination);
-            oscillator.start(noteStart);
-            oscillator.stop(noteStart + 0.2);
-        });
+        // One short glass ding: a soft fundamental plus a quiet shimmer.
+        chime(1318.5, 0, 0.62, 0.09);
+        chime(1975.5, 0, 0.4, 0.02);
+        chime(2637, 0.01, 0.28, 0.018);
 
         return true;
     }
