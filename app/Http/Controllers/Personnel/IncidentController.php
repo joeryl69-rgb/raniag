@@ -58,8 +58,7 @@ class IncidentController extends Controller
                 })
                 ->whereNotIn('status', ['resolved', 'closed'])
                 ->distinct()
-                ->pluck('status'),
-            $request->input('status')
+                ->pluck('status')
         );
 
         return view('personnel.incidents.index', compact('incidents', 'filters', 'queueStatuses'));

@@ -19,14 +19,15 @@
         <div class="rg-queue-filter-popover">
             <label>
                 <span>Status</span>
-                <select name="status" @if($admin) data-filter-default="" @endif>
-                    @if ($admin)
-                        <option value="" @selected(request('status', '') === '')>Not resolved</option>
-                    @else
-                        <option value="">All statuses</option>
-                    @endif
-                    @foreach ($statuses as $value => $label)
-                        <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                @php
+                    $chosenStatus = (string) request('status', '');
+                    $statusChoices = is_array($statuses) ? $statuses : [];
+                    $chosenStatusExists = $chosenStatus !== '' && array_key_exists($chosenStatus, $statusChoices);
+                @endphp
+                <select name="status" data-filter-default="">
+                    <option value="" @selected(! $chosenStatusExists) hidden></option>
+                    @foreach ($statusChoices as $value => $label)
+                        <option value="{{ $value }}" @selected($chosenStatus === (string) $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>

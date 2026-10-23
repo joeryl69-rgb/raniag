@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\IncidentStatus;
 use App\Models\Incident;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Support\Filters;
@@ -208,13 +209,16 @@ class IncidentRepository implements IncidentRepositoryInterface
             });
         }
 
-        $status = $filters['status'] ?? null;
-        if ($status === 'finished') {
-            $query->whereIn('status', ['resolved', 'closed']);
-        } elseif ($status && $status !== 'all') {
-            $query->where('status', $status);
-        } elseif ($status !== 'all') {
-            $query->whereNotIn('status', ['resolved', 'closed']);
+        $status = is_string($filters['status'] ?? null)
+            ? IncidentStatus::tryFrom($filters['status'])
+            : null;
+        if ($status) {
+            $query->where('status', $status->value);
+        } else {
+            $query->whereNotIn('status', [
+                IncidentStatus::Resolved->value,
+                IncidentStatus::Closed->value,
+            ]);
         }
 
         if (! empty($filters['incident_type_id'] ?? null)) {

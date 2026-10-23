@@ -46,7 +46,7 @@ test('incident filters only offer statuses categories and priorities that exist'
         ->assertDontSee('value="high"', false)
         ->assertDontSee('value="low"', false);
 
-    $response->assertSee('Not resolved', false)
+    $response->assertDontSee('Not resolved', false)
         ->assertDontSee('Newest open incidents', false)
         ->assertDontSee('>All statuses<', false)
         ->assertDontSee('Resolved or closed', false)
@@ -55,8 +55,8 @@ test('incident filters only offer statuses categories and priorities that exist'
 
     $this->get(route('admin.incidents.index', ['status' => 'received']))
         ->assertOk()
-        ->assertSee('value="received" selected', false)
-        ->assertSee('No incidents found');
+        ->assertDontSee('value="received"', false)
+        ->assertSee('value="submitted"', false);
 });
 
 test('the admin incident queue hides resolved reports until that status is chosen', function () {
@@ -75,7 +75,10 @@ test('the admin incident queue hides resolved reports until that status is chose
         ->assertSee('RAN-OPEN-NEW')
         ->assertDontSee('RAN-DONE-NEW')
         ->assertDontSee('RAN-CLOSED-NEW')
-        ->assertSee('Not resolved', false)
+        ->assertSee('value="submitted"', false)
+        ->assertSee('value="resolved"', false)
+        ->assertSee('value="closed"', false)
+        ->assertDontSee('Not resolved', false)
         ->assertDontSee('Newest open incidents', false)
         ->assertDontSee('value="finished"', false);
 

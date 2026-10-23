@@ -86,7 +86,7 @@ class IncidentController extends Controller
             'resolved' => $countStatus(IncidentStatus::Resolved),
         ];
         $incidentKpis['outside'] = Incident::query()->where('meta->within_jurisdiction', false)->count();
-        $queueStatuses = FilterOptions::enums(IncidentStatus::cases(), $statusCounts->keys(), $request->input('status'));
+        $queueStatuses = FilterOptions::enums(IncidentStatus::cases(), $statusCounts->keys());
         $queuePriorities = FilterOptions::enums(
             IncidentPriority::cases(),
             Incident::query()->distinct()->pluck('priority'),
