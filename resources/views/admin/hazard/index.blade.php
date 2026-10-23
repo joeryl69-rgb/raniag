@@ -80,7 +80,8 @@
                 <div class="hz-toolbar mb-2">
                     <div class="hz-toolbar-copy">
                         <span class="hz-kicker">Map the boundary</span>
-                        <strong id="geometry-hint" role="status" aria-live="polite">Draw an area or a box, then name it in the panel.</strong>
+                        <strong id="geometry-hint" role="status" aria-live="polite">Tap "Tap to use the map" before drawing. The boundary tools stay off until the map is on.</strong>
+                        <span class="hz-map-state" id="map-lock-note">Map locked</span>
                     </div>
                     <div class="hz-tool-group" role="group" aria-label="Boundary tools">
                         <button type="button" class="hz-tool" id="tool-polygon"><i class="bi bi-pentagon" aria-hidden="true"></i><span>Draw area</span></button>
@@ -102,7 +103,7 @@
                 <div class="hz-panel-head">
                     <span class="hz-kicker" id="hz-mode-kicker">{{ $openCenter ? 'New shelter' : 'New hazard area' }}</span>
                     <h2 id="hz-mode-title">{{ $openCenter ? 'Drop a pin for the shelter' : 'Trace the area, then name it' }}</h2>
-                    <p id="hz-mode-lead">{{ $openCenter ? 'Click the map to place the shelter, then fill in who it can hold.' : 'Choose the incident type, draw the boundary, then save. Residents see the type color on the public map.' }}</p>
+                    <p id="hz-mode-lead">{{ $openCenter ? 'Tap "Tap to use the map", then click the map to place the shelter.' : 'Tap "Tap to use the map" before drawing. Then choose the type, trace the boundary, and save.' }}</p>
                 </div>
                 <div class="card-body">
                     <div class="hz-mode-switch" role="group" aria-label="What to add">
@@ -150,7 +151,7 @@
                         </section>
                         <section class="hz-section" id="boundary-step">
                             <span class="hz-kicker">3 · Boundary</span>
-                            <p id="boundary-note">No boundary yet. Use Draw area or Draw box on the map.</p>
+                            <p id="boundary-note">Tap "Tap to use the map" before drawing. The boundary tools stay off until the map is on.</p>
                         </section>
                         <section class="hz-section">
                             <span class="hz-kicker">4 · Public map</span>
@@ -170,7 +171,7 @@
                         <input type="hidden" name="workspace" value="center">
                         <section class="hz-section" id="pin-step">
                             <span class="hz-kicker">1 · Pin</span>
-                            <p id="center-coords">Pin not placed yet. Click the map, then drag the pin if it needs to move.</p>
+                            <p id="center-coords">Pin not placed yet. Tap "Tap to use the map", then click the map to drop the shelter.</p>
                             <label class="form-label" for="center-color">Pin color</label>
                             <input type="color" name="color" id="center-color" class="form-control form-control-color" value="{{ old('color', '#0f766e') }}" title="Color residents see on the live map">
                             <div class="form-text">This is the shelter pin color on the public Live Map.</div>
@@ -488,7 +489,17 @@
 .hz-tool { display: inline-flex; align-items: center; gap: .4rem; min-height: 2.35rem; padding: .35rem .7rem; border: 1px solid var(--raniag-border); border-radius: .6rem; background: var(--raniag-card); color: var(--raniag-ink); font-size: .82rem; font-weight: 650; line-height: 1; }
 .hz-tool:hover { border-color: color-mix(in srgb, var(--raniag-primary) 45%, var(--raniag-border)); color: var(--raniag-primary); }
 .hz-tool.is-selected { border-color: var(--raniag-primary); background: color-mix(in srgb, var(--raniag-primary) 12%, var(--raniag-card)); color: var(--raniag-primary); }
+.hz-tool.is-waiting { border-style: dashed; color: var(--raniag-muted); }
 .hz-tool:disabled { opacity: .45; }
+.hz-map-state { display: inline-flex; width: fit-content; margin-top: .4rem; padding: .18rem .55rem; border-radius: 999px; background: color-mix(in srgb, #b45309 16%, var(--raniag-card)); color: #9a3412; font-size: .68rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.hz-map-state.is-ready { background: color-mix(in srgb, #0f766e 16%, var(--raniag-card)); color: #0f766e; }
+#ops-map .rg-map-scroll-action.is-needed { box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--raniag-primary); animation: hz-map-lock-pulse 1.4s ease-in-out infinite; }
+@keyframes hz-map-lock-pulse { 50% { transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) {
+    #ops-map .rg-map-scroll-action.is-needed { animation: none; }
+}
+html[data-theme="dark"] .hz-map-state { color: #fdba74; }
+html[data-theme="dark"] .hz-map-state.is-ready { color: #5eead4; }
 .hz-tool-quiet { color: var(--raniag-muted); }
 .hz-panel-head { padding: 1rem 1rem .2rem; }
 .hz-panel-head h2 { margin: 0 0 .3rem; font-size: 1.05rem; font-weight: 750; letter-spacing: -.02em; }
@@ -500,6 +511,9 @@
 .hz-section p { margin: 0; font-size: .82rem; line-height: 1.4; color: var(--raniag-muted); }
 .hz-section.is-ready { border-bottom-color: color-mix(in srgb, var(--raniag-primary) 35%, var(--raniag-border)); }
 .hz-section.is-ready p { color: var(--raniag-ink); font-weight: 650; }
+.hz-section.is-locked { border-bottom-color: color-mix(in srgb, #b45309 45%, var(--raniag-border)); }
+.hz-section.is-locked p { color: #9a3412; font-weight: 650; }
+html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-type-preview { display: flex; align-items: center; gap: .6rem; margin-top: .7rem; font-size: .8rem; line-height: 1.35; color: var(--raniag-muted); }
 .hz-list-label { background: color-mix(in srgb, var(--raniag-ink) 4%, var(--raniag-card)) !important; color: var(--raniag-muted) !important; font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .hz-map-wrap { position: relative; height: calc(100vh - 280px); min-height: 520px; border-radius: 12px; overflow: hidden; border: 1px solid var(--raniag-border); background: var(--raniag-card-raised); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent); }
@@ -572,6 +586,76 @@
         document.querySelectorAll('.hz-tool').forEach((button) => {
             button.classList.toggle('is-selected', button.id === id);
         });
+    }
+
+    const mapLockNote = document.getElementById('map-lock-note');
+
+    function mapReady() {
+        return map.getContainer().dataset.mapInteractive === '1';
+    }
+
+    function drawing() {
+        return !!(polygonDrawer?._enabled || boxDrawer?._enabled || editDrawer?._enabled);
+    }
+
+    function setDrawHold(on) {
+        map.getContainer().dataset.drawHold = on ? '1' : '0';
+        if (on && map.dragging) map.dragging.disable();
+    }
+
+    function lockMessage(shelter) {
+        if (shelter) return 'Tap "Tap to use the map" before placing a shelter pin.';
+        if (geometryInput.value) return 'Tap "Tap to use the map" again before adjusting this boundary.';
+        return 'Tap "Tap to use the map" before drawing. The boundary tools stay off until the map is on.';
+    }
+
+    function showLock() {
+        const shelter = centerForm && !centerForm.classList.contains('d-none');
+        if (shelter) {
+            if (geometryHint) geometryHint.textContent = lockMessage(true);
+            if (coordsLabel && !pinPlaced) coordsLabel.textContent = 'Pin not placed yet. Tap "Tap to use the map", then click the map to drop the shelter.';
+        } else {
+            say(lockMessage(false), !!geometryInput.value);
+        }
+        boundaryStep?.classList.toggle('is-locked', !shelter);
+        pinStep?.classList.toggle('is-locked', !!shelter);
+    }
+
+    function syncMapLock() {
+        const ready = mapReady();
+        if (mapLockNote) {
+            mapLockNote.textContent = ready ? 'Map on' : 'Map locked';
+            mapLockNote.classList.toggle('is-ready', ready);
+        }
+        map.getContainer().querySelector('.rg-map-scroll-action')?.classList.toggle('is-needed', !ready);
+        document.querySelectorAll('.hz-tool').forEach((button) => {
+            if (button.id === 'tool-clear') return;
+            button.classList.toggle('is-waiting', !ready);
+            button.title = ready ? '' : 'Tap "Tap to use the map" first';
+        });
+        if (!ready) {
+            boundaryStep?.classList.add('is-locked');
+            pinStep?.classList.add('is-locked');
+        } else {
+            boundaryStep?.classList.remove('is-locked');
+            pinStep?.classList.remove('is-locked');
+        }
+    }
+
+    function requireMap() {
+        if (mapReady()) return true;
+        syncMapLock();
+        showLock();
+        map.getContainer().querySelector('.rg-map-scroll-action')?.focus();
+        return false;
+    }
+
+    function stopDrawing() {
+        polygonDrawer?.disable();
+        boxDrawer?.disable();
+        if (editDrawer?._enabled) editDrawer.disable();
+        setDrawHold(false);
+        markTool('');
     }
 
     function currentColor() {
@@ -692,6 +776,7 @@
         polygonDrawer.disable();
         boxDrawer.disable();
         if (editDrawer?._enabled) editDrawer.disable();
+        setDrawHold(false);
         polygonDrawer = new L.Draw.Polygon(map, { allowIntersection: false, showArea: true, shapeOptions: shapeOptions() });
         boxDrawer = new L.Draw.Rectangle(map, { shapeOptions: shapeOptions() });
     }
@@ -720,6 +805,7 @@
         polygonDrawer.disable();
         boxDrawer.disable();
         if (editDrawer._enabled) editDrawer.disable();
+        setDrawHold(false);
     });
 
     map.on(L.Draw.Event.EDITED, function (event) {
@@ -731,26 +817,32 @@
 
     document.getElementById('tool-polygon')?.addEventListener('click', () => {
         setMode('zone');
+        if (!requireMap()) return;
         refreshDrawers();
         if (editDrawer._enabled) editDrawer.disable();
         polygonDrawer.enable();
+        setDrawHold(true);
         markTool('tool-polygon');
         say('Click to add corners. Click the first corner again to close the area.', false);
     });
     document.getElementById('tool-box')?.addEventListener('click', () => {
         setMode('zone');
+        if (!requireMap()) return;
         refreshDrawers();
         if (editDrawer._enabled) editDrawer.disable();
         boxDrawer.enable();
+        setDrawHold(true);
         markTool('tool-box');
         say('Click one corner, then the opposite corner.', false);
     });
     editTool?.addEventListener('click', () => {
         if (!drawnLayer) return;
+        if (!requireMap()) return;
         polygonDrawer.disable();
         boxDrawer.disable();
         if (!editDrawer._enabled) {
             editDrawer.enable();
+            setDrawHold(true);
             markTool('tool-edit');
             say('Drag the handles, then click Save on the map.', true);
         }
@@ -759,13 +851,15 @@
         polygonDrawer.disable();
         boxDrawer.disable();
         if (editDrawer._enabled) editDrawer.disable();
+        setDrawHold(false);
         drawnItems.clearLayers();
         drawnLayer = null;
         geometryInput.value = '';
         if (zoneSave) zoneSave.disabled = true;
         if (editTool) editTool.disabled = true;
         markTool('');
-        say('Drawing cleared. Trace the boundary again.', false);
+        if (mapReady()) say('Drawing cleared. Trace the boundary again.', false);
+        else showLock();
     });
 
     typeSelect?.addEventListener('change', () => {
@@ -824,8 +918,31 @@
 
     map.on('click', (e) => {
         if (centerForm.classList.contains('d-none')) return;
+        if (!mapReady()) return;
         if (polygonDrawer._enabled || boxDrawer._enabled) return;
         placeDraft(e.latlng.lat, e.latlng.lng);
+    });
+
+    map.getContainer().addEventListener('raniag:map-mode', (event) => {
+        const ready = !!event.detail?.interactive;
+        if (!ready) {
+            stopDrawing();
+            syncMapLock();
+            showLock();
+            return;
+        }
+        if (drawing()) setDrawHold(true);
+        syncMapLock();
+        const shelter = centerForm && !centerForm.classList.contains('d-none');
+        if (shelter) {
+            if (geometryHint) geometryHint.textContent = pinPlaced
+                ? coordsLabel.textContent
+                : 'Map is on. Click the map to drop the shelter pin.';
+            return;
+        }
+        if (drawing()) return;
+        if (geometryInput.value) say('Boundary ready. Adjust the corners, or save the hazard area.', true);
+        else say('Map is on. Draw an area or a box, then name it in the panel.', false);
     });
 
     function setMode(mode) {
@@ -839,14 +956,18 @@
         if (modeKicker) modeKicker.textContent = center ? 'New shelter' : 'New hazard area';
         if (modeTitle) modeTitle.textContent = center ? 'Drop a pin for the shelter' : 'Trace the area, then name it';
         if (modeLead) modeLead.textContent = center
-            ? 'Click the map to place the shelter, then fill in who it can hold.'
-            : 'Choose the incident type, draw the boundary, then save. Residents see the type color on the public map.';
+            ? 'Tap "Tap to use the map", then click the map to place the shelter.'
+            : 'Tap "Tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
         if (center) {
             polygonDrawer.disable();
             boxDrawer.disable();
             if (editDrawer._enabled) editDrawer.disable();
+            setDrawHold(false);
             markTool('');
-            if (geometryHint) geometryHint.textContent = pinPlaced ? 'Shelter pin is on the map. Drag it if it needs to move.' : 'Click the map to drop the shelter pin.';
+            if (!mapReady()) showLock();
+            else if (geometryHint) geometryHint.textContent = pinPlaced ? 'Shelter pin is on the map. Drag it if it needs to move.' : 'Map is on. Click the map to drop the shelter pin.';
+        } else if (!mapReady()) {
+            showLock();
         } else if (!geometryInput.value) {
             say('Draw an area or a box, then name it in the panel.', false);
         } else {
@@ -859,10 +980,16 @@
     document.getElementById('mode-center')?.addEventListener('click', () => setMode('center'));
     if (startCenter) setMode('center');
     if (hadPin && latInput.value && lngInput.value) placeDraft(parseFloat(latInput.value), parseFloat(lngInput.value));
+    syncMapLock();
 
     zoneForm?.addEventListener('submit', (e) => {
         if (!geometryInput.value || !drawnLayer) {
             e.preventDefault();
+            if (!mapReady()) {
+                showLock();
+                map.getContainer().querySelector('.rg-map-scroll-action')?.focus();
+                return;
+            }
             say('Draw a boundary on the map before saving this hazard area.', false);
             document.getElementById('tool-polygon')?.focus();
         }

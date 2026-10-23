@@ -9,6 +9,15 @@
         return window.matchMedia('(pointer: coarse)').matches;
     }
 
+    function publish(map, interactive) {
+        const container = map.getContainer();
+        container.dataset.mapInteractive = interactive ? '1' : '0';
+        container.dispatchEvent(new CustomEvent('raniag:map-mode', {
+            bubbles: true,
+            detail: { interactive: !!interactive },
+        }));
+    }
+
     function setMapInteractions(map, enabled) {
         [
             map.dragging,
@@ -23,6 +32,9 @@
             if (enabled) handler.enable();
             else handler.disable();
         });
+        if (enabled && map.getContainer().dataset.drawHold === '1' && map.dragging) {
+            map.dragging.disable();
+        }
     }
 
     function bindWheel(map) {
@@ -57,8 +69,7 @@
                 event.stopPropagation();
                 setMapInteractions(map, true);
                 cover.remove();
-
-                container.dataset.mapInteractive = '1';
+                publish(map, true);
                 const doneControl = global.L.control({ position: 'bottomleft' });
                 doneControl.onAdd = function () {
                     const control = global.L.DomUtil.create('div', 'leaflet-control rg-map-scroll-done-control');
@@ -86,8 +97,8 @@
         }
 
         container.appendChild(cover);
-        container.dataset.mapInteractive = '0';
         setMapInteractions(map, false);
+        publish(map, false);
     }
 
     function guard(map, options) {
