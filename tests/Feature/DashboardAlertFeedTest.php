@@ -152,7 +152,8 @@ test('live command alert chime is a short soft tone', function () {
     $sound = file_get_contents(public_path('js/notification-alert-sound.js'));
 
     expect($sound)
-        ->toContain("oscillator.type = 'sine'")
+        ->toContain("oscillator.type = 'triangle'")
+        ->toContain('0.62')
         ->not->toContain("oscillator.type = 'square'")
         ->not->toContain('1175');
 });

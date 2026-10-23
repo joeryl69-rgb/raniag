@@ -1061,20 +1061,22 @@
             }
 
             let alertChimePending = false;
+            let alertChimePlayedFor = '';
 
             function playAlertChime() {
+                if (!currentIncidentAlert) return;
+                const alertId = String(currentIncidentAlert.id || '');
+                if (alertChimePlayedFor === alertId) return;
                 if (document.hidden) {
                     alertChimePending = true;
                     return;
                 }
-                const played = window.RANIAGAlertSound?.play();
-                if (!played || typeof played.then !== 'function') {
-                    alertChimePending = true;
+                if (window.RANIAGAlertSound?.play()) {
+                    alertChimePlayedFor = alertId;
+                    alertChimePending = false;
                     return;
                 }
-                played.then(function (ok) {
-                    alertChimePending = !ok;
-                });
+                alertChimePending = true;
             }
 
             function bindIncidentAlert() {
@@ -1088,14 +1090,23 @@
                     event.preventDefault();
                     acknowledgeIncidentAlert(true);
                 });
-                const playPendingChime = function () {
-                    if (!alertChimePending || document.hidden) return;
-                    alertChimePending = false;
-                    playAlertChime();
+                const playWaitingChime = function () {
+                    const sound = window.RANIAGAlertSound;
+                    if (!sound) return;
+                    const ready = sound.prime ? sound.prime() : Promise.resolve(false);
+                    Promise.resolve(ready).then(function () {
+                        if (!alertChimePending || document.hidden) return;
+                        if (sound.play()) {
+                            alertChimePending = false;
+                            if (currentIncidentAlert) alertChimePlayedFor = String(currentIncidentAlert.id || '');
+                        }
+                    });
                 };
-                document.addEventListener('pointerdown', playPendingChime, { passive: true });
-                document.addEventListener('keydown', playPendingChime);
-                document.addEventListener('visibilitychange', playPendingChime);
+                document.addEventListener('pointerdown', playWaitingChime, { passive: true });
+                document.addEventListener('keydown', playWaitingChime);
+                document.addEventListener('visibilitychange', function () {
+                    if (!document.hidden) playWaitingChime();
+                });
             }
 
             function updateAlertBacklog() {

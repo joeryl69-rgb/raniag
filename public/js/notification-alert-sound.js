@@ -3,46 +3,63 @@
 
     let audioContext = null;
 
-    async function unlock() {
+    function context() {
         const AudioContextClass = global.AudioContext || global.webkitAudioContext;
-        if (!AudioContextClass) return false;
+        if (!AudioContextClass) return null;
 
         try {
             audioContext = audioContext || new AudioContextClass();
-            if (audioContext.state === 'suspended') await audioContext.resume();
-            return audioContext.state === 'running';
+            return audioContext;
         } catch (error) {
             console.warn('Notification alert sound could not be enabled:', error);
-            return false;
+            return null;
         }
     }
 
-    function chime(frequency, start, duration, peak) {
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        const noteStart = audioContext.currentTime + 0.02 + start;
-        oscillator.type = 'sine';
-        oscillator.frequency.value = frequency;
+    function prime() {
+        const ctx = context();
+        if (!ctx) return Promise.resolve(false);
+        if (ctx.state === 'suspended') {
+            return Promise.resolve(ctx.resume()).then(function () {
+                return ctx.state === 'running';
+            }).catch(function () {
+                return false;
+            });
+        }
+
+        return Promise.resolve(ctx.state === 'running');
+    }
+
+    function tone(ctx, destination, frequency, start, duration, peak) {
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const noteStart = ctx.currentTime + 0.02 + start;
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, noteStart);
         gain.gain.setValueAtTime(0.0001, noteStart);
         gain.gain.exponentialRampToValueAtTime(peak, noteStart + 0.012);
         gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + duration);
         oscillator.connect(gain);
-        gain.connect(audioContext.destination);
+        gain.connect(destination);
         oscillator.start(noteStart);
         oscillator.stop(noteStart + duration + 0.02);
     }
 
-    async function play() {
-        const unlocked = await unlock();
-        if (!unlocked || audioContext?.state !== 'running') return false;
+    function play() {
+        const ctx = context();
+        if (!ctx || ctx.state !== 'running') return false;
 
-        // One short glass ding: a soft fundamental plus a quiet shimmer.
-        chime(1318.5, 0, 0.62, 0.09);
-        chime(1975.5, 0, 0.4, 0.02);
-        chime(2637, 0.01, 0.28, 0.018);
+        const master = ctx.createGain();
+        master.gain.value = 0.85;
+        master.connect(ctx.destination);
+
+        // One short rising chime. Loud enough to hear, smooth rather than buzzy.
+        tone(ctx, master, 1046.5, 0, 0.24, 0.62);
+        tone(ctx, master, 1318.5, 0.11, 0.26, 0.55);
+        tone(ctx, master, 1568, 0.22, 0.46, 0.48);
 
         return true;
     }
 
-    global.RANIAGAlertSound = { unlock, play };
+    global.RANIAGAlertSound = { unlock: prime, prime: prime, play: play };
 })(window);
