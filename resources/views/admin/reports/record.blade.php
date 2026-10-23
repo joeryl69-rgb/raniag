@@ -449,8 +449,6 @@
 .report-export-card>span:nth-child(2){display:flex;flex-direction:column;gap:.1rem;min-width:0}
 .report-export-card strong{font-size:.8rem}.report-export-card small{font-size:.68rem;color:var(--report-muted)}
 .report-export-arrow{margin-left:auto;color:var(--report-blue);font-size:1rem}
-.report-export-link{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .1rem;color:var(--report-blue);font-size:.74rem;font-weight:700;text-decoration:none}
-.report-export-link:hover{text-decoration:underline}
 .report-presentation-area{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:color-mix(in srgb,var(--report-blue) 3%,var(--report-surface))}
 .report-presentation-area p{margin-top:.2rem}.report-presentation-area .btn{white-space:nowrap}
 .report-metric-note{font-size:.7rem;color:var(--report-muted)}

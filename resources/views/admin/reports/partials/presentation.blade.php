@@ -87,8 +87,16 @@
                     <span><strong>Excel + charts</strong><small>Rows and a chart summary sheet</small></span>
                     <i class="bi bi-arrow-down-circle report-export-arrow" aria-hidden="true"></i>
                 </a>
-                <a class="report-export-link" href="{{ route('admin.reports.presentation.word', $exportQuery) }}"><i class="bi bi-file-earmark-word"></i> Word document</a>
-                <a class="report-export-link" href="{{ route('admin.reports.presentation.pdf', $exportQuery) }}"><i class="bi bi-file-earmark-pdf"></i> PDF document</a>
+                <a class="report-export-card" href="{{ route('admin.reports.presentation.word', $exportQuery) }}">
+                    <span class="report-export-icon"><i class="bi bi-file-earmark-word"></i></span>
+                    <span><strong>Word document</strong><small>Editable formatted report</small></span>
+                    <i class="bi bi-arrow-down-circle report-export-arrow" aria-hidden="true"></i>
+                </a>
+                <a class="report-export-card" href="{{ route('admin.reports.presentation.pdf', $exportQuery) }}">
+                    <span class="report-export-icon"><i class="bi bi-file-earmark-pdf"></i></span>
+                    <span><strong>PDF document</strong><small>Fixed pages ready to share</small></span>
+                    <i class="bi bi-arrow-down-circle report-export-arrow" aria-hidden="true"></i>
+                </a>
             </div>
         </div>
 
