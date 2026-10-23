@@ -208,8 +208,13 @@ class IncidentRepository implements IncidentRepositoryInterface
             });
         }
 
-        if (! empty($filters['status'] ?? null)) {
-            $query->where('status', $filters['status']);
+        $status = $filters['status'] ?? null;
+        if ($status === 'finished') {
+            $query->whereIn('status', ['resolved', 'closed']);
+        } elseif ($status && $status !== 'all') {
+            $query->where('status', $status);
+        } elseif ($status !== 'all') {
+            $query->whereNotIn('status', ['resolved', 'closed']);
         }
 
         if (! empty($filters['incident_type_id'] ?? null)) {

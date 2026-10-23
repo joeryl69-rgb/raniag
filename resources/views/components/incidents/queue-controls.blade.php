@@ -19,8 +19,14 @@
         <div class="rg-queue-filter-popover">
             <label>
                 <span>Status</span>
-                <select name="status">
-                    <option value="">All statuses</option>
+                <select name="status" @if($admin) data-filter-default="" @endif>
+                    @if ($admin)
+                        <option value="" @selected(request('status', '') === '')>Newest open incidents</option>
+                        <option value="all" @selected(request('status') === 'all')>All statuses</option>
+                        <option value="finished" @selected(request('status') === 'finished')>Resolved or closed</option>
+                    @else
+                        <option value="">All statuses</option>
+                    @endif
                     @foreach ($statuses as $value => $label)
                         <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
                     @endforeach

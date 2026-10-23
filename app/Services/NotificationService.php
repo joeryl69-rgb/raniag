@@ -501,30 +501,24 @@ class NotificationService
             }
 
             $messageId = (string) ($response->json('data.uid') ?? '');
-            $savedType = strtolower((string) ($response->json('data.sms_type') ?? ''));
-            if ($savedType === '' && $messageId !== '') {
-                try {
-                    $saved = Http::withToken($apiToken)
-                        ->acceptJson()
-                        ->timeout(20)
-                        ->get('https://dashboard.philsms.com/api/v3/sms/'.$messageId);
-                    $savedType = strtolower((string) ($saved->json('data.sms_type') ?? ''));
-                } catch (\Throwable) {
-                    $savedType = '';
-                }
+            $gatewayStatus = strtolower((string) ($response->json('data.status') ?? ''));
+            if (in_array($gatewayStatus, ['failed', 'undelivered', 'rejected', 'error'], true)) {
+                throw new \Exception('PhilSMS reported this text as '.$gatewayStatus.'.');
             }
 
-            if ($savedType === 'voice') {
-                throw new \Exception('PhilSMS routed this alert as a voice call. A text message was requested.');
-            }
+            // PhilSMS often stores an accepted handset text as sms_type=voice.
+            // The phone still receives the SMS, so that label is not a failure.
+            $savedType = strtolower((string) ($response->json('data.sms_type') ?? ''));
 
             $smsLog->update([
                 'status' => SmsLogStatus::Sent->value,
                 'sent_at' => now(),
+                'failed_at' => null,
                 'provider_message_id' => $messageId !== '' ? $messageId : 'philsms_'.uniqid(),
                 'provider_response' => [
                     'body' => $response->json(),
                     'sms_type' => $savedType !== '' ? $savedType : $textType,
+                    'requested_type' => $textType,
                     'timestamp' => now()->toIso8601String(),
                 ],
             ]);

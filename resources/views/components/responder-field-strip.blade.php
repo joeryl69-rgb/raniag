@@ -108,7 +108,7 @@
             <div class="small border rounded p-2 bg-white" style="max-height:180px;overflow:auto;">
                 @foreach ($reporterTexts as $sms)
                     <div class="mb-2">
-                        <div class="text-muted">{{ $sms->created_at?->timezone(config('app.timezone'))->format('M j, g:ia') }} · {{ $sms->status?->value ?? $sms->status }}</div>
+                        <div class="text-muted">{{ $sms->created_at?->timezone(config('app.timezone'))->format('M j, g:ia') }} · {{ $sms->status?->label() ?? $sms->status }}</div>
                         <div>{{ $sms->message }}</div>
                         @if ($sms->thread_note)
                             <div class="fst-italic text-muted">Staff note: {{ $sms->thread_note }}</div>

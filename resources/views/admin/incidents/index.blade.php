@@ -9,10 +9,10 @@
 
     <div class="rg-incident-index">
     <x-kpi-strip :items="[
-        ['label' => 'All incidents', 'value' => $incidentKpis['total'], 'icon' => 'bi-clipboard2-pulse', 'tone' => 'primary', 'sub' => 'Every recorded case'],
+        ['label' => 'All incidents', 'value' => $incidentKpis['total'], 'icon' => 'bi-clipboard2-pulse', 'tone' => 'primary', 'sub' => 'Every recorded case', 'href' => route('admin.incidents.index', ['status' => 'all'])],
         ['label' => 'Awaiting review', 'value' => $incidentKpis['submitted'], 'icon' => 'bi-inbox', 'tone' => 'warning', 'sub' => 'New public reports', 'href' => route('admin.incidents.index', ['status' => 'submitted'])],
         ['label' => 'In progress', 'value' => $incidentKpis['in_progress'], 'icon' => 'bi-activity', 'tone' => 'danger', 'sub' => 'Active responses', 'href' => route('admin.incidents.index', ['status' => 'in_progress'])],
-        ['label' => 'Resolved or closed', 'value' => $incidentKpis['resolved'], 'icon' => 'bi-check-circle', 'tone' => 'success', 'sub' => 'Completed cases'],
+        ['label' => 'Resolved or closed', 'value' => $incidentKpis['resolved'], 'icon' => 'bi-check-circle', 'tone' => 'success', 'sub' => 'Completed cases', 'href' => route('admin.incidents.index', ['status' => 'finished'])],
     ]" />
 
     <section class="rg-command-board" aria-labelledby="rg-queue-heading" data-view-mode-root="admin-incident-queue" data-view-mode-user="{{ auth()->id() }}">

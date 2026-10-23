@@ -46,12 +46,42 @@ test('incident filters only offer statuses categories and priorities that exist'
         ->assertDontSee('value="high"', false)
         ->assertDontSee('value="low"', false);
 
-    $response->assertSee('All statuses');
+    $response->assertSee('All statuses')
+        ->assertSee('Newest open incidents', false);
 
     $this->get(route('admin.incidents.index', ['status' => 'received']))
         ->assertOk()
         ->assertSee('value="received" selected', false)
         ->assertSee('No incidents found');
+});
+
+test('the admin incident queue defaults to newest open incidents and can still show resolved cases', function () {
+    $administrator = User::factory()->administrator()->create();
+    $type = IncidentType::factory()->create();
+    $open = makeQueueIncident($type, 'submitted', 'high');
+    $open->update(['tracking_number' => 'RAN-OPEN-NEW', 'reported_at' => now()->subHour()]);
+    $resolved = makeQueueIncident($type, 'resolved', 'medium');
+    $resolved->update(['tracking_number' => 'RAN-DONE-NEW', 'reported_at' => now()]);
+
+    $this->actingAs($administrator)
+        ->get(route('admin.incidents.index'))
+        ->assertOk()
+        ->assertSee('RAN-OPEN-NEW')
+        ->assertDontSee('RAN-DONE-NEW')
+        ->assertSee('Newest open incidents', false)
+        ->assertSee('value="finished"', false);
+
+    $this->get(route('admin.incidents.index', ['status' => 'all']))
+        ->assertOk()
+        ->assertSee('RAN-OPEN-NEW')
+        ->assertSee('RAN-DONE-NEW')
+        ->assertSee('value="all" selected', false);
+
+    $this->get(route('admin.incidents.index', ['status' => 'finished']))
+        ->assertOk()
+        ->assertSee('RAN-DONE-NEW')
+        ->assertDontSee('RAN-OPEN-NEW')
+        ->assertSee('value="finished" selected', false);
 });
 
 test('the situational map status and priority filters follow open incidents', function () {
