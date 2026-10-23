@@ -137,6 +137,8 @@ test('staff dashboards render the current account alert cursor and the notificat
         ->assertSee('incident-toast-sweep', false)
         ->assertSee('incident-alert-ring', false)
         ->assertSee('setInterval(remindIncidentAlert, 30000)', false)
+        ->assertDontSee('playAlertTone', false)
+        ->assertDontSee('RANIAGAlertSound?.play()', false)
         ->assertSee('acknowledgeIncidentAlert(false)', false)
         ->assertDontSee('setTimeout(hideIncidentAlert', false)
         ->assertSee('let alertCursor = Number(1)', false)

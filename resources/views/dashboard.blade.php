@@ -1060,12 +1060,7 @@
                 document.getElementById('map-insight-panel')?.classList.remove('is-open');
             }
 
-            function prepareAlertAudio() {
-                return window.RANIAGAlertSound?.unlock() || Promise.resolve(false);
-            }
-
             function bindIncidentAlert() {
-                const banner = document.getElementById('incident-alert-banner');
                 const dismiss = document.getElementById('incident-alert-dismiss');
                 const open = document.getElementById('incident-alert-link');
                 dismiss?.addEventListener('click', function () {
@@ -1076,19 +1071,6 @@
                     event.preventDefault();
                     acknowledgeIncidentAlert(true);
                 });
-                if (!banner) return;
-                const unlockAudio = () => {
-                    prepareAlertAudio().then((ready) => {
-                        if (ready && currentIncidentAlert) playAlertTone();
-                    });
-                };
-                document.addEventListener('pointerdown', unlockAudio, { passive: true });
-                document.addEventListener('keydown', unlockAudio);
-            }
-
-            function playAlertTone() {
-                if (document.hidden) return;
-                window.RANIAGAlertSound?.play();
             }
 
             function updateAlertBacklog() {
@@ -1117,7 +1099,6 @@
             function remindIncidentAlert() {
                 if (!currentIncidentAlert || document.hidden) return;
                 restartAlertAnimation();
-                playAlertTone();
             }
 
             function startAlertReminders() {
@@ -1154,7 +1135,6 @@
                 updateAlertBacklog();
                 banner.classList.add('is-visible');
                 restartAlertAnimation();
-                playAlertTone();
                 startAlertReminders();
             }
 
