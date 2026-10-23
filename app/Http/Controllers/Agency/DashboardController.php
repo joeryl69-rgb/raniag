@@ -182,7 +182,6 @@ class DashboardController extends Controller
             'sms_alerts_this_week' => $smsReceived,
             'active_dispatches' => $activeDispatches,
             'situational_incidents' => app(SituationalMapService::class)->openIncidentsPayload($agencyId),
-            'referred_outside' => app(SituationalMapService::class)->referredOutsidePayload($agencyId),
             'latest_incident' => $activeDispatches->first() ? [
                 'id' => $activeDispatches->first()['id'],
                 'tracking_number' => $activeDispatches->first()['tracking_number'],

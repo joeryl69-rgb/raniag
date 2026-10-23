@@ -32,7 +32,9 @@ test('every staff dashboard wires the situational map refresh button', function 
         ->assertOk()
         ->assertSee('id="map-refresh-btn"', false)
         ->assertSee('loadData({ manual: true })', false)
-        ->assertSee('fresh=1', false);
+        ->assertSee('fresh=1', false)
+        ->assertDontSee('Referred outside Pamplona', false)
+        ->assertDontSee('id="map-referred"', false);
 })->with([
     'administrator' => ['administrator', 'admin.dashboard'],
     'agency' => ['agency', 'agency.dashboard'],

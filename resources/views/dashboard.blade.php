@@ -325,14 +325,6 @@
             .legend-line { display: inline-block; width: 16px; height: 0; border-top-width: 3px; border-top-style: solid; margin-right: .35rem; vertical-align: middle; }
             .legend-muni { border-top-color: #0b3a8c; }
             .legend-brgy { border-top-color: #0f766e; border-top-style: dashed; }
-            .map-referred { border-top: 1px solid var(--raniag-border); background: #fff8eb; padding: .75rem 1.1rem .9rem; }
-            .map-referred-head { display: flex; gap: .6rem; align-items: flex-start; color: #8a5a00; margin-bottom: .45rem; }
-            .map-referred-head i { font-size: 1.1rem; margin-top: .1rem; }
-            .map-referred-head strong { display: block; color: #5c3b00; }
-            .map-referred-head span { display: block; font-size: .78rem; }
-            .map-referred a { display: flex; justify-content: space-between; gap: .75rem; padding: .4rem 0; border-top: 1px dashed rgba(138, 90, 0, .25); color: inherit; text-decoration: none; font-size: .84rem; }
-            .map-referred a:hover { color: var(--raniag-primary); }
-            .map-referred .ref-track { font-weight: 800; }
 
             #dashboard-map { width: 100%; z-index: 1; }
             #dashboard-map.h-admin,
@@ -519,24 +511,6 @@
             [data-theme="dark"] .layer-panel .form-check-input:checked {
                 background-color: var(--raniag-primary, #3d8bfd);
                 border-color: var(--raniag-primary, #3d8bfd);
-            }
-            [data-theme="dark"] .map-referred {
-                background: #2a2116;
-                border-top-color: #5c4630;
-            }
-            [data-theme="dark"] .map-referred-head,
-            [data-theme="dark"] .map-referred-head strong,
-            [data-theme="dark"] .map-referred-head span {
-                color: #f6e2b8;
-            }
-            [data-theme="dark"] .map-referred a,
-            [data-theme="dark"] .map-referred a:hover {
-                color: #ffe7b8 !important;
-                border-top-color: rgba(246, 226, 184, .35);
-            }
-            [data-theme="dark"] .map-referred .text-muted,
-            [data-theme="dark"] .map-referred .small {
-                color: #e7d3a8 !important;
             }
         </style>
     @endpush
@@ -730,16 +704,6 @@
                     <span><span class="dot" style="background:#0d6efd"></span>Low</span>
                     <span><i class="legend-outside"></i>Outside Pamplona</span>
                     <span class="ms-auto small" id="map-count-label">— points plotted</span>
-                </div>
-                <div class="map-referred d-none" id="map-referred">
-                    <div class="map-referred-head">
-                        <i class="bi bi-signpost-split"></i>
-                        <div>
-                            <strong>Referred outside Pamplona</strong>
-                            <span>Open reports with a location are pinned on the map. This list is for referrals that are no longer an open case.</span>
-                        </div>
-                    </div>
-                    <div id="map-referred-list"></div>
                 </div>
             </div>
         </div>
@@ -1675,28 +1639,6 @@
                     });
             }
 
-            function renderReferred(rows) {
-                const box = document.getElementById('map-referred');
-                const list = document.getElementById('map-referred-list');
-                if (!box || !list) return;
-                const items = Array.isArray(rows) ? rows : [];
-                if (!items.length) {
-                    box.classList.add('d-none');
-                    list.innerHTML = '';
-                    return;
-                }
-                box.classList.remove('d-none');
-                list.innerHTML = items.map((row) => {
-                    const href = INCIDENT_URL_BASE + '/' + row.id;
-                    const place = row.place || 'Outside Pamplona';
-                    const type = row.type ? escapeHtml(row.type) + ' · ' : '';
-                    return `<a href="${href}">
-                        <span><span class="ref-track">${escapeHtml(row.tracking_number || ('#' + row.id))}</span><span class="d-block text-muted">${type}${escapeHtml(place)}</span></span>
-                        <span class="text-muted small">${escapeHtml(row.reported_at || '')}</span>
-                    </a>`;
-                }).join('');
-            }
-
             function markMapRefreshed() {
                 const label = document.getElementById('map-count-label');
                 if (!label) return;
@@ -1736,7 +1678,6 @@
                 populateBarangayFilter(barangayCounts);
 
                 rawPoints = data.recent_incidents || [];
-                renderReferred(data.referred_outside);
                 applyMapFilters();
                 plotHazardLayers(data);
 
@@ -1973,7 +1914,6 @@
 
                 rawPoints = data.situational_incidents || data.active_dispatches || [];
                 applyMapFilters();
-                renderReferred(data.referred_outside);
                 renderDispatchTable(data.active_dispatches || []);
                 renderMeters('role-status-meters', Object.entries(sb).map(([label, value]) => ({
                     label: String(label).replaceAll('_', ' '),
