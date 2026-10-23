@@ -1894,6 +1894,17 @@ body.modal-open .rg-help-fab { opacity: 0 !important; visibility: hidden !import
     color: #e2e8f0 !important;
 }
 
+/* Empty paper-form chips (Call Taker, Dispatch, Narrative, Endorsement)
+   use text-bg-light plus text-muted. Dark mode turns .text-muted light,
+   which vanishes on the still-white chip. Shared by admin, agency, and
+   personnel screens that render these badges. */
+[data-theme="dark"] .badge.text-bg-light,
+[data-theme="dark"] .badge.text-bg-light.text-muted {
+    background-color: #243044 !important;
+    color: #eef3f8 !important;
+    border-color: #6d849c !important;
+}
+
 [data-theme="dark"] .profile-dropdown-card,
 [data-theme="dark"] .theme-swatch-btn {
     background-color: var(--raniag-card-raised, #182338) !important;

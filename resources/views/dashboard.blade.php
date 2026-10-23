@@ -491,6 +491,53 @@
                 color: var(--raniag-ink, #e8eef6);
             }
             [data-theme="dark"] .map-filters select { border-color: #334155; }
+
+            /* The layer card was a light slab, and dark mode paints every
+               label light, so Base Map / Overlays disappeared on white.
+               Same failure on the cream referral list: light link and
+               .text-muted colors sat on #fff8eb. */
+            [data-theme="dark"] .layer-panel {
+                background: #152033;
+                border-color: #3d5168;
+                color: #f2f6fb;
+                box-shadow: 0 .5rem 1.25rem rgba(0, 0, 0, .4);
+            }
+            [data-theme="dark"] .layer-panel .layer-panel-title {
+                color: #d5e2ee;
+            }
+            [data-theme="dark"] .layer-panel .form-check-label {
+                color: #f2f6fb;
+            }
+            [data-theme="dark"] .layer-panel hr {
+                border-color: #3d5168;
+                opacity: 1;
+            }
+            [data-theme="dark"] .layer-panel .form-check-input {
+                background-color: #1c2c44;
+                border-color: #8aa0b8;
+            }
+            [data-theme="dark"] .layer-panel .form-check-input:checked {
+                background-color: var(--raniag-primary, #3d8bfd);
+                border-color: var(--raniag-primary, #3d8bfd);
+            }
+            [data-theme="dark"] .map-referred {
+                background: #2a2116;
+                border-top-color: #5c4630;
+            }
+            [data-theme="dark"] .map-referred-head,
+            [data-theme="dark"] .map-referred-head strong,
+            [data-theme="dark"] .map-referred-head span {
+                color: #f6e2b8;
+            }
+            [data-theme="dark"] .map-referred a,
+            [data-theme="dark"] .map-referred a:hover {
+                color: #ffe7b8 !important;
+                border-top-color: rgba(246, 226, 184, .35);
+            }
+            [data-theme="dark"] .map-referred .text-muted,
+            [data-theme="dark"] .map-referred .small {
+                color: #e7d3a8 !important;
+            }
         </style>
     @endpush
 
