@@ -12,6 +12,8 @@ test('public hazard map page renders live risk chrome', function () {
         ->assertSee('class="rg-hazard-tabs" role="tablist"', false)
         ->assertSee('class="rg-hazard-tab is-active" data-hazard-tab="risk"', false)
         ->assertSee('id="hazard-map"', false)
+        ->assertSee('id="route-targets"', false)
+        ->assertSee('The path can switch when more than one shelter is open.', false)
         ->assertSee('data-lenis-prevent', false)
         ->assertSee('.rg-hazard-nearest-btn strong { color: #f0f5f6; }', false);
 });
@@ -38,6 +40,35 @@ test('outside-area GPS reverse geocoding returns barangay municipality and count
         ->assertJsonPath('municipality', 'Sanchez Mira')
         ->assertJsonPath('province', 'Cagayan')
         ->assertJsonPath('country', 'Philippines');
+});
+
+test('nearest center lists every open evacuation center by distance', function () {
+    \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Far Shelter',
+        'latitude' => 18.60,
+        'longitude' => 121.50,
+        'is_open' => true,
+    ]);
+    \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Near Shelter',
+        'latitude' => 18.451,
+        'longitude' => 121.341,
+        'is_open' => true,
+    ]);
+    \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Closed Shelter',
+        'latitude' => 18.450,
+        'longitude' => 121.340,
+        'is_open' => false,
+    ]);
+
+    $this->getJson(route('public.hazard.nearest', ['lat' => 18.45, 'lng' => 121.34]))
+        ->assertOk()
+        ->assertJsonPath('nearest_center.name', 'Near Shelter')
+        ->assertJsonCount(2, 'open_centers')
+        ->assertJsonPath('open_centers.0.name', 'Near Shelter')
+        ->assertJsonPath('open_centers.1.name', 'Far Shelter')
+        ->assertJsonMissing(['name' => 'Closed Shelter']);
 });
 
 test('public hazard snapshot returns zones centers and risk without incident coordinates', function () {

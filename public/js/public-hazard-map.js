@@ -63,6 +63,9 @@
         let youLatLng = null;
         let watchId = null;
         let nearestData = null;
+        let knownCenters = cfg.centers || [];
+        let chosenCenterId = null;
+        let lastRouteCenterId = null;
         let tipMode = 'both';
         let didInitialYouFit = false;
         let routeLayer = null;
@@ -74,6 +77,7 @@
         let lastRouteLatLng = null;
         let trailLine = null;
         const trail = [];
+        const ROUTE_OFF = 'Turn on My location, then choose an open center. The path can switch when more than one shelter is open.';
         const ROUTE_MIN_MOVE_M = 25;
         const ROUTE_MIN_INTERVAL_MS = 12000;
         const TRAIL_MIN_MOVE_M = 8;
@@ -150,7 +154,7 @@
                 risk: 'Risk awareness highlights barangays with open community reports — no exact addresses are shown.',
                 you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
                 both: 'Open reports stay as barangay counts. Exact house locations stay private. Toggle Pamplona AOR to see its geofence, and use Places for hazards and evacuation centers.',
-                route: 'Live route to the nearest open center. It updates as you move.',
+                route: 'The path follows the open center you pick. Tap another shelter to change it.',
                 off: 'My location is off. Turn it on to track yourself and show the route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
             };
@@ -268,12 +272,47 @@
             return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
         }
 
+        function openCenters() {
+            if (Array.isArray(nearestData?.open_centers) && nearestData.open_centers.length) {
+                return nearestData.open_centers;
+            }
+            return (knownCenters || []).filter((center) => center.is_open !== false);
+        }
+
+        function activeCenter() {
+            const list = openCenters();
+            if (chosenCenterId) {
+                const picked = list.find((center) => Number(center.id) === Number(chosenCenterId));
+                if (picked) return picked;
+                if (nearestData) chosenCenterId = null;
+            }
+            return nearestData?.nearest_center || null;
+        }
+
         function shouldRefreshRoute(force) {
+            const destination = activeCenter();
+            if (destination && lastRouteCenterId != null && Number(lastRouteCenterId) !== Number(destination.id)) return true;
             if (force) return true;
             if (!youLatLng) return false;
             if (!lastRouteLatLng || !lastRouteAt) return true;
             if (Date.now() - lastRouteAt >= ROUTE_MIN_INTERVAL_MS) return true;
             return haversineMeters(lastRouteLatLng, youLatLng) >= ROUTE_MIN_MOVE_M;
+        }
+
+        function chooseCenter(id, fly) {
+            const next = Number(id);
+            if (!next) return;
+            const changed = Number(chosenCenterId) !== next;
+            chosenCenterId = next;
+            highlightCenter(next);
+            renderRouteTargets();
+            if (fly) flyToCenter(next);
+            document.querySelector('[data-hazard-tab="route"]')?.click();
+            if (!layersOn().you) {
+                setLocationEnabled(true);
+                return;
+            }
+            if (changed) fetchRoute({ force: true });
         }
 
         function setLocationEnabled(enabled) {
@@ -297,11 +336,14 @@
                 trail.length = 0;
                 trailLine = null;
                 nearestData = null;
+                chosenCenterId = null;
+                lastRouteCenterId = null;
+                renderRouteTargets();
                 didInitialYouFit = false;
                 youGroup.clearLayers();
                 document.getElementById('nearest-box')?.classList.add('d-none');
                 document.getElementById('containing-zones-box')?.classList.add('d-none');
-                if (routeSummary) routeSummary.textContent = 'Turn on My location to see the path to the nearest open evacuation center.';
+                if (routeSummary) routeSummary.textContent = ROUTE_OFF;
                 setRouteStatus('');
                 setGeoStatus('');
                 showRouteBox(!!mapboxToken);
@@ -332,17 +374,17 @@
         async function fetchRoute({ force } = {}) {
             if (!layersOn().you) {
                 clearRoute();
-                if (routeSummary) routeSummary.textContent = 'Turn on My location to see the path to the nearest open evacuation center.';
+                if (routeSummary) routeSummary.textContent = ROUTE_OFF;
                 setRouteStatus('');
                 return;
             }
 
-            const nc = nearestData?.nearest_center;
+            const nc = activeCenter();
             if (!mapboxToken || !youLatLng || !nc) {
                 clearRoute();
                 if (routeSummary) {
                     routeSummary.textContent = mapboxToken
-                        ? (youLatLng ? 'Looking for the nearest open center…' : 'Turn on My location to see the path to the nearest open evacuation center.')
+                        ? (youLatLng ? 'Looking for the nearest open center…' : ROUTE_OFF)
                         : 'Mapbox token not configured — route unavailable.';
                 }
                 showRouteBox(!!mapboxToken);
@@ -380,6 +422,7 @@
                 routeLayer = result.layer;
                 lastRouteAt = Date.now();
                 lastRouteLatLng = from;
+                lastRouteCenterId = nc.id;
 
                 const label = routeProfile === 'driving' ? 'drive' : 'walk';
                 if (routeSummary) {
@@ -399,6 +442,7 @@
                     routeLayer = fallback.layer;
                     lastRouteAt = Date.now();
                     lastRouteLatLng = from;
+                    lastRouteCenterId = nc.id;
                     if (routeSummary) {
                         routeSummary.textContent = `${formatDistance(fallback.distance)} · ~${formatDuration(fallback.duration)} straight-line to ${nc.name}`;
                     }
@@ -435,9 +479,9 @@
                 const focus = [];
                 if (youMarker) focus.push(youMarker);
                 if (routeLayer) focus.push(routeLayer);
-                const nearestId = nearestData?.nearest_center?.id;
-                if (nearestId && centerLayers.has(Number(nearestId))) {
-                    focus.push(centerLayers.get(Number(nearestId)));
+                const focusId = activeCenter()?.id;
+                if (focusId && centerLayers.has(Number(focusId))) {
+                    focus.push(centerLayers.get(Number(focusId)));
                 }
                 if (focus.length) {
                     try {
@@ -555,6 +599,31 @@
             if (chkRisk && !chkRisk.checked) map.removeLayer(riskGroup);
         }
 
+        function renderRouteTargets() {
+            const box = document.getElementById('route-targets');
+            const heading = document.getElementById('route-heading');
+            if (!box) return;
+            const centers = layersOn().you ? openCenters() : [];
+            const active = activeCenter();
+            if (centers.length < 2) {
+                box.classList.add('d-none');
+                box.innerHTML = '';
+                if (heading) heading.textContent = 'Nearest open center';
+                return;
+            }
+            box.classList.remove('d-none');
+            if (heading) heading.textContent = 'Choose an open center';
+            box.innerHTML = centers.map((center) => {
+                const selected = active && Number(center.id) === Number(active.id);
+                const nearest = nearestData?.nearest_center && Number(center.id) === Number(nearestData.nearest_center.id);
+                const distance = center.distance_m != null ? formatDistance(center.distance_m) : '';
+                return `<button type="button" class="rg-hazard-route-target${selected ? ' is-selected' : ''}" data-route-center="${center.id}">
+                    <strong>${esc(center.name)}</strong>
+                    <span>${nearest ? 'Nearest' : 'Open center'}${distance ? ` · ${esc(distance)}` : ''}</span>
+                </button>`;
+            }).join('');
+        }
+
         function renderNearest() {
             const box = document.getElementById('nearest-box');
             const hazardBox = document.getElementById('containing-zones-box');
@@ -579,7 +648,8 @@
                         map.addLayer(centerGroup);
                         syncListVisibility();
                     }
-                    flyToCenter(nc.id);
+                    if (layersOn().you) chooseCenter(nc.id, true);
+                    else flyToCenter(nc.id);
                     updateJoTip('centers');
                 });
             }
@@ -622,6 +692,7 @@
                     });
                 }
             }
+            renderRouteTargets();
         }
 
         async function fetchNearest(lat, lng) {
@@ -825,7 +896,8 @@
                     `<strong>${esc(c.name)}</strong>` +
                     '<div class="small">Open evacuation center</div>' +
                     (where ? `<div class="small">${esc(where)}</div>` : '') +
-                    cap + notes
+                    cap + notes +
+                    `<button type="button" class="btn btn-sm btn-primary mt-2" data-route-center="${c.id}">Route here</button>`
                 );
                 marker.addTo(centerGroup);
                 centerLayers.set(Number(c.id), marker);
@@ -833,11 +905,18 @@
         }
 
         function applySnapshot(data) {
+            knownCenters = data.centers || [];
+            const chosenClosed = chosenCenterId
+                && !knownCenters.some((center) => Number(center.id) === Number(chosenCenterId));
+            if (chosenClosed) chosenCenterId = null;
             renderZones(data.zones || []);
             renderCenters(data.centers || []);
             renderRisk(data.risk || cfg.risk);
             renderLists(data.zones || [], data.centers || []);
             renderLegend(data.zones || [], data.centers || []);
+            renderRouteTargets();
+            if (chosenCenterId) highlightCenter(chosenCenterId);
+            if (chosenClosed && layersOn().you) fetchRoute({ force: true });
             lastUpdated = Date.now();
             setUpdatedLabel();
         }
@@ -857,7 +936,19 @@
         document.getElementById('center-list')?.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-center-id]');
             if (!btn) return;
-            flyToCenter(btn.dataset.centerId);
+            if (layersOn().you) chooseCenter(btn.dataset.centerId, true);
+            else flyToCenter(btn.dataset.centerId);
+        });
+        document.getElementById('route-targets')?.addEventListener('click', (event) => {
+            const btn = event.target.closest('[data-route-center]');
+            if (!btn) return;
+            chooseCenter(btn.dataset.routeCenter, false);
+        });
+        mapEl.addEventListener('click', (event) => {
+            const btn = event.target.closest('[data-route-center]');
+            if (!btn) return;
+            event.preventDefault();
+            chooseCenter(btn.dataset.routeCenter, false);
         });
 
         function onLayerToggle(which, checked) {
@@ -894,7 +985,7 @@
                 if (!el.checked) return;
                 routeProfile = el.value === 'driving' ? 'driving' : 'walking';
                 if (!layersOn().you) {
-                    if (routeSummary) routeSummary.textContent = 'Turn on My location to see the path to the nearest open evacuation center.';
+                    if (routeSummary) routeSummary.textContent = ROUTE_OFF;
                     return;
                 }
                 fetchRoute({ force: true }).then(() => fitActiveView({ animate: true }));

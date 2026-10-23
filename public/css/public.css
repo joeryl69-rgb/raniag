@@ -2637,6 +2637,23 @@ html[data-public-theme="dark"] .jo-report-coach-text {
   background: rgba(11, 94, 215, .04);
   border-color: rgba(11, 94, 215, .18) !important;
 }
+.rg-hazard-route-targets { display: grid; gap: .35rem; margin-top: .55rem; }
+.rg-hazard-route-target {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: .45rem .6rem;
+  border: 1px solid var(--raniag-border, #dde5ea);
+  border-radius: .7rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.rg-hazard-route-target span { font-size: .72rem; opacity: .75; }
+.rg-hazard-route-target.is-selected { border-color: #0b5ed7; box-shadow: inset 3px 0 0 #0b5ed7; }
+html[data-theme="dark"] .rg-hazard-route-target { border-color: rgba(240, 245, 246, .22); color: #f0f5f6; }
+html[data-theme="dark"] .rg-hazard-route-target.is-selected { border-color: #9ae4ce; box-shadow: inset 3px 0 0 #9ae4ce; }
 .rg-hazard-nearest-btn,
 .rg-hazard-nearest-btn strong { color: #f0f5f6; cursor: pointer; }
 .rg-hazard-nearest-btn:hover strong,

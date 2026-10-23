@@ -200,16 +200,22 @@ class HazardMapController extends Controller
 
         $lat = (float) $data['lat'];
         $lng = (float) $data['lng'];
-        $best = null;
-        $bestDist = PHP_FLOAT_MAX;
-
-        foreach (EvacuationCenter::query()->where('is_open', true)->get() as $center) {
-            $d = $this->haversine($lat, $lng, (float) $center->latitude, (float) $center->longitude);
-            if ($d < $bestDist) {
-                $bestDist = $d;
-                $best = $center;
-            }
-        }
+        $openCenters = EvacuationCenter::query()
+            ->where('is_open', true)
+            ->get()
+            ->map(function (EvacuationCenter $center) use ($lat, $lng) {
+                return [
+                    'id' => $center->id,
+                    'name' => $center->name,
+                    'latitude' => $center->latitude,
+                    'longitude' => $center->longitude,
+                    'barangay' => $center->barangay,
+                    'distance_m' => round($this->haversine($lat, $lng, (float) $center->latitude, (float) $center->longitude)),
+                ];
+            })
+            ->sortBy('distance_m')
+            ->values();
+        $best = $openCenters->first();
 
         $containing = [];
         foreach (HazardZone::query()->with('type')->where('is_active', true)->get() as $zone) {
@@ -224,13 +230,8 @@ class HazardMapController extends Controller
         }
 
         return response()->json([
-            'nearest_center' => $best ? [
-                'id' => $best->id,
-                'name' => $best->name,
-                'latitude' => $best->latitude,
-                'longitude' => $best->longitude,
-                'distance_m' => round($bestDist),
-            ] : null,
+            'nearest_center' => $best,
+            'open_centers' => $openCenters,
             'hazard_zones' => $containing,
         ]);
     }
