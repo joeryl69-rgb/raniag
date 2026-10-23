@@ -46,8 +46,12 @@ test('incident filters only offer statuses categories and priorities that exist'
         ->assertDontSee('value="high"', false)
         ->assertDontSee('value="low"', false);
 
-    $response->assertSee('All statuses')
-        ->assertSee('Newest open incidents', false);
+    $response->assertSee('Not resolved', false)
+        ->assertDontSee('Newest open incidents', false)
+        ->assertDontSee('>All statuses<', false)
+        ->assertDontSee('Resolved or closed', false)
+        ->assertDontSee('value="finished"', false)
+        ->assertDontSee('value="all"', false);
 
     $this->get(route('admin.incidents.index', ['status' => 'received']))
         ->assertOk()
@@ -55,33 +59,32 @@ test('incident filters only offer statuses categories and priorities that exist'
         ->assertSee('No incidents found');
 });
 
-test('the admin incident queue defaults to newest open incidents and can still show resolved cases', function () {
+test('the admin incident queue hides resolved reports until that status is chosen', function () {
     $administrator = User::factory()->administrator()->create();
     $type = IncidentType::factory()->create();
     $open = makeQueueIncident($type, 'submitted', 'high');
     $open->update(['tracking_number' => 'RAN-OPEN-NEW', 'reported_at' => now()->subHour()]);
     $resolved = makeQueueIncident($type, 'resolved', 'medium');
     $resolved->update(['tracking_number' => 'RAN-DONE-NEW', 'reported_at' => now()]);
+    $closed = makeQueueIncident($type, 'closed', 'low');
+    $closed->update(['tracking_number' => 'RAN-CLOSED-NEW', 'reported_at' => now()]);
 
     $this->actingAs($administrator)
         ->get(route('admin.incidents.index'))
         ->assertOk()
         ->assertSee('RAN-OPEN-NEW')
         ->assertDontSee('RAN-DONE-NEW')
-        ->assertSee('Newest open incidents', false)
-        ->assertSee('value="finished"', false);
+        ->assertDontSee('RAN-CLOSED-NEW')
+        ->assertSee('Not resolved', false)
+        ->assertDontSee('Newest open incidents', false)
+        ->assertDontSee('value="finished"', false);
 
-    $this->get(route('admin.incidents.index', ['status' => 'all']))
-        ->assertOk()
-        ->assertSee('RAN-OPEN-NEW')
-        ->assertSee('RAN-DONE-NEW')
-        ->assertSee('value="all" selected', false);
-
-    $this->get(route('admin.incidents.index', ['status' => 'finished']))
+    $this->get(route('admin.incidents.index', ['status' => 'resolved']))
         ->assertOk()
         ->assertSee('RAN-DONE-NEW')
         ->assertDontSee('RAN-OPEN-NEW')
-        ->assertSee('value="finished" selected', false);
+        ->assertDontSee('RAN-CLOSED-NEW')
+        ->assertSee('value="resolved" selected', false);
 });
 
 test('the situational map status and priority filters follow open incidents', function () {
