@@ -4,10 +4,12 @@
 
     function readTheme() {
         try {
-            return localStorage.getItem(storageKey) === 'dark' ? 'dark' : 'light';
+            const stored = localStorage.getItem(storageKey);
+            if (stored === 'light' || stored === 'dark') return stored;
+            return 'dark';
         } catch (error) {
             console.warn('RANIAG theme preference could not be read:', error);
-            return 'light';
+            return 'dark';
         }
     }
 

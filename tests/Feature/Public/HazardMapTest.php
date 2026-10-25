@@ -17,6 +17,7 @@ test('public hazard map page renders live risk chrome', function () {
         ->assertSee('class="rg-hazard-tab is-active" data-hazard-tab="risk"', false)
         ->assertSee('id="hazard-map"', false)
         ->assertSee('id="hazard-report-modal"', false)
+        ->assertSee('id="hazard-report-picks"', false)
         ->assertSee('class="modal-dialog rg-report-sheet"', false)
         ->assertSee('aria-label="Close"', false)
         ->assertSee('viewport-fit=cover', false)

@@ -574,20 +574,39 @@
             });
             document.getElementById('hazard-report-prev')?.addEventListener('click', () => stepReportModal(-1));
             document.getElementById('hazard-report-next')?.addEventListener('click', () => stepReportModal(1));
+            document.getElementById('hazard-report-picks')?.addEventListener('click', (event) => {
+                const btn = event.target.closest('[data-report-index]');
+                if (!btn) return;
+                const next = Number(btn.dataset.reportIndex);
+                if (!Number.isInteger(next) || !reportModalGroup[next]) return;
+                document.getElementById('hazard-report-media')?.querySelectorAll('video').forEach((video) => video.pause());
+                reportModalIndex = next;
+                showReportModalIndex();
+            });
             return reportModal;
         }
 
-        function fillReportModal(report, index, total) {
+        function fillReportModal(report, index, reports) {
             const title = document.getElementById('hazard-report-title');
             const kicker = document.getElementById('hazard-report-kicker');
             const meta = document.getElementById('hazard-report-meta');
             const media = document.getElementById('hazard-report-media');
             const nav = document.getElementById('hazard-report-nav');
             const count = document.getElementById('hazard-report-count');
+            const picks = document.getElementById('hazard-report-picks');
+            const total = reports.length;
             if (title) title.textContent = report.tracking_number || 'Open report';
-            if (kicker) kicker.textContent = report.type || 'Open report';
+            if (kicker) kicker.textContent = total > 1 ? `${total} reports at this spot` : (report.type || 'Open report');
             const bits = [report.status, report.barangay, reportedWhen(report.reported_at)].filter(Boolean);
             if (meta) meta.textContent = bits.join(' · ');
+            if (picks) {
+                picks.hidden = total < 2;
+                picks.innerHTML = total < 2 ? '' : reports.map((item, itemIndex) =>
+                    `<button type="button" class="rg-report-pick${itemIndex === index ? ' is-selected' : ''}" data-report-index="${itemIndex}">` +
+                    `<strong>${esc(item.tracking_number || 'Open report')}</strong>` +
+                    `<span>${esc(item.type || 'Report')}</span></button>`
+                ).join('');
+            }
             if (media) {
                 const items = report.media || [];
                 media.innerHTML = items.length
@@ -605,25 +624,43 @@
         }
 
         function showReportModalIndex() {
-            const marker = reportModalGroup[reportModalIndex];
-            if (!marker?.report) return;
-            fillReportModal(marker.report, reportModalIndex, reportModalGroup.length);
+            const report = reportModalGroup[reportModalIndex];
+            if (!report) return;
+            fillReportModal(report, reportModalIndex, reportModalGroup);
         }
 
-        function openReportGroup(markers, index) {
+        function openReportGroup(reports, index) {
             const modal = ensureReportModal();
-            if (!modal || !markers.length) return;
-            reportModalGroup = markers;
-            reportModalIndex = Math.min(Math.max(index, 0), markers.length - 1);
+            if (!modal || !reports.length) return;
+            reportModalGroup = reports;
+            reportModalIndex = Math.min(Math.max(index, 0), reports.length - 1);
             showReportModalIndex();
             modal.show();
         }
 
-        function openReportModal(marker) {
-            const here = marker.getLatLng();
-            const nearby = reportMarkers.filter((other) => here.distanceTo(other.getLatLng()) <= 40);
-            const group = nearby.includes(marker) ? nearby : [marker, ...nearby];
-            openReportGroup(group, Math.max(0, group.indexOf(marker)));
+        function clusterReports(reports) {
+            const items = reports.filter((report) => Number.isFinite(Number(report.latitude)) && Number.isFinite(Number(report.longitude)));
+            const parent = items.map((_, index) => index);
+            const find = (index) => {
+                let root = index;
+                while (parent[root] !== root) root = parent[root];
+                return root;
+            };
+            const unite = (left, right) => { parent[find(left)] = find(right); };
+            items.forEach((report, index) => {
+                const here = leaflet.latLng(Number(report.latitude), Number(report.longitude));
+                for (let other = index + 1; other < items.length; other += 1) {
+                    const there = leaflet.latLng(Number(items[other].latitude), Number(items[other].longitude));
+                    if (here.distanceTo(there) <= 45) unite(index, other);
+                }
+            });
+            const groups = new Map();
+            items.forEach((report, index) => {
+                const key = find(index);
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(report);
+            });
+            return [...groups.values()];
         }
 
         function stepReportModal(delta) {
@@ -668,19 +705,20 @@
             riskGroup.clearLayers();
             riskLayer = null;
             reportMarkers = [];
-            pins.forEach((report) => {
-                const lat = Number(report.latitude);
-                const lng = Number(report.longitude);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-                const icon = window.RaniagIcons?.buildDivIcon({
-                    icon: report.icon,
-                    color: report.color,
-                    size: 28,
-                });
+            clusterReports(pins).forEach((group) => {
+                const lat = group.reduce((sum, report) => sum + Number(report.latitude), 0) / group.length;
+                const lng = group.reduce((sum, report) => sum + Number(report.longitude), 0) / group.length;
+                const lead = group[0];
+                const icon = group.length > 1
+                    ? window.RaniagIcons?.buildClusterIcon({ count: group.length, size: 36 })
+                    : window.RaniagIcons?.buildDivIcon({ icon: lead.icon, color: lead.color, size: 28 });
                 const marker = leaflet.marker([lat, lng], icon ? { icon } : {});
-                marker.barangayName = report.barangay || '';
-                marker.report = report;
-                marker.on('click', () => openReportModal(marker));
+                marker.reports = group;
+                marker.barangayName = lead.barangay || '';
+                if (group.length > 1) {
+                    marker.bindTooltip(`${group.length} reports at this spot`, { direction: 'top', offset: [0, -12] });
+                }
+                marker.on('click', () => openReportGroup(group, 0));
                 marker.addTo(riskGroup);
                 reportMarkers.push(marker);
             });
@@ -1032,7 +1070,9 @@
         document.getElementById('risk-list')?.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-risk-barangay]');
             if (!btn) return;
-            const layers = reportMarkers.filter((marker) => marker.barangayName === btn.dataset.riskBarangay);
+            const name = btn.dataset.riskBarangay;
+            const layers = reportMarkers.filter((marker) => (marker.reports || []).some((report) => report.barangay === name));
+            const reports = layers.flatMap((marker) => marker.reports).filter((report) => report.barangay === name);
             if (!layers.length) return;
             if (chkRisk && !chkRisk.checked) {
                 chkRisk.checked = true;
@@ -1041,7 +1081,7 @@
             try {
                 const bounds = leaflet.latLngBounds(layers.map((marker) => marker.getLatLng()));
                 map.fitBounds(bounds.pad(0.4), { maxZoom: 16, animate: !REDUCE });
-                openReportGroup(layers, 0);
+                openReportGroup(reports, 0);
             } catch (err) { /* */ }
         });
         document.getElementById('route-targets')?.addEventListener('click', (event) => {
