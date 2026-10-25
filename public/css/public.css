@@ -3034,6 +3034,21 @@ html[data-theme="dark"] #hazard-report-modal .btn-outline-secondary {
   border-color: #6d8790;
 }
 body.modal-open .jo-guide-dock { visibility: hidden; pointer-events: none; }
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #fff;
+  color: #203749;
+}
+.leaflet-popup-content,
+.leaflet-popup-content strong,
+.leaflet-popup-content .small {
+  color: #203749;
+}
+html[data-public-theme="dark"] .leaflet-popup-content .text-muted,
+html[data-theme="dark"] .leaflet-popup-content .text-muted,
+html[data-bs-theme="dark"] .leaflet-popup-content .text-muted {
+  color: #52677a !important;
+}
 .rg-hazard-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .rg-evac-marker {
   background: transparent;
