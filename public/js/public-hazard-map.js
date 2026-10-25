@@ -554,20 +554,83 @@
             return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
         }
 
-        function reportPopup(report) {
-            const when = reportedWhen(report.reported_at);
-            const place = [report.barangay, when].filter(Boolean).join(' · ');
-            const media = (report.media || []).map((item) => {
-                if (item.kind === 'video') {
-                    return `<video class="rg-hazard-report-media" controls preload="metadata" src="${esc(item.url)}"></video>`;
-                }
-                return `<img class="rg-hazard-report-media" src="${esc(item.url)}" alt="GPS photo submitted with this report">`;
-            }).join('');
-            return `<strong>${esc(report.tracking_number || 'Open report')}</strong>`
-                + `<div class="small">${esc(report.type || 'Report')}${report.status ? ` · ${esc(report.status)}` : ''}</div>`
-                + (place ? `<div class="small">${esc(place)}</div>` : '')
-                + media
-                + '<div class="small text-muted mt-1">Names and contact details stay private.</div>';
+        let reportModal = null;
+        let reportModalGroup = [];
+        let reportModalIndex = 0;
+
+        function ensureReportModal() {
+            if (reportModal || !window.bootstrap?.Modal) return reportModal;
+            const el = document.getElementById('hazard-report-modal');
+            if (!el) return null;
+            reportModal = window.bootstrap.Modal.getOrCreateInstance(el);
+            el.addEventListener('hidden.bs.modal', () => {
+                const media = document.getElementById('hazard-report-media');
+                media?.querySelectorAll('video').forEach((video) => {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load();
+                });
+                if (media) media.replaceChildren();
+            });
+            document.getElementById('hazard-report-prev')?.addEventListener('click', () => stepReportModal(-1));
+            document.getElementById('hazard-report-next')?.addEventListener('click', () => stepReportModal(1));
+            return reportModal;
+        }
+
+        function fillReportModal(report, index, total) {
+            const title = document.getElementById('hazard-report-title');
+            const kicker = document.getElementById('hazard-report-kicker');
+            const meta = document.getElementById('hazard-report-meta');
+            const media = document.getElementById('hazard-report-media');
+            const nav = document.getElementById('hazard-report-nav');
+            const count = document.getElementById('hazard-report-count');
+            if (title) title.textContent = report.tracking_number || 'Open report';
+            if (kicker) kicker.textContent = report.type || 'Open report';
+            const bits = [report.status, report.barangay, reportedWhen(report.reported_at)].filter(Boolean);
+            if (meta) meta.textContent = bits.join(' · ');
+            if (media) {
+                const items = report.media || [];
+                media.innerHTML = items.length
+                    ? items.map((item) => {
+                        if (item.kind === 'video') {
+                            return `<video class="rg-report-media" controls playsinline webkit-playsinline preload="metadata" src="${esc(item.url)}"></video>`;
+                        }
+                        return `<img class="rg-report-media" src="${esc(item.url)}" alt="GPS photo submitted with this report">`;
+                    }).join('')
+                    : '<p class="rg-report-empty">No GPS photo or video was sent with this report.</p>';
+            }
+            if (nav) nav.hidden = total < 2;
+            if (count) count.textContent = total > 1 ? `${index + 1} of ${total}` : '';
+            document.querySelector('#hazard-report-modal .modal-body')?.scrollTo(0, 0);
+        }
+
+        function showReportModalIndex() {
+            const marker = reportModalGroup[reportModalIndex];
+            if (!marker?.report) return;
+            fillReportModal(marker.report, reportModalIndex, reportModalGroup.length);
+        }
+
+        function openReportGroup(markers, index) {
+            const modal = ensureReportModal();
+            if (!modal || !markers.length) return;
+            reportModalGroup = markers;
+            reportModalIndex = Math.min(Math.max(index, 0), markers.length - 1);
+            showReportModalIndex();
+            modal.show();
+        }
+
+        function openReportModal(marker) {
+            const here = marker.getLatLng();
+            const nearby = reportMarkers.filter((other) => here.distanceTo(other.getLatLng()) <= 40);
+            const group = nearby.includes(marker) ? nearby : [marker, ...nearby];
+            openReportGroup(group, Math.max(0, group.indexOf(marker)));
+        }
+
+        function stepReportModal(delta) {
+            if (reportModalGroup.length < 2) return;
+            document.getElementById('hazard-report-media')?.querySelectorAll('video').forEach((video) => video.pause());
+            reportModalIndex = (reportModalIndex + delta + reportModalGroup.length) % reportModalGroup.length;
+            showReportModalIndex();
         }
 
         function renderRisk(risk, reports) {
@@ -616,7 +679,8 @@
                 });
                 const marker = leaflet.marker([lat, lng], icon ? { icon } : {});
                 marker.barangayName = report.barangay || '';
-                marker.bindPopup(reportPopup(report), { maxWidth: 280 });
+                marker.report = report;
+                marker.on('click', () => openReportModal(marker));
                 marker.addTo(riskGroup);
                 reportMarkers.push(marker);
             });
@@ -977,7 +1041,7 @@
             try {
                 const bounds = leaflet.latLngBounds(layers.map((marker) => marker.getLatLng()));
                 map.fitBounds(bounds.pad(0.4), { maxZoom: 16, animate: !REDUCE });
-                if (layers.length === 1) layers[0].openPopup();
+                openReportGroup(layers, 0);
             } catch (err) { /* */ }
         });
         document.getElementById('route-targets')?.addEventListener('click', (event) => {

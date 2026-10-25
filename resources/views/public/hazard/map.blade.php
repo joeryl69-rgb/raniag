@@ -99,6 +99,32 @@
         </aside>
     </div>
 </div>
+
+<div class="modal fade" id="hazard-report-modal" tabindex="-1" aria-labelledby="hazard-report-title" aria-hidden="true">
+    <div class="modal-dialog rg-report-sheet">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="min-w-0">
+                    <span class="rg-report-kicker" id="hazard-report-kicker">Open report</span>
+                    <h2 class="modal-title" id="hazard-report-title">Report</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="rg-report-meta" id="hazard-report-meta"></p>
+                <div id="hazard-report-media"></div>
+            </div>
+            <div class="modal-footer">
+                <p class="rg-report-privacy">Names and contact details stay private.</p>
+                <div class="rg-report-nav" id="hazard-report-nav" hidden>
+                    <button type="button" class="btn btn-outline-secondary" id="hazard-report-prev">Previous</button>
+                    <span id="hazard-report-count" aria-live="polite"></span>
+                    <button type="button" class="btn btn-outline-secondary" id="hazard-report-next">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
