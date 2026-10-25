@@ -597,7 +597,7 @@
             const total = reports.length;
             if (title) title.textContent = report.tracking_number || 'Open report';
             if (kicker) kicker.textContent = total > 1 ? `${total} reports at this spot` : (report.type || 'Open report');
-            const bits = [report.status, report.barangay, reportedWhen(report.reported_at)].filter(Boolean);
+            const bits = [total > 1 ? report.type : null, report.status, report.barangay, reportedWhen(report.reported_at)].filter(Boolean);
             if (meta) meta.textContent = bits.join(' · ');
             if (picks) {
                 picks.hidden = total < 2;
@@ -606,6 +606,11 @@
                     `<strong>${esc(item.tracking_number || 'Open report')}</strong>` +
                     `<span>${esc(item.type || 'Report')}</span></button>`
                 ).join('');
+                const selected = picks.querySelector('.is-selected');
+                if (selected) {
+                    const left = selected.offsetLeft - (picks.clientWidth - selected.offsetWidth) / 2;
+                    picks.scrollTo({ left: Math.max(0, left) });
+                }
             }
             if (media) {
                 const items = report.media || [];

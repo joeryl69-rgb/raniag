@@ -110,8 +110,8 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="rg-report-picks" id="hazard-report-picks" hidden></div>
             <div class="modal-body">
-                <div class="rg-report-picks" id="hazard-report-picks" hidden></div>
                 <p class="rg-report-meta" id="hazard-report-meta"></p>
                 <div id="hazard-report-media"></div>
             </div>

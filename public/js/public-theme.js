@@ -31,6 +31,7 @@
     function applyTheme(theme) {
         root.dataset.publicTheme = theme;
         root.dataset.theme = theme;
+        root.dataset.bsTheme = theme;
         root.style.colorScheme = theme;
         const themeColor = document.querySelector('meta[name="theme-color"]');
         if (themeColor) themeColor.content = theme === 'dark' ? '#0c1923' : '#f2f5f5';
