@@ -532,9 +532,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-panel { max-height: none; }
 }
 @media (max-width: 575.98px) {
-    .hz-toolbar { align-items: stretch; }
-    .hz-tool-group { width: 100%; }
-    .hz-tool { flex: 1 1 auto; justify-content: center; }
+    .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
+    .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
+    .hz-tool-group { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+    .hz-tool { width: 100%; justify-content: center; }
 }
 </style>
 @endpush

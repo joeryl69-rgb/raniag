@@ -516,7 +516,15 @@
 
 @media (max-width: 575.98px) {
     .container-fluid:has(.rg-workspace-intro--announcement-studio) #rg-announcements-list .list-group-item > .d-flex:last-child { padding-left: 0; }
-    .container-fluid:has(.rg-workspace-intro--hazard-map) .hz-toolbar { align-items: flex-start; flex-direction: column; }
+    .container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+    .container-fluid:has(.rg-workspace-intro--hazard-map) .rg-hazard-content .hz-toolbar-copy {
+        flex: 0 0 auto;
+        width: 100%;
+    }
 }
 
 /* Round 71 workspace refresh: bring the requested staff pages up to the
