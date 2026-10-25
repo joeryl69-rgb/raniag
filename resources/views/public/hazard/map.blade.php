@@ -14,7 +14,7 @@
             <h1 class="rg-page-title">What is happening in Pamplona</h1>
             <p class="rg-page-sub mb-0">
                 Hazard zones and evacuation centers are drawn by {{ config('raniag.organization') }}.
-                Risk shows how many reports are still open in each barangay. Exact report locations stay private.
+                Open reports inside Pamplona are pins at the reported spot. A pin shows the tracking number, the incident type, and a GPS photo or video when the reporter sent one. Names and contact details stay private.
             </p>
         </div>
         <div class="text-md-end">
@@ -37,7 +37,7 @@
                 <img src="/images/guide/jo-map.png?v=1" alt="" width="72" height="96" class="jo-mascot" id="hazard-jo-avatar">
                 <div class="min-w-0">
                     <div class="small fw-bold" style="color:var(--rg-brand);">Pamplona live map</div>
-                    <div class="small text-muted" id="hazard-jo-tip">See open reports by barangay, then open Places for hazard zones and evacuation centers.</div>
+                    <div class="small text-muted" id="hazard-jo-tip">Open reports inside Pamplona are pins. Tap a pin for the tracking number and any GPS photo or video. Names and contact details stay private.</div>
                 </div>
             </div>
 
@@ -47,7 +47,7 @@
                 <input type="checkbox" class="btn-check" id="layer-centers" checked autocomplete="off">
                 <label class="btn btn-sm rg-hazard-chip" for="layer-centers">Evacuation</label>
                 <input type="checkbox" class="btn-check" id="layer-risk" checked autocomplete="off">
-                <label class="btn btn-sm rg-hazard-chip" for="layer-risk">Barangay risk</label>
+                <label class="btn btn-sm rg-hazard-chip" for="layer-risk">Open reports</label>
                 <input type="checkbox" class="btn-check" id="layer-geofence" checked autocomplete="off" @disabled(!$boundary)>
                 <label class="btn btn-sm rg-hazard-chip" for="layer-geofence" title="{{ $boundary ? 'Show or hide Pamplona’s area-of-responsibility boundary' : 'Pamplona boundary data is unavailable' }}">Pamplona AOR</label>
                 <input type="checkbox" class="btn-check" id="layer-you" autocomplete="off">
@@ -65,7 +65,7 @@
 
             <div class="rg-hazard-pane" data-hazard-pane="risk">
                 <div id="risk-box" class="rg-hazard-nearest small">
-                    <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Open reports by barangay</div>
+                    <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Open reports</div>
                     <div id="risk-summary" class="fw-semibold">Loading…</div>
                     <div id="risk-list" class="mt-1 text-muted" style="font-size:.78rem"></div>
                 </div>
@@ -103,6 +103,7 @@
 
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
 <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
 <script src="{{ asset('js/public-hazard-map.js') }}?v={{ @filemtime(public_path('js/public-hazard-map.js')) }}"></script>
 <script>
@@ -112,6 +113,7 @@ window.RANIAG_HAZARD = {
     zones: @json($zones),
     centers: @json($centers),
     risk: @json($risk),
+    openReports: @json($openReports),
     snapshotUrl: @json($snapshotUrl),
     nearestUrl: @json($nearestUrl),
 };

@@ -57,6 +57,7 @@
         const zoneLayers = new Map();
         const centerLayers = new Map();
         let riskLayer = null;
+        let reportMarkers = [];
         let lastUpdated = Date.now();
         let youMarker = null;
         let youAccuracy = null;
@@ -151,9 +152,9 @@
             const tips = {
                 centers: 'Viewing evacuation centers. Tap one for details, or use my current location to see the nearest open center.',
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
-                risk: 'Risk awareness highlights barangays with open community reports — no exact addresses are shown.',
+                risk: 'Each pin is one open report inside Pamplona. Tap it for the tracking number and a GPS photo or video when one was sent. Names and contact details stay private.',
                 you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
-                both: 'Open reports stay as barangay counts. Exact house locations stay private. Toggle Pamplona AOR to see its geofence, and use Places for hazards and evacuation centers.',
+                both: 'Open reports inside Pamplona are pins. Tap a pin for the tracking number and any GPS photo or video. Names and contact details stay private. Use Places for hazards and evacuation centers.',
                 route: 'The path follows the open center you pick. Tap another shelter to change it.',
                 off: 'My location is off. Turn it on to track yourself and show the route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
@@ -546,55 +547,80 @@
             layer.openPopup();
         }
 
-        function renderRisk(risk) {
-            const data = risk || { barangays: [], total_open: 0, geometries: null };
+        function reportedWhen(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+
+        function reportPopup(report) {
+            const when = reportedWhen(report.reported_at);
+            const place = [report.barangay, when].filter(Boolean).join(' · ');
+            const media = (report.media || []).map((item) => {
+                if (item.kind === 'video') {
+                    return `<video class="rg-hazard-report-media" controls preload="metadata" src="${esc(item.url)}"></video>`;
+                }
+                return `<img class="rg-hazard-report-media" src="${esc(item.url)}" alt="GPS photo submitted with this report">`;
+            }).join('');
+            return `<strong>${esc(report.tracking_number || 'Open report')}</strong>`
+                + `<div class="small">${esc(report.type || 'Report')}${report.status ? ` · ${esc(report.status)}` : ''}</div>`
+                + (place ? `<div class="small">${esc(place)}</div>` : '')
+                + media
+                + '<div class="small text-muted mt-1">Names and contact details stay private.</div>';
+        }
+
+        function renderRisk(risk, reports) {
+            const data = risk || { barangays: [], total_open: 0 };
+            const pins = Array.isArray(reports) ? reports : [];
             const hot = (data.barangays || [])
                 .filter((b) => (b.open_count || 0) > 0)
                 .sort((a, b) => b.open_count - a.open_count);
+            const pinnedBarangays = new Set(pins.map((report) => report.barangay).filter(Boolean));
 
             if (riskSummary) {
-                riskSummary.textContent = data.total_open > 0
-                    ? `${data.total_open} open report${data.total_open === 1 ? '' : 's'} across ${hot.length} barangay${hot.length === 1 ? '' : 's'}`
-                    : 'No open community reports right now — stay aware and keep reporting hazards.';
+                if (data.total_open > 0) {
+                    const across = `${data.total_open} open report${data.total_open === 1 ? '' : 's'} across ${hot.length} barangay${hot.length === 1 ? '' : 's'}`;
+                    const located = pins.length === data.total_open
+                        ? ' Pins mark each reported spot.'
+                        : (pins.length === 0
+                            ? ' None of them included a location, so no pins are shown.'
+                            : ` Pins mark the ${pins.length} that included a location.`);
+                    riskSummary.textContent = across + '.' + located;
+                } else {
+                    riskSummary.textContent = 'No open community reports right now — stay aware and keep reporting hazards.';
+                }
             }
             if (riskList) {
                 riskList.innerHTML = hot.length
-                    ? hot.slice(0, 6).map((b) =>
-                        `<div><strong>${esc(b.name)}</strong> · ${esc(b.open_count)} open</div>`
-                    ).join('')
+                    ? hot.slice(0, 6).map((b) => {
+                        const label = `<strong>${esc(b.name)}</strong> · ${esc(b.open_count)} open`;
+                        return pinnedBarangays.has(b.name)
+                            ? `<button type="button" class="rg-hazard-risk-pin" data-risk-barangay="${esc(b.name)}">${label}</button>`
+                            : `<div>${label}</div>`;
+                    }).join('')
                     : '<div>All mapped barangays are calm.</div>';
             }
 
             riskGroup.clearLayers();
             riskLayer = null;
-            if (!data.geometries?.features?.length) return;
-
-            const fill = Mapbox?.riskFillColor || ((n) => (n > 0 ? '#f97316' : '#94a3b8'));
-            const opac = Mapbox?.riskFillOpacity || ((n) => (n > 0 ? 0.35 : 0.06));
-
-            riskLayer = leaflet.geoJSON(data.geometries, {
-                style: (feature) => {
-                    const n = feature?.properties?.open_count || 0;
-                    return {
-                        color: fill(n),
-                        weight: n > 0 ? 1.5 : 0.8,
-                        fillColor: fill(n),
-                        fillOpacity: opac(n),
-                        opacity: 0.85,
-                    };
-                },
-                onEachFeature: (feature, layer) => {
-                    const name = feature.properties?.name || 'Barangay';
-                    const n = feature.properties?.open_count || 0;
-                    layer.bindPopup(
-                        `<strong>${esc(name)}</strong>` +
-                        `<div class="small mt-1">${n > 0
-                            ? `${n} report${n === 1 ? '' : 's'} still open in this barangay.`
-                            : 'No open reports in this barangay.'}</div>` +
-                        '<div class="small text-muted mt-1">This is a count only. House locations are not shown.</div>'
-                    );
-                },
-            }).addTo(riskGroup);
+            reportMarkers = [];
+            pins.forEach((report) => {
+                const lat = Number(report.latitude);
+                const lng = Number(report.longitude);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+                const icon = window.RaniagIcons?.buildDivIcon({
+                    icon: report.icon,
+                    color: report.color,
+                    size: 28,
+                });
+                const marker = leaflet.marker([lat, lng], icon ? { icon } : {});
+                marker.barangayName = report.barangay || '';
+                marker.bindPopup(reportPopup(report), { maxWidth: 280 });
+                marker.addTo(riskGroup);
+                reportMarkers.push(marker);
+            });
+            if (reportMarkers.length) riskLayer = leaflet.featureGroup(reportMarkers);
 
             if (chkRisk && !chkRisk.checked) map.removeLayer(riskGroup);
         }
@@ -820,7 +846,7 @@
                 `<span title="Hazard zone">${zoneSwatches} Hazard zone</span>` +
                 `<span title="Evacuation center">${centerSwatches} Center</span>` +
                 (cfg.boundary ? '<span title="Pamplona area of responsibility"><i style="display:inline-block;width:14px;border-top:2px dashed #f0c96d"></i> Pamplona AOR</span>' : '') +
-                '<span title="Open incident reports in this barangay"><i class="rg-hazard-swatch" style="background:#fbbf24"></i><i class="rg-hazard-swatch" style="background:#f97316"></i><i class="rg-hazard-swatch" style="background:#dc2626"></i> Open reports</span>' +
+                '<span title="Open report inside Pamplona"><i class="rg-hazard-swatch rg-hazard-swatch-pin" style="background:#f97316"></i> Open report</span>' +
                 '<span title="Shown only while My location is on"><i class="rg-hazard-swatch" style="background:#0b5ed7;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0b5ed7"></i> You</span>';
         }
 
@@ -911,7 +937,7 @@
             if (chosenClosed) chosenCenterId = null;
             renderZones(data.zones || []);
             renderCenters(data.centers || []);
-            renderRisk(data.risk || cfg.risk);
+            renderRisk(data.risk || cfg.risk, data.open_reports || []);
             renderLists(data.zones || [], data.centers || []);
             renderLegend(data.zones || [], data.centers || []);
             renderRouteTargets();
@@ -938,6 +964,21 @@
             if (!btn) return;
             if (layersOn().you) chooseCenter(btn.dataset.centerId, true);
             else flyToCenter(btn.dataset.centerId);
+        });
+        document.getElementById('risk-list')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-risk-barangay]');
+            if (!btn) return;
+            const layers = reportMarkers.filter((marker) => marker.barangayName === btn.dataset.riskBarangay);
+            if (!layers.length) return;
+            if (chkRisk && !chkRisk.checked) {
+                chkRisk.checked = true;
+                map.addLayer(riskGroup);
+            }
+            try {
+                const bounds = leaflet.latLngBounds(layers.map((marker) => marker.getLatLng()));
+                map.fitBounds(bounds.pad(0.4), { maxZoom: 16, animate: !REDUCE });
+                if (layers.length === 1) layers[0].openPopup();
+            } catch (err) { /* */ }
         });
         document.getElementById('route-targets')?.addEventListener('click', (event) => {
             const btn = event.target.closest('[data-route-center]');
@@ -1021,6 +1062,7 @@
             zones: cfg.zones || [],
             centers: cfg.centers || [],
             risk: cfg.risk || null,
+            open_reports: cfg.openReports || [],
         });
         fitActiveView({ animate: false });
 

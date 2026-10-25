@@ -15,6 +15,9 @@ Route::name('public.')->group(function () {
     Route::get('/hazard-map', [\App\Http\Controllers\Public\HazardMapController::class, 'index'])->name('hazard.map');
     Route::get('/hazard-map/nearest', [\App\Http\Controllers\Public\HazardMapController::class, 'nearestCenter'])->name('hazard.nearest');
     Route::get('/hazard-map/snapshot', [\App\Http\Controllers\Public\HazardMapController::class, 'snapshot'])->name('hazard.snapshot');
+    Route::get('/hazard-map/reports/media/{evidence}', [\App\Http\Controllers\Public\HazardMapController::class, 'reportMedia'])
+        ->middleware('throttle:60,1')
+        ->name('hazard.report-media');
     Route::get('/hazard-map/barangay', [\App\Http\Controllers\Public\HazardMapController::class, 'barangay'])->name('hazard.barangay');
     Route::get('/map-tile/{z}/{x}/{y}', [\App\Http\Controllers\Public\HazardMapController::class, 'mapTile'])
         ->whereNumber(['z', 'x', 'y'])

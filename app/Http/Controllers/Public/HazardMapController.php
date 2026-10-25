@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\EvacuationCenter;
+use App\Models\Evidence;
 use App\Models\HazardZone;
 use App\Services\GeofenceService;
 use App\Services\SituationalMapService;
+use App\Support\PrivateIncidentFiles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HazardMapController extends Controller
 {
@@ -30,6 +34,7 @@ class HazardMapController extends Controller
             'zones' => $snapshot['zones'],
             'centers' => $snapshot['centers'],
             'risk' => $snapshot['risk'],
+            'openReports' => $snapshot['open_reports'],
             'snapshotUrl' => route('public.hazard.snapshot'),
             'nearestUrl' => route('public.hazard.nearest'),
         ]);
@@ -38,6 +43,47 @@ class HazardMapController extends Controller
     public function snapshot(): JsonResponse
     {
         return response()->json($this->situational->publicSnapshot());
+    }
+
+    /**
+     * GPS photo or video the reporter attached to an open report inside Pamplona.
+     * Staff uploads and closed or outside reports are not served.
+     */
+    public function reportMedia(Evidence $evidence): StreamedResponse|BinaryFileResponse
+    {
+        if (! $this->situational->publicGpsEvidenceIsVisible($evidence)) {
+            abort(404);
+        }
+
+        $path = $evidence->file_path;
+        if (! $path || ! PrivateIncidentFiles::exists($path)) {
+            abort(404);
+        }
+
+        $absolute = PrivateIncidentFiles::absolutePath($path);
+        $mime = (string) $evidence->mime_type;
+        $isVideo = str_starts_with($mime, 'video/');
+        $downloadName = $isVideo ? 'gps-video.mp4' : 'gps-photo.jpg';
+
+        if ($isVideo) {
+            return response()->file($absolute, [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="'.$downloadName.'"',
+                'Cache-Control' => 'private, max-age=3600',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
+        return response()->stream(function () use ($absolute) {
+            $stream = fopen($absolute, 'rb');
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.$downloadName.'"',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function barangay(Request $request): JsonResponse

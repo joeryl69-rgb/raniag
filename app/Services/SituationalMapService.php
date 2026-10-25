@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\IncidentStatus;
 use App\Models\Assignment;
 use App\Models\EvacuationCenter;
+use App\Models\Evidence;
 use App\Models\HazardZone;
 use App\Models\Incident;
 use App\Models\User;
@@ -14,8 +15,10 @@ use Illuminate\Support\Collection;
 /**
  * Builds situational / risk / live-unit payloads for public and staff maps.
  *
- * Public callers never receive exact incident coordinates — only aggregated
- * barangay awareness counts. Staff and verified track sessions get richer data.
+ * The public live map receives open-report pins inside Pamplona (location,
+ * tracking number, type, status, and reporter GPS photo or video only).
+ * Reporter names, contact details, and staff files stay off that payload.
+ * Staff and verified track sessions get richer data.
  */
 class SituationalMapService
 {
@@ -29,10 +32,6 @@ class SituationalMapService
 
     /** Stale GPS pings are hidden from live maps (minutes). */
     public const UNIT_STALE_MINUTES = 10;
-
-    public function __construct(
-        private readonly GeofenceService $geofence,
-    ) {}
 
     /**
      * Active hazard zones for map layers.
@@ -82,9 +81,9 @@ class SituationalMapService
     }
 
     /**
-     * Public risk awareness — barangay open-incident counts only (no lat/lng).
+     * Barangay open-incident counts for the live-map summary. No coordinates.
      *
-     * @return array{barangays: list<array{name: string, open_count: int}>, total_open: int, geometries: array|null}
+     * @return array{barangays: list<array{name: string, open_count: int}>, total_open: int}
      */
     public function publicRiskAwareness(): array
     {
@@ -104,37 +103,88 @@ class SituationalMapService
             ];
         }
 
-        $geo = $this->geofence->barangayBoundaries();
-        $geometries = null;
-        if (is_array($geo) && ($geo['type'] ?? null) === 'FeatureCollection') {
-            $countMap = collect($barangays)->mapWithKeys(fn ($b) => [$b['name'] => $b['open_count']]);
-            $features = [];
-            foreach ($geo['features'] ?? [] as $feature) {
-                $name = $feature['properties']['adm4_en'] ?? null;
-                if (! $name) {
-                    continue;
-                }
-                $openCount = (int) ($countMap[$name] ?? 0);
-                $props = $feature['properties'] ?? [];
-                $props['name'] = $name;
-                $props['open_count'] = $openCount;
-                $features[] = [
-                    'type' => 'Feature',
-                    'properties' => $props,
-                    'geometry' => $feature['geometry'],
-                ];
-            }
-            $geometries = [
-                'type' => 'FeatureCollection',
-                'features' => $features,
-            ];
-        }
-
         return [
             'barangays' => $barangays,
             'total_open' => (int) array_sum(array_column($barangays, 'open_count')),
-            'geometries' => $geometries,
         ];
+    }
+
+    /**
+     * Public pins for open reports inside Pamplona that included a location.
+     * Limited to the tracking number, type, status, barangay, time, and
+     * reporter-submitted GPS photo or video. No names or contact details.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function publicOpenReports(): array
+    {
+        $openValues = array_map(fn (IncidentStatus $s) => $s->value, self::OPEN_STATUSES);
+
+        return $this->insidePamplona(Incident::query())
+            ->with(['incidentType', 'evidence'])
+            ->whereIn('status', $openValues)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderByDesc('reported_at')
+            ->get()
+            ->map(function (Incident $incident) {
+                $media = $incident->evidence
+                    ->filter(fn (Evidence $item) => $this->publicGpsEvidenceIsVisible($item))
+                    ->map(fn (Evidence $item) => [
+                        'kind' => str_starts_with((string) $item->mime_type, 'video/') ? 'video' : 'image',
+                        'url' => route('public.hazard.report-media', $item),
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'tracking_number' => $incident->tracking_number,
+                    'type' => $incident->incidentType?->name,
+                    'icon' => $incident->incidentType?->icon,
+                    'color' => $incident->incidentType?->color,
+                    'status' => $incident->status?->label() ?? '',
+                    'barangay' => $incident->barangay,
+                    'reported_at' => $incident->reported_at?->toIso8601String(),
+                    'latitude' => (float) $incident->latitude,
+                    'longitude' => (float) $incident->longitude,
+                    'media' => $media,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * A public map may show a file only when the reporter captured it with
+     * GPS on an open report inside Pamplona. Staff uploads stay private.
+     */
+    public function publicGpsEvidenceIsVisible(Evidence $evidence): bool
+    {
+        if (! $this->isReporterGpsCapture($evidence)) {
+            return false;
+        }
+
+        $evidence->loadMissing('incident');
+        $incident = $evidence->incident;
+        if (! $incident || $incident->latitude === null || $incident->longitude === null) {
+            return false;
+        }
+
+        $mime = (string) $evidence->mime_type;
+        if (! str_starts_with($mime, 'image/') && ! str_starts_with($mime, 'video/')) {
+            return false;
+        }
+
+        if (! in_array($incident->status, self::OPEN_STATUSES, true)) {
+            return false;
+        }
+
+        return $this->insidePamplona(Incident::query()->whereKey($incident->id))->exists();
+    }
+
+    private function isReporterGpsCapture(Evidence $evidence): bool
+    {
+        return $evidence->uploaded_by === null && $evidence->is_gps_capture;
     }
 
     /**
@@ -310,6 +360,7 @@ class SituationalMapService
             'zones' => $this->activeZonesPayload(),
             'centers' => $this->openCentersPayload(),
             'risk' => $this->publicRiskAwareness(),
+            'open_reports' => $this->publicOpenReports(),
             'updated_at' => now()->toIso8601String(),
         ];
     }

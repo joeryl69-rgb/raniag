@@ -2775,6 +2775,28 @@ html[data-theme="dark"] .rg-hazard-route-target.is-selected { border-color: #9ae
   40% { background: rgba(217,85,43,.16); }
 }
 .rg-hazard-legend span { display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; font-weight: 700; color: #5b6780; white-space: nowrap; }
+.rg-hazard-risk-pin {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 2px 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.rg-hazard-risk-pin:hover,
+.rg-hazard-risk-pin:focus-visible { color: var(--rg-brand); }
+.rg-hazard-report-media {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-top: 8px;
+  display: block;
+  background: #0f172a;
+}
 .rg-hazard-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .rg-evac-marker {
   background: transparent;
