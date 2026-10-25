@@ -31,13 +31,21 @@
             >
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Status</label>
-                    <select name="status" class="form-select" data-filter-default="all">
-                        <option value="all" @selected(request('status', 'all') === 'all')>All finished cases</option>
-                        @foreach ($statusOptions as $value => $label)
-                            <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <div class="form-text">This list is only finished cases. Resolved means the response is done. Closed means the file is filed. All finished cases shows both.</div>
+                    @php
+                        $statusKeys = array_map('strval', array_keys($statusOptions));
+                        $requestedStatus = (string) request('status', '');
+                        $statusChoice = in_array($requestedStatus, $statusKeys, true) ? $requestedStatus : null;
+                        $singleStatus = count($statusKeys) === 1 ? $statusKeys[0] : null;
+                    @endphp
+                    @if ($statusOptions === [])
+                        <p class="form-text mb-0">No finished status is on file.</p>
+                    @else
+                        <select name="status" class="form-select" data-filter-default="{{ $singleStatus ?? '' }}">
+                            @foreach ($statusOptions as $value => $label)
+                                <option value="{{ $value }}" @selected($statusChoice === (string) $value || ($statusChoice === null && $singleStatus === (string) $value))>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    @endif
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">File completion</label>

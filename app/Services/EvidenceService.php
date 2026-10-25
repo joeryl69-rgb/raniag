@@ -206,6 +206,26 @@ class EvidenceService
         }
     }
 
+    public function remove(Evidence $evidence): void
+    {
+        $this->deleteFile($evidence);
+        $evidence->delete();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function captureMetadata(?string $json): array
+    {
+        if ($json === null || trim($json) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
     /**
      * Extracts coordinates from JPEG EXIF metadata.
      */

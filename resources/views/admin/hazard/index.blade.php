@@ -113,6 +113,8 @@
 
                     <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form" class="{{ $openCenter ? 'd-none' : '' }}">
                         @csrf
+                        <input type="hidden" name="_method" id="zone-form-method" value="PATCH" disabled>
+                        <input type="hidden" name="editing_zone_id" id="editing-zone-id" value="{{ old('editing_zone_id') }}">
                         <input type="hidden" name="workspace" value="zone">
                         <input type="hidden" name="geometry_json" id="geometry_json" value="{{ old('workspace') === 'center' ? '' : old('geometry_json') }}">
                         <section class="hz-section">
@@ -164,6 +166,7 @@
                             <div class="alert alert-danger py-2 small" role="alert">{{ $message }}</div>
                         @enderror
                         <button class="btn btn-primary w-100" type="submit" id="zone-save" @disabled($incidentTypes->isEmpty() || ! old('geometry_json'))>Save hazard area</button>
+                        <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="zone-cancel-edit">Cancel edit</button>
                     </form>
 
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
@@ -368,48 +371,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="editZoneModal" tabindex="-1" aria-labelledby="editZoneTitle">
-    <div class="modal-dialog">
-        <form class="modal-content" method="POST" id="edit-zone-form" action="#">
-            @csrf
-            @method('PATCH')
-            <div class="modal-header">
-                <h6 class="modal-title fw-bold" id="editZoneTitle">Edit hazard area</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <label class="form-label" for="edit-zone-type">Incident type</label>
-                <select name="incident_type_id" id="edit-zone-type" class="form-select" required>
-                    @foreach ($incidentTypes as $type)
-                        <option value="{{ $type->id }}">{{ $type->name }}</option>
-                    @endforeach
-                </select>
-                <label class="form-label mt-2" for="edit-zone-name">Area name</label>
-                <input name="name" id="edit-zone-name" class="form-control" required maxlength="120">
-                <label class="form-label mt-2" for="edit-zone-barangay">Barangay</label>
-                <select name="barangay" id="edit-zone-barangay" class="form-select">
-                    <option value="">Covers more than one</option>
-                    @foreach ($barangays as $b)
-                        <option value="{{ $b }}">{{ $b }}</option>
-                    @endforeach
-                </select>
-                <div class="form-check mt-3">
-                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="edit-zone-active">
-                    <label class="form-check-label" for="edit-zone-active">Show on the public Live Map</label>
-                </div>
-                <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" id="edit-zone-replace-boundary">
-                    <label class="form-check-label" for="edit-zone-replace-boundary">Replace the boundary with the shape currently drawn on the map</label>
-                </div>
-                <input type="hidden" name="geometry_json" id="edit-zone-geometry" value="">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save changes</button>
-            </div>
-        </form>
-    </div>
-</div>
 <div class="modal fade" id="advisoryModal" tabindex="-1" aria-labelledby="advisoryTitle">
     <div class="modal-dialog">
         <form class="modal-content" method="POST" id="advisory-form" action="#">
@@ -782,6 +743,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     const zoneLayer = L.featureGroup().addTo(map);
+    const savedZoneLayers = new Map();
+    let editingZoneId = null;
     existingZones.forEach((z) => {
         try {
             const layer = L.geoJSON(z.geometry, {
@@ -794,6 +757,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
                     className: z.active ? 'rg-hazard-poly' : '',
                 },
             }).bindTooltip(z.name);
+            savedZoneLayers.set(String(z.id), layer);
             zoneLayer.addLayer(layer);
         } catch (e) {
             console.error('Unable to render a saved hazard boundary.', e);
@@ -908,7 +872,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (zoneSave) zoneSave.disabled = true;
         if (editTool) editTool.disabled = true;
         markTool('');
-        if (mapReady()) say('Drawing cleared. Trace the boundary again.', false);
+        if (editingZoneId) say('Boundary cleared. Draw the replacement, or cancel the edit to keep the saved shape.', false);
+        else if (mapReady()) say('Drawing cleared. Trace the boundary again.', false);
         else showLock();
     });
 
@@ -1027,7 +992,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     document.getElementById('mode-zone')?.addEventListener('click', () => setMode('zone'));
-    document.getElementById('mode-center')?.addEventListener('click', () => setMode('center'));
+    document.getElementById('mode-center')?.addEventListener('click', () => {
+        if (editingZoneId) cancelZoneEdit();
+        setMode('center');
+    });
     if (startCenter) setMode('center');
     if (hadPin && latInput.value && lngInput.value) placeDraft(parseFloat(latInput.value), parseFloat(lngInput.value));
     syncMapLock();
@@ -1045,38 +1013,133 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         }
     });
 
-    const editZoneModal = document.getElementById('editZoneModal');
-    const editZoneForm = document.getElementById('edit-zone-form');
+    const zoneStoreAction = zoneForm?.getAttribute('action') || '';
+
+    function restoreEditingLayer() {
+        if (!editingZoneId) return;
+        const layer = savedZoneLayers.get(editingZoneId);
+        if (layer && !zoneLayer.hasLayer(layer)) zoneLayer.addLayer(layer);
+        editingZoneId = null;
+    }
+
+    function engageMap() {
+        map.getContainer().querySelector('.rg-map-scroll-action')?.click();
+    }
+
+    function enableBoundaryEdit() {
+        if (!drawnLayer) return;
+        polygonDrawer.disable();
+        boxDrawer.disable();
+        if (editDrawer._enabled) editDrawer.disable();
+        try {
+            editDrawer.enable();
+        } catch (e) {
+            console.error('Unable to turn on boundary editing.', e);
+        }
+        setDrawHold(true);
+        markTool('tool-edit');
+        if (editTool) editTool.disabled = false;
+        say('Drag the corners to reshape this area, then save.', true);
+    }
+
+    function beginZoneEdit(zone, data, keepDrawn) {
+        if (editingZoneId && editingZoneId !== String(zone.id)) restoreEditingLayer();
+        setMode('zone');
+        editingZoneId = String(zone.id);
+        const staticLayer = savedZoneLayers.get(editingZoneId);
+        if (staticLayer && zoneLayer.hasLayer(staticLayer)) zoneLayer.removeLayer(staticLayer);
+        if (!keepDrawn || !drawnLayer) {
+            drawnItems.clearLayers();
+            drawnLayer = null;
+            try {
+                const restored = L.geoJSON(zone.geometry);
+                restored.eachLayer((layer) => {
+                    drawnLayer = layer;
+                    drawnItems.addLayer(layer);
+                    styleDrawn();
+                    capture(layer);
+                });
+            } catch (e) {
+                console.error('Unable to load this hazard boundary for editing.', e);
+            }
+        }
+        if (drawnLayer && drawnLayer.getBounds) {
+            try { map.fitBounds(drawnLayer.getBounds(), { padding: [28, 28], maxZoom: 17 }); } catch (e) {}
+        }
+        if (zoneForm) zoneForm.action = zoneEditTemplate.replace('__ID__', zone.id);
+        const method = document.getElementById('zone-form-method');
+        if (method) method.disabled = false;
+        const editingInput = document.getElementById('editing-zone-id');
+        if (editingInput) editingInput.value = zone.id;
+        if (!keepDrawn) {
+            const name = document.getElementById('zone-name');
+            const barangay = document.getElementById('zone-barangay');
+            const active = document.getElementById('zoneActive');
+            if (name) name.value = data.name || zone.name || '';
+            if (barangay) barangay.value = data.barangay || '';
+            if (active) active.checked = data.active === '1' || data.active === 1;
+            if (typeSelect && data.typeId) typeSelect.value = data.typeId;
+            syncTypePreview();
+            styleDrawn();
+        }
+        if (zoneSave) zoneSave.textContent = 'Save changes';
+        document.getElementById('zone-cancel-edit')?.classList.remove('d-none');
+        if (modeKicker) modeKicker.textContent = 'Edit hazard area';
+        if (modeTitle) modeTitle.textContent = 'Adjust this boundary on the map';
+        if (modeLead) modeLead.textContent = 'Drag the corners to reshape the area. The boundary on the map is the one that will be saved.';
+        engageMap();
+        enableBoundaryEdit();
+        document.getElementById('ops-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    function cancelZoneEdit() {
+        restoreEditingLayer();
+        const method = document.getElementById('zone-form-method');
+        if (method) method.disabled = true;
+        const editingInput = document.getElementById('editing-zone-id');
+        if (editingInput) editingInput.value = '';
+        if (zoneForm && zoneStoreAction) zoneForm.action = zoneStoreAction;
+        document.getElementById('zone-cancel-edit')?.classList.add('d-none');
+        if (zoneSave) {
+            zoneSave.textContent = 'Save hazard area';
+            zoneSave.disabled = true;
+        }
+        polygonDrawer.disable();
+        boxDrawer.disable();
+        if (editDrawer._enabled) editDrawer.disable();
+        setDrawHold(false);
+        drawnItems.clearLayers();
+        drawnLayer = null;
+        if (geometryInput) geometryInput.value = '';
+        if (editTool) editTool.disabled = true;
+        markTool('');
+        const name = document.getElementById('zone-name');
+        const barangay = document.getElementById('zone-barangay');
+        const active = document.getElementById('zoneActive');
+        if (name) name.value = '';
+        if (barangay) barangay.value = '';
+        if (active) active.checked = true;
+        if (modeKicker) modeKicker.textContent = 'New hazard area';
+        if (modeTitle) modeTitle.textContent = 'Trace the area, then name it';
+        if (modeLead) modeLead.textContent = 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
+        if (!mapReady()) showLock();
+        else say('Draw an area or a box, then name it in the panel.', false);
+    }
+
     document.querySelectorAll('.js-edit-zone').forEach((btn) => {
         btn.addEventListener('click', () => {
-            if (!editZoneForm || !editZoneModal) return;
-            editZoneForm.action = zoneEditTemplate.replace('__ID__', btn.dataset.id);
-            document.getElementById('editZoneTitle').textContent = 'Edit · ' + (btn.dataset.name || 'Hazard area');
-            document.getElementById('edit-zone-name').value = btn.dataset.name || '';
-            document.getElementById('edit-zone-barangay').value = btn.dataset.barangay || '';
-            document.getElementById('edit-zone-active').checked = btn.dataset.active === '1';
-            const typeSelect = document.getElementById('edit-zone-type');
-            if (typeSelect && btn.dataset.typeId) typeSelect.value = btn.dataset.typeId;
-            document.getElementById('edit-zone-replace-boundary').checked = false;
-            document.getElementById('edit-zone-geometry').value = '';
-            bootstrap.Modal.getOrCreateInstance(editZoneModal).show();
+            const zone = existingZones.find((z) => String(z.id) === String(btn.dataset.id));
+            if (!zone) return;
+            beginZoneEdit(zone, btn.dataset, false);
         });
     });
-    editZoneForm?.addEventListener('submit', (event) => {
-        const replace = document.getElementById('edit-zone-replace-boundary')?.checked;
-        const drawn = document.getElementById('geometry_json')?.value || '';
-        const target = document.getElementById('edit-zone-geometry');
-        if (!replace) {
-            if (target) target.value = '';
-            return;
-        }
-        if (!drawn) {
-            event.preventDefault();
-            window.alert('Draw the new boundary on the map first, then save the edit.');
-            return;
-        }
-        if (target) target.value = drawn;
-    });
+    document.getElementById('zone-cancel-edit')?.addEventListener('click', cancelZoneEdit);
+    const resumeEditId = document.getElementById('editing-zone-id')?.value || '';
+    if (/^\d+$/.test(resumeEditId)) {
+        const zone = existingZones.find((z) => String(z.id) === resumeEditId);
+        const resumeButton = document.querySelector('.js-edit-zone[data-id="' + resumeEditId + '"]');
+        if (zone) beginZoneEdit(zone, resumeButton?.dataset || {}, !!drawnLayer);
+    }
 
     const advisoryModal = document.getElementById('advisoryModal');
     document.querySelectorAll('.js-advisory').forEach((btn) => {

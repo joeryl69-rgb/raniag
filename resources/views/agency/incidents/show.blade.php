@@ -343,6 +343,18 @@
                                                     </div>
 
                                                     <div class="mb-3">
+                                                        @php
+                                                            $incident->evidence->loadMissing('uploader');
+                                                            $savedResolutionEvidence = $incident->evidence->filter(
+                                                                fn ($item) => (int) ($item->uploader?->agency_id) === (int) $agencyId
+                                                            );
+                                                        @endphp
+                                                        <x-resolution-saved-evidence
+                                                            :items="$savedResolutionEvidence"
+                                                            :incident-id="$incident->id"
+                                                            :resolution-id="$agencyResolution->id"
+                                                            destroy-route="agency.incidents.resolution.evidence.destroy"
+                                                        />
                                                         <x-gps-camera />
                                                         <label for="evidence" class="form-label">Attach More Evidence <span class="text-muted">(optional)</span></label>
                                                         <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">

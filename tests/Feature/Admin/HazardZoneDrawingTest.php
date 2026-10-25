@@ -23,8 +23,10 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('id="tool-box"', false)
         ->assertSee('id="boundary-note"', false)
         ->assertSee('hz-mode-switch', false)
-        ->assertSee('id="editZoneModal"', false)
-        ->assertSee('Edit hazard area', false);
+        ->assertSee('id="zone-cancel-edit"', false)
+        ->assertSee('Edit hazard area', false)
+        ->assertSee('Drag the corners to reshape this area, then save.', false)
+        ->assertDontSee('id="editZoneModal"', false);
 });
 
 test('hazard area creation rejects incomplete or non polygon geojson', function () {
@@ -111,4 +113,47 @@ test('an existing hazard area can be renamed without redrawing its boundary', fu
         ->and($zone->barangay)->toBe('Centro')
         ->and($zone->geometry)->toBe($geometry)
         ->and($zone->type?->name)->toBe('Edited flood type');
+});
+
+test('editing a hazard area saves the boundary drawn on the map', function () {
+    $administrator = User::factory()->administrator()->create();
+    $incidentType = IncidentType::factory()->create();
+    $original = [
+        'type' => 'Polygon',
+        'coordinates' => [[
+            [121.3, 18.4],
+            [121.4, 18.4],
+            [121.4, 18.5],
+            [121.3, 18.5],
+            [121.3, 18.4],
+        ]],
+    ];
+    $reshaped = [
+        'type' => 'Polygon',
+        'coordinates' => [[
+            [121.31, 18.41],
+            [121.42, 18.41],
+            [121.42, 18.52],
+            [121.31, 18.52],
+            [121.31, 18.41],
+        ]],
+    ];
+
+    $this->actingAs($administrator)
+        ->post(route('admin.hazard.zones.store'), [
+            'incident_type_id' => $incidentType->id,
+            'name' => 'Riverside',
+            'geometry_json' => json_encode($original),
+        ]);
+
+    $zone = HazardZone::query()->firstOrFail();
+
+    $this->patch(route('admin.hazard.zones.details', $zone), [
+        'incident_type_id' => $incidentType->id,
+        'name' => 'Riverside',
+        'is_active' => '1',
+        'geometry_json' => json_encode($reshaped),
+    ])->assertRedirect();
+
+    expect($zone->fresh()->geometry)->toBe($reshaped);
 });

@@ -228,7 +228,7 @@ class HazardEvacController extends Controller
         $payload = [
             'hazard_zone_type_id' => $type->id,
             'name' => $data['name'],
-            'barangay' => $data['barangay'] ?: null,
+            'barangay' => ($data['barangay'] ?? null) ?: null,
             'is_active' => $request->boolean('is_active'),
         ];
 

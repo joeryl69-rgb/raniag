@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Agency;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agency\SubmitResolutionRequest;
 use App\Models\Assignment;
-use App\Models\Incident;
+use App\Models\Evidence;
 use App\Models\Resolution;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Services\AssignmentService;
@@ -13,6 +13,7 @@ use App\Services\EvidenceService;
 use App\Services\ResolutionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class ResolutionController extends Controller
 {
@@ -134,7 +135,7 @@ class ResolutionController extends Controller
             $this->evidenceService->attachToIncident(
                 $record,
                 $data['evidence'],
-                [],
+                $this->evidenceService->captureMetadata($data['meta']['gps_captures'] ?? null),
                 $request->user()->id
             );
         }
@@ -150,5 +151,27 @@ class ResolutionController extends Controller
         return redirect()
             ->route('agency.incidents.show', $record->id)
             ->with('success', 'Resolution details updated successfully.');
+    }
+
+    public function destroyEvidence(Request $request, int $incident, int $resolutionId, Evidence $evidence): RedirectResponse
+    {
+        $record = $this->incidents->findById($incident);
+        abort_if(! $record, 404);
+        abort_if($evidence->incident_id !== $record->id, 404);
+
+        $resolution = Resolution::with('resolver')->where('incident_id', $record->id)
+            ->where('id', $resolutionId)
+            ->firstOrFail();
+
+        $agencyId = (int) $request->user()?->agency_id;
+        abort_if($agencyId !== (int) $resolution->resolver?->agency_id, 403, 'You can only edit resolutions submitted by your agency.');
+        abort_if(in_array($record->status->value, ['resolved', 'closed'], true), 403, 'You can no longer edit this resolution because the case has been globally resolved.');
+        abort_if((int) $evidence->uploader?->agency_id !== $agencyId, 403, 'You can only remove evidence your agency submitted.');
+
+        $this->evidenceService->remove($evidence);
+
+        return redirect()
+            ->route('agency.incidents.show', $record->id)
+            ->with('success', 'That file was removed from this resolution.');
     }
 }

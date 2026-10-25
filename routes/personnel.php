@@ -33,4 +33,5 @@ Route::prefix('personnel')
 
         Route::post('/incidents/{incident}/resolution', [ResolutionController::class, 'store'])->name('incidents.resolution');
         Route::put('/incidents/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('incidents.resolution.update');
+        Route::delete('/incidents/{incident}/resolutions/{resolution}/evidence/{evidence}', [ResolutionController::class, 'destroyEvidence'])->name('incidents.resolution.evidence.destroy');
     });

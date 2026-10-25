@@ -119,7 +119,35 @@ test('case document filters omit statuses and completion states with no files', 
         ->assertSee('value="resolved"', false)
         ->assertSee('value="missing"', false)
         ->assertDontSee('value="closed"', false)
-        ->assertDontSee('value="complete"', false);
+        ->assertDontSee('value="complete"', false)
+        ->assertDontSee('All finished cases', false)
+        ->assertDontSee('Active cases', false)
+        ->assertDontSee('value="all"', false)
+        ->assertDontSee('value="submitted"', false)
+        ->assertDontSee('value="in_progress"', false);
+});
+
+test('case document status filter lists only statuses that have cases', function () {
+    $administrator = User::factory()->administrator()->create();
+    $type = IncidentType::factory()->create();
+    makeQueueIncident($type, 'resolved');
+    makeQueueIncident($type, 'closed');
+    makeQueueIncident($type, 'submitted');
+
+    $html = $this->actingAs($administrator)
+        ->get(route('admin.incident_documents.index'))
+        ->assertOk()
+        ->getContent();
+
+    preg_match('/<select name="status".*?<\/select>/s', $html, $status);
+
+    expect($status[0] ?? '')
+        ->toContain('value="resolved"')
+        ->toContain('value="closed"')
+        ->not->toContain('value="submitted"')
+        ->not->toContain('value="all"')
+        ->not->toContain('Active cases')
+        ->not->toContain('All finished cases');
 });
 
 test('announcement filters omit types and publication states that have no notices', function () {

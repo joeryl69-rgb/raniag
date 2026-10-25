@@ -38,6 +38,7 @@ Route::prefix('agency')
 
         Route::post('/incidents/{incident}/resolution', [ResolutionController::class, 'store'])->name('incidents.resolution');
         Route::put('/incidents/{incident}/resolutions/{resolution}', [ResolutionController::class, 'update'])->name('incidents.resolution.update');
+        Route::delete('/incidents/{incident}/resolutions/{resolution}/evidence/{evidence}', [ResolutionController::class, 'destroyEvidence'])->name('incidents.resolution.evidence.destroy');
 
         // "Resolved Reports" — read-only history of the agency's resolved/closed
         // incidents (they drop off the active Dispatches list once resolved).
