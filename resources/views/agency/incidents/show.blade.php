@@ -343,8 +343,10 @@
                                                     </div>
 
                                                     <div class="mb-3">
-                                                        <label for="edit_evidence" class="form-label">Attach More Evidence <span class="text-muted">(optional)</span></label>
-                                                        <input class="form-control" type="file" name="evidence[]" id="edit_evidence" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
+                                                        <x-gps-camera />
+                                                        <label for="evidence" class="form-label">Attach More Evidence <span class="text-muted">(optional)</span></label>
+                                                        <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
+                                                        <div class="form-text">Use the GPS Camera above for a geotagged photo, or attach files directly here.</div>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
@@ -394,7 +396,10 @@
                             @endif
 
                             @if($pendingRequest)
-                                <p class="small text-muted mb-2">A printable request for this incident is waiting for approval.</p>
+                                <p class="small text-muted mb-2">A document request for this incident is waiting for approval.</p>
+                                <a href="{{ route('agency.document_requests.index', ['request' => $pendingRequest->id]) }}" class="btn btn-outline-primary rg-print-request-button mb-2">
+                                    <i class="bi bi-file-earmark-text me-2"></i>Open this document request
+                                </a>
                                 <form method="POST" action="{{ route('agency.document_requests.cancel', $pendingRequest) }}" class="rg-print-request-form" onsubmit="return confirm('Cancel this document request?');">
                                     @csrf
                                     @method('PATCH')
@@ -403,17 +408,10 @@
                                     </button>
                                 </form>
                             @else
-                                <form method="POST" action="{{ route('agency.incidents.print_requests.store', $incident->id) }}" class="rg-print-request-form">
-                                    @csrf
-                                    <input type="hidden" name="request_type" value="single">
-                                    <div class="mb-3">
-                                        <label for="request_note" class="form-label">{{ $issuedRequest ? 'Why do you need another copy?' : 'Request Details' }}</label>
-                                        <textarea class="form-control" id="request_note" name="request_note" rows="3" @if($issuedRequest) required @endif placeholder="{{ $issuedRequest ? 'Explain what the new copy is for' : 'Describe what you need in the printable copy (optional)' }}"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-outline-primary rg-print-request-button">
-                                        <i class="bi bi-file-earmark-text me-2"></i>{{ $issuedRequest ? 'Request another copy' : 'Request Printable Copy' }}
-                                    </button>
-                                </form>
+                                <p class="small text-muted mb-2">Request the printable copy from My document requests. This case does not keep a second request form.</p>
+                                <a href="{{ route('agency.document_requests.index', ['incident' => $incident->id]) }}" class="btn btn-outline-primary rg-print-request-button">
+                                    <i class="bi bi-file-earmark-text me-2"></i>{{ $issuedRequest ? 'Request another copy' : 'Request this document' }}
+                                </a>
                             @endif
                         </div>
 
@@ -458,7 +456,7 @@
                 <div class="card-body">
                     <div class="rg-report-narrative">
                         <span class="rg-report-marker" aria-hidden="true"><i class="bi bi-quote"></i></span>
-                        <p>{{ $incident->description ?: 'No repository documents attached for the selected content.' }}</p>
+                        <p>{{ filled(trim((string) $incident->description)) ? $incident->description : 'No narrative description was recorded for this report.' }}</p>
                     </div>
                 </div>
             </div>

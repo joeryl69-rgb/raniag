@@ -174,7 +174,11 @@
         <div style="font-weight: bold; margin-bottom: 5px; font-size: 11pt;">{{ $incident->title }}</div>
     @endif
     <div class="narrative-box">
-        {!! nl2br(e($incident->description)) !!}
+        @if (filled(trim((string) $incident->description)))
+            {!! nl2br(e($incident->description)) !!}
+        @else
+            <span style="font-style: italic; color: #666;">No narrative description was recorded for this report.</span>
+        @endif
     </div>
     @endif
 

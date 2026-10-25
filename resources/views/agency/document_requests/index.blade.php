@@ -74,7 +74,7 @@
                             <option value="">Select a resolved report…</option>
                             @foreach($eligibleIncidents as $inc)
                                 @php $alreadyIssued = in_array($inc->id, $issuedIncidentIds ?? [], true); @endphp
-                                <option value="{{ route('agency.incidents.print_requests.store', $inc->id) }}" data-incident-id="{{ $inc->id }}" @if($alreadyIssued) data-issued="1" @endif>{{ $inc->tracking_number }}{{ $alreadyIssued ? ' — copy already issued' : '' }}</option>
+                                <option value="{{ route('agency.incidents.print_requests.store', $inc->id) }}" data-incident-id="{{ $inc->id }}" @selected((string) request('incident') === (string) $inc->id) @if($alreadyIssued) data-issued="1" @endif>{{ $inc->tracking_number }}{{ $alreadyIssued ? ' — copy already issued' : '' }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -266,6 +266,7 @@
                             markFollowUpNote(singleNote, singleNoteLabel, !!(opt && opt.getAttribute('data-issued')), false);
                             applyAvailability('single', id ? [id] : []);
                         });
+                        if (sel.value) sel.dispatchEvent(new Event('change'));
 
                         guardSubmit(singleForm, function () {
                             var opt = sel.options[sel.selectedIndex];
@@ -366,7 +367,7 @@
                         </thead>
                         <tbody id="rg-agency-doc-requests-tbody">
                             @foreach($documentRequests as $dr)
-                                <tr>
+                                <tr id="doc-request-{{ $dr->id }}" @if((string) request('request') === (string) $dr->id) class="table-primary" @endif>
                                     <td class="px-3 py-3 fw-bold text-primary">{{ $dr->incident->tracking_number ?? 'N/A' }}</td>
                                     <td class="py-3">{{ ucfirst($dr->request_type) }}</td>
                                     <td class="py-3">
@@ -441,4 +442,9 @@
             @endif
         </div>
     </div>
+@if (request()->filled('request'))
+    <script>
+        document.getElementById('doc-request-{{ (int) request('request') }}')?.scrollIntoView({ block: 'center' });
+    </script>
+@endif
 </x-app-layout>

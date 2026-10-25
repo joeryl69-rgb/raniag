@@ -24,6 +24,7 @@ class DocumentRequestController extends Controller
         $agencyId = $request->user()->agency_id;
         abort_if(! $agencyId, 403, 'No agency associated with this account.');
 
+        $focusId = $request->integer('request');
         $query = DocumentRequest::query()
             ->with(['incident'])
             ->where('requesting_agency_id', $agencyId);
@@ -32,9 +33,19 @@ class DocumentRequestController extends Controller
         if ($status === 'archived') {
             $query->whereNotNull('archived_at');
         } else {
-            $query->whereNull('archived_at');
+            $query->where(function ($inner) use ($focusId) {
+                $inner->whereNull('archived_at');
+                if ($focusId) {
+                    $inner->orWhere('id', $focusId);
+                }
+            });
             if ($status && $status !== 'all') {
-                $query->where('status', $status);
+                $query->where(function ($inner) use ($status, $focusId) {
+                    $inner->where('status', $status);
+                    if ($focusId) {
+                        $inner->orWhere('id', $focusId);
+                    }
+                });
             }
         }
 
@@ -58,6 +69,9 @@ class DocumentRequestController extends Controller
         $sort = $request->string('sort')->value() ?: 'created_at';
         $direction = $request->string('direction')->value() === 'asc' ? 'asc' : 'desc';
         $sortable = ['created_at', 'status', 'request_type'];
+        if ($focusId) {
+            $query->orderByRaw('case when id = ? then 0 else 1 end', [$focusId]);
+        }
         $documentRequests = $query
             ->orderBy(in_array($sort, $sortable, true) ? $sort : 'created_at', $direction)
             ->orderByDesc('id')

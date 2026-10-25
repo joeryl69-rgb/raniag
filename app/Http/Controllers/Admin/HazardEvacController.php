@@ -213,6 +213,44 @@ class HazardEvacController extends Controller
         return back()->with('success', 'Advisory updated. Residents see it when they open this area on the Live Map.');
     }
 
+    public function updateZoneDetails(Request $request, HazardZone $zone): RedirectResponse
+    {
+        $data = $request->validate([
+            'incident_type_id' => ['required', 'exists:incident_types,id'],
+            'name' => ['required', 'string', 'max:120'],
+            'barangay' => ['nullable', 'string', 'max:100'],
+            'geometry_json' => ['nullable', 'string', 'json', 'max:100000'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        $incidentType = IncidentType::query()->findOrFail($data['incident_type_id']);
+        $type = $this->zoneTypeForIncident($incidentType);
+        $payload = [
+            'hazard_zone_type_id' => $type->id,
+            'name' => $data['name'],
+            'barangay' => $data['barangay'] ?: null,
+            'is_active' => $request->boolean('is_active'),
+        ];
+
+        if (Schema::hasColumn('hazard_zones', 'color')) {
+            $payload['color'] = $type->color;
+        }
+
+        if ($request->filled('geometry_json')) {
+            $geometry = json_decode($data['geometry_json'], true);
+            if (! $this->isValidHazardPolygon($geometry)) {
+                return back()->withErrors([
+                    'geometry_json' => 'Draw a valid closed hazard boundary on the map before replacing this area.',
+                ])->withInput();
+            }
+            $payload['geometry'] = $geometry;
+        }
+
+        $zone->update($payload);
+
+        return back()->with('success', 'Hazard area updated.');
+    }
+
     public function destroyZone(HazardZone $zone): RedirectResponse
     {
         $zone->delete();

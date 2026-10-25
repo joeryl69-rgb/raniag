@@ -25,7 +25,7 @@
                     $chosenStatusExists = $chosenStatus !== '' && array_key_exists($chosenStatus, $statusChoices);
                 @endphp
                 <select name="status" data-filter-default="">
-                    <option value="" @selected(! $chosenStatusExists) hidden></option>
+                    <option value="" @selected(! $chosenStatusExists)>Active cases</option>
                     @foreach ($statusChoices as $value => $label)
                         <option value="{{ $value }}" @selected($chosenStatus === (string) $value)>{{ $label }}</option>
                     @endforeach

@@ -80,7 +80,7 @@
                 <div class="hz-toolbar mb-2">
                     <div class="hz-toolbar-copy">
                         <span class="hz-kicker">Map the boundary</span>
-                        <strong id="geometry-hint" role="status" aria-live="polite">Tap "Tap to use the map" before drawing. The boundary tools stay off until the map is on.</strong>
+                        <strong id="geometry-hint" role="status" aria-live="polite">Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.</strong>
                         <span class="hz-map-state" id="map-lock-note">Map locked</span>
                     </div>
                     <div class="hz-tool-group" role="group" aria-label="Boundary tools">
@@ -103,7 +103,7 @@
                 <div class="hz-panel-head">
                     <span class="hz-kicker" id="hz-mode-kicker">{{ $openCenter ? 'New shelter' : 'New hazard area' }}</span>
                     <h2 id="hz-mode-title">{{ $openCenter ? 'Drop a pin for the shelter' : 'Trace the area, then name it' }}</h2>
-                    <p id="hz-mode-lead">{{ $openCenter ? 'Tap "Tap to use the map", then click the map to place the shelter.' : 'Tap "Tap to use the map" before drawing. Then choose the type, trace the boundary, and save.' }}</p>
+                    <p id="hz-mode-lead">{{ $openCenter ? 'Click or tap "Click or tap to use the map", then click the map to place the shelter.' : 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.' }}</p>
                 </div>
                 <div class="card-body">
                     <div class="hz-mode-switch" role="group" aria-label="What to add">
@@ -151,7 +151,7 @@
                         </section>
                         <section class="hz-section" id="boundary-step">
                             <span class="hz-kicker">3 · Boundary</span>
-                            <p id="boundary-note">Tap "Tap to use the map" before drawing. The boundary tools stay off until the map is on.</p>
+                            <p id="boundary-note">Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.</p>
                         </section>
                         <section class="hz-section">
                             <span class="hz-kicker">4 · Public map</span>
@@ -171,7 +171,7 @@
                         <input type="hidden" name="workspace" value="center">
                         <section class="hz-section" id="pin-step">
                             <span class="hz-kicker">1 · Pin</span>
-                            <p id="center-coords">Pin not placed yet. Tap "Tap to use the map", then click the map to drop the shelter.</p>
+                            <p id="center-coords">Pin not placed yet. Click or tap "Click or tap to use the map", then click the map to drop the shelter.</p>
                             <label class="form-label" for="center-color">Pin color</label>
                             <input type="color" name="color" id="center-color" class="form-control form-control-color" value="{{ old('color', '#0f766e') }}" title="Color residents see on the live map">
                             <div class="form-text">This is the shelter pin color on the public Live Map.</div>
@@ -217,7 +217,13 @@
                                     </div>
                                     <div class="small text-muted">{{ $zone->type?->name ?? 'Hazard' }}@if($zone->barangay) · {{ $zone->barangay }}@endif · {{ $zone->is_active ? 'Public' : 'Hidden' }}</div>
                                 </div>
-                                <div class="d-flex gap-1 flex-shrink-0">
+                                <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-edit-zone"
+                                        data-id="{{ $zone->id }}"
+                                        data-name="{{ $zone->name }}"
+                                        data-barangay="{{ $zone->barangay }}"
+                                        data-active="{{ $zone->is_active ? '1' : '0' }}"
+                                        data-type-id="{{ $incidentTypes->first(fn ($type) => $type->name === ($zone->type->name ?? null))?->id }}">Edit</button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary js-advisory" data-id="{{ $zone->id }}">Advisory</button>
                                     <form method="POST" action="{{ route('admin.hazard.zones.destroy', $zone) }}" onsubmit="return confirm('Remove this hazard area?');">
                                         @csrf
@@ -362,6 +368,48 @@
     </div>
 </div>
 
+<div class="modal fade" id="editZoneModal" tabindex="-1" aria-labelledby="editZoneTitle">
+    <div class="modal-dialog">
+        <form class="modal-content" method="POST" id="edit-zone-form" action="#">
+            @csrf
+            @method('PATCH')
+            <div class="modal-header">
+                <h6 class="modal-title fw-bold" id="editZoneTitle">Edit hazard area</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="edit-zone-type">Incident type</label>
+                <select name="incident_type_id" id="edit-zone-type" class="form-select" required>
+                    @foreach ($incidentTypes as $type)
+                        <option value="{{ $type->id }}">{{ $type->name }}</option>
+                    @endforeach
+                </select>
+                <label class="form-label mt-2" for="edit-zone-name">Area name</label>
+                <input name="name" id="edit-zone-name" class="form-control" required maxlength="120">
+                <label class="form-label mt-2" for="edit-zone-barangay">Barangay</label>
+                <select name="barangay" id="edit-zone-barangay" class="form-select">
+                    <option value="">Covers more than one</option>
+                    @foreach ($barangays as $b)
+                        <option value="{{ $b }}">{{ $b }}</option>
+                    @endforeach
+                </select>
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="edit-zone-active">
+                    <label class="form-check-label" for="edit-zone-active">Show on the public Live Map</label>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="edit-zone-replace-boundary">
+                    <label class="form-check-label" for="edit-zone-replace-boundary">Replace the boundary with the shape currently drawn on the map</label>
+                </div>
+                <input type="hidden" name="geometry_json" id="edit-zone-geometry" value="">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+        </form>
+    </div>
+</div>
 <div class="modal fade" id="advisoryModal" tabindex="-1" aria-labelledby="advisoryTitle">
     <div class="modal-dialog">
         <form class="modal-content" method="POST" id="advisory-form" action="#">
@@ -550,6 +598,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const existingZones = @json($mapZonesJson);
     const existingCenters = @json($mapCentersJson);
     const advisoryTemplate = @json(route('admin.hazard.zones.update', ['zone' => '__ID__']));
+    const zoneEditTemplate = @json(route('admin.hazard.zones.details', ['zone' => '__ID__']));
     const advisories = @json($advisoryMap);
     const startCenter = @json($openCenter);
     const hadPin = @json(old('workspace') === 'center');
@@ -605,16 +654,16 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     function lockMessage(shelter) {
-        if (shelter) return 'Tap "Tap to use the map" before placing a shelter pin.';
-        if (geometryInput.value) return 'Tap "Tap to use the map" again before adjusting this boundary.';
-        return 'Tap "Tap to use the map" before drawing. The boundary tools stay off until the map is on.';
+        if (shelter) return 'Click or tap "Click or tap to use the map" before placing a shelter pin.';
+        if (geometryInput.value) return 'Click or tap "Click or tap to use the map" again before adjusting this boundary.';
+        return 'Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.';
     }
 
     function showLock() {
         const shelter = centerForm && !centerForm.classList.contains('d-none');
         if (shelter) {
             if (geometryHint) geometryHint.textContent = lockMessage(true);
-            if (coordsLabel && !pinPlaced) coordsLabel.textContent = 'Pin not placed yet. Tap "Tap to use the map", then click the map to drop the shelter.';
+            if (coordsLabel && !pinPlaced) coordsLabel.textContent = 'Pin not placed yet. Click or tap "Click or tap to use the map", then click the map to drop the shelter.';
         } else {
             say(lockMessage(false), !!geometryInput.value);
         }
@@ -632,7 +681,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         document.querySelectorAll('.hz-tool').forEach((button) => {
             if (button.id === 'tool-clear') return;
             button.classList.toggle('is-waiting', !ready);
-            button.title = ready ? '' : 'Tap "Tap to use the map" first';
+            button.title = ready ? '' : 'Click or tap "Click or tap to use the map" first';
         });
         if (!ready) {
             boundaryStep?.classList.add('is-locked');
@@ -957,8 +1006,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (modeKicker) modeKicker.textContent = center ? 'New shelter' : 'New hazard area';
         if (modeTitle) modeTitle.textContent = center ? 'Drop a pin for the shelter' : 'Trace the area, then name it';
         if (modeLead) modeLead.textContent = center
-            ? 'Tap "Tap to use the map", then click the map to place the shelter.'
-            : 'Tap "Tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
+            ? 'Click or tap "Click or tap to use the map", then click the map to place the shelter.'
+            : 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
         if (center) {
             polygonDrawer.disable();
             boxDrawer.disable();
@@ -994,6 +1043,39 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             say('Draw a boundary on the map before saving this hazard area.', false);
             document.getElementById('tool-polygon')?.focus();
         }
+    });
+
+    const editZoneModal = document.getElementById('editZoneModal');
+    const editZoneForm = document.getElementById('edit-zone-form');
+    document.querySelectorAll('.js-edit-zone').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            if (!editZoneForm || !editZoneModal) return;
+            editZoneForm.action = zoneEditTemplate.replace('__ID__', btn.dataset.id);
+            document.getElementById('editZoneTitle').textContent = 'Edit · ' + (btn.dataset.name || 'Hazard area');
+            document.getElementById('edit-zone-name').value = btn.dataset.name || '';
+            document.getElementById('edit-zone-barangay').value = btn.dataset.barangay || '';
+            document.getElementById('edit-zone-active').checked = btn.dataset.active === '1';
+            const typeSelect = document.getElementById('edit-zone-type');
+            if (typeSelect && btn.dataset.typeId) typeSelect.value = btn.dataset.typeId;
+            document.getElementById('edit-zone-replace-boundary').checked = false;
+            document.getElementById('edit-zone-geometry').value = '';
+            bootstrap.Modal.getOrCreateInstance(editZoneModal).show();
+        });
+    });
+    editZoneForm?.addEventListener('submit', (event) => {
+        const replace = document.getElementById('edit-zone-replace-boundary')?.checked;
+        const drawn = document.getElementById('geometry_json')?.value || '';
+        const target = document.getElementById('edit-zone-geometry');
+        if (!replace) {
+            if (target) target.value = '';
+            return;
+        }
+        if (!drawn) {
+            event.preventDefault();
+            window.alert('Draw the new boundary on the map first, then save the edit.');
+            return;
+        }
+        if (target) target.value = drawn;
     });
 
     const advisoryModal = document.getElementById('advisoryModal');

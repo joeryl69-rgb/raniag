@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Route;
 
 class Notification extends Model
 {
@@ -95,6 +96,13 @@ class Notification extends Model
             return $this->data['url'];
         }
 
+        if (str_starts_with((string) $this->type, 'document_request.')) {
+            $documentUrl = $this->documentRequestUrl();
+            if ($documentUrl) {
+                return $documentUrl;
+            }
+        }
+
         if ($this->incident_id && $this->user) {
             $routeName = match (true) {
                 $this->user->isAdministrator() => 'admin.incidents.show',
@@ -106,6 +114,48 @@ class Notification extends Model
             if ($routeName && \Illuminate\Support\Facades\Route::has($routeName)) {
                 return route($routeName, $this->incident_id, absolute: false);
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * Document-request notices open the request itself, or the generated
+     * file once it exists. Case notices stay on the incident.
+     */
+    private function documentRequestUrl(): ?string
+    {
+        if (! $this->user) {
+            return null;
+        }
+
+        $requestId = $this->data['document_request_id'] ?? null;
+        $documentRequest = $requestId
+            ? DocumentRequest::query()->find($requestId)
+            : null;
+
+        if (! $documentRequest && $this->incident_id) {
+            $documentRequest = DocumentRequest::query()
+                ->where('incident_id', $this->incident_id)
+                ->latest('id')
+                ->first();
+        }
+
+        if ($this->user->isAdministrator() && Route::has('admin.document_requests.index')) {
+            return route('admin.document_requests.index', array_filter([
+                'request' => $documentRequest?->id,
+                'status' => $documentRequest && $documentRequest->status !== 'pending' ? 'all' : null,
+            ]), absolute: false);
+        }
+
+        if ($documentRequest?->generated_path) {
+            return '/storage/'.ltrim((string) $documentRequest->generated_path, '/');
+        }
+
+        if ($this->user->isAgency() && Route::has('agency.document_requests.index')) {
+            return route('agency.document_requests.index', array_filter([
+                'request' => $documentRequest?->id,
+            ]), absolute: false);
         }
 
         return null;

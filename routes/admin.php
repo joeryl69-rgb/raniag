@@ -32,6 +32,7 @@ Route::prefix('admin')
         Route::get('/hazard', [HazardEvacController::class, 'index'])->name('hazard.index');
         Route::post('/hazard/zones', [HazardEvacController::class, 'storeZone'])->name('hazard.zones.store');
         Route::patch('/hazard/zones/{zone}', [HazardEvacController::class, 'updateZone'])->name('hazard.zones.update');
+        Route::patch('/hazard/zones/{zone}/details', [HazardEvacController::class, 'updateZoneDetails'])->name('hazard.zones.details');
         Route::delete('/hazard/zones/{zone}', [HazardEvacController::class, 'destroyZone'])->name('hazard.zones.destroy');
         Route::post('/hazard/centers', [HazardEvacController::class, 'storeCenter'])->name('hazard.centers.store');
         Route::patch('/hazard/centers/{center}', [HazardEvacController::class, 'updateCenter'])->name('hazard.centers.update');

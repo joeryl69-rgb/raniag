@@ -755,18 +755,33 @@
         ) <= MAP_THUMB_LOCATION_TOLERANCE_METERS;
     }
 
+    function offlineCaptureAllowed() {
+        return document.getElementById('gps-camera-module')?.dataset.offlineOk === '1'
+            && navigator.onLine === false;
+    }
+
     function isCaptureReady() {
-        return cameraOpen
+        const base = cameraOpen
             && hasFreshGpsFix()
             && isGpsFixDisplayed()
-            && isPlaceResolvedFor(lastPosition.coords)
-            && isMapPreviewReady()
             && isCameraFrameReady()
             && canAddMoreCaptures();
+        if (offlineCaptureAllowed() && base) {
+            if (placeEl && lastPosition?.coords && !isPlaceResolvedFor(lastPosition.coords)) {
+                placeEl.textContent = 'Place unavailable while offline';
+            }
+            return true;
+        }
+        return base
+            && isPlaceResolvedFor(lastPosition?.coords)
+            && isMapPreviewReady();
     }
 
     function captureWaitReason() {
         if (!cameraOpen) return 'Open the camera to capture GPS evidence.';
+        if (offlineCaptureAllowed() && !hasFreshGpsFix()) {
+            return 'This phone is offline, so a map location cannot be pinned. Continue without a GPS photo. The report will say the location was unavailable.';
+        }
         if (!lastPosition || locationSource !== 'gps') return 'Waiting for a GPS location fix. A map pin cannot be used as GPS evidence.';
         if (!hasFreshGpsFix()) return 'Refreshing your location. Wait for a current GPS fix.';
         if (!isGpsFixDisplayed()) return 'Waiting for your GPS coordinates and accuracy to appear.';

@@ -9,7 +9,7 @@
     />
 
     <x-kpi-strip :items="[
-        ['label' => 'Case files', 'value' => $incidents->total(), 'icon' => 'bi-folder2-open', 'tone' => 'primary', 'sub' => 'Resolved and closed, matching the filters'],
+        ['label' => 'Case files', 'value' => $incidents->total(), 'icon' => 'bi-folder2-open', 'tone' => 'primary', 'sub' => 'Finished cases matching the filters'],
     ]" />
 
     <section class="rg-table-desk rg-case-documents" aria-labelledby="rg-case-files-heading">
@@ -32,11 +32,12 @@
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Status</label>
                     <select name="status" class="form-select" data-filter-default="all">
-                        <option value="all" @selected(request('status', 'all') === 'all')>Resolved and closed</option>
+                        <option value="all" @selected(request('status', 'all') === 'all')>All finished cases</option>
                         @foreach ($statusOptions as $value => $label)
                             <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
+                    <div class="form-text">This list is only finished cases. Resolved means the response is done. Closed means the file is filed. All finished cases shows both.</div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">File completion</label>

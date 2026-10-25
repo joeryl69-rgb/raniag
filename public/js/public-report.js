@@ -907,14 +907,29 @@
         return validGpsCaptures().length > 0;
     }
 
-    function locationIsReady() {
-        const captureReady = captureHasCoordinates();
+    function coordinatesArePresent() {
         const lat = Number(latInput?.value);
         const lng = Number(lngInput?.value);
-        const coordinatesReady = captureReady || (latInput?.value !== '' && lngInput?.value !== ''
+        return captureHasCoordinates() || (latInput?.value !== '' && lngInput?.value !== ''
             && Number.isFinite(lat) && lat >= -90 && lat <= 90
             && Number.isFinite(lng) && lng >= -180 && lng <= 180);
-        return coordinatesReady && window.RANIAG_MAP_API?.hasPinnedLocation?.() === true;
+    }
+
+    function syncOfflineLocation() {
+        const offline = navigator.onLine === false;
+        const missingPin = !coordinatesArePresent();
+        const unavailable = offline && missingPin;
+        const field = document.getElementById('location-unavailable');
+        if (field) field.value = unavailable ? 'offline' : '';
+        document.getElementById('location-offline-note')?.classList.toggle('d-none', !unavailable);
+        document.getElementById('gps-offline-note')?.classList.toggle('d-none', !offline);
+        document.getElementById('location-picker')?.classList.toggle('d-none', unavailable || captureHasCoordinates());
+    }
+
+    function locationIsReady() {
+        syncOfflineLocation();
+        if (navigator.onLine === false && !coordinatesArePresent()) return true;
+        return coordinatesArePresent() && window.RANIAG_MAP_API?.hasPinnedLocation?.() === true;
     }
 
     function contactIsReady() {
@@ -1158,6 +1173,7 @@
             syncLocationMode({ plot: captureHasCoordinates() });
             requestAnimationFrame(() => mapInstance?.invalidateSize());
         }
+        syncOfflineLocation();
         if (wizardStep === CONTACT_STEP) {
             applyEvidenceGate();
         }
@@ -1202,6 +1218,9 @@
             showWizardStep(idx);
         });
     });
+    form?.addEventListener('submit', () => syncOfflineLocation());
+    window.addEventListener('online', syncOfflineLocation);
+    window.addEventListener('offline', syncOfflineLocation);
     form?.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') return;
         if (event.target && event.target.tagName === 'TEXTAREA') return;

@@ -100,7 +100,7 @@
                 <div class="card-body">
                     <div class="rg-report-narrative">
                         <span class="rg-report-marker" aria-hidden="true"><i class="bi bi-quote"></i></span>
-                        <p>{{ $incident->description ?: 'No repository documents attached for the selected content.' }}</p>
+                        <p>{{ filled(trim((string) $incident->description)) ? $incident->description : 'No narrative description was recorded for this report.' }}</p>
                     </div>
                 </div>
             </div>
@@ -434,8 +434,10 @@
                                                     </div>
 
                                                     <div class="mb-3">
-                                                        <label for="edit_evidence" class="form-label">Attach More Evidence <span class="text-muted">(optional)</span></label>
-                                                        <input class="form-control" type="file" name="evidence[]" id="edit_evidence" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
+                                                        <x-gps-camera />
+                                                        <label for="evidence" class="form-label">Attach More Evidence <span class="text-muted">(optional)</span></label>
+                                                        <input class="form-control" type="file" name="evidence[]" id="evidence" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov,.webm">
+                                                        <div class="form-text">Use the GPS Camera above for a geotagged photo, or attach files directly here.</div>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">

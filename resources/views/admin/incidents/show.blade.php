@@ -79,7 +79,7 @@
                 <div class="card-body">
                     <div class="rg-report-narrative">
                         <span class="rg-report-marker" aria-hidden="true"><i class="bi bi-quote"></i></span>
-                        <p>{{ $incident->description ?: 'No repository documents attached for the selected content.' }}</p>
+                        <p>{{ filled(trim((string) $incident->description)) ? $incident->description : 'No narrative description was recorded for this report.' }}</p>
                     </div>
                 </div>
             </div>

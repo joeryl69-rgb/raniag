@@ -28,9 +28,15 @@ class PrintableReportRequestController extends Controller
         // - status=all: no filtering
         // - otherwise exact match
         $status = $request->input('status');
+        $focusId = $request->integer('request');
 
         if ($status === null || $status === '' || $status === '0') {
-            $query->where('status', 'pending');
+            $query->where(function ($inner) use ($focusId) {
+                $inner->where('status', 'pending');
+                if ($focusId) {
+                    $inner->orWhere('id', $focusId);
+                }
+            });
         } elseif ($status !== 'all') {
             $query->where('status', $status);
         }
@@ -57,6 +63,9 @@ class PrintableReportRequestController extends Controller
         $sort = $request->string('sort')->value() ?: 'created_at';
         $direction = $request->string('direction')->value() === 'asc' ? 'asc' : 'desc';
         $sortable = ['created_at', 'status', 'request_type'];
+        if ($focusId) {
+            $query->orderByRaw('case when id = ? then 0 else 1 end', [$focusId]);
+        }
         $documentRequests = $query
             ->orderBy(in_array($sort, $sortable, true) ? $sort : 'created_at', $direction)
             ->orderByDesc('id')

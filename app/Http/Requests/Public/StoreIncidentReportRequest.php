@@ -61,6 +61,11 @@ class StoreIncidentReportRequest extends FormRequest
                 'latitude' => $latBlank ? $capture['latitude'] : $this->input('latitude'),
                 'longitude' => $lngBlank ? $capture['longitude'] : $this->input('longitude'),
             ]);
+        } elseif ($this->offlineWithoutLocation() && $latBlank && $lngBlank) {
+            $this->merge([
+                'latitude' => null,
+                'longitude' => null,
+            ]);
         }
 
         // Priority is derived from the selected incident type's admin-configured
@@ -84,6 +89,7 @@ class StoreIncidentReportRequest extends FormRequest
         $maxSize = (int) config('raniag.evidence.max_size_kb', 5120);
         $mimes = config('raniag.evidence.allowed_mimes', []);
         $hasEvidence = $this->hasEvidence();
+        $locationRule = $this->offlineWithoutLocation() ? 'nullable' : 'required';
 
         return [
             'incident_type_id' => ['required', 'integer', Rule::exists('incident_types', 'id')->where('is_active', true)],
@@ -91,8 +97,9 @@ class StoreIncidentReportRequest extends FormRequest
             'title' => ['nullable', 'string', 'max:255'],
             'location_address' => ['nullable', 'string', 'max:500'],
             'barangay' => ['nullable', 'string', 'max:255'],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'latitude' => [$locationRule, 'nullable', 'numeric', 'between:-90,90'],
+            'longitude' => [$locationRule, 'nullable', 'numeric', 'between:-180,180'],
+            'meta.location_unavailable' => ['nullable', 'string', 'in:offline'],
             'reporter_name' => ['nullable', 'required_if:is_anonymous,0,false', 'string', 'max:255'],
             // Without a photo or a GPS capture, staff have nothing to verify the
             // report against — at least one way to reach the reporter becomes
@@ -165,6 +172,23 @@ class StoreIncidentReportRequest extends FormRequest
                 }
             }
         });
+    }
+
+    /**
+     * An offline replay with no GPS photo and no map pin is an expected
+     * case: the phone could not determine a location. Online reports still
+     * require coordinates.
+     */
+    private function offlineWithoutLocation(): bool
+    {
+        if (! $this->boolean('offline_delivery')) {
+            return false;
+        }
+
+        $meta = $this->input('meta');
+        $flag = is_array($meta) ? ($meta['location_unavailable'] ?? null) : null;
+
+        return $flag === 'offline' && ! $this->firstGpsCapture();
     }
 
     /**

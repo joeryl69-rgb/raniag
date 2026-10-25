@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\ReporterPushSubscription;
 use App\Services\WebPushService;
@@ -140,4 +141,37 @@ test('an offline replay still notifies when the original response was lost', fun
         'offline_delivery' => '1',
         'push_client_token' => 'phone-token-retry',
     ])->assertOk()->assertJsonPath('duplicate', true);
+});
+
+test('an offline report can be filed when gps and location were unavailable', function () {
+    $type = IncidentType::factory()->create();
+
+    $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'Filed while the phone had no signal.',
+        'is_anonymous' => 0,
+        'reporter_name' => 'Offline Reporter',
+        'reporter_phone' => '09171234567',
+        'offline_delivery' => '1',
+        'meta' => ['location_unavailable' => 'offline'],
+    ])->assertCreated();
+
+    $incident = Incident::query()->first();
+    expect($incident)->not->toBeNull()
+        ->and($incident->latitude)->toBeNull()
+        ->and($incident->longitude)->toBeNull()
+        ->and($incident->location_address)->toBe('Location unavailable because this report was filed offline.')
+        ->and($incident->meta['location_unavailable'] ?? null)->toBe('offline');
+});
+
+test('an online report still requires a location when no gps photo was attached', function () {
+    $type = IncidentType::factory()->create();
+
+    $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'Online with no pin.',
+        'is_anonymous' => 0,
+        'reporter_name' => 'Online Reporter',
+        'reporter_phone' => '09171234567',
+    ])->assertStatus(422)->assertJsonValidationErrors('latitude');
 });

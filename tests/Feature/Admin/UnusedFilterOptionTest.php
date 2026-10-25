@@ -48,6 +48,8 @@ test('incident filters only offer statuses categories and priorities that exist'
 
     $response->assertDontSee('Not resolved', false)
         ->assertDontSee('Newest open incidents', false)
+        ->assertSee('>Active cases<', false)
+        ->assertDontSee('hidden></option>', false)
         ->assertDontSee('>All statuses<', false)
         ->assertDontSee('Resolved or closed', false)
         ->assertDontSee('value="finished"', false)

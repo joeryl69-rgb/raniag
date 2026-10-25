@@ -354,6 +354,9 @@
                         </div>
                     </div>
                 </div>
+                <div id="location-offline-note" class="alert alert-warning d-none small" role="status">
+                    This phone is offline, so your location cannot be determined and a map pin cannot be saved. Continue anyway. The report will be marked “location unavailable because it was filed offline.”
+                </div>
                 <div id="location-picker">
                 <p class="text-muted small mb-3" style="max-width: 60ch;">No GPS photo or video was attached. Share your current location before continuing.</p>
                 <button type="button" class="btn btn-outline-primary mb-3" id="use-current-location">
@@ -424,11 +427,15 @@
                 <p class="text-muted small mb-3">
                     A GPS photo or video places this report, and the next step shows that place. Without one, you must share your location before you can continue.
                 </p>
+                <div id="gps-offline-note" class="alert alert-warning d-none small" role="status">
+                    This phone is offline. A GPS photo cannot pin a place until the connection returns, and the map cannot look up an address. You can still file the report. It stays on this phone and sends when you reconnect, and MDRRMO will see that the location was unavailable.
+                </div>
                 <input type="hidden" name="meta[gps_captures]" id="gps-capture-log" value="">
+                <input type="hidden" name="meta[location_unavailable]" id="location-unavailable" value="">
                 <input type="hidden" name="idempotency_key" id="idempotency_key" value="">
                 <input type="hidden" name="push_client_token" id="push_client_token" value="">
 
-                <div id="gps-camera-module" class="mb-4">
+                <div id="gps-camera-module" class="mb-4" data-offline-ok="1">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                         <div class="d-flex align-items-start gap-3">
                             <span class="rg-icon-tile"><i class="bi bi-camera-video"></i></span>

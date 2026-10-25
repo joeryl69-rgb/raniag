@@ -593,7 +593,9 @@ class ReportChapterRenderer
                 ['Status', $this->statusLabel($incident)],
                 ['Priority', $priority],
                 ['Reported', $incident->reported_at?->format('M j, Y g:i a') ?? '—'],
-                ['What happened', $this->clip((string) $incident->description, 400)],
+                ['What happened', filled(trim((string) $incident->description))
+                    ? $this->clip((string) $incident->description, 400)
+                    : 'No narrative description was recorded for this report.'],
             ],
             'total' => 1,
             'note' => 'This is the case summary. The full paper file stays on the case.',

@@ -63,7 +63,7 @@
             const useButton = document.createElement('button');
             useButton.type = 'button';
             useButton.className = 'rg-map-scroll-action';
-            useButton.textContent = 'Tap to use the map';
+            useButton.textContent = 'Click or tap to use the map';
             useButton.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();

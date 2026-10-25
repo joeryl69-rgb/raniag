@@ -360,6 +360,7 @@ class NotificationService
             'New document request',
             "{$requesterName} requested documents for [{$incident->tracking_number}].",
             $incident,
+            ['document_request_id' => $documentRequest->id],
         );
     }
 
@@ -373,6 +374,7 @@ class NotificationService
             'Document request cancelled',
             "The agency cancelled the document request for [{$incident->tracking_number}].",
             $incident,
+            ['document_request_id' => $documentRequest->id],
         );
     }
 
@@ -391,6 +393,7 @@ class NotificationService
             'Document request approved',
             "Your document request for [{$incident->tracking_number}] is ready to download.",
             $incident,
+            ['document_request_id' => $documentRequest->id],
         );
     }
 

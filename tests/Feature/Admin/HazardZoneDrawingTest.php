@@ -16,13 +16,15 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('2 · Place')
         ->assertSee('3 · Boundary')
         ->assertSee('4 · Public map')
-        ->assertSee('Tap "Tap to use the map" before drawing. The boundary tools stay off until the map is on.', false)
+        ->assertSee('Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.', false)
         ->assertSee('Map locked')
         ->assertSee('id="map-lock-note"', false)
         ->assertSee('id="tool-polygon"', false)
         ->assertSee('id="tool-box"', false)
         ->assertSee('id="boundary-note"', false)
-        ->assertSee('hz-mode-switch', false);
+        ->assertSee('hz-mode-switch', false)
+        ->assertSee('id="editZoneModal"', false)
+        ->assertSee('Edit hazard area', false);
 });
 
 test('hazard area creation rejects incomplete or non polygon geojson', function () {
@@ -69,4 +71,44 @@ test('hazard area creation stores a closed polygon boundary', function () {
         ->assertRedirect(route('admin.hazard.index'));
 
     expect(HazardZone::query()->firstOrFail()->geometry)->toBe($geometry);
+});
+
+test('an existing hazard area can be renamed without redrawing its boundary', function () {
+    $administrator = User::factory()->administrator()->create();
+    $incidentType = IncidentType::factory()->create();
+    $replacement = IncidentType::factory()->create(['name' => 'Edited flood type']);
+    $geometry = [
+        'type' => 'Polygon',
+        'coordinates' => [[
+            [121.3, 18.4],
+            [121.4, 18.4],
+            [121.4, 18.5],
+            [121.3, 18.5],
+            [121.3, 18.4],
+        ]],
+    ];
+
+    $this->actingAs($administrator)
+        ->post(route('admin.hazard.zones.store'), [
+            'incident_type_id' => $incidentType->id,
+            'name' => 'Original area',
+            'geometry_json' => json_encode($geometry),
+        ]);
+
+    $zone = HazardZone::query()->firstOrFail();
+
+    $this->from(route('admin.hazard.index'))
+        ->patch(route('admin.hazard.zones.details', $zone), [
+            'incident_type_id' => $replacement->id,
+            'name' => 'Renamed area',
+            'barangay' => 'Centro',
+            'is_active' => '1',
+        ])
+        ->assertRedirect(route('admin.hazard.index'));
+
+    $zone->refresh();
+    expect($zone->name)->toBe('Renamed area')
+        ->and($zone->barangay)->toBe('Centro')
+        ->and($zone->geometry)->toBe($geometry)
+        ->and($zone->type?->name)->toBe('Edited flood type');
 });

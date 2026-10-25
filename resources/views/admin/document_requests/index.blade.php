@@ -81,7 +81,7 @@
                         $picked = $dr->requested_sections;
                         $tracking = $dr->incident->tracking_number ?? 'No tracking number';
                     @endphp
-                    <article class="doc-request {{ $status === 'pending' ? 'is-pending' : '' }}">
+                    <article id="doc-request-{{ $dr->id }}" class="doc-request {{ $status === 'pending' ? 'is-pending' : '' }} {{ (string) request('request') === (string) $dr->id ? 'border border-primary' : '' }}">
                         <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between">
                             <div class="flex-grow-1 min-w-0">
                                 <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
@@ -164,4 +164,9 @@
         @endif
     </section>
 
+@if (request()->filled('request'))
+    <script>
+        document.getElementById('doc-request-{{ (int) request('request') }}')?.scrollIntoView({ block: 'center' });
+    </script>
+@endif
 </x-app-layout>

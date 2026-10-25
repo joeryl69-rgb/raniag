@@ -37,9 +37,18 @@ class IncidentService
             $meta['gps_captures'] = is_array($decoded) ? $decoded : [];
         }
 
-        $lat = isset($payload['latitude']) ? (float) $payload['latitude'] : null;
-        $lng = isset($payload['longitude']) ? (float) $payload['longitude'] : null;
-        $withinJurisdiction = $this->geofence->isWithinPamplona($lat, $lng);
+        $lat = is_numeric($payload['latitude'] ?? null) ? (float) $payload['latitude'] : null;
+        $lng = is_numeric($payload['longitude'] ?? null) ? (float) $payload['longitude'] : null;
+        $payload['latitude'] = $lat;
+        $payload['longitude'] = $lng;
+        if ($lat === null && $lng === null && ($meta['location_unavailable'] ?? null) === 'offline') {
+            $meta['location_unavailable'] = 'offline';
+            $payload['location_address'] = ($payload['location_address'] ?? null)
+                ?: 'Location unavailable because this report was filed offline.';
+        }
+        $withinJurisdiction = $lat !== null && $lng !== null
+            ? $this->geofence->isWithinPamplona($lat, $lng)
+            : null;
 
         if ($withinJurisdiction !== null) {
             $meta['within_jurisdiction'] = $withinJurisdiction;
