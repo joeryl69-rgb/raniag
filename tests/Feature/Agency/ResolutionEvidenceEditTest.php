@@ -82,9 +82,14 @@ test('edit my resolution shows the saved gps photo and can remove it', function 
         ->assertOk()
         ->assertSee('GPS photos and files already submitted')
         ->assertSee('resolution-gps.jpg')
-        ->assertSee('Remove')
+        ->assertSee('id="evidence-upload-list"', false)
+        ->assertSee('form="remove-evidence-'.$saved->id.'"', false)
         ->assertSee(route('agency.incidents.resolution.evidence.destroy', [$incident, $resolution, $saved]), false)
         ->assertDontSee(route('agency.incidents.resolution.evidence.destroy', [$incident, $resolution, $reporter]), false);
+
+    preg_match('/<form action="'.preg_quote(route('agency.incidents.resolution.update', [$incident, $resolution]), '/').'".*?<\/form>/s', $this->get(route('agency.incidents.show', $incident))->getContent(), $editForm);
+    $editInner = preg_replace('/^<form\b[^>]*>/', '', $editForm[0] ?? '');
+    expect($editInner)->not->toContain('<form');
 
     $this->delete(route('agency.incidents.resolution.evidence.destroy', [$incident, $resolution, $saved]))
         ->assertRedirect(route('agency.incidents.show', $incident));

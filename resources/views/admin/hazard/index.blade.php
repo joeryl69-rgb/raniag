@@ -113,7 +113,7 @@
 
                     <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form" class="{{ $openCenter ? 'd-none' : '' }}">
                         @csrf
-                        <input type="hidden" name="_method" id="zone-form-method" value="PATCH" disabled>
+                        <input type="hidden" id="zone-form-method" value="PATCH" disabled>
                         <input type="hidden" name="editing_zone_id" id="editing-zone-id" value="{{ old('editing_zone_id') }}">
                         <input type="hidden" name="workspace" value="zone">
                         <input type="hidden" name="geometry_json" id="geometry_json" value="{{ old('workspace') === 'center' ? '' : old('geometry_json') }}">
@@ -165,8 +165,10 @@
                         @error('geometry_json')
                             <div class="alert alert-danger py-2 small" role="alert">{{ $message }}</div>
                         @enderror
-                        <button class="btn btn-primary w-100" type="submit" id="zone-save" @disabled($incidentTypes->isEmpty() || ! old('geometry_json'))>Save hazard area</button>
-                        <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="zone-cancel-edit">Cancel edit</button>
+                        <div class="hz-edit-actions" id="zone-edit-actions">
+                            <button class="btn btn-primary w-100" type="submit" id="zone-save" @disabled($incidentTypes->isEmpty() || ! old('geometry_json'))>Save hazard area</button>
+                            <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="zone-cancel-edit">Cancel edit</button>
+                        </div>
                     </form>
 
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
@@ -532,6 +534,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-swatch { width: 14px; height: 10px; border-radius: 2px; background: #b45309; display: inline-block; }
 .hz-shelter-key { width: 12px; height: 12px; border-radius: 50%; background: #0f766e; display: inline-block; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #0f766e; }
 .hz-panel { max-height: calc(100vh - 230px); overflow: auto; border: 1px solid var(--raniag-border) !important; border-radius: .9rem !important; background: var(--raniag-card) !important; color: var(--raniag-ink); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent) !important; }
+.hz-panel.is-editing .hz-edit-actions { position: sticky; bottom: 0; z-index: 3; margin-top: .25rem; padding-top: .75rem; background: var(--raniag-card); box-shadow: 0 -10px 16px color-mix(in srgb, var(--raniag-card) 88%, transparent); }
 .hz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .hz-type-chip { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; }
 .leaflet-draw-tooltip { font-size: 12px; }
@@ -801,7 +804,17 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 
     function capture(layer) {
         const geo = layer.toGeoJSON();
-        geometryInput.value = JSON.stringify(geo.geometry || geo);
+        const geometry = geo.geometry || geo;
+        if (geometry?.type === 'Polygon' && Array.isArray(geometry.coordinates)) {
+            geometry.coordinates = geometry.coordinates.map((ring) => {
+                if (!Array.isArray(ring) || ring.length < 3) return ring;
+                const first = ring[0];
+                const last = ring[ring.length - 1];
+                if (!first || !last || first[0] !== last[0] || first[1] !== last[1]) return ring.concat([first]);
+                return ring;
+            });
+        }
+        geometryInput.value = JSON.stringify(geometry);
         if (zoneSave) zoneSave.disabled = !typeSelect?.value;
         if (editTool) editTool.disabled = false;
         markTool('');
@@ -1001,6 +1014,17 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     syncMapLock();
 
     zoneForm?.addEventListener('submit', (e) => {
+        if (editingZoneId && editDrawer?._enabled && typeof editDrawer.save === 'function') {
+            try { editDrawer.save(); } catch (error) { console.error('Unable to finish the boundary edit.', error); }
+        }
+        if (editingZoneId) {
+            const method = document.getElementById('zone-form-method');
+            if (method) {
+                method.disabled = false;
+                method.name = '_method';
+                method.value = 'PATCH';
+            }
+        }
         if (!geometryInput.value || !drawnLayer) {
             e.preventDefault();
             if (!mapReady()) {
@@ -1068,7 +1092,11 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         }
         if (zoneForm) zoneForm.action = zoneEditTemplate.replace('__ID__', zone.id);
         const method = document.getElementById('zone-form-method');
-        if (method) method.disabled = false;
+        if (method) {
+            method.disabled = false;
+            method.name = '_method';
+            method.value = 'PATCH';
+        }
         const editingInput = document.getElementById('editing-zone-id');
         if (editingInput) editingInput.value = zone.id;
         if (!keepDrawn) {
@@ -1078,7 +1106,9 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             if (name) name.value = data.name || zone.name || '';
             if (barangay) barangay.value = data.barangay || '';
             if (active) active.checked = data.active === '1' || data.active === 1;
-            if (typeSelect && data.typeId) typeSelect.value = data.typeId;
+            if (typeSelect && data.typeId && typeSelect.querySelector('option[value="' + data.typeId + '"]')) {
+                typeSelect.value = data.typeId;
+            }
             syncTypePreview();
             styleDrawn();
         }
@@ -1089,13 +1119,20 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (modeLead) modeLead.textContent = 'Drag the corners to reshape the area. The boundary on the map is the one that will be saved.';
         engageMap();
         enableBoundaryEdit();
-        document.getElementById('ops-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const panel = document.querySelector('.hz-panel');
+        panel?.classList.add('is-editing');
+        if (panel) panel.scrollTop = 0;
+        document.getElementById('hz-mode-kicker')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
     function cancelZoneEdit() {
         restoreEditingLayer();
         const method = document.getElementById('zone-form-method');
-        if (method) method.disabled = true;
+        if (method) {
+            method.disabled = true;
+            method.removeAttribute('name');
+        }
+        document.querySelector('.hz-panel')?.classList.remove('is-editing');
         const editingInput = document.getElementById('editing-zone-id');
         if (editingInput) editingInput.value = '';
         if (zoneForm && zoneStoreAction) zoneForm.action = zoneStoreAction;

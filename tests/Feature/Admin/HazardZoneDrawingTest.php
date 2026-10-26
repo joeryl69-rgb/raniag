@@ -157,3 +157,46 @@ test('editing a hazard area saves the boundary drawn on the map', function () {
 
     expect($zone->fresh()->geometry)->toBe($reshaped);
 });
+
+test('editing a hazard area closes an open boundary before saving it', function () {
+    $administrator = User::factory()->administrator()->create();
+    $incidentType = IncidentType::factory()->create();
+    $original = [
+        'type' => 'Polygon',
+        'coordinates' => [[
+            [121.3, 18.4],
+            [121.4, 18.4],
+            [121.4, 18.5],
+            [121.3, 18.5],
+            [121.3, 18.4],
+        ]],
+    ];
+    $open = [
+        'type' => 'Polygon',
+        'coordinates' => [[
+            [121.31, 18.41],
+            [121.42, 18.41],
+            [121.36, 18.52],
+        ]],
+    ];
+
+    $this->actingAs($administrator)
+        ->post(route('admin.hazard.zones.store'), [
+            'incident_type_id' => $incidentType->id,
+            'name' => 'Open edge',
+            'geometry_json' => json_encode($original),
+        ]);
+
+    $zone = HazardZone::query()->firstOrFail();
+
+    $this->post(route('admin.hazard.zones.details', $zone), [
+        'incident_type_id' => $incidentType->id,
+        'name' => 'Open edge',
+        'is_active' => '1',
+        'geometry_json' => json_encode($open),
+    ])->assertRedirect();
+
+    $saved = $zone->fresh()->geometry;
+    expect($saved['coordinates'][0])->toHaveCount(4)
+        ->and($saved['coordinates'][0][0])->toBe($saved['coordinates'][0][3]);
+});

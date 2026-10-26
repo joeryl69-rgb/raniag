@@ -131,7 +131,13 @@
     </p>
 
     <div class="row g-2 mt-2" id="gps-camera-preview"></div>
+    <div class="row g-2 mt-2 d-none" id="evidence-upload-list" data-thumbs="1" role="list" aria-label="Photos chosen from this phone"></div>
+    <p class="small mb-0 d-none" id="evidence-upload-status" role="status"></p>
 </div>
+<style>
+    #evidence-upload-list .gps-upload-thumb img,
+    #evidence-upload-list .gps-upload-thumb video { width: 100%; height: 140px; object-fit: cover; background: #1f2933; }
+</style>
 
 <div class="modal fade" id="gps-lightbox-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">

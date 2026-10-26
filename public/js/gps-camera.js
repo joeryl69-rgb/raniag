@@ -872,10 +872,85 @@
             : `${Math.max(1, Math.round(bytes / 1024))} KB`;
     }
 
+    const manualPreviewUrls = new Map();
+
+    function previewUrlFor(file) {
+        const key = fileKey(file);
+        if (!manualPreviewUrls.has(key)) {
+            manualPreviewUrls.set(key, URL.createObjectURL(file));
+        }
+
+        return manualPreviewUrls.get(key);
+    }
+
+    function releaseUnusedPreviews() {
+        const live = new Set(manualFiles.map(fileKey));
+        manualPreviewUrls.forEach((url, key) => {
+            if (live.has(key)) return;
+            URL.revokeObjectURL(url);
+            manualPreviewUrls.delete(key);
+        });
+    }
+
+    function removeManualFile(index) {
+        manualFiles.splice(index, 1);
+        syncEvidenceInput();
+        updateEvidenceBadge();
+        updateCaptureReadiness();
+    }
+
     function renderUploadFiles(message = '') {
         if (uploadListEl) {
+            const thumbs = uploadListEl.dataset.thumbs === '1';
+            releaseUnusedPreviews();
             uploadListEl.replaceChildren();
+            uploadListEl.classList.toggle('d-none', manualFiles.length === 0);
             manualFiles.forEach((file, index) => {
+                if (thumbs) {
+                    const col = document.createElement('div');
+                    col.className = 'col-6 col-md-4';
+                    col.setAttribute('role', 'listitem');
+                    const card = document.createElement('div');
+                    card.className = 'gps-upload-thumb card border-0 shadow-sm';
+                    let media;
+                    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+                        media = document.createElement(file.type.startsWith('video/') ? 'video' : 'img');
+                        media.src = previewUrlFor(file);
+                        media.className = 'card-img-top';
+                        if (file.type.startsWith('video/')) {
+                            media.muted = true;
+                            media.playsInline = true;
+                            media.preload = 'metadata';
+                        } else {
+                            media.alt = file.name;
+                        }
+                    } else {
+                        media = document.createElement('div');
+                        media.className = 'd-flex align-items-center justify-content-center bg-light text-secondary';
+                        media.style.height = '140px';
+                        media.innerHTML = '<i class="bi bi-file-earmark fs-1" aria-hidden="true"></i>';
+                    }
+                    const body = document.createElement('div');
+                    body.className = 'card-body p-2 small';
+                    const name = document.createElement('div');
+                    name.className = 'text-truncate';
+                    name.textContent = file.name;
+                    name.title = file.name;
+                    const size = document.createElement('div');
+                    size.className = 'text-muted';
+                    size.textContent = `From this phone · ${formatFileSize(file.size)}`;
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'btn btn-sm btn-outline-danger w-100 mt-2';
+                    remove.textContent = 'Remove';
+                    remove.addEventListener('click', () => removeManualFile(index));
+                    body.append(name, size, remove);
+                    card.append(media, body);
+                    col.appendChild(card);
+                    uploadListEl.appendChild(col);
+                    return;
+                }
+
                 const item = document.createElement('div');
                 item.className = 'rg-evidence-upload-item';
                 item.setAttribute('role', 'listitem');
@@ -902,12 +977,7 @@
                 remove.className = 'rg-evidence-upload-item__remove';
                 remove.setAttribute('aria-label', `Remove ${file.name}`);
                 remove.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
-                remove.addEventListener('click', () => {
-                    manualFiles.splice(index, 1);
-                    syncEvidenceInput();
-                    updateEvidenceBadge();
-                    updateCaptureReadiness();
-                });
+                remove.addEventListener('click', () => removeManualFile(index));
 
                 item.append(icon, name, size, remove);
                 uploadListEl.appendChild(item);
@@ -924,6 +994,9 @@
             uploadStatusEl.textContent = message ? `${message} ${readyText}` : readyText;
             uploadStatusEl.classList.toggle('text-danger', Boolean(message));
             uploadStatusEl.classList.toggle('text-success', total > 0 && !message);
+            if (uploadListEl?.dataset.thumbs === '1') {
+                uploadStatusEl.classList.toggle('d-none', manualFiles.length === 0 && !message);
+            }
         }
     }
 

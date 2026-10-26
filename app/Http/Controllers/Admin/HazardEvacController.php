@@ -120,7 +120,7 @@ class HazardEvacController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        $geometry = json_decode($data['geometry_json'], true);
+        $geometry = $this->closeHazardPolygon(json_decode($data['geometry_json'], true));
         if (! $this->isValidHazardPolygon($geometry)) {
             return back()->withErrors(['geometry_json' => 'Draw a valid closed hazard boundary on the map before saving.'])->withInput();
         }
@@ -142,6 +142,28 @@ class HazardEvacController extends Controller
         HazardZone::create($payload);
 
         return back()->with('success', 'Hazard area saved. It appears on the public Live Map.');
+    }
+
+    private function closeHazardPolygon(mixed $geometry): mixed
+    {
+        if (! is_array($geometry) || ($geometry['type'] ?? null) !== 'Polygon' || ! is_array($geometry['coordinates'] ?? null)) {
+            return $geometry;
+        }
+
+        foreach ($geometry['coordinates'] as $index => $ring) {
+            if (! is_array($ring) || $ring === []) {
+                continue;
+            }
+
+            $first = $ring[0] ?? null;
+            $last = $ring[array_key_last($ring)] ?? null;
+            if (is_array($first) && $first !== $last) {
+                $ring[] = $first;
+                $geometry['coordinates'][$index] = $ring;
+            }
+        }
+
+        return $geometry;
     }
 
     private function isValidHazardPolygon(mixed $geometry): bool
@@ -237,7 +259,7 @@ class HazardEvacController extends Controller
         }
 
         if ($request->filled('geometry_json')) {
-            $geometry = json_decode($data['geometry_json'], true);
+            $geometry = $this->closeHazardPolygon(json_decode($data['geometry_json'], true));
             if (! $this->isValidHazardPolygon($geometry)) {
                 return back()->withErrors([
                     'geometry_json' => 'Draw a valid closed hazard boundary on the map before replacing this area.',
