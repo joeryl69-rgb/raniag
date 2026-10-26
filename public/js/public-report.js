@@ -661,6 +661,7 @@
     }
 
     function resetSubmitButton() {
+        if (form) form.dataset.submitting = '';
         if (!submitButton) return;
         submitButton.disabled = false;
         submitButton.innerHTML = 'Submit Report';
@@ -790,11 +791,23 @@
             event.preventDefault();
             event.stopPropagation();
 
+            if (form.dataset.submitting === '1') return;
             if (!guardReportBeforeSubmit()) return;
+            form.dataset.submitting = '1';
 
             const outbox = window.RANIAG_REPORT_OUTBOX;
-            if (!navigator.onLine || !(await outbox?.reachable?.())) {
-                await outbox?.keep?.(form);
+            const reachable = navigator.onLine
+                && (typeof outbox?.reachable !== 'function' || await outbox.reachable());
+            if (!reachable) {
+                if (typeof outbox?.keep !== 'function') {
+                    showSubmitErrors({
+                        message: 'This browser could not save the report offline. Keep this page open and reconnect before submitting.',
+                    });
+                    resetSubmitButton();
+                    return;
+                }
+                const saved = await outbox?.keep?.(form);
+                if (!saved) form.dataset.submitting = '';
                 return;
             }
 
@@ -923,6 +936,11 @@
         if (field) field.value = unavailable ? 'offline' : '';
         document.getElementById('location-offline-note')?.classList.toggle('d-none', !unavailable);
         document.getElementById('gps-offline-note')?.classList.toggle('d-none', !offline);
+        const readyNote = document.getElementById('report-offline-ready');
+        if (readyNote) {
+            readyNote.classList.toggle('d-none', !offline);
+            readyNote.hidden = !offline;
+        }
         document.getElementById('location-picker')?.classList.toggle('d-none', unavailable || captureHasCoordinates());
     }
 

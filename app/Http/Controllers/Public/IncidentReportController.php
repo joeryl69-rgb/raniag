@@ -9,6 +9,7 @@ use App\Models\Incident;
 use App\Services\GeofenceService;
 use App\Services\IncidentService;
 use App\Services\WebPushService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
@@ -59,24 +60,55 @@ class IncidentReportController extends Controller
     {
         $validated = $request->validated();
         $idempotencyKey = $validated['idempotency_key'] ?? null;
-        unset($validated['idempotency_key']);
-
-        if (is_string($idempotencyKey) && $idempotencyKey !== '') {
-            $cached = Cache::get('report:idem:'.$idempotencyKey);
-            if (is_array($cached) && ! empty($cached['tracking_number'])) {
-                return $this->duplicateResponse($request, $cached);
-            }
+        if (! is_string($idempotencyKey) || $idempotencyKey === '') {
+            $idempotencyKey = null;
+            unset($validated['idempotency_key']);
         }
 
-        $incident = $this->incidentService->submitAnonymousReport(
-            $validated,
-            $request->file('evidence', []) ?? [],
-        );
-
-        if (is_string($idempotencyKey) && $idempotencyKey !== '') {
+        $rememberIdempotency = function (Incident $incident) use ($idempotencyKey): void {
+            if (! $idempotencyKey) {
+                return;
+            }
             Cache::put('report:idem:'.$idempotencyKey, [
                 'tracking_number' => $incident->tracking_number,
             ], now()->addDay());
+        };
+
+        $existing = $this->existingIdempotentReport($idempotencyKey);
+        if ($existing) {
+            return $this->duplicateResponse($request, $existing);
+        }
+
+        $lock = $idempotencyKey
+            ? Cache::lock('report:idem:lock:'.$idempotencyKey, 20)
+            : null;
+
+        try {
+            try {
+                $lock?->block(15);
+            } catch (\Throwable) {
+                $lock = null;
+            }
+
+            $existing = $this->existingIdempotentReport($idempotencyKey);
+            if ($existing) {
+                return $this->duplicateResponse($request, $existing);
+            }
+
+            $incident = $this->incidentService->submitAnonymousReport(
+                $validated,
+                $request->file('evidence', []) ?? [],
+            );
+            $rememberIdempotency($incident);
+        } catch (UniqueConstraintViolationException $exception) {
+            $existing = $this->existingIdempotentReport($idempotencyKey);
+            if ($existing) {
+                return $this->duplicateResponse($request, $existing);
+            }
+
+            throw $exception;
+        } finally {
+            $lock?->release();
         }
 
         $this->notifyOfflineDelivery($request, $incident, $idempotencyKey);
@@ -100,6 +132,32 @@ class IncidentReportController extends Controller
             'trackingNumber' => strtoupper($trackingNumber),
             'organization' => config('raniag.organization'),
         ]);
+    }
+
+    /**
+     * @return array{tracking_number: string}|null
+     */
+    private function existingIdempotentReport(?string $idempotencyKey): ?array
+    {
+        if (! $idempotencyKey) {
+            return null;
+        }
+
+        $cached = Cache::get('report:idem:'.$idempotencyKey);
+        if (is_array($cached) && ! empty($cached['tracking_number'])) {
+            return $cached;
+        }
+
+        $incident = Incident::query()
+            ->withTrashed()
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+
+        if (! $incident) {
+            return null;
+        }
+
+        return ['tracking_number' => $incident->tracking_number];
     }
 
     private function notifyOfflineDelivery(

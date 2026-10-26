@@ -165,7 +165,18 @@
         }
     }
 
+    let flushing = null;
+    let keeping = null;
+
     async function keep(form) {
+        if (keeping) return keeping;
+        keeping = storeOfflineReport(form).finally(() => {
+            keeping = null;
+        });
+        return keeping;
+    }
+
+    async function storeOfflineReport(form) {
         try {
             const pushSetup = !navigator.onLine && !savedPushToken()
                 ? prepareOfflinePushSubscription()
@@ -209,7 +220,38 @@
     }
 
     async function flushOutbox() {
-        const items = await allReports();
+        if (flushing) return flushing;
+        flushing = drainOutbox().finally(() => {
+            flushing = null;
+        });
+        return flushing;
+    }
+
+    async function claimQueuedReports() {
+        const db = await openDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE, 'readwrite');
+            const store = tx.objectStore(STORE);
+            const req = store.getAll();
+            const claimed = [];
+            req.onsuccess = () => {
+                const now = Date.now();
+                (req.result || []).forEach((item) => {
+                    if (item.sendingAt && (now - item.sendingAt) < 45000) {
+                        return;
+                    }
+                    item.sendingAt = now;
+                    store.put(item);
+                    claimed.push(item);
+                });
+            };
+            tx.oncomplete = () => resolve(claimed);
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+    async function drainOutbox() {
+        const items = await claimQueuedReports();
         for (const item of items) {
             try {
                 let csrf = await refreshCsrfToken(item.url);
@@ -272,9 +314,18 @@
                         window.location.href = '/report/' + encodeURIComponent(data.tracking_number) + '/success';
                         return;
                     }
+                } else {
+                    item.sendingAt = 0;
+                    await putReport(item);
                 }
             } catch (e) {
                 console.warn('[raniag-outbox] retry failed', e);
+                try {
+                    item.sendingAt = 0;
+                    await putReport(item);
+                } catch (resetError) {
+                    console.warn('[raniag-outbox] could not release the queued report', resetError);
+                }
             }
         }
     }

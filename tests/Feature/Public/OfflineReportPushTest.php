@@ -141,6 +141,9 @@ test('an offline replay still notifies when the original response was lost', fun
         'offline_delivery' => '1',
         'push_client_token' => 'phone-token-retry',
     ])->assertOk()->assertJsonPath('duplicate', true);
+
+    expect(Incident::query()->where('idempotency_key', 'offline-retry-key')->count())->toBe(1);
+    $this->assertDatabaseCount('incidents', 1);
 });
 
 test('an offline report can be filed when gps and location were unavailable', function () {
@@ -187,6 +190,7 @@ test('offline reporting stays available from the offline page and the report for
         ->assertOk()
         ->assertSee('rg-ask-jo', false)
         ->assertSee('Need help? Ask JO', false)
+        ->assertSee('id="report-offline-ready" role="status" hidden', false)
         ->assertSee('You can still report if the signal drops.', false)
         ->assertDontSee('photos included', false);
 
@@ -196,5 +200,6 @@ test('offline reporting stays available from the offline page and the report for
     expect($outbox)->toContain('The GPS photo and its location stay on this phone')
         ->and($outbox)->toContain('This report has no GPS photo, so no map location was saved')
         ->and($worker)->toContain("const REPORT_URL = '/report'")
-        ->and($worker)->toContain('raniag-cache-dev-v29');
+        ->and($worker)->toContain('preserveOfflineReportPages')
+        ->and($worker)->toContain('raniag-cache-dev-v30');
 });

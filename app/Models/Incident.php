@@ -24,6 +24,7 @@ class Incident extends Model
 
     protected $fillable = [
         'tracking_number',
+        'idempotency_key',
         'tracking_pin',
         'incident_type_id',
         'agency_id',

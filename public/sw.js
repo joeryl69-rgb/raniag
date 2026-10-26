@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v29';
+const CACHE_NAME = 'raniag-cache-dev-v30';
 const OFFLINE_URL = '/offline';
 const REPORT_URL = '/report';
 
@@ -59,16 +59,70 @@ function shouldBypassCache(pathname) {
     return blocked.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
 }
 
-// Install Event
-// cache.addAll() is atomic — if ANY single URL fails (a CDN hiccup, a CORS
-// response, a transient 404), the whole install rejects and the worker
-// never activates. Since push subscribe() waits on
-// navigator.serviceWorker.ready (which only resolves once a worker is
-// active), a failed install silently broke push notifications entirely —
-// "allow" would do nothing and the UI would just fall back to default.
-// Caching each asset independently means one bad URL can't take the rest
-// down, and installation (so push still works) no longer depends on
-// third-party CDNs being reachable at that exact moment.
+function isReportPath(pathname) {
+    return pathname === REPORT_URL || pathname === REPORT_URL + '/';
+}
+
+function networkTimeout(ms) {
+    return new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('network timeout')), ms);
+    });
+}
+
+function putInCache(request, response) {
+    if (!response || response.status !== 200 || !String(request.url).startsWith(self.location.origin)) {
+        return Promise.resolve();
+    }
+    const path = new URL(request.url).pathname;
+    if (shouldBypassCache(path) && !isReportPath(path)) {
+        return Promise.resolve();
+    }
+    const copy = response.clone();
+    return caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+}
+
+async function matchCached(request) {
+    const exact = await caches.match(request);
+    if (exact) return exact;
+    if (String(request.url).startsWith(self.location.origin)) {
+        const loose = await caches.match(request, { ignoreSearch: true });
+        if (loose) return loose;
+    }
+    const path = new URL(request.url, self.location.origin).pathname;
+    if (isReportPath(path)) {
+        return caches.match(REPORT_URL);
+    }
+    return undefined;
+}
+
+function cacheReportShell() {
+    return caches.open(CACHE_NAME).then((cache) => {
+        return Promise.allSettled(
+            [REPORT_URL, OFFLINE_URL].map((url) => cache.add(url).catch((err) => {
+                console.warn('[sw] failed to cache', url, err);
+            }))
+        );
+    });
+}
+
+async function preserveOfflineReportPages(previousCacheNames) {
+    const currentCache = await caches.open(CACHE_NAME);
+    const pages = [REPORT_URL, OFFLINE_URL];
+
+    for (const cacheName of previousCacheNames) {
+        const previousCache = await caches.open(cacheName);
+        for (const page of pages) {
+            const request = new Request(new URL(page, self.location.origin));
+            if (await currentCache.match(request)) continue;
+
+            const response = await previousCache.match(request);
+            if (response) {
+                await currentCache.put(request, response);
+            }
+        }
+    }
+}
+
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -82,24 +136,24 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// Activate Event
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
-                        return caches.delete(cache);
-                    }
-                })
-            );
+        caches.keys().then(async (cacheNames) => {
+            const previousCacheNames = cacheNames.filter((cacheName) => cacheName !== CACHE_NAME);
+            await preserveOfflineReportPages(previousCacheNames);
+            await Promise.all(previousCacheNames.map((cacheName) => caches.delete(cacheName)));
+            await cacheReportShell();
+            await self.clients.claim();
         })
     );
-    self.clients.claim();
 });
 
-// Push Event — shows an OS-level notification even when no RANIAG tab
-// is open, using the payload built by App\Services\WebPushService.
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'raniag-cache-report') {
+        event.waitUntil(cacheReportShell());
+    }
+});
+
 self.addEventListener('push', (event) => {
     let payload = { title: 'RANIAG', body: 'You have a new update.', url: '/' };
     if (event.data) {
@@ -141,8 +195,6 @@ self.addEventListener('push', (event) => {
     );
 });
 
-// Notification click — focuses an already-open RANIAG tab if one exists,
-// otherwise opens the target URL in a new one.
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     const targetUrl = (event.notification.data && event.notification.data.url) || '/';
@@ -162,7 +214,6 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
-// Background Sync — drain offline report outbox when connectivity returns.
 self.addEventListener('sync', (event) => {
     if (event.tag !== 'raniag-report-outbox') {
         return;
@@ -177,45 +228,44 @@ self.addEventListener('sync', (event) => {
     );
 });
 
-// Fetch Event
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') {
         return;
     }
 
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                if (response.status === 200 && event.request.url.startsWith(self.location.origin)) {
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        const path = new URL(event.request.url).pathname;
-                        if (!shouldBypassCache(path)) {
-                            cache.put(event.request, responseToCache);
-                        }
-                    });
+    const url = new URL(event.request.url);
+    const navigate = event.request.mode === 'navigate';
+
+    event.respondWith((async () => {
+        if (navigate && isReportPath(url.pathname)) {
+            const cachedReport = await matchCached(event.request);
+            if (cachedReport) {
+                event.waitUntil(
+                    fetch(event.request).then((response) => putInCache(event.request, response)).catch(() => {})
+                );
+                return cachedReport;
+            }
+        }
+
+        try {
+            const response = navigate
+                ? await Promise.race([fetch(event.request), networkTimeout(4000)])
+                : await fetch(event.request);
+            event.waitUntil(putInCache(event.request, response));
+            return response;
+        } catch (error) {
+            const cached = await matchCached(event.request);
+            if (cached) {
+                return cached;
+            }
+            const accept = event.request.headers.get('accept') || '';
+            if (navigate || accept.includes('text/html')) {
+                const offline = await caches.match(OFFLINE_URL);
+                if (offline) {
+                    return offline;
                 }
-                return response;
-            })
-            .catch(async () => {
-                const cachedResponse = await caches.match(event.request);
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-                if (event.request.url.startsWith(self.location.origin)) {
-                    const loose = await caches.match(event.request, { ignoreSearch: true });
-                    if (loose) {
-                        return loose;
-                    }
-                }
-                const accept = event.request.headers.get('accept') || '';
-                if (event.request.mode === 'navigate' || accept.includes('text/html')) {
-                    const offline = await caches.match(OFFLINE_URL);
-                    if (offline) {
-                        return offline;
-                    }
-                }
-                return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
-            })
-    );
+            }
+            return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+        }
+    })());
 });

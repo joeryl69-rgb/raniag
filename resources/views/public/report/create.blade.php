@@ -236,7 +236,7 @@
             <span class="rg-ask-jo-icon" aria-hidden="true"><i class="bi bi-chat-heart-fill"></i></span>
             Need help? Ask JO
         </button>
-        <div class="rg-offline-ready" role="note">
+        <div class="rg-offline-ready d-none" id="report-offline-ready" role="status" hidden>
             <i class="bi bi-wifi-off" aria-hidden="true"></i>
             <p><strong>You can still report if the signal drops.</strong> The report stays on this phone and sends when you reconnect. A GPS photo is included when you take one. Without a photo, the report says the location was unavailable.</p>
         </div>
