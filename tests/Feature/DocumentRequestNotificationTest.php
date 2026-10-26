@@ -69,7 +69,17 @@ test('a document request notification opens that request instead of the incident
     ]);
     $agencyNotice->setRelation('user', $requester);
 
-    expect($agencyNotice->url())->toBe('/storage/reports/ran-doc-note.pdf');
+    expect($agencyNotice->url())->toBe(route('agency.document_requests.index', [
+        'request' => $documentRequest->id,
+    ], false));
+
+    $this->actingAs($requester)
+        ->get($agencyNotice->url())
+        ->assertOk()
+        ->assertSee('doc-request-'.$documentRequest->id, false)
+        ->assertSee('table-primary', false)
+        ->assertSee('RAN-DOC-NOTE', false)
+        ->assertSee('View Printable PDF', false);
 
     $caseNotice = Notification::query()->create([
         'user_id' => $admin->id,

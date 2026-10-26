@@ -175,3 +175,26 @@ test('an online report still requires a location when no gps photo was attached'
         'reporter_phone' => '09171234567',
     ])->assertStatus(422)->assertJsonValidationErrors('latitude');
 });
+
+test('offline reporting stays available from the offline page and the report form', function () {
+    $this->get(route('public.offline'))
+        ->assertOk()
+        ->assertSee('You can still file a new report from this phone.', false)
+        ->assertSee(route('public.report.create'), false)
+        ->assertSee('Report an incident', false);
+
+    $this->get(route('public.report.create'))
+        ->assertOk()
+        ->assertSee('rg-ask-jo', false)
+        ->assertSee('Need help? Ask JO', false)
+        ->assertSee('You can still report if the signal drops.', false)
+        ->assertDontSee('photos included', false);
+
+    $outbox = file_get_contents(public_path('js/report-outbox.js'));
+    $worker = file_get_contents(public_path('sw.js'));
+
+    expect($outbox)->toContain('The GPS photo and its location stay on this phone')
+        ->and($outbox)->toContain('This report has no GPS photo, so no map location was saved')
+        ->and($worker)->toContain("const REPORT_URL = '/report'")
+        ->and($worker)->toContain('raniag-cache-dev-v29');
+});

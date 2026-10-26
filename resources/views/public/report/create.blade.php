@@ -134,6 +134,51 @@
     html[data-public-theme="dark"] .rg-wizard-dock #wizard-back { color: #e3ecee; border-color: #58717a; }
     html[data-public-theme="dark"] .rg-wizard-dock #wizard-next,
     html[data-public-theme="dark"] .rg-wizard-dock #wizard-submit { background: #168d83; border-color: #168d83; color: #041d1c; }
+    .rg-ask-jo {
+        display: inline-flex;
+        align-items: center;
+        gap: .65rem;
+        margin-top: .35rem;
+        padding: .45rem .8rem .45rem .45rem;
+        border: 1px solid #a8cdc1;
+        border-radius: 999px;
+        background: #e7f6f4;
+        color: #075f60;
+        font-weight: 800;
+        letter-spacing: .01em;
+        line-height: 1.1;
+        text-decoration: none;
+        box-shadow: 0 8px 18px -14px rgba(7, 95, 96, .9);
+    }
+    .rg-ask-jo:hover { background: #d7f0ec; color: #054b4c; }
+    .rg-ask-jo-icon {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #087b78;
+        color: #fff;
+        font-size: .95rem;
+    }
+    .rg-offline-ready {
+        display: flex;
+        gap: .7rem;
+        align-items: flex-start;
+        margin: .85rem 0 0;
+        padding: .75rem .85rem;
+        border: 1px solid #c9ddd8;
+        border-radius: 12px;
+        background: #f4fbfa;
+        color: #23424a;
+    }
+    .rg-offline-ready > .bi { color: #087b78; font-size: 1.15rem; margin-top: .1rem; }
+    .rg-offline-ready p { margin: 0; font-size: .86rem; line-height: 1.45; }
+    html[data-public-theme="dark"] .rg-ask-jo { background: #163f43; border-color: #2f6d68; color: #d7f6ef; }
+    html[data-public-theme="dark"] .rg-ask-jo:hover { background: #1b4c50; color: #fff; }
+    html[data-public-theme="dark"] .rg-ask-jo-icon { background: #168d83; color: #041d1c; }
+    html[data-public-theme="dark"] .rg-offline-ready { background: #132a32; border-color: #38525e; color: #d5e4e8; }
+    html[data-public-theme="dark"] .rg-offline-ready > .bi { color: #7ddecb; }
     #evidence-gate-modal .modal-dialog { width: min(100% - 1.5rem, 520px); }
     #evidence-gate-modal .modal-content {
         overflow: hidden;
@@ -187,7 +232,14 @@
             Pick an incident type and send a GPS photo if you can.
             Written details are optional — you'll get a tracking number the moment you submit.
         </p>
-        <button type="button" class="btn btn-link btn-sm px-0 d-none" id="jo-need-help">Need help? Ask JO</button>
+        <button type="button" class="rg-ask-jo d-none" id="jo-need-help">
+            <span class="rg-ask-jo-icon" aria-hidden="true"><i class="bi bi-chat-heart-fill"></i></span>
+            Need help? Ask JO
+        </button>
+        <div class="rg-offline-ready" role="note">
+            <i class="bi bi-wifi-off" aria-hidden="true"></i>
+            <p><strong>You can still report if the signal drops.</strong> The report stays on this phone and sends when you reconnect. A GPS photo is included when you take one. Without a photo, the report says the location was unavailable.</p>
+        </div>
     </div>
 
     @if ($errors->any())
@@ -657,7 +709,7 @@
                     <div class="modal-body">
                         <div class="rg-offline-mark" id="report-offline-mark"><i class="bi bi-wifi-off" id="report-offline-icon"></i></div>
                         <h2 id="report-offline-title">Saved on this phone</h2>
-                        <p id="report-offline-copy">You are offline. This report stays on this device, photos included, and sends itself when the connection returns. Use this same browser.</p>
+                        <p id="report-offline-copy">You are offline. This report stays on this phone and sends when the connection returns. Use this same browser.</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>

@@ -105,7 +105,19 @@
         return token;
     }
 
-    function showOfflineModal(mode) {
+    function reportIncludesGpsPhoto(form) {
+        const raw = form?.querySelector('#gps-capture-log')?.value || '';
+        const files = form?.querySelector('#evidence')?.files;
+        if (!raw.trim() || !files?.length) return false;
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) && parsed.length > 0;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function showOfflineModal(mode, form) {
         const title = document.getElementById('report-offline-title');
         const copy = document.getElementById('report-offline-copy');
         const mark = document.getElementById('report-offline-mark');
@@ -114,10 +126,13 @@
         if (!title || !copy || !modalEl) return;
 
         const saved = mode !== 'failed';
+        const withGpsPhoto = saved && reportIncludesGpsPhoto(form);
         title.textContent = saved ? 'Saved on this phone' : 'Could not save the report';
-        copy.textContent = saved
-            ? 'You are offline. This report stays on this device, photos included, and sends itself when the connection returns. Use this same browser.'
-            : 'This phone could not keep the report. Submit again when you have a signal.';
+        copy.textContent = !saved
+            ? 'This phone could not keep the report. Submit again when you have a signal.'
+            : (withGpsPhoto
+                ? 'You are offline. The GPS photo and its location stay on this phone and send with the report when the connection returns. Use this same browser.'
+                : 'You are offline. This report has no GPS photo, so no map location was saved. It stays on this phone and sends when the connection returns. MDRRMO will see that the location was unavailable. Use this same browser.');
         mark?.classList.toggle('is-failed', !saved);
         if (icon) icon.className = saved ? 'bi bi-wifi-off' : 'bi bi-exclamation-lg';
 
@@ -177,7 +192,7 @@
                 console.warn('[raniag-outbox] offline push setup failed', error);
             });
             await requestSync();
-            showOfflineModal('saved');
+            showOfflineModal('saved', form);
             return true;
         } catch (e) {
             console.error(e);

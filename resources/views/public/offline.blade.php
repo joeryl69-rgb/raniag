@@ -11,11 +11,13 @@
             </div>
             <h1 class="h3 fw-bold text-dark mb-3">You are offline</h1>
             <p class="text-muted mb-4">
-                It looks like you are not connected to the internet.
-                A report you already started on this phone is kept here and sends when you reconnect. Tracking a report still needs a connection.
+                You can still file a new report from this phone. It stays on this device and sends when the connection returns. A GPS photo is included when you take one. Without a photo, the report says the location was unavailable. Tracking a report still needs a connection.
             </p>
             <div class="d-grid gap-2">
-                <button onclick="window.location.reload();" class="btn btn-primary btn-lg">
+                <a href="{{ route('public.report.create') }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-megaphone-fill me-1"></i>Report an incident
+                </a>
+                <button onclick="window.location.reload();" class="btn btn-outline-secondary btn-lg">
                     <i class="bi bi-arrow-clockwise me-1"></i>Try Reconnecting
                 </button>
             </div>

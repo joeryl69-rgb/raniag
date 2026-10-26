@@ -120,8 +120,9 @@ class Notification extends Model
     }
 
     /**
-     * Document-request notices open the request itself, or the generated
-     * file once it exists. Case notices stay on the incident.
+     * Document-request notices open the request on the desk that owns it.
+     * An approved file stays on that list, highlighted, instead of opening
+     * the PDF. Case notices stay on the incident.
      */
     private function documentRequestUrl(): ?string
     {
@@ -148,14 +149,14 @@ class Notification extends Model
             ]), absolute: false);
         }
 
-        if ($documentRequest?->generated_path) {
-            return '/storage/'.ltrim((string) $documentRequest->generated_path, '/');
-        }
-
         if ($this->user->isAgency() && Route::has('agency.document_requests.index')) {
             return route('agency.document_requests.index', array_filter([
                 'request' => $documentRequest?->id,
             ]), absolute: false);
+        }
+
+        if ($documentRequest?->generated_path) {
+            return '/storage/'.ltrim((string) $documentRequest->generated_path, '/');
         }
 
         return null;

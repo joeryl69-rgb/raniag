@@ -1,8 +1,24 @@
-const CACHE_NAME = 'raniag-cache-dev-v28';
+const CACHE_NAME = 'raniag-cache-dev-v29';
 const OFFLINE_URL = '/offline';
+const REPORT_URL = '/report';
 
 const ASSETS_TO_CACHE = [
     OFFLINE_URL,
+    REPORT_URL,
+    '/css/public.css',
+    '/css/raniag-loader.css',
+    '/js/public-theme.js',
+    '/js/map-scroll.js',
+    '/js/modal-root.js',
+    '/js/live-refresh.js',
+    '/js/public-page-transition.js',
+    '/js/public-guide.js',
+    '/js/help-fab.js',
+    '/js/raniag-mapbox.js',
+    '/js/incident-map-icons.js',
+    '/js/public-report.js',
+    '/js/report-outbox.js',
+    '/js/gps-camera.js',
     '/vendor/bootstrap-icons/bootstrap-icons.min.css',
     '/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
@@ -181,15 +197,25 @@ self.addEventListener('fetch', (event) => {
                 }
                 return response;
             })
-            .catch(() => {
-                return caches.match(event.request).then((cachedResponse) => {
-                    if (cachedResponse) {
-                        return cachedResponse;
+            .catch(async () => {
+                const cachedResponse = await caches.match(event.request);
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                if (event.request.url.startsWith(self.location.origin)) {
+                    const loose = await caches.match(event.request, { ignoreSearch: true });
+                    if (loose) {
+                        return loose;
                     }
-                    if (event.request.headers.get('accept').includes('text/html')) {
-                        return caches.match(OFFLINE_URL);
+                }
+                const accept = event.request.headers.get('accept') || '';
+                if (event.request.mode === 'navigate' || accept.includes('text/html')) {
+                    const offline = await caches.match(OFFLINE_URL);
+                    if (offline) {
+                        return offline;
                     }
-                });
+                }
+                return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
             })
     );
 });
