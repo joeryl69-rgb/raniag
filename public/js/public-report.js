@@ -397,6 +397,19 @@
             }));
         }
 
+        if (navigator.onLine === false) {
+            if (addressInput) addressInput.value = '';
+            if (geofenced) return;
+
+            if (withinMunicipality === false) {
+                setResolveStatus('Pin saved outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
+                setOutsideBanner(true, null);
+            } else {
+                setResolveStatus('Pin saved. Address and barangay lookup need an internet connection.', 'geo-alt', 'text-warning');
+            }
+            return;
+        }
+
         geocodeTimer = setTimeout(async () => {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 8000);
@@ -544,9 +557,15 @@
                 mapMarker.setLatLng([lat, lng]);
                 if (icon) mapMarker.setIcon(icon);
             } else {
-                const markerOptions = { draggable: false };
+                const markerOptions = { draggable: navigator.onLine === false && !captureHasCoordinates() };
                 if (icon) markerOptions.icon = icon;
                 mapMarker = leaflet.marker([lat, lng], markerOptions).addTo(mapInstance);
+                mapMarker.on('dragend', () => {
+                    const position = mapMarker.getLatLng();
+                    if (barangayInput) barangayInput.value = '';
+                    if (addressInput) addressInput.value = '';
+                    updateCoordinateInputs(position.lat, position.lng);
+                });
             }
 
             if (options.pan !== false) {
@@ -593,15 +612,13 @@
                 }).addTo(mapInstance);
             }
 
-            // Map is display-only: no click-to-pin. Location must come from
-            // "Use Current Location" or the GPS camera, so the report always
-            // reflects the reporter's actual device GPS, not a manual guess.
-            mapInstance.dragging.disable();
-            mapInstance.scrollWheelZoom.disable();
-            mapInstance.doubleClickZoom.disable();
-            mapInstance.touchZoom.disable();
-            mapInstance.boxZoom.disable();
-            mapInstance.keyboard.disable();
+            mapInstance.on('click', (event) => {
+                if (navigator.onLine !== false || captureHasCoordinates()) return;
+                if (barangayInput) barangayInput.value = '';
+                if (addressInput) addressInput.value = '';
+                setMarker(event.latlng.lat, event.latlng.lng, { pan: false });
+            });
+
             window.RaniagMapScroll?.guard(mapInstance, { interactive: false });
 
             if (latInput?.value && lngInput?.value) {
@@ -928,6 +945,22 @@
             && Number.isFinite(lng) && lng >= -180 && lng <= 180);
     }
 
+    function setMapInteractions(enabled) {
+        [
+            mapInstance?.dragging,
+            mapInstance?.touchZoom,
+            mapInstance?.doubleClickZoom,
+            mapInstance?.scrollWheelZoom,
+            mapInstance?.boxZoom,
+            mapInstance?.keyboard,
+            mapInstance?.tap,
+        ].forEach((handler) => {
+            if (!handler) return;
+            if (enabled) handler.enable();
+            else handler.disable();
+        });
+    }
+
     function syncOfflineLocation() {
         const offline = navigator.onLine === false;
         const missingPin = !coordinatesArePresent();
@@ -936,12 +969,27 @@
         if (field) field.value = unavailable ? 'offline' : '';
         document.getElementById('location-offline-note')?.classList.toggle('d-none', !unavailable);
         document.getElementById('gps-offline-note')?.classList.toggle('d-none', !offline);
+        const pickerHelp = document.getElementById('location-picker-help');
+        if (pickerHelp) {
+            pickerHelp.textContent = offline
+                ? 'No GPS photo or location fix? Tap the map to place an approximate pin. You can also continue without a pin while offline.'
+                : 'No GPS photo or video was attached. Share your current location before continuing.';
+        }
         const readyNote = document.getElementById('report-offline-ready');
         if (readyNote) {
             readyNote.classList.toggle('d-none', !offline);
             readyNote.hidden = !offline;
         }
-        document.getElementById('location-picker')?.classList.toggle('d-none', unavailable || captureHasCoordinates());
+        document.getElementById('location-picker')?.classList.toggle('d-none', captureHasCoordinates());
+        if (mapInstance) {
+            const manualPinMode = offline && !captureHasCoordinates();
+            setMapInteractions(manualPinMode);
+            window.RaniagMapScroll?.guard(mapInstance, { interactive: manualPinMode });
+            if (mapMarker?.dragging) {
+                if (manualPinMode) mapMarker.dragging.enable();
+                else mapMarker.dragging.disable();
+            }
+        }
     }
 
     function locationIsReady() {

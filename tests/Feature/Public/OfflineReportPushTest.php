@@ -167,6 +167,28 @@ test('an offline report can be filed when gps and location were unavailable', fu
         ->and($incident->meta['location_unavailable'] ?? null)->toBe('offline');
 });
 
+test('an offline report can use an uploaded photo and a manually selected map pin', function () {
+    Storage::fake('local');
+    $type = IncidentType::factory()->create();
+
+    $this->postJson(route('public.report.store'), [
+        'incident_type_id' => $type->id,
+        'description' => 'Filed offline with uploaded photo evidence and a manual pin.',
+        'is_anonymous' => true,
+        'latitude' => '18.47210000',
+        'longitude' => '121.32510000',
+        'offline_delivery' => '1',
+        'evidence' => [UploadedFile::fake()->image('scene.jpg')],
+    ])->assertCreated();
+
+    $incident = Incident::query()->first();
+    expect($incident)->not->toBeNull()
+        ->and((float) $incident->latitude)->toBe(18.4721)
+        ->and((float) $incident->longitude)->toBe(121.3251)
+        ->and($incident->meta['location_unavailable'] ?? null)->toBeNull()
+        ->and($incident->evidence)->toHaveCount(1);
+});
+
 test('an online report still requires a location when no gps photo was attached', function () {
     $type = IncidentType::factory()->create();
 
@@ -182,7 +204,10 @@ test('an online report still requires a location when no gps photo was attached'
 test('offline reporting stays available from the offline page and the report form', function () {
     $this->get(route('public.offline'))
         ->assertOk()
-        ->assertSee('You can still file a new report from this phone.', false)
+        ->assertSee('id="offline-report-link"', false)
+        ->assertSee('aria-disabled="true"', false)
+        ->assertSee('This phone has no saved report form.', false)
+        ->assertSee('Reconnect and open the form once to make it available offline.', false)
         ->assertSee(route('public.report.create'), false)
         ->assertSee('Report an incident', false);
 
@@ -199,6 +224,7 @@ test('offline reporting stays available from the offline page and the report for
 
     expect($outbox)->toContain('The GPS photo and its location stay on this phone')
         ->and($outbox)->toContain('This report has no GPS photo, so no map location was saved')
+        ->and(file_get_contents(public_path('js/public-report.js')))->toContain('manualPinMode')
         ->and($worker)->toContain("const REPORT_URL = '/report'")
         ->and($worker)->toContain('preserveOfflineReportPages')
         ->and($worker)->toContain('raniag-cache-dev-v30');
