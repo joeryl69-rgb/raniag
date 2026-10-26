@@ -205,9 +205,9 @@ test('offline reporting stays available from the offline page and the report for
     $this->get(route('public.offline'))
         ->assertOk()
         ->assertSee('id="offline-report-link"', false)
-        ->assertSee('aria-disabled="true"', false)
-        ->assertSee('This phone has no saved report form.', false)
-        ->assertSee('Reconnect and open the form once to make it available offline.', false)
+        ->assertDontSee('id="offline-report-link" class="btn btn-primary btn-lg disabled"', false)
+        ->assertSee('This phone has no saved report form yet.', false)
+        ->assertSee('Reconnect and open the report form once to save it for offline use.', false)
         ->assertSee(route('public.report.create'), false)
         ->assertSee('Report an incident', false);
 
@@ -221,11 +221,23 @@ test('offline reporting stays available from the offline page and the report for
 
     $outbox = file_get_contents(public_path('js/report-outbox.js'));
     $worker = file_get_contents(public_path('sw.js'));
+    $offlinePage = file_get_contents(resource_path('views/public/offline.blade.php'));
+    $publicLayout = file_get_contents(resource_path('views/layouts/public.blade.php'));
+    $appLayout = file_get_contents(resource_path('views/layouts/app.blade.php'));
+    $pushScript = file_get_contents(public_path('js/push-notifications.js'));
 
     expect($outbox)->toContain('The GPS photo and its location stay on this phone')
         ->and($outbox)->toContain('This report has no GPS photo, so no map location was saved')
         ->and(file_get_contents(public_path('js/public-report.js')))->toContain('manualPinMode')
+        ->and($offlinePage)->toContain('if (navigator.onLine !== false)')
+        ->and($offlinePage)->toContain('prepareReportForOffline')
+        ->and($offlinePage)->toContain('currentCheck !== linkCheck')
+        ->and($offlinePage)->not->toContain("fetch('/up'")
+        ->and($publicLayout)->toContain("navigator.serviceWorker.register('/sw.js?v=")
+        ->and($appLayout)->toContain("window.RANIAG_SERVICE_WORKER_URL = '/sw.js?v=")
+        ->and($pushScript)->toContain('window.RANIAG_SERVICE_WORKER_URL || \'/sw.js\'')
+        ->and($pushScript)->not->toContain("register('/sw.js?v=20')")
         ->and($worker)->toContain("const REPORT_URL = '/report'")
         ->and($worker)->toContain('preserveOfflineReportPages')
-        ->and($worker)->toContain('raniag-cache-dev-v30');
+        ->and($worker)->toContain('raniag-cache-dev-v31');
 });

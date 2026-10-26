@@ -529,6 +529,7 @@
     <script src="{{ asset('js/feedback-disclosure.js') }}?v={{ @filemtime(public_path('js/feedback-disclosure.js')) }}"></script>
     <script src="{{ asset('js/table-view-mode.js') }}?v={{ @filemtime(public_path('js/table-view-mode.js')) }}"></script>
     <script src="{{ asset('js/notification-alert-sound.js') }}?v={{ @filemtime(public_path('js/notification-alert-sound.js')) }}"></script>
+    <script>window.RANIAG_SERVICE_WORKER_URL = '/sw.js?v={{ @filemtime(public_path('sw.js')) }}';</script>
     <script src="{{ asset('js/push-notifications.js') }}?v={{ @filemtime(public_path('js/push-notifications.js')) }}"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" integrity="sha384-X9kJyAubVxnP0hcA+AMMs21U445qsnqhnUF8EBlEpP3a42Kh/JwWjlv2ZcvGfphb" crossorigin="anonymous"></script>
     <script>

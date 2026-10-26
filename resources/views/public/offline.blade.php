@@ -14,8 +14,8 @@
                 If this phone has saved the report form, you can file a report offline. It stays on this device and sends when the connection returns. Tracking a report still needs a connection.
             </p>
             <div class="d-grid gap-2">
-                <a href="{{ route('public.report.create') }}" class="btn btn-primary btn-lg disabled"
-                   id="offline-report-link" aria-disabled="true" tabindex="-1">
+                <a href="{{ route('public.report.create') }}" class="btn btn-primary btn-lg"
+                   id="offline-report-link">
                     <i class="bi bi-megaphone-fill me-1"></i>Report an incident
                 </a>
                 <button onclick="window.location.reload();" class="btn btn-outline-secondary btn-lg">
@@ -23,7 +23,7 @@
                 </button>
             </div>
             <p class="small text-muted mt-3 mb-0" id="offline-report-status" role="status" aria-live="polite">
-                Checking whether this phone has a saved report form…
+                Opening the report form…
             </p>
         </div>
     </div>
@@ -38,39 +38,55 @@
         if (!link || !status) return;
 
         const reportUrl = new URL(@json(route('public.report.create', [], false)), window.location.origin);
+        let linkCheck = 0;
 
-        async function updateReportLink() {
-            const cachedReport = 'caches' in window
-                ? await caches.match(new Request(reportUrl.href)).catch(() => null)
-                : null;
-            let connected = false;
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 2500);
-
-            try {
-                const response = await fetch('/up', {
-                    cache: 'no-store',
-                    signal: controller.signal,
-                    headers: { Accept: 'text/plain' },
-                });
-                connected = response.ok;
-            } catch (error) {
-                connected = false;
-            } finally {
-                clearTimeout(timeout);
-            }
-
-            const available = Boolean(cachedReport) || connected;
+        function setAvailable(available, message) {
             link.classList.toggle('disabled', !available);
             link.setAttribute('aria-disabled', String(!available));
             if (available) {
                 link.removeAttribute('tabindex');
-                status.textContent = cachedReport
-                    ? 'The report form is saved on this phone and can open offline.'
-                    : 'You are connected. The report form can be opened now.';
             } else {
                 link.setAttribute('tabindex', '-1');
-                status.textContent = 'This phone has no saved report form. Reconnect and open the form once to make it available offline.';
+            }
+            status.textContent = message;
+        }
+
+        async function hasCachedReport() {
+            if (!('caches' in window)) return false;
+
+            try {
+                return Boolean(await caches.match(reportUrl.href, { ignoreSearch: true }));
+            } catch (error) {
+                console.warn('[raniag-offline] could not check the saved report form', error);
+                return false;
+            }
+        }
+
+        function prepareReportForOffline() {
+            if (!navigator.onLine || !('serviceWorker' in navigator)) return;
+
+            navigator.serviceWorker.ready.then((registration) => {
+                registration.active?.postMessage({ type: 'raniag-cache-report' });
+            }).catch((error) => {
+                console.warn('[raniag-offline] could not prepare the report form for offline use', error);
+            });
+        }
+
+        async function updateReportLink() {
+            const currentCheck = ++linkCheck;
+            if (navigator.onLine !== false) {
+                setAvailable(true, 'You are connected. The report form is ready to open and will be saved for offline use.');
+                prepareReportForOffline();
+                return;
+            }
+
+            setAvailable(false, 'Checking this phone for a saved report form…');
+            const available = await hasCachedReport();
+            if (currentCheck !== linkCheck || navigator.onLine !== false) return;
+            if (available) {
+                setAvailable(true, 'The saved report form is ready to open offline.');
+            } else {
+                setAvailable(false, 'This phone has no saved report form yet. Reconnect and open the report form once to save it for offline use.');
             }
         }
 
@@ -79,6 +95,7 @@
         });
         window.addEventListener('online', updateReportLink);
         window.addEventListener('offline', updateReportLink);
+        navigator.serviceWorker?.addEventListener('controllerchange', updateReportLink);
         updateReportLink();
     })();
 </script>

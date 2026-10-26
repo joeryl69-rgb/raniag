@@ -198,7 +198,7 @@
         document.addEventListener('keydown', unlockAlertSound, { once: true });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=20')
+            navigator.serviceWorker.register(window.RANIAG_SERVICE_WORKER_URL || '/sw.js')
                 .then(() => navigator.serviceWorker.ready)
                 .then((reg) => {
                     swRegistration = reg;

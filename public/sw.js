@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raniag-cache-dev-v30';
+const CACHE_NAME = 'raniag-cache-dev-v31';
 const OFFLINE_URL = '/offline';
 const REPORT_URL = '/report';
 
