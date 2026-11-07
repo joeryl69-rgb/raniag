@@ -3,6 +3,7 @@
 use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\User;
+use App\Services\TwoFactorService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -29,7 +30,7 @@ test('trusted device survives logout and skips otp on next login', function () {
         'password' => bcrypt('secret123'),
     ]);
 
-    $twoFactor = app(\App\Services\TwoFactorService::class);
+    $twoFactor = app(TwoFactorService::class);
     $cookie = $twoFactor->issueTrustedDeviceCookie($user);
 
     $this->withCookie($cookie->getName(), $cookie->getValue())
@@ -529,22 +530,34 @@ test('map pin metadata is not accepted as a GPS camera capture', function () {
     expect(Incident::query()->count())->toBe(0);
 });
 
-test('video evidence without a gps camera capture is rejected on initial and repeated submissions', function () {
+test('uploaded video is accepted with a gps photo and other evidence attachments', function () {
     Storage::fake('local');
     $type = IncidentType::factory()->create();
+    $capturedAt = now()->toIso8601String();
 
-    $submit = fn () => $this->postJson(route('public.report.store'), [
+    $this->postJson(route('public.report.store'), [
         'incident_type_id' => $type->id,
         'is_anonymous' => true,
         'latitude' => '18.47200000',
         'longitude' => '121.32500000',
-        'evidence' => [UploadedFile::fake()->create('untracked.webm', 100, 'video/webm')],
-    ]);
+        'meta' => ['gps_captures' => json_encode([[
+            'filename' => 'gps-photo.jpg',
+            'latitude' => 18.472,
+            'longitude' => 121.325,
+            'location_source' => 'gps',
+            'captured_at' => $capturedAt,
+        ]])],
+        'evidence' => [
+            UploadedFile::fake()->image('gps-photo.jpg'),
+            UploadedFile::fake()->image('attachment.jpg'),
+            UploadedFile::fake()->create('uploaded-video.mp4', 100, 'video/mp4'),
+        ],
+    ])->assertCreated();
 
-    $submit()->assertStatus(422)->assertJsonValidationErrors(['evidence.0']);
-    $submit()->assertStatus(422)->assertJsonValidationErrors(['evidence.0']);
-
-    expect(Incident::query()->count())->toBe(0);
+    $incident = Incident::query()->with('evidence')->firstOrFail();
+    expect($incident->evidence)->toHaveCount(3)
+        ->and($incident->evidence->where('is_gps_capture', true))->toHaveCount(1)
+        ->and($incident->evidence->firstWhere('original_filename', 'uploaded-video.mp4')?->is_gps_capture)->toBeFalse();
 });
 
 test('video evidence with a matching gps camera capture can be submitted', function () {

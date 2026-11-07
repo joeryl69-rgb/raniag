@@ -629,6 +629,7 @@
                 <div class="form-text" id="evidence-upload-help">
                     Up to {{ $evidenceConfig['max_files'] }} files total (camera + uploads),
                     {{ number_format($evidenceConfig['max_size_kb'] / 1024, 1) }} MB each. Add files in multiple selections; earlier selections stay attached.
+                    Uploaded videos are accepted as evidence; only videos recorded with the GPS Camera include capture coordinates.
                 </div>
                 <div class="small mt-2" id="evidence-upload-status" role="status" aria-live="polite">No upload files selected yet.</div>
                 <div class="rg-evidence-upload-list" id="evidence-upload-list" role="list" aria-label="Selected upload files"></div>

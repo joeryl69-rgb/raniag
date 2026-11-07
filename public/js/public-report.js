@@ -1129,29 +1129,7 @@
         window.RANIAG_JO?.syncReportCoach(wizardStep, { force: true, pose: 'alert', text: message });
     }
 
-    function videoEvidenceWithoutGpsCapture() {
-        const files = Array.from(evidenceFileInput?.files || []);
-        if (!files.length) return false;
-        const captures = validGpsCaptures();
-
-        return files.some((file) => {
-            const isVideo = file.type.startsWith('video/')
-                || /\.(mp4|mov|webm)$/i.test(file.name);
-            if (!isVideo) return false;
-
-            return !captures.some((capture) => capture.filename === file.name);
-        });
-    }
-
     function guardReportBeforeSubmit() {
-        if (videoEvidenceWithoutGpsCapture()) {
-            showWizardStep(CAMERA_STEP);
-            setWizardError(
-                'Video evidence must be recorded with the GPS Camera after a GPS fix appears. Remove the untracked video or record it again with GPS ready.',
-                ['#gps-camera-module', '#evidence']
-            );
-            return false;
-        }
         if (!locationIsReady()) {
             showWizardStep(LOCATION_STEP);
             setWizardError('Wait for your location pin to appear on the map before sending this report.', LOCATION_ERROR_SPOTS, [

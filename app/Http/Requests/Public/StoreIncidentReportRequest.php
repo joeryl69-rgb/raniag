@@ -158,19 +158,6 @@ class StoreIncidentReportRequest extends FormRequest
             if ($errors->has('reporter_email') && $errors->has('reporter_phone')) {
                 $errors->forget('reporter_phone');
             }
-
-            foreach ((array) $this->file('evidence', []) as $index => $file) {
-                if (! $file instanceof UploadedFile || ! $this->isVideoEvidence($file)) {
-                    continue;
-                }
-
-                if (! $this->hasGpsCaptureFor($file)) {
-                    $validator->errors()->add(
-                        "evidence.{$index}",
-                        'Video evidence must be recorded with the GPS Camera while a GPS fix is available. Please record it again after GPS is ready.'
-                    );
-                }
-            }
         });
     }
 
@@ -295,16 +282,5 @@ class StoreIncidentReportRequest extends FormRequest
     {
         return str_starts_with((string) $file->getClientMimeType(), 'video/')
             || in_array(strtolower($file->getClientOriginalExtension()), ['mp4', 'mov', 'webm'], true);
-    }
-
-    private function hasGpsCaptureFor(UploadedFile $file): bool
-    {
-        foreach ($this->gpsCaptures() as $capture) {
-            if (($capture['filename'] ?? null) === $file->getClientOriginalName()) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
