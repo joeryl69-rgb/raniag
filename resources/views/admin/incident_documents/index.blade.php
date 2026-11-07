@@ -48,6 +48,14 @@
                     @endif
                 </div>
                 <div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">Location</label>
+                    <select name="jurisdiction" class="form-select" data-filter-default="">
+                        <option value="" @selected(! in_array(request('jurisdiction'), ['inside', 'outside'], true))>All locations</option>
+                        <option value="inside" @selected(request('jurisdiction') === 'inside')>Inside Pamplona</option>
+                        <option value="outside" @selected(request('jurisdiction') === 'outside')>Outside Pamplona</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">File completion</label>
                     <select name="completion" class="form-select" data-filter-default="">
                         <option value="" @selected(! request('completion'))>Any completion</option>

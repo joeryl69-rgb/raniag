@@ -1850,6 +1850,30 @@ html[data-theme="dark"] .container-fluid:has(.rg-workspace-intro--feedback-triag
     background: var(--raniag-card);
     color: var(--raniag-ink);
 }
+@media (max-width: 575.98px) {
+    .rg-evacuee-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: stretch;
+        gap: .55rem;
+    }
+    .rg-evacuee-registry #evac-stay-filter,
+    .rg-evacuee-registry #evac-origin-filter {
+        display: flex;
+        width: 100%;
+        order: 0;
+    }
+    .rg-evacuee-registry #evac-stay-filter .btn,
+    .rg-evacuee-registry #evac-origin-filter .btn {
+        flex: 1 1 0;
+        white-space: nowrap;
+    }
+    .rg-evacuee-search {
+        width: 100%;
+        min-width: 0;
+        order: 1;
+    }
+}
 .rg-workspace-tabs {
     display: flex;
     flex-wrap: nowrap;

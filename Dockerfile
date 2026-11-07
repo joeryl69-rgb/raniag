@@ -13,6 +13,7 @@ COPY . .
 COPY --from=assets /app/public/build ./public/build
 COPY conf.d/laravel.conf /etc/nginx/conf.d/laravel.conf
 COPY conf.d/laravel.conf /etc/nginx/sites-available/default.conf
+COPY conf.d/uploads.ini /usr/local/etc/php/conf.d/zz-raniag-uploads.ini
 RUN chmod +x scripts/00-laravel-deploy.sh
 
 ENV SKIP_COMPOSER=1

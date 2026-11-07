@@ -73,3 +73,40 @@ test('case document status completion date and search filters narrow the registe
     expect($closedResponse->viewData('incidents')->pluck('tracking_number')->all())
         ->toBe(['RAN-DOC-INCOMPLETE']);
 });
+
+test('case documents can be filtered by Pamplona jurisdiction', function () {
+    $administrator = User::factory()->administrator()->create();
+    $type = IncidentType::factory()->create();
+
+    foreach ([
+        ['RAN-DOC-INSIDE', true],
+        ['RAN-DOC-OUTSIDE', false],
+    ] as [$tracking, $withinJurisdiction]) {
+        Incident::query()->create([
+            'tracking_number' => $tracking,
+            'tracking_pin' => Hash::make('123456'),
+            'incident_type_id' => $type->id,
+            'status' => 'resolved',
+            'priority' => 'medium',
+            'description' => 'Case jurisdiction filtering test',
+            'is_anonymous' => true,
+            'meta' => ['within_jurisdiction' => $withinJurisdiction],
+            'reported_at' => now(),
+        ]);
+    }
+
+    $insideResponse = $this->actingAs($administrator)
+        ->get(route('admin.incident_documents.index', ['jurisdiction' => 'inside']))
+        ->assertOk()
+        ->assertSee('Inside Pamplona', false)
+        ->assertSee('Outside Pamplona', false);
+
+    expect($insideResponse->viewData('incidents')->pluck('tracking_number')->all())
+        ->toBe(['RAN-DOC-INSIDE']);
+
+    $outsideResponse = $this->get(route('admin.incident_documents.index', ['jurisdiction' => 'outside']))
+        ->assertOk();
+
+    expect($outsideResponse->viewData('incidents')->pluck('tracking_number')->all())
+        ->toBe(['RAN-DOC-OUTSIDE']);
+});

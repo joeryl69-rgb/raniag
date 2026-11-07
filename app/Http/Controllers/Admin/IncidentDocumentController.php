@@ -32,6 +32,13 @@ class IncidentDocumentController extends Controller
             ->withCount('incidentDocuments')
             ->with(['incidentType', 'incidentDocuments:id,incident_id,document_type']);
 
+        $jurisdiction = $request->string('jurisdiction')->value();
+        if ($jurisdiction === 'inside') {
+            $query->where('meta->within_jurisdiction', true);
+        } elseif ($jurisdiction === 'outside') {
+            $query->where('meta->within_jurisdiction', false);
+        }
+
         $q = trim((string) $request->string('q'));
         if ($q !== '') {
             $query->where('tracking_number', 'like', "%{$q}%");

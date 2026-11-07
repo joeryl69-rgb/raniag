@@ -318,13 +318,16 @@ test('report submission accepts optional evidence files', function () {
         'meta' => ['gps_captures' => $gpsLog],
         'evidence' => [
             UploadedFile::fake()->image('scene.jpg'),
+            UploadedFile::fake()->image('scene-extra.jpg'),
         ],
     ])->assertRedirect();
 
     $incident = Incident::query()->with('evidence')->first();
 
-    expect($incident->evidence)->toHaveCount(1);
-    Storage::disk('local')->assertExists($incident->evidence->first()->file_path);
+    expect($incident->evidence)->toHaveCount(2);
+    foreach ($incident->evidence as $evidence) {
+        Storage::disk('local')->assertExists($evidence->file_path);
+    }
 });
 
 test('report submission accepts an unofficial client barangay when geofence cannot resolve one', function () {
