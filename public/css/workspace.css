@@ -808,7 +808,15 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: .7rem;
 }
-.rg-filter-popover-fields .rg-filter-date { max-width: 10rem; }
+.rg-filter-popover-fields .rg-filter-date {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+}
+.rg-filter-date .form-control {
+    width: 100%;
+    min-width: 0;
+}
 .rg-filter-popover-fields > .col-md-2 { width: auto; max-width: none; padding: 0; }
 .rg-filter-popover-fields label,
 .rg-filter-popover-fields .form-label,
@@ -859,9 +867,10 @@
     margin: 0;
 }
 .report-presentation-filters .rg-filter-date {
-    flex: 0 1 9rem;
+    flex: 0 0 9rem;
+    width: 9rem;
     max-width: 9rem;
-    min-width: 8rem;
+    min-width: 9rem;
 }
 .report-presentation-filters .report-presentation-filter > span,
 .report-presentation-filters .rg-filter-date > span {
@@ -904,7 +913,10 @@
     }
     .report-presentation-filters .report-presentation-filter,
     .report-presentation-filters .rg-filter-date {
-        flex-basis: calc(50% - .3rem);
+        flex: 0 0 calc(50% - .3rem);
+        width: calc(50% - .3rem);
+        min-width: 0;
+        max-width: none;
     }
     .report-presentation-filters .rg-filter-toolbar-search {
         flex-basis: 100%;
