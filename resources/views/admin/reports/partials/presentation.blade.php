@@ -10,7 +10,7 @@
             <h2 id="presentation-title">Gathered reports</h2>
         </div>
     </div>
-    <p>Choose a record set and refine it by place, incident type, dates, or search. Apply filters to show the matching rows.</p>
+    <p>Choose a record set and refine it by place, shelter, incident type, dates, or search. Apply filters to show the matching rows.</p>
 
     <x-filters.toolbar
         search-placeholder="Search tracking number, name, or place"
@@ -31,6 +31,17 @@
             <span>Barangay</span>
             <select name="barangay" class="form-select" data-filter-default="">
                 <x-place-filter-options :selected="request('barangay')" all-value="" />
+            </select>
+        </label>
+        <label class="report-presentation-filter" data-presentation-evacuees @class(['d-none' => request('dataset') !== 'evacuees'])>
+            <span>Shelter</span>
+            <select name="evacuation_center_id" class="form-select" data-filter-default="" @disabled(request('dataset') !== 'evacuees')>
+                <option value="">All shelters</option>
+                @foreach($presentationCenters ?? [] as $center)
+                    <option value="{{ $center->id }}" @selected((string) request('evacuation_center_id') === (string) $center->id)>
+                        {{ $center->name }}{{ $center->is_open ? '' : ' (closed)' }}
+                    </option>
+                @endforeach
             </select>
         </label>
         <label class="report-presentation-filter" data-presentation-type @class(['d-none' => request('dataset') === 'evacuees'])>
@@ -58,6 +69,11 @@
             </div>
         </div>
         <p class="mb-3">{{ $presentation['summary'] }}. Exports include all matching records, not only the rows on this page.</p>
+        @if(($presentation['demo_count'] ?? 0) > 0)
+            <div class="alert alert-warning py-2 small" role="note">
+                This selection includes {{ $presentation['demo_count'] }} synthetic DEMO records. They are for presentation only and are not verified evacuee registrations.
+            </div>
+        @endif
         <section class="report-metrics report-selection-metrics" aria-label="Selection summary" data-report-metrics>
             @foreach($presentation['metrics'] as $index => $metric)
                 @php
@@ -166,10 +182,16 @@
     document.querySelector('[data-presentation-dataset]')?.addEventListener('change', (event) => {
         const typeField = document.querySelector('[data-presentation-type]');
         const select = typeField?.querySelector('select');
+        const centerField = document.querySelector('[data-presentation-evacuees]');
+        const centerSelect = centerField?.querySelector('select');
         const evacuees = event.target.value === 'evacuees';
         typeField?.classList.toggle('d-none', evacuees);
+        centerField?.classList.toggle('d-none', !evacuees);
         if (select) {
             select.disabled = evacuees;
+        }
+        if (centerSelect) {
+            centerSelect.disabled = !evacuees;
         }
         select?.dispatchEvent(new Event('change', { bubbles: true }));
     });

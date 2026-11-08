@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Evacuee extends Model
 {
     protected $fillable = [
-        'evacuation_center_id', 'full_name', 'age', 'sex', 'barangay',
+        'evacuation_center_id', 'full_name', 'is_demo', 'age', 'sex', 'barangay',
         'origin_scope', 'origin_place',
         'is_vulnerable', 'vulnerability_notes', 'checked_in_at', 'checked_out_at',
     ];
@@ -16,6 +16,7 @@ class Evacuee extends Model
     protected function casts(): array
     {
         return [
+            'is_demo' => 'boolean',
             'is_vulnerable' => 'boolean',
             'checked_in_at' => 'datetime',
             'checked_out_at' => 'datetime',

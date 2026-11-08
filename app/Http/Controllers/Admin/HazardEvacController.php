@@ -12,14 +12,16 @@ use App\Support\IconLibrary;
 use App\Support\PeriodRange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class HazardEvacController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $zones = Schema::hasTable('hazard_zones')
             ? HazardZone::query()->with('type')->latest()->get()
@@ -38,9 +40,21 @@ class HazardEvacController extends Controller
             ? IncidentType::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get()
             : collect();
 
-        $evacuees = Schema::hasTable('evacuees')
-            ? Evacuee::query()->with('center')->latest()->limit(200)->get()
-            : collect();
+        $selectedCenterId = $request->integer('evacuation_center_id') ?: null;
+        if ($selectedCenterId && ! $centers->contains('id', $selectedCenterId)) {
+            $selectedCenterId = null;
+        }
+
+        $evacueeQuery = Schema::hasTable('evacuees')
+            ? Evacuee::query()->with('center')->latest()
+            : null;
+        if ($evacueeQuery && $selectedCenterId) {
+            $evacueeQuery->where('evacuation_center_id', $selectedCenterId);
+        }
+        $evacuees = $evacueeQuery?->get() ?? collect();
+        $checkInCenters = $centers->filter(fn (EvacuationCenter $center) => $center->is_open
+            && ($center->capacity === null || $center->checked_in_count < $center->capacity));
+        $demoCount = $evacuees->where('is_demo', true)->count();
 
         $checkedIn = $evacuees->whereNull('checked_out_at');
         $monthStart = now()->startOfMonth();
@@ -71,6 +85,9 @@ class HazardEvacController extends Controller
             'zones' => $zones,
             'centers' => $centers,
             'evacuees' => $evacuees,
+            'checkInCenters' => $checkInCenters,
+            'selectedCenterId' => $selectedCenterId,
+            'demoCount' => $demoCount,
             'map' => config('raniag.map'),
             'barangays' => config('raniag.barangays', []),
             'mapZonesJson' => $zones->map(function (HazardZone $z) {
@@ -340,13 +357,32 @@ class HazardEvacController extends Controller
             'vulnerability_notes' => ['nullable', 'string', 'max:255'],
         ]);
 
-        Evacuee::create([
-            ...$data,
-            'origin_scope' => $outside ? 'outside' : 'inside',
-            'origin_place' => $outside ? $data['origin_place'] : null,
-            'is_vulnerable' => $request->boolean('is_vulnerable'),
-            'checked_in_at' => now(),
-        ]);
+        DB::transaction(function () use ($data, $outside, $request) {
+            $center = EvacuationCenter::query()
+                ->lockForUpdate()
+                ->findOrFail($data['evacuation_center_id']);
+
+            if (! $center->is_open) {
+                throw ValidationException::withMessages([
+                    'evacuation_center_id' => 'This shelter is closed and cannot accept check-ins.',
+                ]);
+            }
+
+            $checkedInCount = $center->evacuees()->whereNull('checked_out_at')->count();
+            if ($center->capacity !== null && $checkedInCount >= $center->capacity) {
+                throw ValidationException::withMessages([
+                    'evacuation_center_id' => 'This shelter has reached its capacity. Select another open shelter with space.',
+                ]);
+            }
+
+            Evacuee::create([
+                ...$data,
+                'origin_scope' => $outside ? 'outside' : 'inside',
+                'origin_place' => $outside ? $data['origin_place'] : null,
+                'is_vulnerable' => $request->boolean('is_vulnerable'),
+                'checked_in_at' => now(),
+            ]);
+        });
 
         return redirect()
             ->route('admin.hazard.index', ['tab' => 'registry'])

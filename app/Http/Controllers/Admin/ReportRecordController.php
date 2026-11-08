@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ReportRecordRequest;
 use App\Models\ActivityLog;
 use App\Models\Agency;
+use App\Models\EvacuationCenter;
 use App\Models\FeedbackSubmission;
 use App\Models\Incident;
 use App\Models\IncidentType;
@@ -138,7 +139,11 @@ class ReportRecordController extends Controller
         }
 
         $presentationTypes = collect();
+        $presentationCenters = collect();
         if ($view === 'home') {
+            $presentationCenters = EvacuationCenter::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'is_open']);
             $usedTypeIds = Incident::query()->whereNotNull('incident_type_id')->distinct()->pluck('incident_type_id');
             $presentationTypes = IncidentType::query()
                 ->where(function ($query) use ($usedTypeIds, $request) {
@@ -172,6 +177,7 @@ class ReportRecordController extends Controller
             'periodLabel' => $window['label'],
             'incidentTypes' => ($needsBuilderOptions || $view === 'home') ? IncidentType::query()->orderBy('name')->get(['id', 'name']) : collect(),
             'presentationTypes' => $presentationTypes,
+            'presentationCenters' => $presentationCenters,
             'presentation' => $presentation,
             'agencies' => $needsBuilderOptions ? Agency::query()->orderBy('name')->get(['id', 'name', 'code']) : collect(),
             'barangays' => config('raniag.barangays'),

@@ -66,3 +66,85 @@ test('hazard counters show change and an outside evacuee stays distinct', functi
         ->assertSee('People sheltered now', false)
         ->assertSee('1 from outside', false);
 });
+
+test('check-in is blocked when a shelter is full and the registry can filter by shelter', function () {
+    $admin = User::factory()->administrator()->create();
+    $fullCenter = EvacuationCenter::query()->create([
+        'name' => 'Centro Covered Court',
+        'latitude' => 18.45,
+        'longitude' => 121.34,
+        'capacity' => 1,
+        'is_open' => true,
+    ]);
+    $otherCenter = EvacuationCenter::query()->create([
+        'name' => 'Curva Elementary School',
+        'latitude' => 18.46,
+        'longitude' => 121.35,
+        'capacity' => 5,
+        'is_open' => true,
+    ]);
+
+    $this->actingAs($admin)->post(route('admin.hazard.evacuees.store'), [
+        'evacuation_center_id' => $fullCenter->id,
+        'full_name' => 'Maria Cruz',
+        'origin_scope' => 'inside',
+        'barangay' => 'Centro',
+    ])->assertRedirect(route('admin.hazard.index', ['tab' => 'registry']));
+
+    $this->post(route('admin.hazard.evacuees.store'), [
+        'evacuation_center_id' => $fullCenter->id,
+        'full_name' => 'Juan Ramos',
+        'origin_scope' => 'inside',
+        'barangay' => 'Centro',
+    ])->assertSessionHasErrors('evacuation_center_id');
+
+    $response = $this->get(route('admin.hazard.index', [
+        'tab' => 'registry',
+        'evacuation_center_id' => $fullCenter->id,
+    ]))->assertOk()
+        ->assertSee('id="evacuee-center-filter"', false)
+        ->assertSee('Centro Covered Court', false)
+        ->assertDontSee('Curva Elementary School</option>', false);
+
+    expect($response->viewData('evacuees')->pluck('full_name')->all())
+        ->toBe(['Maria Cruz']);
+});
+
+test('demo evacuees vary by shelter capacity, stay within capacity, and seed only once', function () {
+    $small = EvacuationCenter::query()->create([
+        'name' => 'Small Shelter',
+        'latitude' => 18.45,
+        'longitude' => 121.34,
+        'capacity' => 12,
+        'is_open' => true,
+    ]);
+    $large = EvacuationCenter::query()->create([
+        'name' => 'Large Shelter',
+        'latitude' => 18.46,
+        'longitude' => 121.35,
+        'capacity' => 100,
+        'is_open' => true,
+    ]);
+    $closed = EvacuationCenter::query()->create([
+        'name' => 'Closed Shelter',
+        'latitude' => 18.47,
+        'longitude' => 121.36,
+        'capacity' => 40,
+        'is_open' => false,
+    ]);
+
+    $seeder = app(\Database\Seeders\DemoEvacueeSeeder::class);
+    $seeder->run();
+    $smallCount = $small->evacuees()->where('is_demo', true)->count();
+    $largeCount = $large->evacuees()->where('is_demo', true)->count();
+    $seeder->run();
+
+    expect($smallCount)->toBeGreaterThan(0)
+        ->toBeLessThanOrEqual(12)
+        ->and($largeCount)->toBeGreaterThan(0)
+        ->toBeLessThanOrEqual(30)
+        ->and($small->evacuees()->where('is_demo', true)->count())->toBe($smallCount)
+        ->and($large->evacuees()->where('is_demo', true)->count())->toBe($largeCount)
+        ->and($closed->evacuees()->count())->toBe(0)
+        ->and($small->evacuees()->where('is_demo', true)->value('full_name'))->toStartWith('[DEMO]');
+});

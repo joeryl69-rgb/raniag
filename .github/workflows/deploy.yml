@@ -93,6 +93,7 @@ jobs:
             echo "==> artisan"
             php artisan optimize:clear
             php artisan migrate --force
+            php artisan db:seed --class=DemoEvacueeSeeder --force
             php artisan storage:link || true
             php artisan raniag:migrate-private-files --no-interaction || true
             php artisan config:cache

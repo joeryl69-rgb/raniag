@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\IncidentStatus;
+use App\Models\EvacuationCenter;
 use App\Models\Evacuee;
 use App\Models\Incident;
 use App\Models\IncidentType;
@@ -18,7 +19,7 @@ class IncidentPresentation
 
     /**
      * @return array{
-     *     filters: array{dataset: string, q: string, barangay: ?string, incident_type_id: ?int, date_from: ?string, date_to: ?string},
+     *     filters: array{dataset: string, q: string, barangay: ?string, incident_type_id: ?int, evacuation_center_id: ?int, date_from: ?string, date_to: ?string},
      *     columns: list<string>,
      *     rows: list<array{cells: list<string>, url: ?string}>,
      *     pageRows: list<array{cells: list<string>, url: ?string}>,
@@ -42,6 +43,10 @@ class IncidentPresentation
         $perPage = 25;
         $pageNumber = max(1, (int) $request->query('page', 1));
         $pageRows = array_values(array_slice($rows, ($pageNumber - 1) * $perPage, $perPage));
+        $summary = $this->summaryLine($filters, count($rows));
+        if (($matched['demo_count'] ?? 0) > 0) {
+            $summary .= ' · '.$matched['demo_count'].' clearly marked demo records';
+        }
 
         return [
             'filters' => $filters,
@@ -56,13 +61,14 @@ class IncidentPresentation
             'metrics' => $matched['metrics'],
             'title' => $matched['title'],
             'period' => $this->periodLabel($filters['date_from'], $filters['date_to']),
-            'summary' => $this->summaryLine($filters, count($rows)),
+            'summary' => $summary,
+            'demo_count' => $matched['demo_count'] ?? 0,
             'generated_at' => now()->format('M j, Y g:i A'),
         ];
     }
 
     /**
-     * @return array{dataset: string, q: string, barangay: ?string, incident_type_id: ?int, date_from: ?string, date_to: ?string}
+     * @return array{dataset: string, q: string, barangay: ?string, incident_type_id: ?int, evacuation_center_id: ?int, date_from: ?string, date_to: ?string}
      */
     public function filters(Request $request): array
     {
@@ -70,6 +76,7 @@ class IncidentPresentation
             'dataset' => $request->input('dataset') ?: 'incidents',
             'barangay' => $request->input('barangay') ?: null,
             'incident_type_id' => $request->input('incident_type_id') ?: null,
+            'evacuation_center_id' => $request->input('evacuation_center_id') ?: null,
             'date_from' => $request->input('date_from') ?: null,
             'date_to' => $request->input('date_to') ?: null,
         ]);
@@ -79,6 +86,7 @@ class IncidentPresentation
             'q' => ['nullable', 'string', 'max:100'],
             'barangay' => ['nullable', 'string', Rule::in(array_merge(config('raniag.barangays'), [self::OUTSIDE, 'inside', 'all']))],
             'incident_type_id' => ['nullable', 'integer', 'exists:incident_types,id'],
+            'evacuation_center_id' => ['nullable', 'integer', 'exists:evacuation_centers,id'],
             'date_from' => ['nullable', 'date', 'before_or_equal:today'],
             'date_to' => ['nullable', 'date', 'before_or_equal:today', Rule::when($request->filled('date_from'), 'after_or_equal:date_from')],
         ]);
@@ -88,14 +96,15 @@ class IncidentPresentation
             'q' => trim((string) ($validated['q'] ?? '')),
             'barangay' => $validated['barangay'] ?? null,
             'incident_type_id' => isset($validated['incident_type_id']) ? (int) $validated['incident_type_id'] : null,
+            'evacuation_center_id' => isset($validated['evacuation_center_id']) ? (int) $validated['evacuation_center_id'] : null,
             'date_from' => $validated['date_from'] ?? null,
             'date_to' => $validated['date_to'] ?? null,
         ];
     }
 
     /**
-     * @param  array{dataset: string, q: string, barangay: ?string, incident_type_id: ?int, date_from: ?string, date_to: ?string}  $filters
-     * @return array{title: string, columns: list<string>, rows: list<array{cells: list<string>, url: ?string}>, charts: list<array{title: string, rows: list<array{label: string, count: int}>}>}
+     * @param  array{dataset: string, q: string, barangay: ?string, incident_type_id: ?int, evacuation_center_id: ?int, date_from: ?string, date_to: ?string}  $filters
+     * @return array{title: string, columns: list<string>, rows: list<array{cells: list<string>, url: ?string}>, charts: list<array{title: string, rows: list<array{label: string, count: int}>}>, metrics: list<array{label: string, value: int}>, demo_count: int}
      */
     private function incidents(array $filters): array
     {
@@ -188,6 +197,9 @@ class IncidentPresentation
     {
         $query = Evacuee::query()->with('center:id,name')->orderByDesc('checked_in_at')->orderByDesc('id');
         $this->between($query, 'checked_in_at', $filters['date_from'], $filters['date_to']);
+        if ($filters['evacuation_center_id']) {
+            $query->where('evacuation_center_id', $filters['evacuation_center_id']);
+        }
 
         if ($filters['barangay'] === self::OUTSIDE) {
             $query->where('origin_scope', 'outside');
@@ -243,6 +255,7 @@ class IncidentPresentation
                 ['title' => 'Evacuees by origin', 'rows' => $this->counts($people, fn (Evacuee $person) => $person->isOutsideMunicipality() ? 'Outside Pamplona' : 'Pamplona')],
                 ['title' => 'Evacuees by status', 'rows' => $this->counts($people, fn (Evacuee $person) => $person->checked_out_at ? 'Left' : 'Inside')],
             ],
+            'demo_count' => $people->where('is_demo', true)->count(),
         ];
     }
 
@@ -313,7 +326,11 @@ class IncidentPresentation
         $search = $filters['q'] !== '' ? ' · Search: '.$filters['q'] : '';
 
         if ($filters['dataset'] === 'evacuees') {
-            return 'Evacuee registry · '.$place.$search.' · '.$count.' '.$records;
+            $center = $filters['evacuation_center_id']
+                ? (string) (EvacuationCenter::query()->whereKey($filters['evacuation_center_id'])->value('name') ?: 'Selected shelter')
+                : 'All shelters';
+
+            return 'Evacuee registry · '.$place.' · '.$center.$search.' · '.$count.' '.$records;
         }
 
         $type = 'All incident types';

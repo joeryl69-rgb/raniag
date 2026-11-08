@@ -629,3 +629,65 @@ test('the evacuee registry uses the same filters and exports', function () {
     $zip->close();
     unlink($tmp);
 });
+
+test('evacuee presentation filters and exports by evacuation center', function () {
+    $admin = User::factory()->administrator()->create();
+    $firstCenter = \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Centro Municipal Gymnasium',
+        'latitude' => 18.45,
+        'longitude' => 121.34,
+        'capacity' => 60,
+        'is_open' => true,
+    ]);
+    $secondCenter = \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Curva Elementary School',
+        'latitude' => 18.46,
+        'longitude' => 121.35,
+        'capacity' => 40,
+        'is_open' => true,
+    ]);
+
+    foreach ([
+        [$firstCenter, '[DEMO] Maria Santos', 'Centro', true],
+        [$secondCenter, 'Juan Ramos', 'Curva', false],
+    ] as [$center, $name, $barangay, $isDemo]) {
+        \App\Models\Evacuee::query()->create([
+            'evacuation_center_id' => $center->id,
+            'full_name' => $name,
+            'is_demo' => $isDemo,
+            'origin_scope' => 'inside',
+            'barangay' => $barangay,
+            'checked_in_at' => now(),
+        ]);
+    }
+
+    $query = [
+        'applied' => '1',
+        'dataset' => 'evacuees',
+        'evacuation_center_id' => $firstCenter->id,
+    ];
+
+    $response = $this->actingAs($admin)
+        ->get(route('admin.reports.index', $query))
+        ->assertOk()
+        ->assertSee('name="evacuation_center_id"', false)
+        ->assertSee('Centro Municipal Gymnasium', false)
+        ->assertSee('[DEMO] Maria Santos', false)
+        ->assertSee('DEMO records', false)
+        ->assertSee('data-report-metric="People in selection" data-report-metric-value="1"', false)
+        ->assertDontSee('Juan Ramos', false);
+
+    expect($response->viewData('presentation')['filters']['evacuation_center_id'])
+        ->toBe($firstCenter->id);
+
+    $excel = $this->get(route('admin.reports.presentation.excel', $query))->assertOk();
+    $tmp = presentationTestArtifactPath('xlsx');
+    file_put_contents($tmp, $excel->getContent());
+    $zip = new ZipArchive;
+    expect($zip->open($tmp))->toBeTrue();
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    expect($sheet)->toContain('[DEMO] Maria Santos')
+        ->and($sheet)->not->toContain('Juan Ramos');
+    $zip->close();
+    unlink($tmp);
+});

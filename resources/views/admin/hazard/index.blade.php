@@ -278,24 +278,42 @@
     <div class="tab-pane fade {{ $openRegistry ? 'show active' : '' }}" id="tab-registry">
         <div class="rg-evacuee-toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <p class="small text-muted mb-0">Who is inside a shelter right now. Check someone in only after their shelter exists on the map.</p>
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#checkInModal" @disabled($centers->isEmpty())>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#checkInModal" @disabled($checkInCenters->isEmpty())>
                 <i class="bi bi-person-plus me-1"></i>Check in
             </button>
         </div>
         @if ($centers->isEmpty())
             <div class="alert alert-light border">Pin a shelter on the map before registering evacuees.</div>
+        @elseif ($checkInCenters->isEmpty())
+            <div class="alert alert-warning">There are no open shelters with available capacity for new check-ins.</div>
         @endif
 
         <div class="card rg-evacuee-registry border-0 shadow-sm" @if($evacuees->isNotEmpty()) data-view-mode-root="evacuee-registry" data-view-mode-user="{{ auth()->id() }}" @endif>
             <div class="card-header rg-evacuee-registry-header">
                 <div class="rg-evacuee-summary">
                     <span class="rg-evacuee-count">{{ $checkedIn->count() }} checked in <span aria-hidden="true">·</span> {{ $evacuees->count() }} listed</span>
+                    @if($demoCount)
+                        <span class="badge text-bg-warning">{{ $demoCount }} DEMO records in this view</span>
+                    @endif
                     @if($evacuees->isNotEmpty())
                         <x-view-mode-toggle register="evacuee-registry" label="Evacuee registry" />
                     @endif
                 </div>
-                @if($evacuees->isNotEmpty())
+                @if($evacuees->isNotEmpty() || $centers->isNotEmpty())
                     <div class="rg-evacuee-controls">
+                        <form method="GET" action="{{ route('admin.hazard.index') }}" class="rg-evacuee-center-filter">
+                            <input type="hidden" name="tab" value="registry">
+                            <label class="small fw-semibold" for="evacuee-center-filter">Shelter</label>
+                            <select class="form-select form-select-sm" id="evacuee-center-filter" name="evacuation_center_id" onchange="this.form.submit()">
+                                <option value="">All shelters</option>
+                                @foreach($centers as $center)
+                                    <option value="{{ $center->id }}" @selected($selectedCenterId === $center->id)>
+                                        {{ $center->name }}{{ $center->is_open ? '' : ' (closed)' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                        @if($evacuees->isNotEmpty())
                         <div class="btn-group btn-group-sm" id="evac-stay-filter" role="group" aria-label="Evacuee stay">
                             <button type="button" class="btn btn-primary" data-stay="inside" aria-pressed="true">Still inside</button>
                             <button type="button" class="btn btn-outline-secondary" data-stay="left" aria-pressed="false">Checked out</button>
@@ -311,9 +329,15 @@
                             <span class="visually-hidden">Search evacuees by name or shelter</span>
                             <input type="search" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter">
                         </label>
+                        @endif
                     </div>
                 @endif
             </div>
+            @if($demoCount)
+                <div class="alert alert-warning rounded-0 mb-0 py-2 px-3 small" role="note">
+                    DEMO records are synthetic presentation data. They count toward shelter occupancy and reports; check them out before using these figures operationally.
+                </div>
+            @endif
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 rg-data-table" id="evacuee-table">
                     <thead class="table-light">
@@ -332,6 +356,9 @@
                             <tr data-origin="{{ $evacuee->origin_scope === 'outside' ? 'outside' : 'inside' }}" data-stay="{{ $evacuee->checked_out_at ? 'left' : 'inside' }}" data-search="{{ strtolower($evacuee->full_name.' '.($evacuee->center?->name ?? '').' '.$evacuee->homeLabel()) }}">
                                 <td>
                                     <div class="fw-semibold">{{ $evacuee->full_name }}</div>
+                                    @if ($evacuee->is_demo)
+                                        <span class="badge text-bg-warning">DEMO — not a verified registration</span>
+                                    @endif
                                     @if ($evacuee->isOutsideMunicipality())
                                         <span class="badge text-bg-info">Outside municipality</span>
                                     @endif
@@ -414,8 +441,10 @@
                 <div class="mb-3">
                     <label class="form-label" for="evacuation_center_id">Shelter</label>
                     <select name="evacuation_center_id" id="evacuation_center_id" class="form-select" required>
-                        @foreach ($centers as $c)
-                            <option value="{{ $c->id }}" @selected(old('evacuation_center_id') == $c->id)>{{ $c->name }}{{ $c->is_open ? '' : ' (closed)' }}</option>
+                        @foreach ($checkInCenters as $c)
+                            <option value="{{ $c->id }}" @selected(old('evacuation_center_id') == $c->id)>
+                                {{ $c->name }} — {{ $c->checked_in_count }} checked in{{ $c->capacity ? ' / '.$c->capacity : '' }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
