@@ -44,10 +44,6 @@ class IncidentPresentation
         $pageNumber = max(1, (int) $request->query('page', 1));
         $pageRows = array_values(array_slice($rows, ($pageNumber - 1) * $perPage, $perPage));
         $summary = $this->summaryLine($filters, count($rows));
-        if (($matched['demo_count'] ?? 0) > 0) {
-            $summary .= ' · '.$matched['demo_count'].' clearly marked demo records';
-        }
-
         return [
             'filters' => $filters,
             'columns' => $columns,
@@ -62,7 +58,6 @@ class IncidentPresentation
             'title' => $matched['title'],
             'period' => $this->periodLabel($filters['date_from'], $filters['date_to']),
             'summary' => $summary,
-            'demo_count' => $matched['demo_count'] ?? 0,
             'generated_at' => now()->format('M j, Y g:i A'),
         ];
     }
@@ -104,7 +99,7 @@ class IncidentPresentation
 
     /**
      * @param  array{dataset: string, q: string, barangay: ?string, incident_type_id: ?int, evacuation_center_id: ?int, date_from: ?string, date_to: ?string}  $filters
-     * @return array{title: string, columns: list<string>, rows: list<array{cells: list<string>, url: ?string}>, charts: list<array{title: string, rows: list<array{label: string, count: int}>}>, metrics: list<array{label: string, value: int}>, demo_count: int}
+     * @return array{title: string, columns: list<string>, rows: list<array{cells: list<string>, url: ?string}>, charts: list<array{title: string, rows: list<array{label: string, count: int}>}>, metrics: list<array{label: string, value: int}>}
      */
     private function incidents(array $filters): array
     {
@@ -255,7 +250,6 @@ class IncidentPresentation
                 ['title' => 'Evacuees by origin', 'rows' => $this->counts($people, fn (Evacuee $person) => $person->isOutsideMunicipality() ? 'Outside Pamplona' : 'Pamplona')],
                 ['title' => 'Evacuees by status', 'rows' => $this->counts($people, fn (Evacuee $person) => $person->checked_out_at ? 'Left' : 'Inside')],
             ],
-            'demo_count' => $people->where('is_demo', true)->count(),
         ];
     }
 

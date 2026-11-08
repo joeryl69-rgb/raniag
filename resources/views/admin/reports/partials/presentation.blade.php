@@ -69,11 +69,6 @@
             </div>
         </div>
         <p class="mb-3">{{ $presentation['summary'] }}. Exports include all matching records, not only the rows on this page.</p>
-        @if(($presentation['demo_count'] ?? 0) > 0)
-            <div class="alert alert-warning py-2 small" role="note">
-                This selection includes {{ $presentation['demo_count'] }} synthetic DEMO records. They are for presentation only and are not verified evacuee registrations.
-            </div>
-        @endif
         <section class="report-metrics report-selection-metrics" aria-label="Selection summary" data-report-metrics>
             @foreach($presentation['metrics'] as $index => $metric)
                 @php

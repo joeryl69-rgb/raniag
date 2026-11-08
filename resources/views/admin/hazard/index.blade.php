@@ -13,7 +13,6 @@
 @php
     $openRegistry = request('tab') === 'registry' || old('workspace') === 'registry';
     $openCenter = old('workspace') === 'center';
-    $checkedIn = $evacuees->whereNull('checked_out_at');
     $advisoryMap = $zones->mapWithKeys(fn ($zone) => [
         $zone->id => [
             'name' => $zone->name,
@@ -47,7 +46,7 @@
     </div>
     <div class="col-6 col-lg-3">
         <div class="hz-stat">
-            <div class="value">{{ $checkedIn->count() }}</div>
+            <div class="value">{{ $checkedInCount }}</div>
             <div class="label">People checked in</div>
             <x-stat-trend :change="$cardTrends['checked_in']" note="vs last month" />
             @if ($cardTrends['outside'])
@@ -66,8 +65,8 @@
     <li class="nav-item">
         <button class="nav-link {{ $openRegistry ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tab-registry" type="button">
             <i class="bi bi-people me-1"></i>Evacuee registry
-            @if ($checkedIn->count())
-                <span class="badge bg-primary ms-1">{{ $checkedIn->count() }}</span>
+            @if ($checkedInCount)
+                <span class="badge bg-primary ms-1">{{ $checkedInCount }}</span>
             @endif
         </button>
     </li>
@@ -291,19 +290,17 @@
         <div class="card rg-evacuee-registry border-0 shadow-sm" @if($evacuees->isNotEmpty()) data-view-mode-root="evacuee-registry" data-view-mode-user="{{ auth()->id() }}" @endif>
             <div class="card-header rg-evacuee-registry-header">
                 <div class="rg-evacuee-summary">
-                    <span class="rg-evacuee-count">{{ $checkedIn->count() }} checked in <span aria-hidden="true">·</span> {{ $evacuees->count() }} listed</span>
-                    @if($demoCount)
-                        <span class="badge text-bg-warning">{{ $demoCount }} DEMO records in this view</span>
-                    @endif
+                    <span class="rg-evacuee-count">{{ $registryCheckedInCount }} checked in <span aria-hidden="true">·</span> {{ $evacuees->total() }} listed</span>
                     @if($evacuees->isNotEmpty())
                         <x-view-mode-toggle register="evacuee-registry" label="Evacuee registry" />
                     @endif
                 </div>
                 @if($evacuees->isNotEmpty() || $centers->isNotEmpty())
-                    <div class="rg-evacuee-controls">
-                        <form method="GET" action="{{ route('admin.hazard.index') }}" class="rg-evacuee-center-filter">
-                            <input type="hidden" name="tab" value="registry">
-                            <label class="small fw-semibold" for="evacuee-center-filter">Shelter</label>
+                    <form method="GET" action="{{ route('admin.hazard.index') }}" class="rg-evacuee-controls" id="evacuee-filter-form">
+                        <input type="hidden" name="tab" value="registry">
+                        <input type="hidden" name="stay" id="evacuee-stay-value" value="{{ $registryFilters['stay'] }}">
+                        <input type="hidden" name="origin" id="evacuee-origin-value" value="{{ $registryFilters['origin'] }}">
+                        <label class="small fw-semibold rg-evacuee-center-filter" for="evacuee-center-filter">Shelter
                             <select class="form-select form-select-sm" id="evacuee-center-filter" name="evacuation_center_id" onchange="this.form.submit()">
                                 <option value="">All shelters</option>
                                 @foreach($centers as $center)
@@ -312,32 +309,26 @@
                                     </option>
                                 @endforeach
                             </select>
-                        </form>
-                        @if($evacuees->isNotEmpty())
+                        </label>
                         <div class="btn-group btn-group-sm" id="evac-stay-filter" role="group" aria-label="Evacuee stay">
-                            <button type="button" class="btn btn-primary" data-stay="inside" aria-pressed="true">Still inside</button>
-                            <button type="button" class="btn btn-outline-secondary" data-stay="left" aria-pressed="false">Checked out</button>
-                            <button type="button" class="btn btn-outline-secondary" data-stay="all" aria-pressed="false">Everyone</button>
+                            <button type="button" class="btn {{ $registryFilters['stay'] === 'inside' ? 'btn-primary' : 'btn-outline-secondary' }}" data-stay="inside" aria-pressed="{{ $registryFilters['stay'] === 'inside' ? 'true' : 'false' }}">Still inside</button>
+                            <button type="button" class="btn {{ $registryFilters['stay'] === 'left' ? 'btn-primary' : 'btn-outline-secondary' }}" data-stay="left" aria-pressed="{{ $registryFilters['stay'] === 'left' ? 'true' : 'false' }}">Checked out</button>
+                            <button type="button" class="btn {{ $registryFilters['stay'] === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}" data-stay="all" aria-pressed="{{ $registryFilters['stay'] === 'all' ? 'true' : 'false' }}">Everyone</button>
                         </div>
                         <div class="btn-group btn-group-sm" id="evac-origin-filter" role="group" aria-label="Evacuee origin">
-                            <button type="button" class="btn btn-primary" data-origin="all" aria-pressed="true">All</button>
-                            <button type="button" class="btn btn-outline-secondary" data-origin="inside" aria-pressed="false">Pamplona</button>
-                            <button type="button" class="btn btn-outline-secondary" data-origin="outside" aria-pressed="false">Outside</button>
+                            <button type="button" class="btn {{ $registryFilters['origin'] === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}" data-origin="all" aria-pressed="{{ $registryFilters['origin'] === 'all' ? 'true' : 'false' }}">All</button>
+                            <button type="button" class="btn {{ $registryFilters['origin'] === 'inside' ? 'btn-primary' : 'btn-outline-secondary' }}" data-origin="inside" aria-pressed="{{ $registryFilters['origin'] === 'inside' ? 'true' : 'false' }}">Pamplona</button>
+                            <button type="button" class="btn {{ $registryFilters['origin'] === 'outside' ? 'btn-primary' : 'btn-outline-secondary' }}" data-origin="outside" aria-pressed="{{ $registryFilters['origin'] === 'outside' ? 'true' : 'false' }}">Outside</button>
                         </div>
                         <label class="rg-evacuee-search">
                             <i class="bi bi-search" aria-hidden="true"></i>
                             <span class="visually-hidden">Search evacuees by name or shelter</span>
-                            <input type="search" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter">
+                            <input type="search" name="q" value="{{ $registryFilters['q'] }}" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter">
                         </label>
-                        @endif
-                    </div>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+                    </form>
                 @endif
             </div>
-            @if($demoCount)
-                <div class="alert alert-warning rounded-0 mb-0 py-2 px-3 small" role="note">
-                    DEMO records are synthetic presentation data. They count toward shelter occupancy and reports; check them out before using these figures operationally.
-                </div>
-            @endif
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 rg-data-table" id="evacuee-table">
                     <thead class="table-light">
@@ -353,12 +344,9 @@
                     </thead>
                     <tbody>
                         @forelse ($evacuees as $evacuee)
-                            <tr data-origin="{{ $evacuee->origin_scope === 'outside' ? 'outside' : 'inside' }}" data-stay="{{ $evacuee->checked_out_at ? 'left' : 'inside' }}" data-search="{{ strtolower($evacuee->full_name.' '.($evacuee->center?->name ?? '').' '.$evacuee->homeLabel()) }}">
+                            <tr>
                                 <td>
                                     <div class="fw-semibold">{{ $evacuee->full_name }}</div>
-                                    @if ($evacuee->is_demo)
-                                        <span class="badge text-bg-warning">DEMO — not a verified registration</span>
-                                    @endif
                                     @if ($evacuee->isOutsideMunicipality())
                                         <span class="badge text-bg-info">Outside municipality</span>
                                     @endif
@@ -388,14 +376,17 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="text-center text-muted py-4">No one is registered yet.</td></tr>
+                            <tr><td colspan="7" class="text-center text-muted py-4">No evacuees match these filters.</td></tr>
                         @endforelse
-                        @if ($evacuees->isNotEmpty())
-                            <tr id="evacuee-filter-empty" class="d-none"><td colspan="7" class="text-center text-muted py-4">No one matches this filter.</td></tr>
-                        @endif
                     </tbody>
                 </table>
             </div>
+            @if($evacuees->hasPages())
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 border-top">
+                    <span class="small text-muted">Showing {{ $evacuees->firstItem() }}–{{ $evacuees->lastItem() }} of {{ $evacuees->total() }} evacuees</span>
+                    {{ $evacuees->links('pagination::bootstrap-5') }}
+                </div>
+            @endif
         </div>
     </div>
 </div>
@@ -1219,44 +1210,19 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         });
     });
 
-    let evacOrigin = 'all';
-    let evacStay = 'inside';
-    function selectEvacueeFilter(group, button, attribute) {
-        group.querySelectorAll('button').forEach((item) => {
-            const selected = item === button;
-            item.classList.toggle('btn-primary', selected);
-            item.classList.toggle('btn-outline-secondary', !selected);
-            item.setAttribute('aria-pressed', selected ? 'true' : 'false');
-        });
-        return button.dataset[attribute];
-    }
-    function applyEvacueeFilter() {
-        const q = (document.getElementById('evacuee-search')?.value || '').trim().toLowerCase();
-        let visible = 0;
-        document.querySelectorAll('#evacuee-table tbody tr[data-search]').forEach((row) => {
-            const originOk = evacOrigin === 'all' || row.dataset.origin === evacOrigin;
-            const stayOk = evacStay === 'all' || row.dataset.stay === evacStay;
-            const textOk = q === '' || row.dataset.search.includes(q);
-            const show = originOk && stayOk && textOk;
-            row.classList.toggle('d-none', !show);
-            if (show) visible += 1;
-        });
-        document.getElementById('evacuee-filter-empty')?.classList.toggle('d-none', visible !== 0);
-    }
-    document.getElementById('evacuee-search')?.addEventListener('input', applyEvacueeFilter);
+    const evacueeFilterForm = document.getElementById('evacuee-filter-form');
     document.querySelectorAll('#evac-origin-filter button').forEach((button) => {
         button.addEventListener('click', () => {
-            evacOrigin = selectEvacueeFilter(document.getElementById('evac-origin-filter'), button, 'origin') || 'all';
-            applyEvacueeFilter();
+            document.getElementById('evacuee-origin-value').value = button.dataset.origin || 'all';
+            evacueeFilterForm?.requestSubmit();
         });
     });
     document.querySelectorAll('#evac-stay-filter button').forEach((button) => {
         button.addEventListener('click', () => {
-            evacStay = selectEvacueeFilter(document.getElementById('evac-stay-filter'), button, 'stay') || 'inside';
-            applyEvacueeFilter();
+            document.getElementById('evacuee-stay-value').value = button.dataset.stay || 'inside';
+            evacueeFilterForm?.requestSubmit();
         });
     });
-    applyEvacueeFilter();
 
     const insideFields = document.getElementById('origin-inside-fields');
     const outsideFields = document.getElementById('origin-outside-fields');

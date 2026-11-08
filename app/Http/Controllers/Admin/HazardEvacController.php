@@ -12,6 +12,7 @@ use App\Support\IconLibrary;
 use App\Support\PeriodRange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -23,6 +24,17 @@ class HazardEvacController extends Controller
 {
     public function index(Request $request): View
     {
+        $registryFilters = $request->validate([
+            'stay' => ['nullable', Rule::in(['inside', 'left', 'all'])],
+            'origin' => ['nullable', Rule::in(['inside', 'outside', 'all'])],
+            'q' => ['nullable', 'string', 'max:100'],
+        ]);
+        $registryFilters = [
+            'stay' => $registryFilters['stay'] ?? 'inside',
+            'origin' => $registryFilters['origin'] ?? 'all',
+            'q' => trim($registryFilters['q'] ?? ''),
+        ];
+
         $zones = Schema::hasTable('hazard_zones')
             ? HazardZone::query()->with('type')->latest()->get()
             : collect();
@@ -51,12 +63,58 @@ class HazardEvacController extends Controller
         if ($evacueeQuery && $selectedCenterId) {
             $evacueeQuery->where('evacuation_center_id', $selectedCenterId);
         }
-        $evacuees = $evacueeQuery?->get() ?? collect();
+        $evacueeStatsQuery = $evacueeQuery ? clone $evacueeQuery : null;
+        if ($evacueeQuery && $registryFilters['stay'] === 'inside') {
+            $evacueeQuery->whereNull('checked_out_at');
+        } elseif ($evacueeQuery && $registryFilters['stay'] === 'left') {
+            $evacueeQuery->whereNotNull('checked_out_at');
+        }
+        if ($evacueeQuery && $registryFilters['origin'] === 'outside') {
+            $evacueeQuery->where('origin_scope', 'outside');
+        } elseif ($evacueeQuery && $registryFilters['origin'] === 'inside') {
+            $evacueeQuery->where(function ($query) {
+                $query->where('origin_scope', '!=', 'outside')->orWhereNull('origin_scope');
+            });
+        }
+        if ($evacueeQuery && $registryFilters['q'] !== '') {
+            $term = $registryFilters['q'];
+            $evacueeQuery->where(function ($query) use ($term) {
+                $query->where('full_name', 'like', '%'.$term.'%')
+                    ->orWhere('barangay', 'like', '%'.$term.'%')
+                    ->orWhere('origin_place', 'like', '%'.$term.'%')
+                    ->orWhereHas('center', fn ($center) => $center->where('name', 'like', '%'.$term.'%'));
+            });
+        }
+        $checkedInCount = $evacueeStatsQuery
+            ? (clone $evacueeStatsQuery)->whereNull('checked_out_at')->count()
+            : 0;
+        $outsideCount = $evacueeStatsQuery
+            ? (clone $evacueeStatsQuery)->whereNull('checked_out_at')->where('origin_scope', 'outside')->count()
+            : 0;
+        $checkedSince = function ($from, $until = null) use ($evacueeStatsQuery) {
+            if (! $evacueeStatsQuery) {
+                return 0;
+            }
+
+            $query = (clone $evacueeStatsQuery)->where('checked_in_at', '>=', $from);
+            if ($until !== null) {
+                $query->where('checked_in_at', '<', $until);
+            }
+
+            return $query->count();
+        };
+        $registryCheckedInCount = $evacueeQuery
+            ? (clone $evacueeQuery)->whereNull('checked_out_at')->count()
+            : 0;
+        $evacuees = $evacueeQuery
+            ? $evacueeQuery->paginate(15)->withQueryString()
+            : new LengthAwarePaginator(collect(), 0, 15, 1, [
+                'path' => route('admin.hazard.index'),
+                'query' => $request->query(),
+            ]);
         $checkInCenters = $centers->filter(fn (EvacuationCenter $center) => $center->is_open
             && ($center->capacity === null || $center->checked_in_count < $center->capacity));
-        $demoCount = $evacuees->where('is_demo', true)->count();
 
-        $checkedIn = $evacuees->whereNull('checked_out_at');
         $monthStart = now()->startOfMonth();
         $previousStart = now()->copy()->subMonthNoOverflow()->startOfMonth();
         $countSince = function ($rows, $from, $until = null) {
@@ -69,25 +127,16 @@ class HazardEvacController extends Controller
                 return $until === null || $at->lt($until);
             })->count();
         };
-        $checkedSince = function ($from, $until = null) use ($evacuees) {
-            return $evacuees->filter(function ($row) use ($from, $until) {
-                $at = $row->checked_in_at;
-                if (! $at || $at->lt($from)) {
-                    return false;
-                }
-
-                return $until === null || $at->lt($until);
-            })->count();
-        };
-
         return view('admin.hazard.index', [
             'incidentTypes' => $incidentTypes,
             'zones' => $zones,
             'centers' => $centers,
             'evacuees' => $evacuees,
+            'registryFilters' => $registryFilters,
+            'checkedInCount' => $checkedInCount,
+            'registryCheckedInCount' => $registryCheckedInCount,
             'checkInCenters' => $checkInCenters,
             'selectedCenterId' => $selectedCenterId,
-            'demoCount' => $demoCount,
             'map' => config('raniag.map'),
             'barangays' => config('raniag.barangays', []),
             'mapZonesJson' => $zones->map(function (HazardZone $z) {
@@ -122,7 +171,7 @@ class HazardEvacController extends Controller
                     'direction' => 'flat',
                 ],
                 'checked_in' => PeriodRange::change($checkedSince($monthStart), $checkedSince($previousStart, $monthStart)),
-                'outside' => $checkedIn->where('origin_scope', 'outside')->count(),
+                'outside' => $outsideCount,
             ],
         ]);
     }

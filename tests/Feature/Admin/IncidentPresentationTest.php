@@ -648,7 +648,7 @@ test('evacuee presentation filters and exports by evacuation center', function (
     ]);
 
     foreach ([
-        [$firstCenter, '[DEMO] Maria Santos', 'Centro', true],
+        [$firstCenter, 'Maria Santos', 'Centro', true],
         [$secondCenter, 'Juan Ramos', 'Curva', false],
     ] as [$center, $name, $barangay, $isDemo]) {
         \App\Models\Evacuee::query()->create([
@@ -672,8 +672,9 @@ test('evacuee presentation filters and exports by evacuation center', function (
         ->assertOk()
         ->assertSee('name="evacuation_center_id"', false)
         ->assertSee('Centro Municipal Gymnasium', false)
-        ->assertSee('[DEMO] Maria Santos', false)
-        ->assertSee('DEMO records', false)
+        ->assertSee('Maria Santos', false)
+        ->assertDontSee('DEMO', false)
+        ->assertDontSee('demo record', false)
         ->assertSee('data-report-metric="People in selection" data-report-metric-value="1"', false)
         ->assertDontSee('Juan Ramos', false);
 
@@ -686,7 +687,7 @@ test('evacuee presentation filters and exports by evacuation center', function (
     $zip = new ZipArchive;
     expect($zip->open($tmp))->toBeTrue();
     $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
-    expect($sheet)->toContain('[DEMO] Maria Santos')
+    expect($sheet)->toContain('Maria Santos')
         ->and($sheet)->not->toContain('Juan Ramos');
     $zip->close();
     unlink($tmp);

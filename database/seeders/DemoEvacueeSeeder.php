@@ -87,15 +87,15 @@ class DemoEvacueeSeeder extends Seeder
 
                 Evacuee::query()->create([
                     'evacuation_center_id' => $center->id,
-                    'full_name' => '[DEMO] '.$name,
+                    'full_name' => $name,
                     'is_demo' => true,
                     'age' => $age,
                     'sex' => $sex,
                     'barangay' => $homeBarangay,
                     'origin_scope' => $isOutside ? 'outside' : 'inside',
                     'origin_place' => $isOutside ? $outsidePlace[0] : null,
-                    'is_vulnerable' => $index % 7 === 0,
-                    'vulnerability_notes' => $index % 7 === 0 ? 'Demo record — verify before operational use' : null,
+                    'is_vulnerable' => false,
+                    'vulnerability_notes' => null,
                     'checked_in_at' => $checkedInAt,
                 ]);
             }
