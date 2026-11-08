@@ -175,7 +175,7 @@ class Notification extends Model
         }
 
         if ($documentRequest?->generated_path) {
-            return '/storage/'.ltrim((string) $documentRequest->generated_path, '/');
+            return $documentRequest->generatedUrl();
         }
 
         return null;

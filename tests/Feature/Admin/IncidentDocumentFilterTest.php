@@ -74,6 +74,32 @@ test('case document status completion date and search filters narrow the registe
         ->toBe(['RAN-DOC-INCOMPLETE']);
 });
 
+test('case documents show all finished cases without applying a status filter', function () {
+    $administrator = User::factory()->administrator()->create();
+    $type = IncidentType::factory()->create();
+
+    foreach (['resolved' => 'RAN-DOC-RESOLVED-ALL', 'closed' => 'RAN-DOC-CLOSED-ALL'] as $status => $tracking) {
+        Incident::query()->create([
+            'tracking_number' => $tracking,
+            'tracking_pin' => Hash::make('123456'),
+            'incident_type_id' => $type->id,
+            'status' => $status,
+            'priority' => 'medium',
+            'description' => 'Finished cases are shown together.',
+            'is_anonymous' => true,
+            'reported_at' => now(),
+        ]);
+    }
+
+    $response = $this->actingAs($administrator)
+        ->get(route('admin.incident_documents.index', ['status' => 'resolved']))
+        ->assertOk()
+        ->assertDontSee('name="status"', false);
+
+    expect($response->viewData('incidents')->pluck('tracking_number')->all())
+        ->toContain('RAN-DOC-RESOLVED-ALL', 'RAN-DOC-CLOSED-ALL');
+});
+
 test('case documents can be filtered by Pamplona jurisdiction', function () {
     $administrator = User::factory()->administrator()->create();
     $type = IncidentType::factory()->create();

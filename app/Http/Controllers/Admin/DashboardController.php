@@ -168,12 +168,11 @@ class DashboardController extends Controller
             ->mapWithKeys(fn ($item) => [$item->status instanceof \BackedEnum ? $item->status->value : (string) $item->status => (int) $item->count]);
 
         // Normalize keys to match the UI
-        // submitted, in_progress, resolved, closed
+        // submitted, in_progress, resolved
         $statusCounts = [
             'submitted' => $statusCountsRaw[IncidentStatus::Submitted->value] ?? 0,
             'in_progress' => $statusCountsRaw[IncidentStatus::InProgress->value] ?? 0,
             'resolved' => $statusCountsRaw[IncidentStatus::Resolved->value] ?? 0,
-            'closed' => $statusCountsRaw[IncidentStatus::Closed->value] ?? 0,
         ];
 
         // Situational Map feed: only currently-open incidents belong here.
@@ -213,8 +212,13 @@ class DashboardController extends Controller
             ->mapWithKeys(fn ($item) => [$item->name => (int) $item->count]);
 
         // 2. Barangay Distribution
+        $openStatusValues = array_map(
+            fn (IncidentStatus $status) => $status->value,
+            SituationalMapService::OPEN_STATUSES
+        );
         $barangayCounts = Incident::selectRaw('barangay, COUNT(*) as count')
             ->whereIn('barangay', config('raniag.barangays', []))
+            ->whereIn('status', $openStatusValues)
             ->where(function ($inner) {
                 $inner->whereNull('meta->within_jurisdiction')
                     ->orWhere('meta->within_jurisdiction', true);

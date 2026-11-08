@@ -23,12 +23,10 @@ class IncidentDocumentController extends Controller
 
     public function index(Request $request): View
     {
-        $statusFilter = $request->string('status')->value() ?: 'all';
         $validStatuses = [IncidentStatus::Resolved->value, IncidentStatus::Closed->value];
-        $statuses = $statusFilter === 'all' ? $validStatuses : array_intersect([$statusFilter], $validStatuses);
 
         $query = Incident::query()
-            ->whereIn('status', $statuses ?: $validStatuses)
+            ->whereIn('status', $validStatuses)
             ->withCount('incidentDocuments')
             ->with(['incidentType', 'incidentDocuments:id,incident_id,document_type']);
 
@@ -63,15 +61,10 @@ class IncidentDocumentController extends Controller
         $incidents = $query->orderBy($sortColumn, $direction)
             ->orderByDesc('id')
             ->paginate(12)
-            ->appends($request->query());
+            ->appends($request->except('status'));
 
         $documentTypes = IncidentDocumentType::cases();
         $caseScope = Incident::query()->whereIn('status', $validStatuses);
-        $statusOptions = FilterOptions::enums(
-            [IncidentStatus::Resolved, IncidentStatus::Closed],
-            (clone $caseScope)->distinct()->pluck('status'),
-            $statusFilter === 'all' ? null : $statusFilter
-        );
         $requiredForms = count($documentTypes);
         $completionStates = [];
         if ((clone $caseScope)->has('incidentDocuments', '>=', $requiredForms)->exists()) {
@@ -85,7 +78,7 @@ class IncidentDocumentController extends Controller
             'missing' => 'Missing a form',
         ], $completionStates, $request->input('completion'));
 
-        return view('admin.incident_documents.index', compact('incidents', 'documentTypes', 'statusOptions', 'completionOptions'));
+        return view('admin.incident_documents.index', compact('incidents', 'documentTypes', 'completionOptions'));
     }
 
     public function show(Incident $incident): View

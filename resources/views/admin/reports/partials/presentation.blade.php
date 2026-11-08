@@ -33,7 +33,7 @@
                 <x-place-filter-options :selected="request('barangay')" all-value="" />
             </select>
         </label>
-        <label class="report-presentation-filter" data-presentation-evacuees @class(['d-none' => request('dataset') !== 'evacuees'])>
+        <label class="report-presentation-filter" data-presentation-evacuees @if(request('dataset') !== 'evacuees') hidden @endif>
             <span>Shelter</span>
             <select name="evacuation_center_id" class="form-select" data-filter-default="" @disabled(request('dataset') !== 'evacuees')>
                 <option value="">All shelters</option>
@@ -44,7 +44,7 @@
                 @endforeach
             </select>
         </label>
-        <label class="report-presentation-filter" data-presentation-type @class(['d-none' => request('dataset') === 'evacuees'])>
+        <label class="report-presentation-filter" data-presentation-type @if(request('dataset') === 'evacuees') hidden @endif>
             <span>Incident type</span>
             <select name="incident_type_id" class="form-select" data-filter-default="" @disabled(request('dataset') === 'evacuees')>
                 <option value="">All incident types</option>
@@ -180,8 +180,8 @@
         const centerField = document.querySelector('[data-presentation-evacuees]');
         const centerSelect = centerField?.querySelector('select');
         const evacuees = event.target.value === 'evacuees';
-        typeField?.classList.toggle('d-none', evacuees);
-        centerField?.classList.toggle('d-none', !evacuees);
+        if (typeField) typeField.hidden = evacuees;
+        if (centerField) centerField.hidden = !evacuees;
         if (select) {
             select.disabled = evacuees;
         }

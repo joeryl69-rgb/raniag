@@ -396,7 +396,7 @@
                         <div class="rg-print-request-actions">
                             @if($issuedRequest)
                                 @if($issuedRequest->generated_path)
-                                    <a href="{{ Storage::url($issuedRequest->generated_path) }}" target="_blank" class="btn btn-success rg-print-request-button">
+                                    <a href="{{ $issuedRequest->generatedUrl() }}" target="_blank" class="btn btn-success rg-print-request-button">
                                         <i class="bi bi-file-earmark-pdf me-2"></i>View Printable PDF
                                     </a>
                                 @endif

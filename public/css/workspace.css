@@ -808,6 +808,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: .7rem;
 }
+.rg-filter-popover-fields .rg-filter-date { max-width: 10rem; }
 .rg-filter-popover-fields > .col-md-2 { width: auto; max-width: none; padding: 0; }
 .rg-filter-popover-fields label,
 .rg-filter-popover-fields .form-label,
@@ -856,6 +857,11 @@
     gap: .3rem;
     min-width: 7rem;
     margin: 0;
+}
+.report-presentation-filters .rg-filter-date {
+    flex: 0 1 9rem;
+    max-width: 9rem;
+    min-width: 8rem;
 }
 .report-presentation-filters .report-presentation-filter > span,
 .report-presentation-filters .rg-filter-date > span {

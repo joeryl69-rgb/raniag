@@ -121,7 +121,7 @@
 
                             <div class="doc-actions">
                                 @if($dr->generated_path)
-                                    <a href="{{ Storage::disk('public')->url($dr->generated_path) }}" target="_blank" class="btn btn-outline-success btn-sm w-100 mb-2">
+                                    <a href="{{ $dr->generatedUrl() }}" target="_blank" class="btn btn-outline-success btn-sm w-100 mb-2">
                                         <i class="bi bi-file-earmark-pdf me-1"></i>View PDF
                                     </a>
                                 @endif

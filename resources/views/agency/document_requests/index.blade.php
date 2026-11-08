@@ -381,7 +381,7 @@
                                     <td class="px-3 py-3 text-end">
                                         <div class="d-flex gap-2 justify-content-end flex-wrap">
                                             @if($dr->generated_path)
-                                                <a href="{{ Storage::disk('public')->url($dr->generated_path) }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                                <a href="{{ $dr->generatedUrl() }}" target="_blank" class="btn btn-sm btn-outline-success">
                                                     <i class="bi bi-file-earmark-pdf me-1"></i>View Printable PDF
                                                 </a>
                                             @endif

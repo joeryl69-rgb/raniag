@@ -70,6 +70,20 @@ test('hazard counters show change and an outside evacuee stays distinct', functi
         ->assertSee('1 from outside', false);
 });
 
+test('evacuee report filters hide incident type and show shelter instead', function () {
+    $administrator = User::factory()->administrator()->create();
+
+    $html = $this->actingAs($administrator)
+        ->get(route('admin.reports.index', ['dataset' => 'evacuees']))
+        ->assertOk()
+        ->getContent();
+
+    expect(preg_match('/<label[^>]*data-presentation-type[^>]*\shidden(?:\s|>)/', $html))->toBe(1)
+        ->and(preg_match('/<label[^>]*data-presentation-evacuees[^>]*\shidden(?:\s|>)/', $html))->toBe(0)
+        ->and($html)->toContain('name="incident_type_id"')
+        ->toContain('name="evacuation_center_id"');
+});
+
 test('check-in is blocked when a shelter is full and the registry can filter by shelter', function () {
     $admin = User::factory()->administrator()->create();
     $fullCenter = EvacuationCenter::query()->create([

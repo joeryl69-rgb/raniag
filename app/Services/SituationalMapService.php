@@ -220,9 +220,10 @@ class SituationalMapService
             ->map(function (Incident $inc) {
                 $hazardZones = $inc->meta['hazard_zones'] ?? [];
                 $status = $inc->status instanceof \BackedEnum ? $inc->status->value : (string) $inc->status;
+                $jurisdiction = $inc->meta['within_jurisdiction'] ?? null;
                 $inside = $status !== IncidentStatus::OutsideAor->value
-                    && ($inc->meta['within_jurisdiction'] ?? null) !== false
-                    && \App\Support\PlaceScope::isOfficial($inc->barangay);
+                    && ($jurisdiction === true
+                        || ($jurisdiction === null && \App\Support\PlaceScope::isOfficial($inc->barangay)));
 
                 return [
                     'id' => $inc->id,

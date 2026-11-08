@@ -48,4 +48,11 @@ class DocumentRequest extends Model
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
+
+    public function generatedUrl(): ?string
+    {
+        return $this->generated_path
+            ? '/storage/'.ltrim($this->generated_path, '/')
+            : null;
+    }
 }

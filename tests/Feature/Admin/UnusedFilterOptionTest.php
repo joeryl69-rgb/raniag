@@ -116,10 +116,9 @@ test('case document filters omit statuses and completion states with no files', 
     $this->actingAs($administrator)
         ->get(route('admin.incident_documents.index'))
         ->assertOk()
-        ->assertSee('value="resolved"', false)
         ->assertSee('value="missing"', false)
-        ->assertDontSee('value="closed"', false)
         ->assertDontSee('value="complete"', false)
+        ->assertDontSee('name="status"', false)
         ->assertDontSee('All finished cases', false)
         ->assertDontSee('Active cases', false)
         ->assertDontSee('value="all"', false)
@@ -127,27 +126,26 @@ test('case document filters omit statuses and completion states with no files', 
         ->assertDontSee('value="in_progress"', false);
 });
 
-test('case document status filter lists only statuses that have cases', function () {
+test('case documents include all finished cases without a redundant status filter', function () {
     $administrator = User::factory()->administrator()->create();
     $type = IncidentType::factory()->create();
-    makeQueueIncident($type, 'resolved');
-    makeQueueIncident($type, 'closed');
-    makeQueueIncident($type, 'submitted');
+    $resolved = makeQueueIncident($type, 'resolved');
+    $resolved->update(['tracking_number' => 'RAN-DOC-RESOLVED']);
+    $closed = makeQueueIncident($type, 'closed');
+    $closed->update(['tracking_number' => 'RAN-DOC-CLOSED']);
+    $active = makeQueueIncident($type, 'submitted');
+    $active->update(['tracking_number' => 'RAN-DOC-ACTIVE']);
 
     $html = $this->actingAs($administrator)
         ->get(route('admin.incident_documents.index'))
         ->assertOk()
         ->getContent();
 
-    preg_match('/<select name="status".*?<\/select>/s', $html, $status);
-
-    expect($status[0] ?? '')
-        ->toContain('value="resolved"')
-        ->toContain('value="closed"')
-        ->not->toContain('value="submitted"')
-        ->not->toContain('value="all"')
-        ->not->toContain('Active cases')
-        ->not->toContain('All finished cases');
+    expect($html)
+        ->not->toContain('name="status"')
+        ->toContain('RAN-DOC-RESOLVED')
+        ->toContain('RAN-DOC-CLOSED')
+        ->not->toContain('RAN-DOC-ACTIVE');
 });
 
 test('announcement filters omit types and publication states that have no notices', function () {

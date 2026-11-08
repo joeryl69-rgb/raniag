@@ -730,7 +730,7 @@
                         </div>
                     </div>
                     <div class="ring-label"><i class="bi bi-check-circle"></i> Resolution Rate</div>
-                    <div class="ring-sub" id="ring-resolution-sub">Cases resolved or closed</div>
+                    <div class="ring-sub" id="ring-resolution-sub">Completed cases</div>
                 </div>
                 <div class="dash-card perf-ring-card">
                     <div class="ring-wrap">
@@ -889,7 +889,6 @@
             let charts = {};
             let currentPoints = [];
             let rawPoints = [];
-            let barangayCounts = {};
             let hotspotByBarangay = {};
             const alertQueue = [];
             const queuedAlertIds = new Set();
@@ -974,10 +973,9 @@
 
             function pointIsInsidePamplona(point) {
                 const name = String(point?.barangay || '');
-                if (!officialBarangays.includes(name)) return false;
                 if (String(point?.status || '') === 'outside_aor') return false;
-                if (point?.within_jurisdiction === false) return false;
-                return true;
+                if (typeof point?.within_jurisdiction === 'boolean') return point.within_jurisdiction;
+                return officialBarangays.includes(name);
             }
 
             function applyMapFilters() {
@@ -994,19 +992,14 @@
                 plotPoints(filtered);
             }
 
-            function populateBarangayFilter() {
-                const sel = document.getElementById('filter-barangay');
-                if (!sel) return;
-                const current = sel.value;
-                if ([...sel.options].some((option) => option.value === current)) sel.value = current;
-            }
-
-            function showBarangayInsight(name) {
+            function showBarangayInsight(name, inside) {
                 const panel = document.getElementById('map-insight-panel');
                 if (!panel || !name) return;
-                const open = barangayCounts[name] ?? rawPoints.filter((p) => p.barangay === name).length;
-                const hotspot = hotspotByBarangay[name];
-                setText('map-insight-name', name);
+                const open = rawPoints.filter((point) =>
+                    point.barangay === name && pointIsInsidePamplona(point) === inside
+                ).length;
+                const hotspot = inside ? hotspotByBarangay[name] : null;
+                setText('map-insight-name', `${name} · ${inside ? 'Inside' : 'Outside'} Pamplona`);
                 setText('map-insight-open', String(open));
                 setText('map-insight-hotspot', hotspot
                     ? `${hotspot.count}× ${hotspot.type}`
@@ -1482,7 +1475,7 @@
                     `<br><a class="popup-view-btn" href="${INCIDENT_URL_BASE}/${pt.id}"><i class="bi bi-box-arrow-up-right"></i> View</a>`
                 );
                 marker.on('click', function () {
-                    if (pt.barangay) showBarangayInsight(pt.barangay);
+                    if (pt.barangay) showBarangayInsight(pt.barangay, pointIsInsidePamplona(pt));
                 });
                 marker.addTo(markerLayer);
             }
@@ -1653,7 +1646,7 @@
                 setText('kpi-in-progress', sb.in_progress ?? 0);
                 setText('kpi-resolved', sb.resolved ?? 0);
                 setText('kpi-agencies', data.active_agencies ?? 0);
-                setText('kpi-total-sub', `Submitted ${sb.submitted ?? 0} · Closed ${sb.closed ?? 0}`);
+                setText('kpi-total-sub', `Submitted ${sb.submitted ?? 0}`);
                 setText('kpi-active-assignments', `Active assignments ${data.active_assignments ?? 0}`);
                 setText('kpi-resolved-week', `Completed this week ${data.assignments_completed_this_week ?? 0}`);
                 const picture = data.period || {};
@@ -1666,7 +1659,6 @@
                 const analytics = data.analytics || {};
                 setText('kpi-avg-resolution', `Avg. resolution ${analytics.avg_resolution_hours ?? 0}h`);
 
-                barangayCounts = analytics.barangays || {};
                 hotspotByBarangay = {};
                 (analytics.redundancy_hotspots || []).forEach((h) => {
                     if (!h?.barangay) return;
@@ -1675,8 +1667,6 @@
                         hotspotByBarangay[h.barangay] = { type: h.type, count: h.count };
                     }
                 });
-                populateBarangayFilter(barangayCounts);
-
                 rawPoints = data.recent_incidents || [];
                 applyMapFilters();
                 plotHazardLayers(data);
@@ -1689,8 +1679,8 @@
 
                 renderOpsBoard(rawPoints);
                 renderTrendChart((data.period && data.period.trend) || analytics.weekly_trends || []);
-                const statusOrder = ['submitted', 'in_progress', 'resolved', 'closed'];
-                const statusLabels = { submitted: 'Submitted', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' };
+                const statusOrder = ['submitted', 'in_progress', 'resolved'];
+                const statusLabels = { submitted: 'Submitted', in_progress: 'In progress', resolved: 'Resolved' };
                 renderMeters('status-meters', statusOrder.map((key) => ({
                     label: statusLabels[key],
                     value: Number(sb[key]) || 0,
@@ -1717,7 +1707,7 @@
 
                 const perf = data.performance || {};
                 setRing('ring-resolution-fill', 'ring-resolution-value', perf.resolution_rate);
-                setText('ring-resolution-sub', `${perf.resolved_closed_count ?? 0} of ${data.total_incidents ?? 0} cases resolved`);
+                setText('ring-resolution-sub', `${perf.resolved_closed_count ?? 0} of ${data.total_incidents ?? 0} completed cases`);
 
                 setRing('ring-coverage-fill', 'ring-coverage-value', perf.assignment_coverage_rate);
                 setText('ring-coverage-sub', `${data.active_assignments ?? 0} of ${perf.open_incidents_count ?? 0} open cases dispatched`);
@@ -1884,11 +1874,14 @@
                     (points || []).forEach((point) => {
                         const name = point.barangay || '';
                         if (!name) return;
-                        counts[name] = (counts[name] || 0) + 1;
+                        const inside = pointIsInsidePamplona(point);
+                        const key = `${inside ? 'inside' : 'outside'}|${name}`;
+                        counts[key] = counts[key] || { name, inside, count: 0 };
+                        counts[key].count++;
                     });
-                    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-                    places.innerHTML = entries.length ? entries.map(([name, count]) =>
-                        `<div class="hotspot-row"><span>${escapeHtml(name)}</span><span class="hotspot-count">${count} open</span></div>`
+                    const entries = Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 6);
+                    places.innerHTML = entries.length ? entries.map(({ name, inside, count }) =>
+                        `<div class="hotspot-row"><span>${escapeHtml(name)} <small class="text-muted">${inside ? 'Inside' : 'Outside'} Pamplona</small></span><span class="hotspot-count">${count} open</span></div>`
                     ).join('') : '<div class="empty-note">No open reports in Pamplona barangays.</div>';
                 }
             }

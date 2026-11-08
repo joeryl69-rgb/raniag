@@ -3,7 +3,7 @@
     <x-workspace-intro
         eyebrow="INCIDENT MANAGEMENT / RECORDS"
         title="Case documents"
-        description="Find the closed-case forms staff need for review, filing, and follow-up."
+        description="Find resolved and closed case forms for review, filing, and follow-up."
         icon="bi-folder2-open"
         variant="case-documents"
     />
@@ -16,7 +16,7 @@
         <header class="rg-table-desk-head">
             <div>
                 <h2 id="rg-case-files-heading">Case file register <span>{{ $incidents->total() }} records</span></h2>
-                <p>Closed-case forms for review and filing. Open a file to view its documents.</p>
+                <p>Resolved and closed case forms for review and filing. Open a file to view its documents.</p>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-folder2-open text-primary fs-5" aria-hidden="true"></i>
@@ -29,24 +29,6 @@
                 :clear-url="route('admin.incident_documents.index')"
                 :compact="true"
             >
-                <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">Status</label>
-                    @php
-                        $statusKeys = array_map('strval', array_keys($statusOptions));
-                        $requestedStatus = (string) request('status', '');
-                        $statusChoice = in_array($requestedStatus, $statusKeys, true) ? $requestedStatus : null;
-                        $singleStatus = count($statusKeys) === 1 ? $statusKeys[0] : null;
-                    @endphp
-                    @if ($statusOptions === [])
-                        <p class="form-text mb-0">No finished status is on file.</p>
-                    @else
-                        <select name="status" class="form-select" data-filter-default="{{ $singleStatus ?? '' }}">
-                            @foreach ($statusOptions as $value => $label)
-                                <option value="{{ $value }}" @selected($statusChoice === (string) $value || ($statusChoice === null && $singleStatus === (string) $value))>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    @endif
-                </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">Location</label>
                     <select name="jurisdiction" class="form-select" data-filter-default="">
@@ -71,7 +53,7 @@
             @if($incidents->isEmpty())
                 <div class="rg-empty-state" role="status">
                     <span class="rg-empty-state-icon"><i class="bi bi-folder-x" aria-hidden="true"></i></span>
-                    <strong>No closed cases match these filters</strong>
+                    <strong>No resolved or closed cases match these filters</strong>
                     <span>Try another status, completion state, or tracking number.</span>
                 </div>
             @else
