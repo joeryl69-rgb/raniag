@@ -52,7 +52,7 @@
                     <option value="">All types</option>
                     @foreach($types as $type)
                         <option value="{{ $type }}" {{ request('type') === $type ? 'selected' : '' }}>
-                            {{ \Illuminate\Support\Str::headline(str_replace('.', ' ', $type)) }}
+                            {{ \App\Models\Notification::labelForType($type) }}
                         </option>
                     @endforeach
                 </select>

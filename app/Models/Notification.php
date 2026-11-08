@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 class Notification extends Model
 {
@@ -63,6 +64,7 @@ class Notification extends Model
             'document_request.new' => 'bi-file-earmark-arrow-up-fill',
             'document_request.ready' => 'bi-file-earmark-check-fill',
             'document_request.unavailable' => 'bi-file-earmark-excel-fill',
+            'feedback.new' => 'bi-chat-square-heart-fill',
             default => 'bi-bell-fill',
         };
     }
@@ -75,7 +77,24 @@ class Notification extends Model
             'incident.status_changed' => 'info',
             'resolution.submitted', 'document_request.ready' => 'success',
             'document_request.unavailable' => 'warning',
+            'feedback.new' => 'primary',
             default => 'secondary',
+        };
+    }
+
+    public static function labelForType(string $type): string
+    {
+        return match ($type) {
+            'incident.new' => 'Incident New',
+            'incident.assigned' => 'Incident Assigned',
+            'incident.status_changed' => 'Incident Status Changed',
+            'incident.outside_aor' => 'Incident Outside AOR',
+            'resolution.submitted' => 'Resolution Submitted',
+            'document_request.new' => 'Document Request New',
+            'document_request.ready' => 'Document Request Ready',
+            'document_request.unavailable' => 'Document Request Unavailable',
+            'feedback.new' => 'Feedback & Concerns',
+            default => Str::headline(str_replace('.', ' ', $type)),
         };
     }
 
@@ -111,7 +130,7 @@ class Notification extends Model
                 default => null,
             };
 
-            if ($routeName && \Illuminate\Support\Facades\Route::has($routeName)) {
+            if ($routeName && Route::has($routeName)) {
                 return route($routeName, $this->incident_id, absolute: false);
             }
         }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\FeedbackSubmission;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,7 +19,7 @@ class FeedbackController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, NotificationService $notifications): RedirectResponse
     {
         $data = $request->validate([
             'category' => ['required', 'string', 'in:'.implode(',', array_keys(FeedbackSubmission::filterableCategories()))],
@@ -33,7 +34,8 @@ class FeedbackController extends Controller
         unset($data['website']);
         $data['submitted_via'] = 'public';
 
-        FeedbackSubmission::create($data);
+        $feedback = FeedbackSubmission::create($data);
+        $notifications->notifyAdminsNewFeedback($feedback);
 
         return back()->with('sent', true);
     }

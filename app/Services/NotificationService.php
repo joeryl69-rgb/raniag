@@ -9,6 +9,7 @@ use App\Mail\IncidentReportReceivedMail;
 use App\Mail\IncidentStatusUpdateMail;
 use App\Models\Assignment;
 use App\Models\DocumentRequest;
+use App\Models\FeedbackSubmission;
 use App\Models\Incident;
 use App\Models\Notification;
 use App\Models\Resolution;
@@ -64,6 +65,27 @@ class NotificationService
     {
         User::where('role', $role)->where('is_active', true)->get()
             ->each(fn (User $user) => $this->notify($user, $type, $title, $message, $incident, $data));
+    }
+
+    public function notifyAdminsNewFeedback(FeedbackSubmission $feedback): void
+    {
+        $source = $feedback->isFromAgency()
+            ? 'Support Center'
+            : 'Public Support Center';
+
+        $this->notifyRole(
+            UserRole::Administrator,
+            'feedback.new',
+            'New feedback or concern',
+            $feedback->categoryLabel().': '.$feedback->subject.' ('.$source.').',
+            data: [
+                'url' => route('admin.feedback.index', [
+                    'status' => 'all',
+                    'q' => $feedback->subject,
+                ], absolute: false),
+                'feedback_submission_id' => $feedback->id,
+            ],
+        );
     }
 
     private function fullLocation(Incident $incident): string

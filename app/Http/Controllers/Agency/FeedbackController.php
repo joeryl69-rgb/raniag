@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Agency;
 
 use App\Http\Controllers\Controller;
 use App\Models\FeedbackSubmission;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,7 +25,7 @@ class FeedbackController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, NotificationService $notifications): RedirectResponse
     {
         $data = $request->validate([
             'category' => ['required', 'string', 'in:'.implode(',', array_keys(FeedbackSubmission::filterableCategories()))],
@@ -34,13 +35,14 @@ class FeedbackController extends Controller
 
         $user = $request->user();
 
-        FeedbackSubmission::create($data + [
+        $feedback = FeedbackSubmission::create($data + [
             'submitted_via' => 'agency',
             'agency_id' => $user->agency_id,
             'submitted_by' => $user->id,
             'submitter_name' => $user->name,
             'submitter_email' => $user->email,
         ]);
+        $notifications->notifyAdminsNewFeedback($feedback);
 
         return redirect()->route('agency.support.create')->with('sent', true);
     }

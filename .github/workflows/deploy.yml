@@ -122,4 +122,4 @@ jobs:
           status: ${{ job.status }}
           env: production
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          env_url: https://mediumorchid-weasel-407759.hostingersite.com
+          env_url: https://wheat-dog-777889.hostingersite.com
