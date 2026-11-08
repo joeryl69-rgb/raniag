@@ -320,12 +320,14 @@
                             <button type="button" class="btn {{ $registryFilters['origin'] === 'inside' ? 'btn-primary' : 'btn-outline-secondary' }}" data-origin="inside" aria-pressed="{{ $registryFilters['origin'] === 'inside' ? 'true' : 'false' }}">Pamplona</button>
                             <button type="button" class="btn {{ $registryFilters['origin'] === 'outside' ? 'btn-primary' : 'btn-outline-secondary' }}" data-origin="outside" aria-pressed="{{ $registryFilters['origin'] === 'outside' ? 'true' : 'false' }}">Outside</button>
                         </div>
-                        <label class="rg-evacuee-search">
-                            <i class="bi bi-search" aria-hidden="true"></i>
-                            <span class="visually-hidden">Search evacuees by name or shelter</span>
-                            <input type="search" name="q" value="{{ $registryFilters['q'] }}" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter">
-                        </label>
-                        <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+                        <div class="rg-evacuee-search-group">
+                            <label class="rg-evacuee-search">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                                <span class="visually-hidden">Search evacuees by name or shelter</span>
+                                <input type="search" name="q" value="{{ $registryFilters['q'] }}" class="form-control form-control-sm" id="evacuee-search" placeholder="Search name or shelter">
+                            </label>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+                        </div>
                     </form>
                 @endif
             </div>
