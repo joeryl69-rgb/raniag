@@ -93,16 +93,16 @@ class IncidentTrackController extends Controller
         ])->header('Cache-Control', 'no-store, private');
     }
 
-    public function liveHistory(Request $request, string $trackingNumber): Response
+    public function liveUpdates(Request $request, string $trackingNumber): Response
     {
         $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
         abort_if(! $incident, 404);
         abort_unless(session()->get('track_verified.'.$incident->id) === true, 403);
 
-        $this->loadTrackingHistory($incident);
+        $this->loadTrackingLiveData($incident);
 
         return response()
-            ->view('public.track._history', ['incident' => $incident])
+            ->view('public.track._live_updates', ['incident' => $incident])
             ->header('Cache-Control', 'no-store, private');
     }
 
@@ -146,7 +146,7 @@ class IncidentTrackController extends Controller
         session()->put('track_verified.'.$incident->id, true);
 
         $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency']);
-        $this->loadTrackingHistory($incident);
+        $this->loadTrackingLiveData($incident);
 
         return view('public.track.show', [
             'incident' => $incident,
@@ -160,9 +160,13 @@ class IncidentTrackController extends Controller
         ]);
     }
 
-    private function loadTrackingHistory(\App\Models\Incident $incident): void
+    private function loadTrackingLiveData(\App\Models\Incident $incident): void
     {
-        $incident->loadMissing('statusUpdates.user.agency');
+        $incident->loadMissing([
+            'assignments.agency',
+            'assignments.assignee',
+            'statusUpdates.user.agency',
+        ]);
         $incident->setRelation('resolutions', $incident->resolutions()
             ->with('resolver.agency')
             ->where('created_at', '>=', $incident->created_at)

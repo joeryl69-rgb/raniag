@@ -1,6 +1,12 @@
 (function (window, document) {
     'use strict';
 
+    const liveRegionSelectors = [
+        '#rg-track-status',
+        '#case-assignment-status',
+        '#case-history-content',
+    ];
+
     function init() {
         const target = document.getElementById('case-history-content');
         const updatesUrl = target?.dataset.liveUpdatesUrl;
@@ -20,21 +26,31 @@
                     cache: 'no-store',
                 });
                 if (!response.ok) {
-                    console.warn('[public-track-history] Update check failed with HTTP status ' + response.status + '.');
+                    console.warn('[public-track-updates] Update check failed with HTTP status ' + response.status + '.');
                     return;
                 }
 
                 const html = await response.text();
-                const fresh = new DOMParser()
-                    .parseFromString(html, 'text/html')
-                    .querySelector('#case-history-content');
-                if (!fresh) {
-                    console.warn('[public-track-history] The update response did not contain the history fragment.');
-                } else if (fresh.innerHTML !== target.innerHTML) {
-                    target.innerHTML = fresh.innerHTML;
+                const freshDocument = new DOMParser().parseFromString(html, 'text/html');
+                const regions = liveRegionSelectors.map((selector) => ({
+                    current: document.querySelector(selector),
+                    fresh: freshDocument.querySelector(selector),
+                    selector,
+                }));
+
+                if (regions.some(({ current, fresh }) => !current || !fresh)) {
+                    console.warn('[public-track-updates] The response is missing one or more live tracking regions.');
+                    return;
                 }
+
+                regions.forEach(({ current, fresh }) => {
+                    if (fresh.innerHTML !== current.innerHTML) {
+                        current.innerHTML = fresh.innerHTML;
+                    }
+                });
+                document.dispatchEvent(new CustomEvent('rg:tracking-updated'));
             } catch (error) {
-                console.warn('[public-track-history] Update check failed; retrying on next poll.', error);
+                console.warn('[public-track-updates] Update check failed; retrying on next poll.', error);
             } finally {
                 inFlight = false;
             }

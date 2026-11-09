@@ -12,7 +12,7 @@ use App\Models\User;
 use App\Services\SituationalMapService;
 use Illuminate\Support\Facades\Hash;
 
-test('tracking page shows each agency resolution and serves fresh content for polling', function () {
+test('tracking page shows each agency resolution and serves fresh live-update fragments', function () {
     $type = IncidentType::factory()->create();
     $firstAgency = Agency::query()->create([
         'name' => 'First Response Agency',
@@ -45,7 +45,7 @@ test('tracking page shows each agency resolution and serves fresh content for po
         'resolved_at' => now()->subMinutes(2),
     ]);
 
-    $this->get(route('public.track.history', $incident->tracking_number))
+    $this->get(route('public.track.updates', $incident->tracking_number))
         ->assertForbidden();
 
     $response = $this->withSession(['track_verified.'.$incident->id => true])
@@ -70,13 +70,101 @@ test('tracking page shows each agency resolution and serves fresh content for po
     ]);
 
     $historyResponse = $this->withSession(['track_verified.'.$incident->id => true])
-        ->get(route('public.track.history', $incident->tracking_number).'?_='.now()->timestamp)
+        ->get(route('public.track.updates', $incident->tracking_number).'?_='.now()->timestamp)
         ->assertOk()
+        ->assertSee('id="rg-track-status"', false)
+        ->assertSee('id="case-assignment-status"', false)
+        ->assertSee('id="case-history-content"', false)
         ->assertSee('First Response Agency')
         ->assertSee('First agency completed its response.')
         ->assertSee('Final Response Agency')
         ->assertSee('Final agency completed the response.');
     expect($historyResponse->headers->get('Cache-Control'))
+        ->toContain('no-store')
+        ->toContain('private');
+});
+
+test('live tracking feed refreshes status, every active assignment, and resolutions together', function () {
+    $type = IncidentType::factory()->create();
+    $firstAgency = Agency::query()->create([
+        'name' => 'First Live Agency',
+        'code' => 'FLA1',
+        'is_active' => true,
+    ]);
+    $secondAgency = Agency::query()->create([
+        'name' => 'Second Live Agency',
+        'code' => 'FLA2',
+        'is_active' => true,
+    ]);
+    $administrator = User::factory()->administrator()->create();
+    $secondResponder = User::factory()->agency()->create(['agency_id' => $secondAgency->id]);
+    $incident = Incident::query()->create([
+        'tracking_number' => 'RAN-LIVE-ALL-UPDATES',
+        'incident_type_id' => $type->id,
+        'status' => IncidentStatus::InProgress,
+        'priority' => 'medium',
+        'description' => 'Tracking live update integration test.',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+    $firstAssignment = Assignment::query()->create([
+        'incident_id' => $incident->id,
+        'agency_id' => $firstAgency->id,
+        'assigned_by' => $administrator->id,
+        'is_active' => true,
+        'assigned_at' => now(),
+    ]);
+
+    $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.case', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('First Live Agency')
+        ->assertDontSee('Second Live Agency')
+        ->assertSee('CASE MOVEMENT / IN PROGRESS');
+
+    $firstAssignment->update([
+        'acknowledged_at' => now(),
+        'field_phase' => 'on_scene',
+    ]);
+    Assignment::query()->create([
+        'incident_id' => $incident->id,
+        'agency_id' => $secondAgency->id,
+        'assigned_by' => $administrator->id,
+        'is_active' => true,
+        'assigned_at' => now(),
+    ]);
+    $incident->update([
+        'status' => IncidentStatus::Resolved,
+        'resolved_at' => now(),
+    ]);
+    StatusUpdate::query()->create([
+        'incident_id' => $incident->id,
+        'from_status' => IncidentStatus::InProgress,
+        'to_status' => IncidentStatus::Resolved,
+        'comment' => 'Responding agencies completed their work.',
+        'is_public' => true,
+    ]);
+    Resolution::query()->create([
+        'incident_id' => $incident->id,
+        'resolved_by' => $secondResponder->id,
+        'summary' => 'Second agency resolution arrived after page load.',
+        'actions_taken' => 'Private resolution actions.',
+        'resolved_at' => now(),
+    ]);
+
+    $updates = $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.updates', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('CASE MOVEMENT / RESOLVED')
+        ->assertSee('data-current-status="resolved"', false)
+        ->assertSee('First Live Agency')
+        ->assertSee('Second Live Agency')
+        ->assertSee('On scene')
+        ->assertSee('id="case-history-content"', false)
+        ->assertSee('Second agency resolution arrived after page load.')
+        ->assertDontSee('Private resolution actions.');
+
+    expect($updates->headers->get('Cache-Control'))
         ->toContain('no-store')
         ->toContain('private');
 });
@@ -382,11 +470,11 @@ test('agency location sharing routes the live responder pin to agency admin and 
         ->assertSee('js/public-track-map.js', false)
         ->assertSee('js/incident-map-icons.js', false)
         ->assertSee('icon: '.json_encode($type->icon), false)
-        ->assertSee('id="rg-track-status" data-live-refresh', false)
-        ->assertSee('data-live-refresh-target="#case-assignment-status"', false)
+        ->assertSee('id="rg-track-status"', false)
+        ->assertSee('id="case-assignment-status"', false)
         ->assertSee('data-live-updates-url', false)
         ->assertSee('js/public-track-history.js', false)
-        ->assertSee('data-live-refresh-interval="4000"', false)
+        ->assertSee(route('public.track.updates', $incident->tracking_number), false)
         ->assertSee('pollMs: 3000', false);
 
     $this->withSession(['track_verified.'.$incident->id => true])
