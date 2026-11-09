@@ -278,5 +278,5 @@ document.addEventListener('DOMContentLoaded', function () {
 @endpush
 
 @push('scripts')
-<script src="{{ asset('js/public-track-history.js') }}?v={{ @filemtime(public_path('js/public-track-history.js')) }}"></script>
+<script src="{{ asset('js/public-track-updates.js') }}?v=121"></script>
 @endpush

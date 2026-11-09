@@ -53,7 +53,7 @@ test('tracking page shows each agency resolution and serves fresh live-update fr
         ->assertOk()
         ->assertSee('Agency resolutions')
         ->assertSee('data-live-updates-url', false)
-        ->assertSee('js/public-track-history.js', false)
+        ->assertSee('js/public-track-updates.js', false)
         ->assertSee('First Response Agency')
         ->assertSee('First agency completed its response.')
         ->assertDontSee('Actions taken by the first agency.');
@@ -167,6 +167,56 @@ test('live tracking feed refreshes status, every active assignment, and resoluti
     expect($updates->headers->get('Cache-Control'))
         ->toContain('no-store')
         ->toContain('private');
+});
+
+test('agency acceptance and field-phase actions appear in the next public tracking poll', function () {
+    $type = IncidentType::factory()->create();
+    $agency = Agency::query()->create([
+        'name' => 'Live Acceptance Agency',
+        'code' => 'LAA1',
+        'is_active' => true,
+    ]);
+    $administrator = User::factory()->administrator()->create();
+    $agencyUser = User::factory()->agency()->create(['agency_id' => $agency->id]);
+    $incident = Incident::query()->create([
+        'tracking_number' => 'RAN-LIVE-ACCEPT',
+        'incident_type_id' => $type->id,
+        'status' => IncidentStatus::Assigned,
+        'priority' => 'medium',
+        'description' => 'Assignment acceptance live-poll test.',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+    Assignment::query()->create([
+        'incident_id' => $incident->id,
+        'agency_id' => $agency->id,
+        'assigned_by' => $administrator->id,
+        'is_active' => true,
+        'assigned_at' => now(),
+    ]);
+
+    $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.case', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('Awaiting acceptance');
+
+    $this->actingAs($agencyUser)
+        ->post(route('agency.incidents.accept', $incident))
+        ->assertRedirect();
+
+    $this->actingAs($agencyUser)
+        ->postJson(route('agency.incidents.field_phase', $incident), ['field_phase' => 'en_route'])
+        ->assertOk()
+        ->assertJsonPath('field_phase', 'en_route');
+
+    $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.updates', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('Live Acceptance Agency')
+        ->assertSee('En route')
+        ->assertSee('CASE MOVEMENT / IN PROGRESS')
+        ->assertSee('Live Acceptance Agency accepted the assignment and started the investigation.')
+        ->assertSee('Live Acceptance Agency is on the way to the reported location.');
 });
 
 test('public tracking hides pending-info requests even when legacy updates are public', function () {
@@ -473,7 +523,7 @@ test('agency location sharing routes the live responder pin to agency admin and 
         ->assertSee('id="rg-track-status"', false)
         ->assertSee('id="case-assignment-status"', false)
         ->assertSee('data-live-updates-url', false)
-        ->assertSee('js/public-track-history.js', false)
+        ->assertSee('js/public-track-updates.js', false)
         ->assertSee(route('public.track.updates', $incident->tracking_number), false)
         ->assertSee('pollMs: 3000', false);
 
