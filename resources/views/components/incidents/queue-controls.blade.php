@@ -20,13 +20,18 @@
             <label>
                 <span>Status</span>
                 @php
-                    $chosenStatus = (string) request('status', '');
+                    $chosenStatus = (string) request('status', $admin ? 'submitted' : 'all');
                     $statusChoices = is_array($statuses) ? $statuses : [];
-                    $chosenStatusExists = $chosenStatus !== '' && array_key_exists($chosenStatus, $statusChoices);
                 @endphp
-                <select name="status" data-filter-default="">
-                    <option value="" @selected(! $chosenStatusExists)>Active cases</option>
+                <select name="status" data-filter-default="{{ $admin ? 'submitted' : 'all' }}">
+                    @if ($admin)
+                        <option value="submitted" @selected($chosenStatus === 'submitted')>Submitted reports</option>
+                        <option value="all" @selected($chosenStatus === 'all')>All reports</option>
+                    @else
+                        <option value="all" @selected($chosenStatus === 'all' || $chosenStatus === '')>All assigned cases</option>
+                    @endif
                     @foreach ($statusChoices as $value => $label)
+                        @continue($admin && $value === 'submitted')
                         <option value="{{ $value }}" @selected($chosenStatus === (string) $value)>{{ $label }}</option>
                     @endforeach
                 </select>

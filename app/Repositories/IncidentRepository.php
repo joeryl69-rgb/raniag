@@ -104,7 +104,8 @@ class IncidentRepository implements IncidentRepositoryInterface
                     ->latest('assignments.created_at'),
             ])
             ->whereHas('assignments', function ($q) use ($agencyId) {
-                $q->where('assignments.agency_id', $agencyId);
+                $q->where('assignments.agency_id', $agencyId)
+                    ->where('assignments.is_active', true);
             });
 
         // Resolved incidents move to the Document Request workflow and no
@@ -161,7 +162,7 @@ class IncidentRepository implements IncidentRepositoryInterface
                     if ($agencyId) {
                         $w->orWhere('assignments.agency_id', $agencyId);
                     }
-                });
+                })->where('assignments.is_active', true);
             });
 
         // Resolved incidents move to the Document Request workflow and no
@@ -212,11 +213,8 @@ class IncidentRepository implements IncidentRepositoryInterface
             : null;
         if ($status) {
             $query->where('status', $status->value);
-        } else {
-            $query->whereNotIn('status', [
-                IncidentStatus::Resolved->value,
-                IncidentStatus::Closed->value,
-            ]);
+        } elseif (($filters['status'] ?? null) !== 'all') {
+            $query->where('status', IncidentStatus::Submitted->value);
         }
 
         if (! empty($filters['incident_type_id'] ?? null)) {
@@ -255,7 +253,8 @@ class IncidentRepository implements IncidentRepositoryInterface
 
         if ($sort === 'priority') {
             $query->orderByRaw($priorityOrder)
-                ->orderBy('reported_at', $direction);
+                ->orderBy('reported_at', $direction)
+                ->orderByDesc('id');
 
             return;
         }
@@ -266,5 +265,7 @@ class IncidentRepository implements IncidentRepositoryInterface
         if ($sort !== 'reported_at') {
             $query->orderBy('reported_at', 'desc');
         }
+
+        $query->orderByDesc('id');
     }
 }

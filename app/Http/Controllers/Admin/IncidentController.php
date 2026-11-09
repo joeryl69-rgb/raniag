@@ -37,7 +37,7 @@ class IncidentController extends Controller
 
         $filters = [
             'q' => $request->string('q')->trim()->value(),
-            'status' => $request->string('status')->value(),
+            'status' => $request->string('status')->value() ?: IncidentStatus::Submitted->value,
             'incident_type_id' => $request->integer('incident_type_id') ?: null,
             'priority' => $request->string('priority')->value(),
             'jurisdiction' => $request->string('jurisdiction')->value(),

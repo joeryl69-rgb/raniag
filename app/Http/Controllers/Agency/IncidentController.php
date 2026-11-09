@@ -47,10 +47,13 @@ class IncidentController extends Controller
                 fn (IncidentStatus $status) => ! in_array($status->value, ['resolved', 'closed'], true)
             )),
             Incident::query()
-                ->whereHas('assignments', fn ($query) => $query->where('assignments.agency_id', $agencyId))
+                ->whereHas('assignments', fn ($query) => $query
+                    ->where('assignments.agency_id', $agencyId)
+                    ->where('assignments.is_active', true))
                 ->whereNotIn('status', ['resolved', 'closed'])
                 ->distinct()
-                ->pluck('status')
+                ->pluck('status'),
+            $filters['status'] ?? null
         );
 
         return view('agency.incidents.index', compact('incidents', 'filters', 'queueStatuses'));

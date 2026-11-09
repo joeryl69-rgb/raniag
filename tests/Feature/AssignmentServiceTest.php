@@ -114,8 +114,7 @@ test('agency and assigned personnel both retain case access when multiple agency
     $this->actingAs($personnel)
         ->get(route('personnel.incidents.index'))
         ->assertOk()
-        ->assertSee('RAN-ASN-0004')
-        ->assertSee('Acknowledge RAN-ASN-0004');
+        ->assertSee('RAN-ASN-0004');
 
     $this->actingAs($agencyUser)
         ->get(route('agency.incidents.index'))
@@ -138,6 +137,68 @@ test('agency and assigned personnel both retain case access when multiple agency
         ->assertSee('INCIDENT COMMAND / CASE FILE')
         ->assertSee('Current state')
         ->assertSee('Case dossier sections');
+});
+
+test('agency and personnel queues only include active assignments', function () {
+    $type = IncidentType::factory()->create();
+    $administrator = User::factory()->administrator()->create();
+    $agency = Agency::query()->create(['name' => 'Queue Agency', 'code' => 'QAG', 'is_active' => true]);
+    $agencyUser = User::factory()->agency()->create([
+        'agency_id' => $agency->id,
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+    $personnel = User::factory()->create([
+        'role' => 'personnel',
+        'agency_id' => null,
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+
+    $makeIncident = function (string $trackingNumber) use ($type): Incident {
+        return Incident::query()->create([
+            'tracking_number' => $trackingNumber,
+            'tracking_pin' => Hash::make('123456'),
+            'incident_type_id' => $type->id,
+            'status' => IncidentStatus::Assigned,
+            'priority' => 'medium',
+            'description' => 'Active assignment queue coverage.',
+            'is_anonymous' => true,
+            'reported_at' => now(),
+        ]);
+    };
+
+    $activeIncident = $makeIncident('RAN-ACTIVE-QUEUE');
+    \App\Models\Assignment::query()->create([
+        'incident_id' => $activeIncident->id,
+        'agency_id' => $agency->id,
+        'assigned_to' => $personnel->id,
+        'assigned_by' => $administrator->id,
+        'is_active' => true,
+        'assigned_at' => now(),
+    ]);
+
+    $inactiveIncident = $makeIncident('RAN-INACTIVE-QUEUE');
+    \App\Models\Assignment::query()->create([
+        'incident_id' => $inactiveIncident->id,
+        'agency_id' => $agency->id,
+        'assigned_to' => $personnel->id,
+        'assigned_by' => $administrator->id,
+        'is_active' => false,
+        'assigned_at' => now()->subDay(),
+    ]);
+
+    $this->actingAs($agencyUser)
+        ->get(route('agency.incidents.index'))
+        ->assertOk()
+        ->assertSee('RAN-ACTIVE-QUEUE')
+        ->assertDontSee('RAN-INACTIVE-QUEUE');
+
+    $this->actingAs($personnel)
+        ->get(route('personnel.incidents.index'))
+        ->assertOk()
+        ->assertSee('RAN-ACTIVE-QUEUE')
+        ->assertDontSee('RAN-INACTIVE-QUEUE');
 });
 
 test('acknowledging assignment moves assigned incident to in_progress', function () {

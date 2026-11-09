@@ -54,14 +54,17 @@ class IncidentController extends Controller
                         if ($agencyId) {
                             $assignment->orWhere('assignments.agency_id', $agencyId);
                         }
-                    });
+                    })->where('assignments.is_active', true);
                 })
                 ->whereNotIn('status', ['resolved', 'closed'])
                 ->distinct()
-                ->pluck('status')
+                ->pluck('status'),
+            $filters['status'] ?? null
         );
 
-        return view('personnel.incidents.index', compact('incidents', 'filters', 'queueStatuses'));
+        $barangays = config('raniag.barangays', []);
+
+        return view('personnel.incidents.index', compact('incidents', 'filters', 'queueStatuses', 'barangays'));
     }
 
     public function show(Request $request, int $incident): View|JsonResponse
