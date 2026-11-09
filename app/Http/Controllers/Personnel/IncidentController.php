@@ -156,7 +156,10 @@ class IncidentController extends Controller
         $comment = $data['comment'] ?? null;
         $isPublicUpdate = false;
         if ($newStatus->value === 'pending_info') {
-            $comment = 'Awaiting information: '.($data['needs_info'] ?? $comment);
+            $comment = 'Awaiting information: '.$data['needs_info'];
+            if (filled($data['comment'] ?? null)) {
+                $comment .= "\nInvestigation log: ".$data['comment'];
+            }
             $isPublicUpdate = false;
         }
 

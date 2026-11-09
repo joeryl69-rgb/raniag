@@ -622,6 +622,7 @@
                                 </div>
                             @endif
 
+                            <div id="incident-response-status" data-live-refresh data-live-refresh-target="#incident-response-status" data-live-refresh-interval="4000">
                             @if ($incident->status->value === 'assigned')
                                 <span class="badge bg-warning text-dark mt-2">Awaiting Agency Response</span>
                             @elseif ($incident->status->value === 'in_progress')
@@ -635,11 +636,18 @@
                                         ->where('to_status', \App\Enums\IncidentStatus::PendingInfo)
                                         ->sortByDesc('created_at')
                                         ->first();
+                                    $infoComment = (string) ($latestInfoRequest?->comment ?? '');
+                                    $infoParts = preg_split('/\nInvestigation log:\s*/', $infoComment, 2);
+                                    $requestedDetails = preg_replace('/^Awaiting information:\s*/', '', $infoParts[0] ?? '');
+                                    $investigationLog = $infoParts[1] ?? null;
                                 @endphp
                                 <span class="badge bg-warning text-dark mt-2 mb-2"><i class="bi bi-hourglass-split me-1"></i>Awaiting Info / Pending Request</span>
                                 <div class="alert alert-warning small mb-3">
-                                    <strong>Requested by agency:</strong><br>
-                                    {{ $latestInfoRequest?->comment ?? 'The assigned agency marked this case as awaiting information.' }}
+                                    <strong>Requested details:</strong><br>
+                                    {{ $requestedDetails !== '' ? $requestedDetails : 'The assigned agency marked this case as awaiting information.' }}
+                                    @if (filled($investigationLog))
+                                        <div class="mt-2"><strong>Investigation log:</strong><br>{{ $investigationLog }}</div>
+                                    @endif
                                 </div>
                                 <form action="{{ route('admin.incidents.reply', $incident->id) }}" method="POST">
                                     @csrf
@@ -665,6 +673,7 @@
 
                                 <span class="badge bg-dark mt-2">Case Closed & Archived</span>
                             @endif
+                            </div>
                         </div>
                     @else
                         <div class="alert alert-info mb-0 small">

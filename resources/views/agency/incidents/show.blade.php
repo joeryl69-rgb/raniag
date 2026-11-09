@@ -629,9 +629,11 @@
         @endif
         <script>
             function toggleInfoView() {
-                const status = document.getElementById('status').value;
+                const statusInput = document.getElementById('status');
                 const container = document.getElementById('info-request-container');
                 const infoInput = document.getElementById('needs_info');
+                if (!statusInput || !container || !infoInput) return;
+                const status = statusInput.value;
                 if (status === 'pending_info') {
                     container.classList.remove('d-none');
                     infoInput.required = true;
@@ -641,6 +643,7 @@
                     infoInput.value = '';
                 }
             }
+            toggleInfoView();
         </script>
     @endpush
 </x-app-layout>

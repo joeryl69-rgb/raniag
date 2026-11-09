@@ -64,7 +64,7 @@ test('tracking page shows each agency resolution and serves fresh content for po
     ]);
 
     $this->withSession(['track_verified.'.$incident->id => true])
-        ->get(route('public.track.case', $incident->tracking_number))
+        ->get(route('public.track.case', $incident->tracking_number).'?_live_refresh='.now()->timestamp)
         ->assertOk()
         ->assertSee('First Response Agency')
         ->assertSee('First agency completed its response.')

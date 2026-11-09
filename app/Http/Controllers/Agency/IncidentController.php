@@ -150,7 +150,10 @@ class IncidentController extends Controller
         $isPublicUpdate = false;
         $successMessage = 'Case investigation status successfully logged.';
         if ($newStatus->value === 'pending_info') {
-            $comment = 'Awaiting information: '.($data['needs_info'] ?? $comment);
+            $comment = 'Awaiting information: '.$data['needs_info'];
+            if (filled($data['comment'] ?? null)) {
+                $comment .= "\nInvestigation log: ".$data['comment'];
+            }
             $isPublicUpdate = false;
             $successMessage = 'Info request sent to the MDRRMO Pamplona admin. You will be notified here once they reply.';
         }

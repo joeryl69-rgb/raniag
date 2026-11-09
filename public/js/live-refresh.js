@@ -46,7 +46,9 @@
         if (inFlight.has(url)) {
             return inFlight.get(url);
         }
-        const p = fetch(url, {
+        const requestUrl = new URL(url, window.location.href);
+        requestUrl.searchParams.set('_live_refresh', Date.now().toString());
+        const p = fetch(requestUrl.toString(), {
             headers: {
                 'X-Live-Refresh': '1',
                 'Accept': 'text/html',
