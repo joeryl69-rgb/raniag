@@ -459,6 +459,20 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
                     @endforeach
                 </div>
             @endif
+            @if ($incident->resolutions->isNotEmpty())
+                <h2 class="h6 fw-bold mt-4 mb-3">Agency resolutions</h2>
+                <div class="raniag-timeline raniag-timeline-wide">
+                    @foreach ($incident->resolutions as $resolution)
+                        <div class="raniag-timeline-item">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                                <strong>{{ $resolution->resolver?->agency?->name ?? $resolution->resolver?->display_title ?? 'Response team' }}</strong>
+                                <small class="text-muted">{{ ($resolution->resolved_at ?? $resolution->created_at)->format('M d, Y h:i A') }}</small>
+                            </div>
+                            <p class="rg-track-history-copy">{{ $resolution->summary }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </div>
 </div>

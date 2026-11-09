@@ -64,11 +64,15 @@
         const routeGroup = L.layerGroup().addTo(map);
         const markerByKey = new Map();
         let fitted = false;
+        let userPannedMap = false;
         let lastRouteAt = 0;
         let lastRoute = null;
         const token = String(cfg.map?.mapbox_token || '').trim();
         const statusEl = document.getElementById(cfg.statusEl || 'track-units-status');
         let refreshInFlight = false;
+        map.on('dragstart', () => {
+            userPannedMap = true;
+        });
 
         async function paint(units) {
             const raw = Array.isArray(units) ? units : [];
@@ -167,7 +171,8 @@
                 }
             });
 
-            if (!fitted) {
+            const currentBounds = map.getBounds();
+            if (!userPannedMap && (!fitted || !currentBounds.contains(bounds))) {
                 fitted = true;
                 try {
                     map.fitBounds(bounds.pad(0.18), {

@@ -109,12 +109,15 @@
             const switcher = document.getElementById('account-switcher');
             const switchAccountButton = document.getElementById('rg-switch-account');
             const addAccountButton = document.getElementById('rg-add-account');
+            let quickLoginSubmitting = false;
 
             function chooseAccount(email, quick) {
                 if (email && quick) {
                     const quickEmail = document.getElementById('quick-email');
                     const quickForm = document.getElementById('quick-login-form');
                     if (quickEmail && quickForm) {
+                        if (quickLoginSubmitting) return;
+                        quickLoginSubmitting = true;
                         quickEmail.value = email;
                         quickForm.submit();
                         return;

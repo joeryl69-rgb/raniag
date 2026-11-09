@@ -64,6 +64,7 @@ Route::name('public.')->group(function () {
         ->middleware('throttle:60,1')
         ->name('track.evidence');
     Route::get('/track/{trackingNumber}', [IncidentTrackController::class, 'caseFile'])
+        ->middleware('no-cache')
         ->where('trackingNumber', '[A-Za-z0-9\-]+')
         ->name('track.case');
 });

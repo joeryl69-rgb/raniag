@@ -6,9 +6,71 @@ use App\Models\Agency;
 use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\IncidentType;
+use App\Models\Resolution;
 use App\Models\User;
 use App\Services\SituationalMapService;
 use Illuminate\Support\Facades\Hash;
+
+test('tracking page shows each agency resolution and serves fresh content for polling', function () {
+    $type = IncidentType::factory()->create();
+    $firstAgency = Agency::query()->create([
+        'name' => 'First Response Agency',
+        'code' => 'FRA1',
+        'is_active' => true,
+    ]);
+    $lastAgency = Agency::query()->create([
+        'name' => 'Final Response Agency',
+        'code' => 'FRA2',
+        'is_active' => true,
+    ]);
+    $firstResponder = User::factory()->agency()->create(['agency_id' => $firstAgency->id]);
+    $lastResponder = User::factory()->agency()->create(['agency_id' => $lastAgency->id]);
+    $incident = Incident::query()->create([
+        'tracking_number' => 'RAN-LIVE-RESOLUTIONS',
+        'incident_type_id' => $type->id,
+        'status' => IncidentStatus::Resolved,
+        'priority' => 'medium',
+        'description' => 'Multiple agency resolution test.',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+        'resolved_at' => now(),
+    ]);
+
+    Resolution::query()->create([
+        'incident_id' => $incident->id,
+        'resolved_by' => $firstResponder->id,
+        'summary' => 'First agency completed its response.',
+        'actions_taken' => 'Actions taken by the first agency.',
+        'resolved_at' => now()->subMinutes(2),
+    ]);
+
+    $response = $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.case', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('Agency resolutions')
+        ->assertSee('First Response Agency')
+        ->assertSee('First agency completed its response.')
+        ->assertDontSee('Actions taken by the first agency.');
+    expect($response->headers->get('Cache-Control'))
+        ->toContain('no-store')
+        ->toContain('private');
+
+    Resolution::query()->create([
+        'incident_id' => $incident->id,
+        'resolved_by' => $lastResponder->id,
+        'summary' => 'Final agency completed the response.',
+        'actions_taken' => 'Actions taken by the final agency.',
+        'resolved_at' => now(),
+    ]);
+
+    $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.case', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('First Response Agency')
+        ->assertSee('First agency completed its response.')
+        ->assertSee('Final Response Agency')
+        ->assertSee('Final agency completed the response.');
+});
 
 test('track live units requires verified track session', function () {
     $type = IncidentType::factory()->create();

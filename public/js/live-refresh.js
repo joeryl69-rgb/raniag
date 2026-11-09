@@ -52,6 +52,7 @@
                 'Accept': 'text/html',
             },
             credentials: 'same-origin',
+            cache: 'no-store',
         })
             .then((res) => (res.ok ? res.text() : null))
             .finally(() => {
