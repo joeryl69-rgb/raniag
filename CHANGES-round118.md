@@ -15,4 +15,5 @@
 
 ## Deployment
 
-- These changes are local and must be deployed to Hostinger before they appear on the live site.
+- Commit `4ca5933818f0b79c859d56d0cb67d46b39c0faab` was pushed to `main`.
+- The Hostinger deployment workflow completed successfully for that commit.
