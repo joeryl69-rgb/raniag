@@ -7,6 +7,7 @@ use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\Resolution;
+use App\Models\StatusUpdate;
 use App\Models\User;
 use App\Services\SituationalMapService;
 use Illuminate\Support\Facades\Hash;
@@ -44,10 +45,15 @@ test('tracking page shows each agency resolution and serves fresh content for po
         'resolved_at' => now()->subMinutes(2),
     ]);
 
+    $this->get(route('public.track.history', $incident->tracking_number))
+        ->assertForbidden();
+
     $response = $this->withSession(['track_verified.'.$incident->id => true])
         ->get(route('public.track.case', $incident->tracking_number))
         ->assertOk()
         ->assertSee('Agency resolutions')
+        ->assertSee('data-live-updates-url', false)
+        ->assertSee('js/public-track-history.js', false)
         ->assertSee('First Response Agency')
         ->assertSee('First agency completed its response.')
         ->assertDontSee('Actions taken by the first agency.');
@@ -63,13 +69,47 @@ test('tracking page shows each agency resolution and serves fresh content for po
         'resolved_at' => now(),
     ]);
 
-    $this->withSession(['track_verified.'.$incident->id => true])
-        ->get(route('public.track.case', $incident->tracking_number).'?_live_refresh='.now()->timestamp)
+    $historyResponse = $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.history', $incident->tracking_number).'?_='.now()->timestamp)
         ->assertOk()
         ->assertSee('First Response Agency')
         ->assertSee('First agency completed its response.')
         ->assertSee('Final Response Agency')
         ->assertSee('Final agency completed the response.');
+    expect($historyResponse->headers->get('Cache-Control'))
+        ->toContain('no-store')
+        ->toContain('private');
+});
+
+test('public tracking hides pending-info requests even when legacy updates are public', function () {
+    $type = IncidentType::factory()->create();
+    $incident = Incident::query()->create([
+        'tracking_number' => 'RAN-LIVE-PENDING',
+        'incident_type_id' => $type->id,
+        'status' => IncidentStatus::PendingInfo,
+        'priority' => 'medium',
+        'description' => 'Staff-only information request.',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+    StatusUpdate::query()->create([
+        'incident_id' => $incident->id,
+        'from_status' => IncidentStatus::InProgress,
+        'to_status' => IncidentStatus::PendingInfo,
+        'comment' => 'Awaiting information: Internal location request.'."\n".'Investigation log: Staff-only note.',
+        'is_public' => true,
+    ]);
+
+    $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.case', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('CASE MOVEMENT / IN PROGRESS')
+        ->assertSee('A responding agency is currently working on your report.')
+        ->assertDontSee('Pending Information')
+        ->assertDontSee('We need a bit more information from you')
+        ->assertDontSee('Internal location request.')
+        ->assertDontSee('Staff-only note.')
+        ->assertDontSee('Reply to responders');
 });
 
 test('track live units requires verified track session', function () {
@@ -344,7 +384,8 @@ test('agency location sharing routes the live responder pin to agency admin and 
         ->assertSee('icon: '.json_encode($type->icon), false)
         ->assertSee('id="rg-track-status" data-live-refresh', false)
         ->assertSee('data-live-refresh-target="#case-assignment-status"', false)
-        ->assertSee('data-live-refresh-target="#case-history-content"', false)
+        ->assertSee('data-live-updates-url', false)
+        ->assertSee('js/public-track-history.js', false)
         ->assertSee('data-live-refresh-interval="4000"', false)
         ->assertSee('pollMs: 3000', false);
 

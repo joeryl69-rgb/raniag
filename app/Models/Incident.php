@@ -185,7 +185,11 @@ class Incident extends Model
     public function getPublicTimelineAttribute()
     {
         return $this->statusTimeline->filter(function ($update) {
-            return $update->is_public !== false;
+            $status = $update->to_status instanceof IncidentStatus
+                ? $update->to_status
+                : IncidentStatus::tryFrom((string) $update->to_status);
+
+            return $update->is_public !== false && $status !== IncidentStatus::PendingInfo;
         })->values();
     }
 

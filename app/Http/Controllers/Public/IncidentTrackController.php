@@ -9,6 +9,7 @@ use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class IncidentTrackController extends Controller
@@ -92,6 +93,19 @@ class IncidentTrackController extends Controller
         ])->header('Cache-Control', 'no-store, private');
     }
 
+    public function liveHistory(Request $request, string $trackingNumber): Response
+    {
+        $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
+        abort_if(! $incident, 404);
+        abort_unless(session()->get('track_verified.'.$incident->id) === true, 403);
+
+        $this->loadTrackingHistory($incident);
+
+        return response()
+            ->view('public.track._history', ['incident' => $incident])
+            ->header('Cache-Control', 'no-store, private');
+    }
+
     private function resolveTrackingView(string $trackingNumber, bool $asJson = false): View|JsonResponse|RedirectResponse
     {
         $incident = $this->incidentService->findByTrackingNumber(
@@ -131,17 +145,11 @@ class IncidentTrackController extends Controller
     {
         session()->put('track_verified.'.$incident->id, true);
 
-        $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency', 'statusUpdates.user.agency']);
-        $incident->setRelation('resolutions', $incident->resolutions()
-            ->with('resolver.agency')
-            ->where('created_at', '>=', $incident->created_at)
-            ->orderBy('resolved_at')
-            ->get());
+        $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency']);
+        $this->loadTrackingHistory($incident);
 
         return view('public.track.show', [
             'incident' => $incident,
-            'canReply' => $incident->status === \App\Enums\IncidentStatus::PendingInfo
-                && session()->get('track_verified.'.$incident->id) === true,
             'nearestCenter' => $this->nearestOpenCenter($incident),
             'map' => config('raniag.map'),
             'unitsUrl' => route('public.track.units', [
@@ -150,6 +158,16 @@ class IncidentTrackController extends Controller
             ]),
             'liveUnits' => $this->situational->liveUnitsForIncident($incident, forPublic: true),
         ]);
+    }
+
+    private function loadTrackingHistory(\App\Models\Incident $incident): void
+    {
+        $incident->loadMissing('statusUpdates.user.agency');
+        $incident->setRelation('resolutions', $incident->resolutions()
+            ->with('resolver.agency')
+            ->where('created_at', '>=', $incident->created_at)
+            ->orderBy('resolved_at')
+            ->get());
     }
 
     public function reply(Request $request, string $trackingNumber): RedirectResponse

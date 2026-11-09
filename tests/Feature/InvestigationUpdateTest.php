@@ -74,14 +74,18 @@ test('agency and personnel pending-info updates preserve the investigation log f
                 ? 'agency.incidents.show'
                 : 'personnel.incidents.show', $incident))
             ->assertOk()
-            ->assertSee('toggleInfoView();', false);
+                ->assertSee('toggleInfoView();', false)
+                ->assertSee('Requested details:')
+                ->assertSee('Investigation log:');
 
         $this->actingAs($administrator)
             ->get($adminCaseUrl.'?_live_refresh='.now()->timestamp)
             ->assertOk()
             ->assertSee('id="incident-response-status" data-live-refresh', false)
             ->assertSee('Please confirm the exact incident location.')
-            ->assertSee('Coordinates do not match the scene report.');
+            ->assertSee('Coordinates do not match the scene report.')
+            ->assertSee('Requested details:')
+            ->assertSee('Investigation log:');
 
         $this->withSession(['track_verified.'.$incident->id => true])
             ->get(route('public.track.case', $incident->tracking_number))

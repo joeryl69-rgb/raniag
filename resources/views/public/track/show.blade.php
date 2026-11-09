@@ -83,19 +83,18 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
 
     @php
         $statusValue = $incident->status->value;
+        $trackingStatusValue = $statusValue === 'pending_info' ? 'in_progress' : $statusValue;
 
         $plainLanguage = [
             'submitted' => 'Your report has been submitted and is waiting to be reviewed by our team.',
             'received' => 'Good news — your report has been received and confirmed.',
             'assigned' => 'Your report has been assigned to a responding agency.',
             'in_progress' => 'A responding agency is currently working on your report.',
-            'pending_info' => 'We need a bit more information from you before we can continue. Please reply below if you can add details.',
             'resolved' => 'Your report has been resolved. Thank you for helping keep our community safe.',
             'closed' => 'This report has been resolved and officially closed.',
             'rejected' => 'This report could not be accepted. Please see the notes below for details.',
             'outside_aor' => 'This location falls outside Pamplona\'s area of responsibility. It has been referred to the appropriate agency or municipality; MDRRMO Pamplona will not be processing it further.',
         ];
-        $canReply = $canReply ?? false;
         $nearestCenter = $nearestCenter ?? null;
 
         $steps = [
@@ -108,10 +107,9 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
         $stepOrder = array_keys($steps);
 
         // pending_info and closed visually sit on top of in_progress / resolved respectively
-        $effectiveStatus = match ($statusValue) {
-            'pending_info' => 'in_progress',
+        $effectiveStatus = match ($trackingStatusValue) {
             'closed' => 'resolved',
-            default => $statusValue,
+            default => $trackingStatusValue,
         };
         $currentIndex = array_search($effectiveStatus, $stepOrder, true);
         $isRejected = $statusValue === 'rejected';
@@ -121,8 +119,8 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
     <div id="rg-track-status" data-live-refresh data-live-refresh-target="#rg-track-status" data-live-refresh-interval="4000">
     <section class="rg-track-detail-banner" aria-live="polite" data-rg-reveal>
         <div class="rg-track-detail-banner-copy">
-            <span class="rg-track-detail-kicker">CASE MOVEMENT / {{ strtoupper(str_replace('_', ' ', $statusValue)) }}</span>
-            <strong>{{ $plainLanguage[$statusValue] ?? 'Your report status is available below.' }}</strong>
+            <span class="rg-track-detail-kicker">CASE MOVEMENT / {{ strtoupper(str_replace('_', ' ', $trackingStatusValue)) }}</span>
+            <strong>{{ $plainLanguage[$trackingStatusValue] ?? 'Your report status is available below.' }}</strong>
             <p>Updates are private to this tracking reference. The map and details on this page are not shown on the public community dashboard.</p>
         </div>
         <img src="/images/guide/{{ $isRejected || $isOutsideAor ? 'jo-alert' : ($effectiveStatus === 'resolved' ? 'jo-resolved' : 'jo-map') }}.png?v=1" alt="" width="132" height="176">
@@ -155,8 +153,8 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
                 </div>
             @else
                 <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
-                    <x-public.status-badge :status="$incident->status" class="fs-6 px-3 py-2" />
-                    <div class="text-muted">{{ $plainLanguage[$statusValue] ?? '' }}</div>
+                    <x-public.status-badge :status="$trackingStatusValue" class="fs-6 px-3 py-2" />
+                    <div class="text-muted">{{ $plainLanguage[$trackingStatusValue] ?? '' }}</div>
                 </div>
 
                 <div class="raniag-progress-tracker mx-auto" style="max-width: 100%;">
@@ -278,21 +276,6 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
     @endif
     </div>
 
-    <div id="case-reply-status" data-live-refresh data-live-refresh-target="#case-reply-status" data-live-refresh-interval="4000">
-        @if ($canReply)
-        <div class="card raniag-card rg-app-card mb-4 border-warning">
-            <div class="card-header raniag-card-header py-3">Reply to responders</div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('public.track.reply', $incident->tracking_number) }}">
-                    @csrf
-                    <textarea name="message" class="form-control mb-2" rows="3" required maxlength="2000" placeholder="Add the information requested…"></textarea>
-                    <button type="submit" class="btn btn-primary">Send reply</button>
-                </form>
-    </div>
-        </div>
-    @endif
-        </div>
-
     @php
         $hasNarrative = filled(trim((string) $incident->title)) || filled(trim((string) $incident->description));
         $reporterEvidence = $incident->evidence->whereNull('uploaded_by');
@@ -410,69 +393,13 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
         @endif
     </div>
 
-    <div class="card raniag-card rg-app-card mt-4" id="case-history" data-live-refresh data-live-refresh-target="#case-history-content" data-live-refresh-interval="4000">
+    <div class="card raniag-card rg-app-card mt-4" id="case-history">
         <div class="card-header raniag-card-header d-flex align-items-center gap-2 py-3">
             <span class="raniag-step-badge"><i class="bi bi-list-ul"></i></span>
             <span>Full History</span>
         </div>
-        <div class="card-body p-4" id="case-history-content">
-            @if ($incident->publicTimeline->isEmpty())
-                <p class="text-muted mb-0">No public updates yet. Please check back later.</p>
-            @else
-                <div class="raniag-timeline raniag-timeline-wide">
-                    @foreach ($incident->publicTimeline as $update)
-                        @php
-                            $tKey = $update->to_status->value ?? $update->to_status;
-                            $comment = trim((string) $update->comment);
-                            $actor = $update->user?->display_title;
-                            $agencyName = $update->user?->agency?->name;
-                            $byline = collect([$actor, $agencyName])->filter()->unique()->implode(' · ');
-                            $detail = $comment;
-                            if ($comment === 'Incident report received from the public portal.') {
-                                $detail = 'The report was sent from the public form and is waiting for MDRRMO to review it.';
-                            } elseif ($comment === 'Report validated and received') {
-                                $detail = 'MDRRMO Pamplona checked the report and opened it for response.';
-                            } elseif ($comment === 'Assignment accepted and incident under active investigation') {
-                                $detail = ($agencyName ?: 'The assigned team').' accepted the assignment and started the investigation.';
-                            } elseif ($comment === 'Responder en route') {
-                                $detail = ($agencyName ?: 'A responder').' is on the way to the reported location.';
-                            } elseif ($comment === 'Responder on scene') {
-                                $detail = ($agencyName ?: 'A responder').' has arrived at the reported location.';
-                            } elseif (preg_match('/^Assigned to:?\s*(.+)$/', $comment, $assignedMatch)) {
-                                $detail = 'MDRRMO assigned this report to '.rtrim($assignedMatch[1], '.').'.';
-                            } elseif (str_starts_with($comment, 'Reporter reply:')) {
-                                $detail = 'You replied: '.trim(substr($comment, strlen('Reporter reply:')));
-                            }
-                        @endphp
-                        <div class="raniag-timeline-item" data-status="{{ $tKey }}">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
-                                <x-public.status-badge :status="$update->to_status" :comment="$update->comment" />
-                                <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
-                            </div>
-                            @if ($byline)
-                                <div class="rg-track-history-by">Recorded by {{ $byline }}</div>
-                            @endif
-                            @if ($detail !== '')
-                                <p class="rg-track-history-copy">{{ $detail }}</p>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-            @if ($incident->resolutions->isNotEmpty())
-                <h2 class="h6 fw-bold mt-4 mb-3">Agency resolutions</h2>
-                <div class="raniag-timeline raniag-timeline-wide">
-                    @foreach ($incident->resolutions as $resolution)
-                        <div class="raniag-timeline-item">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
-                                <strong>{{ $resolution->resolver?->agency?->name ?? $resolution->resolver?->display_title ?? 'Response team' }}</strong>
-                                <small class="text-muted">{{ ($resolution->resolved_at ?? $resolution->created_at)->format('M d, Y h:i A') }}</small>
-                            </div>
-                            <p class="rg-track-history-copy">{{ $resolution->summary }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+        <div class="card-body p-4" id="case-history-content" data-live-updates-url="{{ route('public.track.history', $incident->tracking_number) }}">
+            @include('public.track._history', ['incident' => $incident])
         </div>
     </div>
 </div>
@@ -503,4 +430,8 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endif
+@endpush
+
+@push('scripts')
+<script src="{{ asset('js/public-track-history.js') }}?v={{ @filemtime(public_path('js/public-track-history.js')) }}"></script>
 @endpush

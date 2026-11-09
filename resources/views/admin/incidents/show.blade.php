@@ -178,7 +178,18 @@
                                         <small class="text-muted">{{ $update->created_at->format('M d, Y h:i A') }}</small>
                                     </div>
                                     @if ($update->comment)
-                                        <p class="mb-0 text-dark p-2 bg-light rounded-3 mt-1 small">{{ $update->comment }}</p>
+                                        @php
+                                            $updateStatus = $update->to_status->value ?? $update->to_status;
+                                            $pendingInfoParts = preg_split('/\r?\nInvestigation log:\s*/', (string) $update->comment, 2);
+                                        @endphp
+                                        @if ($updateStatus === 'pending_info')
+                                            <p class="mb-0 text-dark p-2 bg-light rounded-3 mt-1 small"><strong>Requested details:</strong> {{ preg_replace('/^Awaiting information:\s*/', '', $pendingInfoParts[0] ?? '') }}</p>
+                                            @if (! empty($pendingInfoParts[1]))
+                                                <p class="mb-0 text-dark p-2 bg-light rounded-3 mt-1 small"><strong>Investigation log:</strong> {{ $pendingInfoParts[1] }}</p>
+                                            @endif
+                                        @else
+                                            <p class="mb-0 text-dark p-2 bg-light rounded-3 mt-1 small">{{ $update->comment }}</p>
+                                        @endif
                                     @endif
                                 </div>
                             @endforeach
