@@ -12,11 +12,37 @@
         const updatesUrl = target?.dataset.liveUpdatesUrl;
         if (!target || !updatesUrl) return;
 
-        let inFlight = false;
+        let inFlightController = null;
+        let pollTimer = null;
 
-        async function refresh() {
-            if (document.hidden || inFlight) return;
-            inFlight = true;
+        function scheduleRefresh() {
+            if (pollTimer !== null) {
+                window.clearTimeout(pollTimer);
+            }
+            pollTimer = window.setTimeout(() => {
+                pollTimer = null;
+                refresh();
+            }, 3000);
+        }
+
+        async function refresh(force = false) {
+            if (document.hidden && !force) {
+                scheduleRefresh();
+                return;
+            }
+            if (inFlightController) {
+                if (!force) return;
+                inFlightController.abort();
+            }
+
+            const controller = new AbortController();
+            inFlightController = controller;
+            let timedOut = false;
+            const timeout = window.setTimeout(() => {
+                timedOut = true;
+                controller.abort();
+            }, 10000);
+
             try {
                 const url = new URL(updatesUrl, window.location.href);
                 url.searchParams.set('_', Date.now().toString());
@@ -24,6 +50,7 @@
                     headers: { Accept: 'text/html' },
                     credentials: 'same-origin',
                     cache: 'no-store',
+                    signal: controller.signal,
                 });
                 if (!response.ok) {
                     console.warn('[public-track-updates] Update check failed with HTTP status ' + response.status + '.');
@@ -50,16 +77,26 @@
                 });
                 document.dispatchEvent(new CustomEvent('rg:tracking-updated'));
             } catch (error) {
-                console.warn('[public-track-updates] Update check failed; retrying on next poll.', error);
+                if (timedOut) {
+                    console.warn('[public-track-updates] Update check timed out; retrying.');
+                } else if (!controller.signal.aborted) {
+                    console.warn('[public-track-updates] Update check failed; retrying on next poll.', error);
+                }
             } finally {
-                inFlight = false;
+                window.clearTimeout(timeout);
+                if (inFlightController === controller) {
+                    inFlightController = null;
+                    scheduleRefresh();
+                }
             }
         }
 
         refresh();
-        window.setInterval(refresh, 3000);
-        document.addEventListener('visibilitychange', refresh);
-        window.addEventListener('focus', refresh);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) refresh(true);
+        });
+        window.addEventListener('focus', () => refresh(true));
+        window.addEventListener('online', () => refresh(true));
     }
 
     if (document.readyState === 'loading') {

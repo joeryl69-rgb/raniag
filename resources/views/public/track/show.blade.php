@@ -278,5 +278,5 @@ document.addEventListener('DOMContentLoaded', function () {
 @endpush
 
 @push('scripts')
-<script src="{{ asset('js/public-track-updates.js') }}?v=121"></script>
+<script src="{{ asset('js/public-track-updates.js') }}?v=122"></script>
 @endpush

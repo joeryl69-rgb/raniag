@@ -170,9 +170,7 @@ class Incident extends Model
     {
         $updates = $this->relationLoaded('statusUpdates') ? $this->statusUpdates : $this->statusUpdates()->get();
 
-        return $updates->filter(function ($update) {
-            return $update->created_at >= $this->created_at;
-        })->sortBy('created_at')->values();
+        return $updates->sortBy('created_at')->values();
     }
 
     /**

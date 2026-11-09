@@ -169,7 +169,6 @@ class IncidentTrackController extends Controller
         ]);
         $incident->setRelation('resolutions', $incident->resolutions()
             ->with('resolver.agency')
-            ->where('created_at', '>=', $incident->created_at)
             ->orderBy('resolved_at')
             ->get());
     }

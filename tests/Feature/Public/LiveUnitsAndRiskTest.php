@@ -219,6 +219,73 @@ test('agency acceptance and field-phase actions appear in the next public tracki
         ->assertSee('Live Acceptance Agency is on the way to the reported location.');
 });
 
+test('last agency resolution appears in the live feed after completing the case', function () {
+    $type = IncidentType::factory()->create();
+    $firstAgency = Agency::query()->create([
+        'name' => 'First Resolution Agency',
+        'code' => 'FRA3',
+        'is_active' => true,
+    ]);
+    $finalAgency = Agency::query()->create([
+        'name' => 'Final Resolution Agency',
+        'code' => 'FRA4',
+        'is_active' => true,
+    ]);
+    $administrator = User::factory()->administrator()->create();
+    $firstResponder = User::factory()->agency()->create(['agency_id' => $firstAgency->id]);
+    $finalResponder = User::factory()->agency()->create(['agency_id' => $finalAgency->id]);
+    $incident = Incident::query()->create([
+        'tracking_number' => 'RAN-LIVE-LAST-RESOLUTION',
+        'incident_type_id' => $type->id,
+        'status' => IncidentStatus::InProgress,
+        'priority' => 'medium',
+        'description' => 'Last agency resolution live-poll integration test.',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+
+    foreach ([$firstAgency, $finalAgency] as $agency) {
+        Assignment::query()->create([
+            'incident_id' => $incident->id,
+            'agency_id' => $agency->id,
+            'assigned_by' => $administrator->id,
+            'is_active' => true,
+            'assigned_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($firstResponder)
+        ->post(route('agency.incidents.resolution', $incident), [
+            'summary' => 'First agency completed its independent response.',
+            'actions_taken' => 'First agency response actions completed safely.',
+        ])
+        ->assertRedirect();
+
+    $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.updates', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('First agency completed its independent response.')
+        ->assertDontSee('Final agency submitted the completed case outcome.');
+
+    $this->actingAs($finalResponder)
+        ->post(route('agency.incidents.resolution', $incident), [
+            'summary' => 'Final agency submitted the completed case outcome.',
+            'actions_taken' => 'Final agency completed and documented response actions.',
+        ])
+        ->assertRedirect();
+
+    $this->withSession(['track_verified.'.$incident->id => true])
+        ->get(route('public.track.updates', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('CASE MOVEMENT / RESOLVED')
+        ->assertSee('Final agency submitted the completed case outcome.')
+        ->assertSee('Agency resolutions')
+        ->assertSee('First Resolution Agency')
+        ->assertSee('First agency completed its independent response.')
+        ->assertSee('Final Resolution Agency')
+        ->assertSee('Final agency submitted the completed case outcome.');
+});
+
 test('public tracking hides pending-info requests even when legacy updates are public', function () {
     $type = IncidentType::factory()->create();
     $incident = Incident::query()->create([

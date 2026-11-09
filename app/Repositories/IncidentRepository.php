@@ -18,9 +18,7 @@ class IncidentRepository implements IncidentRepositoryInterface
             ->find($id);
 
         if ($incident) {
-            // Load status updates using a concrete datetime value to avoid SQL column comparisons
             $statusUpdates = $incident->statusUpdates()
-                ->where('created_at', '>=', $incident->created_at)
                 ->orderBy('created_at')
                 ->get();
 
