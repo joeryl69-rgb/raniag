@@ -155,6 +155,10 @@ class HazardEvacController extends Controller
                     'name' => $c->name,
                     'lat' => (float) $c->latitude,
                     'lng' => (float) $c->longitude,
+                    'barangay' => $c->barangay,
+                    'address' => $c->address,
+                    'capacity' => $c->capacity,
+                    'notes' => $c->notes,
                     'open' => (bool) $c->is_open,
                     'color' => $c->color ?: '#0f766e',
                 ];
@@ -371,12 +375,32 @@ class HazardEvacController extends Controller
     public function updateCenter(Request $request, EvacuationCenter $center): RedirectResponse
     {
         $data = $request->validate([
+            'name' => ['required_if:workspace,center', 'string', 'max:120'],
+            'barangay' => ['nullable', 'string', 'max:100'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['required_if:workspace,center', 'numeric', 'between:-90,90'],
+            'longitude' => ['required_if:workspace,center', 'numeric', 'between:-180,180'],
+            'capacity' => ['nullable', 'integer', 'min:1'],
+            'notes' => ['nullable', 'string', 'max:2000'],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
-        $center->update(['color' => $data['color']]);
+        if ($request->input('workspace') === 'center') {
+            $center->update([
+                ...$data,
+                'barangay' => ($data['barangay'] ?? null) ?: null,
+                'address' => ($data['address'] ?? null) ?: null,
+                'capacity' => ($data['capacity'] ?? null) ?: null,
+                'notes' => ($data['notes'] ?? null) ?: null,
+                'is_open' => $request->boolean('is_open'),
+            ]);
+        } else {
+            $center->update(['color' => $data['color']]);
+        }
 
-        return back()->with('success', 'Shelter pin color updated. Residents see it on the Live Map.');
+        return back()->with('success', $request->input('workspace') === 'center'
+            ? 'Shelter updated. Residents see the changes on the Live Map.'
+            : 'Shelter pin color updated. Residents see it on the Live Map.');
     }
 
     public function destroyCenter(EvacuationCenter $center): RedirectResponse

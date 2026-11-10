@@ -172,6 +172,8 @@
 
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
                         @csrf
+                        <input type="hidden" id="center-form-method" value="PATCH" disabled>
+                        <input type="hidden" name="editing_center_id" id="editing-center-id" value="{{ old('editing_center_id') }}">
                         <input type="hidden" name="workspace" value="center">
                         <section class="hz-section" id="pin-step">
                             <span class="hz-kicker">1 · Pin</span>
@@ -193,6 +195,8 @@
                             </select>
                             <label class="form-label mt-2" for="center-address">Address</label>
                             <input name="address" id="center-address" class="form-control" maxlength="255" value="{{ old('workspace') === 'center' ? old('address') : '' }}" placeholder="Street or landmark">
+                            <label class="form-label mt-2" for="center-notes">Notes</label>
+                            <textarea name="notes" id="center-notes" class="form-control" rows="2" maxlength="2000" placeholder="Optional shelter details">{{ old('workspace') === 'center' ? old('notes') : '' }}</textarea>
                         </section>
                         <section class="hz-section">
                             <span class="hz-kicker">3 · Capacity</span>
@@ -206,6 +210,7 @@
                             </div>
                         </section>
                         <button class="btn btn-primary w-100" type="submit" id="center-save" disabled>Save shelter</button>
+                        <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="center-cancel-edit">Cancel edit</button>
                     </form>
                 </div>
 
@@ -255,6 +260,7 @@
                                     @if ($c->capacity) / {{ $c->capacity }} @endif
                                 </div>
                             </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary js-edit-center" data-center-id="{{ $c->id }}">Edit</button>
                             <form method="POST" action="{{ route('admin.hazard.centers.update', $c) }}" class="d-flex align-items-center">
                                 @csrf
                                 @method('PATCH')
@@ -585,8 +591,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const existingCenters = @json($mapCentersJson);
     const advisoryTemplate = @json(route('admin.hazard.zones.update', ['zone' => '__ID__']));
     const zoneEditTemplate = @json(route('admin.hazard.zones.details', ['zone' => '__ID__']));
+    const centerEditTemplate = @json(route('admin.hazard.centers.update', ['center' => '__ID__']));
     const advisories = @json($advisoryMap);
     const startCenter = @json($openCenter);
+    const startCenterId = @json(old('editing_center_id'));
     const hadPin = @json(old('workspace') === 'center');
 
     const typeSelect = document.getElementById('incident_type_id');
@@ -603,6 +611,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const lngInput = document.getElementById('center_longitude');
     const coordsLabel = document.getElementById('center-coords');
     const centerSave = document.getElementById('center-save');
+    const centerMethod = document.getElementById('center-form-method');
+    const editingCenterInput = document.getElementById('editing-center-id');
     const zoneSave = document.getElementById('zone-save');
     const editTool = document.getElementById('tool-edit');
     const boundaryNote = document.getElementById('boundary-note');
@@ -789,10 +799,12 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         }
     });
 
+    const savedCenterMarkers = new Map();
     existingCenters.forEach((c) => {
-        L.marker([c.lat, c.lng], { icon: shelterIcon(c.open, false, c.color), interactive: true })
+        const marker = L.marker([c.lat, c.lng], { icon: shelterIcon(c.open, false, c.color), interactive: true })
             .addTo(map)
             .bindTooltip(c.name + (c.open ? '' : ' (closed)'));
+        savedCenterMarkers.set(String(c.id), marker);
     });
 
     let drawnLayer = null;
@@ -942,11 +954,18 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 
     let draftMarker = null;
     let pinPlaced = false;
+    let editingCenterId = null;
+    const centerStoreAction = centerForm?.getAttribute('action') || '';
+
     function placeDraft(lat, lng) {
         latInput.value = Number(lat).toFixed(7);
         lngInput.value = Number(lng).toFixed(7);
         if (!draftMarker) {
-            draftMarker = L.marker([lat, lng], { icon: shelterIcon(true, true, pinColor()), draggable: true, zIndexOffset: 1000 }).addTo(map);
+            draftMarker = L.marker([lat, lng], {
+                icon: shelterIcon(document.getElementById('centerOpen')?.checked !== false, true, pinColor()),
+                draggable: true,
+                zIndexOffset: 1000,
+            }).addTo(map);
             draftMarker.on('dragend', () => {
                 const p = draftMarker.getLatLng();
                 placeDraft(p.lat, p.lng);
@@ -963,7 +982,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     colorInput?.addEventListener('input', () => {
-        if (draftMarker) draftMarker.setIcon(shelterIcon(true, true, pinColor()));
+        if (draftMarker) draftMarker.setIcon(shelterIcon(document.getElementById('centerOpen')?.checked !== false, true, pinColor()));
+    });
+    document.getElementById('centerOpen')?.addEventListener('change', (event) => {
+        if (draftMarker) draftMarker.setIcon(shelterIcon(event.target.checked, true, pinColor()));
     });
 
     map.on('click', (e) => {
@@ -1003,10 +1025,14 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         centerList.classList.toggle('d-none', !center);
         document.getElementById('mode-zone')?.classList.toggle('is-selected', !center);
         document.getElementById('mode-center')?.classList.toggle('is-selected', center);
-        if (modeKicker) modeKicker.textContent = center ? 'New shelter' : 'New hazard area';
-        if (modeTitle) modeTitle.textContent = center ? 'Drop a pin for the shelter' : 'Trace the area, then name it';
+        if (modeKicker) modeKicker.textContent = center ? (editingCenterId ? 'Edit shelter' : 'New shelter') : 'New hazard area';
+        if (modeTitle) modeTitle.textContent = center
+            ? (editingCenterId ? 'Update this shelter on the map' : 'Drop a pin for the shelter')
+            : 'Trace the area, then name it';
         if (modeLead) modeLead.textContent = center
-            ? 'Click or tap "Click or tap to use the map", then click the map to place the shelter.'
+            ? (editingCenterId
+                ? 'Update the shelter details and drag its pin or click the map to move it.'
+                : 'Click or tap "Click or tap to use the map", then click the map to place the shelter.')
             : 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
         if (center) {
             polygonDrawer.disable();
@@ -1026,13 +1052,102 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         setTimeout(() => map.invalidateSize(), 50);
     }
 
+    function restoreCenterMarker(id) {
+        const marker = savedCenterMarkers.get(String(id));
+        if (marker && !map.hasLayer(marker)) marker.addTo(map);
+    }
+
+    function beginCenterEdit(center, preserveValues = false) {
+        if (!center) return;
+        if (editingCenterId && editingCenterId !== String(center.id)) restoreCenterMarker(editingCenterId);
+        if (draftMarker) {
+            map.removeLayer(draftMarker);
+            draftMarker = null;
+        }
+
+        editingCenterId = String(center.id);
+        const savedMarker = savedCenterMarkers.get(editingCenterId);
+        if (savedMarker && map.hasLayer(savedMarker)) map.removeLayer(savedMarker);
+        setMode('center');
+        centerForm.action = centerEditTemplate.replace('__ID__', center.id);
+        if (centerMethod) {
+            centerMethod.disabled = false;
+            centerMethod.name = '_method';
+            centerMethod.value = 'PATCH';
+        }
+        if (editingCenterInput) editingCenterInput.value = center.id;
+        if (!preserveValues) {
+            document.getElementById('center-name').value = center.name || '';
+            document.getElementById('center-barangay').value = center.barangay || '';
+            document.getElementById('center-address').value = center.address || '';
+            document.getElementById('center-notes').value = center.notes || '';
+            document.getElementById('center-capacity').value = center.capacity ?? '';
+            document.getElementById('centerOpen').checked = !!center.open;
+            colorInput.value = center.color || '#0f766e';
+        }
+        const latitude = preserveValues ? parseFloat(latInput.value) : Number(center.lat);
+        const longitude = preserveValues ? parseFloat(lngInput.value) : Number(center.lng);
+        placeDraft(latitude, longitude);
+        centerSave.textContent = 'Save changes';
+        document.getElementById('center-cancel-edit')?.classList.remove('d-none');
+        document.querySelector('.hz-panel')?.classList.add('is-editing');
+        engageMap();
+        if (modeKicker) modeKicker.textContent = 'Edit shelter';
+        if (modeTitle) modeTitle.textContent = 'Update this shelter on the map';
+        if (modeLead) modeLead.textContent = 'Update the shelter details and drag its pin or click the map to move it.';
+    }
+
+    function cancelCenterEdit() {
+        if (editingCenterId) restoreCenterMarker(editingCenterId);
+        if (draftMarker) {
+            map.removeLayer(draftMarker);
+            draftMarker = null;
+        }
+        editingCenterId = null;
+        if (centerMethod) {
+            centerMethod.disabled = true;
+            centerMethod.removeAttribute('name');
+        }
+        if (editingCenterInput) editingCenterInput.value = '';
+        if (centerForm && centerStoreAction) centerForm.action = centerStoreAction;
+        document.querySelector('.hz-panel')?.classList.remove('is-editing');
+        document.getElementById('center-cancel-edit')?.classList.add('d-none');
+        document.getElementById('center-name').value = '';
+        document.getElementById('center-barangay').value = '';
+        document.getElementById('center-address').value = '';
+        document.getElementById('center-notes').value = '';
+        document.getElementById('center-capacity').value = '';
+        document.getElementById('centerOpen').checked = true;
+        colorInput.value = '#0f766e';
+        latInput.value = mapCfg.default_lat;
+        lngInput.value = mapCfg.default_lng;
+        pinPlaced = false;
+        centerSave.disabled = true;
+        centerSave.textContent = 'Save shelter';
+        if (coordsLabel) coordsLabel.textContent = 'Pin not placed yet. Click or tap "Click or tap to use the map", then click the map to drop the shelter.';
+        setMode('center');
+    }
+
     document.getElementById('mode-zone')?.addEventListener('click', () => setMode('zone'));
     document.getElementById('mode-center')?.addEventListener('click', () => {
         if (editingZoneId) cancelZoneEdit();
         setMode('center');
     });
+    document.getElementById('center-cancel-edit')?.addEventListener('click', cancelCenterEdit);
+    centerList?.addEventListener('click', (event) => {
+        const button = event.target.closest('.js-edit-center');
+        if (!button) return;
+        beginCenterEdit(existingCenters.find((center) => String(center.id) === button.dataset.centerId));
+    });
+    document.getElementById('mode-zone')?.addEventListener('click', () => {
+        if (editingCenterId) cancelCenterEdit();
+    }, { capture: true });
     if (startCenter) setMode('center');
-    if (hadPin && latInput.value && lngInput.value) placeDraft(parseFloat(latInput.value), parseFloat(lngInput.value));
+    if (startCenterId) {
+        beginCenterEdit(existingCenters.find((center) => String(center.id) === String(startCenterId)), true);
+    } else if (hadPin && latInput.value && lngInput.value) {
+        placeDraft(parseFloat(latInput.value), parseFloat(lngInput.value));
+    }
     syncMapLock();
 
     zoneForm?.addEventListener('submit', (e) => {

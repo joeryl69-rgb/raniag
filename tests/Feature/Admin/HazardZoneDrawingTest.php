@@ -200,3 +200,107 @@ test('editing a hazard area closes an open boundary before saving it', function 
     expect($saved['coordinates'][0])->toHaveCount(4)
         ->and($saved['coordinates'][0][0])->toBe($saved['coordinates'][0][3]);
 });
+
+test('saved shelters can be edited from the hazard workspace', function () {
+    $administrator = User::factory()->administrator()->create();
+    $center = \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Original Shelter',
+        'barangay' => 'Centro',
+        'address' => 'Old address',
+        'latitude' => 18.45,
+        'longitude' => 121.34,
+        'capacity' => 120,
+        'is_open' => true,
+        'notes' => 'Original notes',
+        'color' => '#0f766e',
+    ]);
+
+    $this->actingAs($administrator)
+        ->get(route('admin.hazard.index'))
+        ->assertOk()
+        ->assertSee('js-edit-center', false)
+        ->assertSee('Edit')
+        ->assertSee('id="center-cancel-edit"', false)
+        ->assertSee('center-notes', false);
+
+    $this->from(route('admin.hazard.index'))
+        ->patch(route('admin.hazard.centers.update', $center), [
+            'workspace' => 'center',
+            'editing_center_id' => $center->id,
+            'name' => 'Updated Shelter',
+            'barangay' => 'Centro',
+            'address' => 'New address',
+            'latitude' => 18.46,
+            'longitude' => 121.35,
+            'capacity' => 180,
+            'is_open' => '1',
+            'notes' => 'Updated notes',
+            'color' => '#123456',
+        ])
+        ->assertRedirect(route('admin.hazard.index'));
+
+    $center->refresh();
+    expect($center->name)->toBe('Updated Shelter')
+        ->and($center->barangay)->toBe('Centro')
+        ->and($center->address)->toBe('New address')
+        ->and((float) $center->latitude)->toBe(18.46)
+        ->and((float) $center->longitude)->toBe(121.35)
+        ->and($center->capacity)->toBe(180)
+        ->and($center->is_open)->toBeTrue()
+        ->and($center->notes)->toBe('Updated notes')
+        ->and($center->color)->toBe('#123456');
+});
+
+test('editing a shelter pin color alone preserves its other saved details', function () {
+    $administrator = User::factory()->administrator()->create();
+    $center = \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Color Test Shelter',
+        'barangay' => 'Centro',
+        'address' => 'Existing address',
+        'latitude' => 18.45,
+        'longitude' => 121.34,
+        'capacity' => 120,
+        'is_open' => true,
+        'notes' => 'Existing notes',
+        'color' => '#0f766e',
+    ]);
+
+    $this->actingAs($administrator)
+        ->patch(route('admin.hazard.centers.update', $center), [
+            'color' => '#abcdef',
+        ])
+        ->assertRedirect();
+
+    $center->refresh();
+    expect($center->color)->toBe('#abcdef')
+        ->and($center->name)->toBe('Color Test Shelter')
+        ->and($center->address)->toBe('Existing address')
+        ->and($center->capacity)->toBe(120)
+        ->and($center->is_open)->toBeTrue()
+        ->and($center->notes)->toBe('Existing notes');
+});
+
+test('invalid shelter edits return to edit mode with the selected shelter identified', function () {
+    $administrator = User::factory()->administrator()->create();
+    $center = \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Validation Shelter',
+        'latitude' => 18.45,
+        'longitude' => 121.34,
+        'is_open' => true,
+        'color' => '#0f766e',
+    ]);
+
+    $this->actingAs($administrator)
+        ->from(route('admin.hazard.index'))
+        ->patch(route('admin.hazard.centers.update', $center), [
+            'workspace' => 'center',
+            'editing_center_id' => $center->id,
+            'name' => '',
+            'latitude' => 120,
+            'longitude' => 121.35,
+            'color' => '#abcdef',
+        ])
+        ->assertRedirect(route('admin.hazard.index'))
+        ->assertSessionHasErrors(['name', 'latitude'])
+        ->assertSessionHasInput('editing_center_id', $center->id);
+});
