@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\TrackIncidentRequest;
 use App\Services\IncidentService;
+use App\Services\PublicTrackingAccess;
 use App\Services\SituationalMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +18,7 @@ class IncidentTrackController extends Controller
     public function __construct(
         private readonly IncidentService $incidentService,
         private readonly SituationalMapService $situational,
+        private readonly PublicTrackingAccess $trackingAccess,
     ) {}
 
     public function index(Request $request): View
@@ -26,7 +28,7 @@ class IncidentTrackController extends Controller
         ]);
     }
 
-    public function show(TrackIncidentRequest $request): View|JsonResponse|RedirectResponse
+    public function show(TrackIncidentRequest $request): View|JsonResponse|RedirectResponse|Response
     {
         if ($request->wantsJson()) {
             return $this->resolveTrackingView(
@@ -49,14 +51,16 @@ class IncidentTrackController extends Controller
 
         session()->put('track_verified.'.$incident->id, true);
 
-        return redirect()->route('public.track.case', $incident->tracking_number);
+        return redirect()
+            ->route('public.track.case', $incident->tracking_number)
+            ->withCookie($this->trackingAccess->cookie($incident, $request));
     }
 
-    public function caseFile(Request $request, string $trackingNumber): View|RedirectResponse
+    public function caseFile(Request $request, string $trackingNumber): View|RedirectResponse|Response
     {
         $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
 
-        if (! $incident || session()->get('track_verified.'.$incident->id) !== true) {
+        if (! $incident || ! $this->trackingAccess->isVerified($request, $incident)) {
             return redirect()
                 ->route('public.track', ['tracking_number' => strtoupper(trim($trackingNumber))])
                 ->withErrors([
@@ -64,7 +68,7 @@ class IncidentTrackController extends Controller
                 ]);
         }
 
-        return $this->trackingPage($incident);
+        return $this->trackingPage($incident, $request);
     }
 
     public static function trackUnitsToken(\App\Models\Incident $incident): string
@@ -97,16 +101,22 @@ class IncidentTrackController extends Controller
     {
         $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
         abort_if(! $incident, 404);
-        abort_unless(session()->get('track_verified.'.$incident->id) === true, 403);
+        abort_unless($this->trackingAccess->isVerified($request, $incident), 403);
 
         $this->loadTrackingLiveData($incident);
 
-        return response()
+        $response = response()
             ->view('public.track._live_updates', ['incident' => $incident])
             ->header('Cache-Control', 'no-store, private');
+
+        if ($this->trackingAccess->shouldRefreshCookie($request, $incident)) {
+            $response->withCookie($this->trackingAccess->cookie($incident, $request));
+        }
+
+        return $response;
     }
 
-    private function resolveTrackingView(string $trackingNumber, bool $asJson = false): View|JsonResponse|RedirectResponse
+    private function resolveTrackingView(string $trackingNumber, bool $asJson = false): View|JsonResponse|RedirectResponse|Response
     {
         $incident = $this->incidentService->findByTrackingNumber(
             strtoupper(trim($trackingNumber))
@@ -138,17 +148,17 @@ class IncidentTrackController extends Controller
             ]);
         }
 
-        return $this->trackingPage($incident);
+        return $this->trackingPage($incident, request());
     }
 
-    private function trackingPage(\App\Models\Incident $incident): View
+    private function trackingPage(\App\Models\Incident $incident, Request $request): Response
     {
         session()->put('track_verified.'.$incident->id, true);
 
         $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency']);
         $this->loadTrackingLiveData($incident);
 
-        return view('public.track.show', [
+        return response()->view('public.track.show', [
             'incident' => $incident,
             'nearestCenter' => $this->nearestOpenCenter($incident),
             'map' => config('raniag.map'),
@@ -157,7 +167,7 @@ class IncidentTrackController extends Controller
                 't' => self::trackUnitsToken($incident),
             ]),
             'liveUnits' => $this->situational->liveUnitsForIncident($incident, forPublic: true),
-        ]);
+        ])->withCookie($this->trackingAccess->cookie($incident, $request));
     }
 
     private function loadTrackingLiveData(\App\Models\Incident $incident): void
@@ -177,7 +187,7 @@ class IncidentTrackController extends Controller
     {
         $incident = $this->incidentService->findByTrackingNumber(strtoupper(trim($trackingNumber)));
         abort_if(! $incident, 404);
-        abort_unless(session()->get('track_verified.'.$incident->id) === true, 403);
+        abort_unless($this->trackingAccess->isVerified($request, $incident), 403);
         abort_unless($incident->status === \App\Enums\IncidentStatus::PendingInfo, 422);
 
         $data = $request->validate([

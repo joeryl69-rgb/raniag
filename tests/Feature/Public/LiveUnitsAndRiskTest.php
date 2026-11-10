@@ -84,6 +84,60 @@ test('tracking page shows each agency resolution and serves fresh live-update fr
         ->toContain('private');
 });
 
+test('tracking refresh and live updates survive session invalidation after lookup', function () {
+    $type = IncidentType::factory()->create();
+    $agency = Agency::query()->create([
+        'name' => 'Session Change Agency',
+        'code' => 'SCA1',
+        'is_active' => true,
+    ]);
+    $responder = User::factory()->agency()->create(['agency_id' => $agency->id]);
+    $incident = Incident::query()->create([
+        'tracking_number' => 'RAN-SESSION-REFRESH',
+        'incident_type_id' => $type->id,
+        'status' => IncidentStatus::InProgress,
+        'priority' => 'medium',
+        'description' => 'Tracking access must survive a staff session change.',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+
+    $lookup = $this->post(route('public.track.lookup'), [
+        'tracking_number' => $incident->tracking_number,
+    ])->assertRedirect(route('public.track.case', $incident->tracking_number));
+
+    $cookie = $lookup->getCookie('raniag_track_'.$incident->id);
+    expect($cookie)->not->toBeNull()
+        ->and($cookie->getPath())->toBe('/track/'.$incident->tracking_number)
+        ->and($cookie->isHttpOnly())->toBeTrue();
+
+    $this->flushSession()
+        ->withCookie($cookie->getName(), $cookie->getValue())
+        ->get(route('public.track.case', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee($incident->tracking_number);
+
+    $incident->update([
+        'status' => IncidentStatus::Resolved,
+        'resolved_at' => now(),
+    ]);
+    Resolution::query()->create([
+        'incident_id' => $incident->id,
+        'resolved_by' => $responder->id,
+        'summary' => 'Final resolution after session change.',
+        'actions_taken' => 'Private response actions.',
+        'resolved_at' => now(),
+    ]);
+
+    $this->flushSession()
+        ->withCookie($cookie->getName(), $cookie->getValue())
+        ->get(route('public.track.updates', $incident->tracking_number))
+        ->assertOk()
+        ->assertSee('CASE MOVEMENT / RESOLVED')
+        ->assertSee('Final resolution after session change.')
+        ->assertDontSee('Private response actions.');
+});
+
 test('live tracking feed refreshes status, every active assignment, and resolutions together', function () {
     $type = IncidentType::factory()->create();
     $firstAgency = Agency::query()->create([

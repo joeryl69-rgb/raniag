@@ -4,17 +4,21 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Evidence;
+use App\Services\PublicTrackingAccess;
 use App\Support\PrivateIncidentFiles;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TrackEvidenceController extends Controller
 {
+    public function __construct(private readonly PublicTrackingAccess $trackingAccess) {}
+
     /**
      * Serve reporter-submitted evidence only after a successful /track lookup
      * in this session (tracking number + access code).
      */
-    public function show(Evidence $evidence): StreamedResponse|BinaryFileResponse
+    public function show(Request $request, Evidence $evidence): StreamedResponse|BinaryFileResponse
     {
         $evidence->loadMissing('incident');
 
@@ -22,7 +26,7 @@ class TrackEvidenceController extends Controller
             abort(403);
         }
 
-        if (! session()->get('track_verified.'.$evidence->incident_id)) {
+        if (! $this->trackingAccess->isVerified($request, $evidence->incident)) {
             abort(403, 'Verify your tracking number and access code first.');
         }
 
