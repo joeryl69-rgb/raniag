@@ -94,7 +94,8 @@ test('public hazard snapshot returns zones centers and risk without incident coo
     $payload = $response->json();
     $encoded = json_encode($payload['risk']);
     expect($encoded)->not->toContain('"latitude"');
-    expect($encoded)->not->toContain('"longitude"');
+    expect($encoded)->not->toContain('"longitude"')
+        ->and($response->headers->get('Cache-Control'))->toContain('no-store');
 });
 
 test('public live map pins open reports inside Pamplona without personal details', function () {

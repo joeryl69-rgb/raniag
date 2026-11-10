@@ -42,7 +42,9 @@ class HazardMapController extends Controller
 
     public function snapshot(): JsonResponse
     {
-        return response()->json($this->situational->publicSnapshot());
+        return response()
+            ->json($this->situational->publicSnapshot())
+            ->header('Cache-Control', 'no-store');
     }
 
     /**

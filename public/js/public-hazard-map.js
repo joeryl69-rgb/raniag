@@ -76,6 +76,8 @@
         let routePendingForce = false;
         let lastRouteAt = 0;
         let lastRouteLatLng = null;
+        let snapshotController = null;
+        let snapshotTimer = null;
         let trailLine = null;
         const trail = [];
         const ROUTE_OFF = 'Turn on My location, then choose an open center. The path can switch when more than one shelter is open.';
@@ -1175,16 +1177,73 @@
         });
         fitActiveView({ animate: false });
 
-        async function softRefresh() {
-            if (!cfg.snapshotUrl) return;
-            try {
-                const res = await fetch(cfg.snapshotUrl, { headers: { Accept: 'application/json' } });
-                if (!res.ok) return;
-                applySnapshot(await res.json());
-            } catch (e) { /* offline */ }
+        function scheduleSnapshotRefresh() {
+            if (snapshotTimer !== null) {
+                window.clearTimeout(snapshotTimer);
+                snapshotTimer = null;
+            }
+            if (!document.hidden) {
+                snapshotTimer = window.setTimeout(() => {
+                    snapshotTimer = null;
+                    refreshSnapshot();
+                }, 10000);
+            }
         }
 
-        setInterval(softRefresh, 60000);
+        async function refreshSnapshot(force = false) {
+            if (!cfg.snapshotUrl) return;
+            if (document.hidden && !force) {
+                scheduleSnapshotRefresh();
+                return;
+            }
+            if (snapshotController) {
+                if (!force) return;
+                snapshotController.abort();
+            }
+
+            const controller = new AbortController();
+            snapshotController = controller;
+            const timeout = window.setTimeout(() => controller.abort(), 10000);
+            try {
+                const url = new URL(cfg.snapshotUrl, window.location.href);
+                url.searchParams.set('_', Date.now().toString());
+                const res = await fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                    signal: controller.signal,
+                });
+                if (!res.ok) {
+                    console.warn('[public-hazard-map] Snapshot refresh failed with HTTP status ' + res.status + '.');
+                    return;
+                }
+                applySnapshot(await res.json());
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    console.warn('[public-hazard-map] Snapshot refresh failed; retrying.', error);
+                }
+            } finally {
+                window.clearTimeout(timeout);
+                if (snapshotController === controller) {
+                    snapshotController = null;
+                    scheduleSnapshotRefresh();
+                }
+            }
+        }
+
+        refreshSnapshot();
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (snapshotTimer !== null) {
+                    window.clearTimeout(snapshotTimer);
+                    snapshotTimer = null;
+                }
+                snapshotController?.abort();
+            } else {
+                refreshSnapshot(true);
+            }
+        });
+        window.addEventListener('focus', () => refreshSnapshot(true));
+        window.addEventListener('online', () => refreshSnapshot(true));
     }
 
     window.RANIAG_HazardMap = { init };
