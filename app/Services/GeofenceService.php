@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class GeofenceService
 {
+    private const BOUNDARY_CACHE_KEY = 'raniag.pamplona_boundary_geojson';
+
     /**
      * Ray-casting point-in-polygon test for a single ring.
      *
@@ -81,22 +84,56 @@ class GeofenceService
     }
 
     /**
-     * Public accessor for the loaded boundary geometry, e.g. so it can be
-     * serialized to the frontend for a visual overlay. Returns null under
-     * the same conditions as loadBoundary() (not configured / file missing).
+     * Public accessor for the active boundary geometry, e.g. so it can be
+     * serialized to the frontend for a visual overlay. Returns null when
+     * neither a saved administrator boundary nor the default file is available.
      */
     public function boundaryGeometry(): ?array
     {
         return $this->loadBoundary();
     }
 
+    public function boundaryFeatureCollection(): ?array
+    {
+        $geometry = $this->loadBoundary();
+
+        if (! $geometry) {
+            return null;
+        }
+
+        return [
+            'type' => 'FeatureCollection',
+            'features' => [[
+                'type' => 'Feature',
+                'properties' => ['name' => 'Pamplona municipal boundary'],
+                'geometry' => $geometry,
+            ]],
+        ];
+    }
+
+    public function hasCustomBoundary(): bool
+    {
+        return is_array(SystemSetting::query()->find(1)?->municipality_boundary);
+    }
+
+    public function clearBoundaryCache(): void
+    {
+        Cache::forget(self::BOUNDARY_CACHE_KEY);
+    }
+
     /**
-     * Load the configured Pamplona boundary GeoJSON file (cached after
-     * first read since the file never changes at runtime).
+     * Load the saved administrator boundary, falling back to the configured
+     * default GeoJSON. The active geometry is cached until an admin saves or resets it.
      */
     protected function loadBoundary(): ?array
     {
-        return Cache::rememberForever('raniag.pamplona_boundary_geojson', function () {
+        return Cache::rememberForever(self::BOUNDARY_CACHE_KEY, function () {
+            $customBoundary = SystemSetting::query()->find(1)?->municipality_boundary;
+
+            if (is_array($customBoundary) && ($customBoundary['type'] ?? null) === 'Polygon') {
+                return $customBoundary;
+            }
+
             $path = config('raniag.pamplona_boundary_path');
 
             if (! $path || ! Storage::disk('local')->exists($path)) {

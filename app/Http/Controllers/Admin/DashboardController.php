@@ -12,6 +12,7 @@ use App\Models\Assignment;
 use App\Models\Incident;
 use App\Models\SmsLog;
 use App\Services\DashboardAlertFeed;
+use App\Services\GeofenceService;
 use App\Services\SituationalMapService;
 use App\Support\FilterOptions;
 use App\Support\PeriodRange;
@@ -27,6 +28,7 @@ class DashboardController extends Controller
     public function __construct(
         private readonly SituationalMapService $situational,
         private readonly DashboardAlertFeed $dashboardAlerts,
+        private readonly GeofenceService $geofence,
     ) {}
 
     public function index(Request $request): View
@@ -63,13 +65,10 @@ class DashboardController extends Controller
      */
     public function boundary(): JsonResponse
     {
-        $path = 'geo/pamplona_boundary.geojson';
+        $boundary = $this->geofence->boundaryFeatureCollection();
+        abort_unless($boundary, 404);
 
-        abort_unless(Storage::disk('local')->exists($path), 404);
-
-        return response()->json(
-            json_decode(Storage::disk('local')->get($path), true)
-        );
+        return response()->json($boundary)->header('Cache-Control', 'no-store');
     }
 
     /**

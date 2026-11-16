@@ -97,10 +97,13 @@ class HazardMapController extends Controller
 
         $lat = (float) $data['lat'];
         $lng = (float) $data['lng'];
-        $name = $this->geofence->resolveBarangay($lat, $lng);
+        $withinMunicipality = $this->geofence->isWithinPamplona($lat, $lng);
+        $name = $withinMunicipality === false
+            ? null
+            : $this->geofence->resolveBarangay($lat, $lng);
         $address = config('raniag.address');
 
-        if ($name !== null) {
+        if ($withinMunicipality !== false && ($name !== null || $withinMunicipality === true)) {
             return response()->json([
                 'barangay' => $name,
                 'municipality' => $address['municipality'] ?? 'Pamplona',

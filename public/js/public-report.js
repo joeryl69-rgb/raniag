@@ -204,43 +204,7 @@
     const boundaryGeometry = window.RANIAG_BOUNDARY || null;
     const barangayBoundaries = window.RANIAG_BARANGAY_BOUNDARIES || null;
     const addressDefaults = window.RANIAG_ADDRESS || { municipality: 'Pamplona', province: 'Cagayan', country: 'Philippines' };
-
-    // Mirrors App\Services\GeofenceService::pointInRing (ray-casting, [lng, lat] pairs).
-    function pointInRing(lng, lat, ring) {
-        let inside = false;
-        const count = ring.length;
-        if (count < 3) return false;
-
-        for (let i = 0, j = count - 1; i < count; j = i++) {
-            const [lngI, latI] = ring[i];
-            const [lngJ, latJ] = ring[j];
-            const intersects = (latI > lat) !== (latJ > lat)
-                && lng < ((lngJ - lngI) * (lat - latI)) / (latJ - latI) + lngI;
-            if (intersects) inside = !inside;
-        }
-        return inside;
-    }
-
-    // Mirrors App\Services\GeofenceService::pointInGeometry (Polygon/MultiPolygon + holes).
-    function pointInGeometry(lng, lat, geometry) {
-        if (!geometry) return null;
-        const type = geometry.type;
-        const coordinates = geometry.coordinates || [];
-        const polygons = type === 'MultiPolygon' ? coordinates : [coordinates];
-
-        for (const rings of polygons) {
-            if (!rings || !rings.length) continue;
-            const outer = rings[0];
-            if (!pointInRing(lng, lat, outer)) continue;
-
-            let inHole = false;
-            for (const hole of rings.slice(1)) {
-                if (pointInRing(lng, lat, hole)) { inHole = true; break; }
-            }
-            if (!inHole) return true;
-        }
-        return false;
-    }
+    const pointInGeometry = window.RANIAG_Geofence.pointInGeometry;
 
     // Real point-in-polygon barangay lookup against the official boundary
     // file (mirrors GeofenceService::resolveBarangay on the backend).
@@ -271,7 +235,8 @@
         if (!outsideBannerEl) return;
         if (isOutside) {
             if (outsideBannerTextEl) {
-                outsideBannerTextEl.textContent = `This pin appears to be in ${municipality || 'a neighboring area'}, outside Pamplona. You can still send your report; MDRRMO Pamplona will forward it to the right agency.`;
+                const nearby = municipality ? ` (near ${municipality})` : '';
+                outsideBannerTextEl.textContent = `This pin is outside Pamplona's configured municipal boundary${nearby}. You can still send your report; MDRRMO Pamplona will forward it to the right agency.`;
             }
             outsideBannerEl.classList.remove('d-none');
         } else {
@@ -352,7 +317,13 @@
             document.getElementById('latitude'), document.getElementById('longitude')]
             .forEach((field) => field?.classList.remove('is-invalid'));
 
-        const geofenced = resolveBarangayFromBoundaries(lat, lng);
+        const geofenced = withinMunicipality === false
+            ? null
+            : resolveBarangayFromBoundaries(lat, lng);
+        if (withinMunicipality === false) {
+            if (barangayInput) barangayInput.value = '';
+            if (addressInput) addressInput.value = '';
+        }
         if (barangayInput && geofenced) barangayInput.value = geofenced;
 
         if (geofenced) {
@@ -377,7 +348,7 @@
                     label: `Detected: Barangay ${geofenced}, ${addressDefaults.municipality}`,
                 },
             }));
-        } else if (withinMunicipality === false && !lastResolvedLabel) {
+        } else if (withinMunicipality === false) {
             // A pin just outside the drawn boundary is still a real place.
             // Resolve it immediately so the GPS camera can stay ready while
             // the street lookup fills in the neighboring barangay.
@@ -439,7 +410,7 @@
                 ].filter(Boolean);
                 const areaName = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || addr.quarter || addr.locality || null;
                 const textMatched = locationCandidates.map((candidate) => matchBarangay(candidate)).find(Boolean) || null;
-                const matched = geofenced || textMatched;
+                const matched = withinMunicipality === false ? null : (geofenced || textMatched);
                 // Outside Pamplona's mapped barangays, "areaName" (e.g. "Langagan")
                 // is still a real barangay — just of a neighboring municipality —
                 // so it belongs in the Barangay field, not buried in Street/Landmark.

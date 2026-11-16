@@ -54,7 +54,9 @@ class IncidentService
             $meta['within_jurisdiction'] = $withinJurisdiction;
         }
 
-        $resolvedBarangay = $this->geofence->resolveBarangay($lat, $lng);
+        $resolvedBarangay = $withinJurisdiction === false
+            ? null
+            : $this->geofence->resolveBarangay($lat, $lng);
         $payload['barangay'] = $resolvedBarangay ?? ($payload['barangay'] ?? null);
 
         $gpsCaptures = $meta['gps_captures'] ?? [];

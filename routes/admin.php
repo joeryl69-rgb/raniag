@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FeedbackController;
+use App\Http\Controllers\Admin\GeofenceController;
 use App\Http\Controllers\Admin\HazardEvacController;
 use App\Http\Controllers\Admin\IncidentController;
 use App\Http\Controllers\Admin\IncidentPresentationController;
@@ -31,6 +32,9 @@ Route::prefix('admin')
         Route::post('/availability', [\App\Http\Controllers\Shared\AvailabilityController::class, 'toggleSelf'])->name('availability.toggle');
 
         Route::get('/hazard', [HazardEvacController::class, 'index'])->name('hazard.index');
+        Route::get('/geofence', [GeofenceController::class, 'index'])->name('geofence.index');
+        Route::put('/geofence', [GeofenceController::class, 'update'])->name('geofence.update');
+        Route::delete('/geofence', [GeofenceController::class, 'reset'])->name('geofence.reset');
         Route::post('/hazard/zones', [HazardEvacController::class, 'storeZone'])->name('hazard.zones.store');
         Route::patch('/hazard/zones/{zone}', [HazardEvacController::class, 'updateZone'])->name('hazard.zones.update');
         Route::match(['patch', 'post'], '/hazard/zones/{zone}/details', [HazardEvacController::class, 'updateZoneDetails'])->name('hazard.zones.details');

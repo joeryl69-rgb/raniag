@@ -30,6 +30,11 @@
                 </a>
             </li>
             <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.geofence.*') ? 'active' : '' }}" href="{{ route('admin.geofence.index') }}">
+                    <i class="bi bi-bounding-box"></i><span>Municipal boundary</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
                 <a class="nav-link {{ request()->routeIs('admin.incident_documents.*') ? 'active' : '' }}" href="{{ route('admin.incident_documents.index') }}">
                     <i class="bi bi-folder2-open"></i><span>Case Documents</span>
                 </a>

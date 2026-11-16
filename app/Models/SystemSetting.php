@@ -15,6 +15,9 @@ class SystemSetting extends Model
         'font_key',
         'font_size',
         'updated_by',
+        'municipality_boundary',
+        'municipality_boundary_updated_by',
+        'municipality_boundary_updated_at',
     ];
 
     protected function casts(): array
@@ -22,6 +25,8 @@ class SystemSetting extends Model
         return [
             'dark_mode' => 'boolean',
             'follow_system' => 'boolean',
+            'municipality_boundary' => 'array',
+            'municipality_boundary_updated_at' => 'datetime',
         ];
     }
 
@@ -30,8 +35,14 @@ class SystemSetting extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function municipalityBoundaryUpdatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'municipality_boundary_updated_by');
+    }
+
     /**
-     * Singleton accessor — the whole app shares one settings row (id=1).
+     * Singleton accessor — the whole app shares one settings row (id=1)
+     * for appearance preferences and the editable municipal boundary.
      * Cached for the request so layouts/app.blade.php can call this on
      * every page without an extra query per view.
      */

@@ -8,6 +8,7 @@
         variant="hazard-map"
     >
         <a href="{{ $publicHazardMapUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right me-1"></i>Public map</a>
+        <a href="{{ route('admin.geofence.index') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-bounding-box me-1"></i>Adjust municipal boundary</a>
     </x-workspace-intro>
 
 @php

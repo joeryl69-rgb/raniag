@@ -500,67 +500,20 @@
         }
     }
 
-    // Same ray-cast as the public report form and GeofenceService.
-    // Staff pages do not load public-report.js, so the camera has to do
-    // this itself or the place line waits on a network lookup.
-    function pointInRing(lng, lat, ring) {
-        let inside = false;
-        const count = ring?.length || 0;
-        if (count < 3) return false;
-        for (let i = 0, j = count - 1; i < count; j = i++) {
-            const [lngI, latI] = ring[i];
-            const [lngJ, latJ] = ring[j];
-            const intersects = (latI > lat) !== (latJ > lat)
-                && lng < ((lngJ - lngI) * (lat - latI)) / (latJ - latI) + lngI;
-            if (intersects) inside = !inside;
-        }
-        return inside;
-    }
-
-    function pointInGeometry(lng, lat, geometry) {
-        if (!geometry) return null;
-        const coordinates = geometry.coordinates || [];
-        const polygons = geometry.type === 'MultiPolygon' ? coordinates : [coordinates];
-        for (const rings of polygons) {
-            if (!rings || !rings.length || !pointInRing(lng, lat, rings[0])) continue;
-            let inHole = false;
-            for (const hole of rings.slice(1)) {
-                if (pointInRing(lng, lat, hole)) { inHole = true; break; }
-            }
-            if (!inHole) return true;
-        }
-        return false;
-    }
-
     function resolvePlaceFromBoundaries(lat, lng) {
-        const boundaries = window.RANIAG_BARANGAY_BOUNDARIES;
-        const boundary = window.RANIAG_BOUNDARY;
-        const address = window.RANIAG_ADDRESS || { municipality: 'Pamplona', province: 'Cagayan', country: 'Philippines' };
-        if (!boundaries?.features && !boundary) return null;
-        if (boundaries?.features) {
-            for (const feature of boundaries.features) {
-                const name = feature.properties && feature.properties.adm4_en;
-                if (name && pointInGeometry(lng, lat, feature.geometry)) {
-                    return {
-                        inside: true,
-                        barangay: name,
-                        municipality: address.municipality || 'Pamplona',
-                        province: address.province || 'Cagayan',
-                        country: address.country || 'Philippines',
-                    };
-                }
-            }
+        const geofence = window.RANIAG_Geofence;
+        if (!geofence) {
+            console.error('RANIAG municipal geofence helper did not load.');
+            return null;
         }
-        if (boundary && pointInGeometry(lng, lat, boundary) === false) {
-            return {
-                inside: false,
-                barangay: null,
-                municipality: 'Outside Pamplona',
-                province: address.province || 'Cagayan',
-                country: address.country || 'Philippines',
-            };
-        }
-        return null;
+
+        return geofence.resolvePlaceFromBoundaries(
+            lat,
+            lng,
+            window.RANIAG_BOUNDARY,
+            window.RANIAG_BARANGAY_BOUNDARIES,
+            window.RANIAG_ADDRESS
+        );
     }
 
     function publishResolvedPlace(lat, lng, place) {

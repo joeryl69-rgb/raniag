@@ -751,6 +751,7 @@
     window.RANIAG_INCIDENT_TYPES = @json($incidentTypeMarkers);
 </script>
 <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
+<script src="{{ asset('js/municipal-geofence.js') }}?v={{ @filemtime(public_path('js/municipal-geofence.js')) }}"></script>
 <script src="{{ asset('js/public-report.js') }}?v={{ @filemtime(public_path('js/public-report.js')) }}"></script>
 <script src="{{ asset('js/report-outbox.js') }}?v={{ @filemtime(public_path('js/report-outbox.js')) }}"></script>
 <script src="{{ asset('js/gps-camera.js') }}?v={{ @filemtime(public_path('js/gps-camera.js')) }}"></script>
