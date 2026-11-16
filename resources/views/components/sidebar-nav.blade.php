@@ -52,6 +52,11 @@
                 </a>
             </li>
             <li class="nav-item" data-role="administrator">
+                <a class="nav-link {{ request()->routeIs('admin.referral_contacts.*') ? 'active' : '' }}" href="{{ route('admin.referral_contacts.index') }}">
+                    <i class="bi bi-telephone-forward"></i><span>Referral contacts</span>
+                </a>
+            </li>
+            <li class="nav-item" data-role="administrator">
                 <a class="nav-link d-flex align-items-center {{ request()->routeIs('admin.personnel.*') || (request()->routeIs('admin.agencies.*') && request('directory') === 'personnel') || request()->routeIs('admin.personnel_roles.*') ? 'active' : '' }}"
                    href="#personnelCoordinationSubmenu" data-bs-toggle="collapse" role="button"
                    aria-expanded="{{ request()->routeIs('admin.personnel.*') || (request()->routeIs('admin.agencies.*') && request('directory') === 'personnel') || request()->routeIs('admin.personnel_roles.*') ? 'true' : 'false' }}"

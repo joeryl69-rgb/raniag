@@ -66,6 +66,43 @@
                         <div class="text-muted">{{ $plainLanguage['outside_aor'] }}</div>
                     </div>
                 </div>
+                @if ($incident->referral)
+                    <section
+                        class="rg-track-referral mt-4"
+                        id="rg-track-referral"
+                        aria-labelledby="rg-track-referral-title"
+                        data-latitude="{{ $incident->referral->latitude }}"
+                        data-longitude="{{ $incident->referral->longitude }}"
+                        data-municipality="{{ $incident->referral->municipality }}"
+                        data-office="{{ $incident->referral->office_name }}"
+                    >
+                        <div class="small fw-bold text-uppercase text-muted mb-1">Coordination destination</div>
+                        <h2 class="h5 fw-bold mb-1" id="rg-track-referral-title">
+                            {{ $incident->referral->office_name }}
+                        </h2>
+                        <div class="fw-semibold">{{ $incident->referral->municipality }}</div>
+                        @if ($incident->referral->location_address)
+                            <div class="small text-muted mt-1">{{ $incident->referral->location_address }}</div>
+                        @endif
+                        <p class="mt-2 mb-2">{{ $incident->referral->public_note }}</p>
+                        @if ($incident->referral->hotline)
+                            <a class="btn btn-outline-primary btn-sm" href="tel:{{ preg_replace('/[^0-9+]/', '', $incident->referral->hotline) }}">
+                                <i class="bi bi-telephone-forward me-1" aria-hidden="true"></i>
+                                {{ $incident->referral->municipality }} hotline: {{ $incident->referral->hotline }}
+                            </a>
+                        @else
+                            <div class="small text-muted">No public hotline was listed for this referral office.</div>
+                        @endif
+                        @if (($incident->latitude === null || $incident->longitude === null) && $incident->referral->latitude !== null && $incident->referral->longitude !== null)
+                            <div class="mt-3">
+                                <div class="small fw-semibold mb-2">Receiving office location</div>
+                                <div class="rg-track-referral-map-frame">
+                                    <div id="rg-track-referral-map" data-lenis-prevent></div>
+                                </div>
+                            </div>
+                        @endif
+                    </section>
+                @endif
             @else
                 <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
                     <x-public.status-badge :status="$trackingStatusValue" class="fs-6 px-3 py-2" />

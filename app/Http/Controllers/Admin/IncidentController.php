@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\ValidateIncidentRequest;
 use App\Models\Agency;
 use App\Models\Incident;
 use App\Models\IncidentType;
+use App\Models\MunicipalityContact;
 use App\Models\User;
 use App\Repositories\Contracts\IncidentRepositoryInterface;
 use App\Services\AssignmentService;
@@ -19,6 +20,7 @@ use App\Support\FilterOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
@@ -121,12 +123,18 @@ class IncidentController extends Controller
             ->whereNotIn('id', $alreadyAssignedPersonnelIds)
             ->orderBy('name')
             ->get();
+        $referralContacts = MunicipalityContact::query()
+            ->where('is_active', true)
+            ->orderBy('municipality')
+            ->orderBy('office_name')
+            ->get();
 
         return view('admin.incidents.show', [
             // 'evidence' intentionally omitted here — repository supplies a filtered evidence relation to avoid showing orphaned files
             'incident' => $record,
             'agencies' => $agencies,
             'personnel' => $personnel,
+            'referralContacts' => $referralContacts,
         ]);
     }
 
@@ -159,26 +167,44 @@ class IncidentController extends Controller
         }
 
         if ($data['action'] === 'outside_aor') {
-            $this->incidentService->recordStatusChange(
-                incident: $record,
-                toStatus: IncidentStatus::OutsideAor,
-                user: $request->user(),
-                comment: 'Referred outside Pamplona AOR: '.$data['notes'],
-                isPublic: true,
-            );
+            $contact = MunicipalityContact::query()
+                ->where('is_active', true)
+                ->findOrFail($data['municipality_contact_id']);
+
+            DB::transaction(function () use ($record, $contact, $data, $request) {
+                $this->incidentService->recordStatusChange(
+                    incident: $record,
+                    toStatus: IncidentStatus::OutsideAor,
+                    user: $request->user(),
+                    comment: 'Report referred to '.$contact->office_name.' in '.$contact->municipality.'.',
+                    isPublic: true,
+                );
+
+                $record->referral()->create([
+                    'municipality_contact_id' => $contact->id,
+                    'referred_by' => $request->user()->id,
+                    'municipality' => $contact->municipality,
+                    'office_name' => $contact->office_name,
+                    'hotline' => $contact->hotline,
+                    'location_address' => $contact->address,
+                    'latitude' => $contact->latitude,
+                    'longitude' => $contact->longitude,
+                    'public_note' => $data['notes'],
+                ]);
+            });
 
             $this->notifications->notifyOutsideAor($record, $request->user());
 
             if ($request->wantsJson()) {
                 return response()->json([
                     'message' => 'Incident marked as outside AOR and referred.',
-                    'incident' => $record->fresh(),
+                    'incident' => $record->fresh()->load('referral'),
                 ]);
             }
 
             return redirect()
                 ->route('admin.incidents.show', $record->id)
-                ->with('success', 'Incident marked as outside AOR. The reporter will see this report as referred/closed on tracking.');
+                ->with('success', 'Incident referred to '.$contact->office_name.' in '.$contact->municipality.'. The reporter can see the coordination details on tracking.');
         }
 
         if ($record->status === IncidentStatus::Submitted) {

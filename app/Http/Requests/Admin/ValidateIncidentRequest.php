@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\UserRole;
 use App\Models\Agency;
+use App\Models\MunicipalityContact;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -23,6 +24,10 @@ class ValidateIncidentRequest extends FormRequest
         $rules = [
             'action' => ['required', Rule::in(['approve', 'reject', 'outside_aor'])],
             'notes' => [$isOutsideAor ? 'required' : 'nullable', 'string', 'max:1000'],
+            'municipality_contact_id' => [
+                $isOutsideAor ? 'required' : 'nullable',
+                Rule::exists(MunicipalityContact::class, 'id')->where('is_active', true),
+            ],
         ];
 
         // Only require assignment selections when approving the report
@@ -68,6 +73,8 @@ class ValidateIncidentRequest extends FormRequest
             'action.required' => 'Please specify an action: approve, reject, or mark as outside AOR.',
             'action.in' => 'Action must be approve, reject, or outside_aor.',
             'notes.required' => 'Please provide referral details (which agency/municipality this was referred to) before marking as outside AOR.',
+            'municipality_contact_id.required' => 'Select the municipality office this report was referred to.',
+            'municipality_contact_id.exists' => 'Select an active referral contact from the directory.',
             'assigned_agency_id.required_without_all' => 'Please select at least one agency or personnel to assign this incident to.',
             'assigned_agency_id.array' => 'Agency selection must be an array.',
             'assigned_agency_id.min' => 'Please select at least one agency.',

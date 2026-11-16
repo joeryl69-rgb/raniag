@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\IncidentController;
 use App\Http\Controllers\Admin\IncidentPresentationController;
 use App\Http\Controllers\Admin\IncidentDocumentController;
 use App\Http\Controllers\Admin\IncidentTypeController;
+use App\Http\Controllers\Admin\MunicipalityContactController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PersonnelRoleController;
 use App\Http\Controllers\Admin\PrintableReportRequestController;
@@ -59,6 +60,13 @@ Route::prefix('admin')
 
         Route::get('/incident-documents', [IncidentDocumentController::class, 'index'])->name('incident_documents.index');
         Route::get('/incident-documents/{incident}', [IncidentDocumentController::class, 'show'])->name('incident_documents.show');
+
+        Route::prefix('referral-contacts')->name('referral_contacts.')->group(function () {
+            Route::get('/', [MunicipalityContactController::class, 'index'])->name('index');
+            Route::post('/', [MunicipalityContactController::class, 'store'])->name('store');
+            Route::put('/{municipalityContact}', [MunicipalityContactController::class, 'update'])->name('update');
+            Route::delete('/{municipalityContact}', [MunicipalityContactController::class, 'destroy'])->name('destroy');
+        });
 
         Route::prefix('incident-types')->name('incident_types.')->group(function () {
             Route::get('/', [IncidentTypeController::class, 'index'])->name('index');

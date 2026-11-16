@@ -45,8 +45,15 @@ html[data-public-theme="dark"] #rg-track-status .progress-track { background:#30
 .rg-track-evidence-grid .rg-evidence-video-trigger { height:100%; aspect-ratio:auto; }
 .rg-track-history-by { margin:2px 0 4px; color:#5d7480; font-size:.78rem; }
 .rg-track-history-copy { margin:0; color:#243d48; line-height:1.5; }
+.rg-track-referral { padding:16px;border:1px solid #bad9d5;border-left:4px solid #168576;border-radius:6px;background:#f1f8f6; }
+.rg-track-referral h2 { color:#153c3a; }
+.rg-track-referral-map-frame { height:240px;overflow:hidden;border:1px solid #cbd9dc;border-radius:6px; }
+.rg-track-referral-map-frame #rg-track-referral-map { width:100%;height:100%; }
 html[data-public-theme="dark"] .rg-track-history-by { color:#a9c0c6; }
 html[data-public-theme="dark"] .rg-track-history-copy { color:#dce8e8; }
+html[data-public-theme="dark"] .rg-track-referral { border-color:#3f6764;border-left-color:#61d0b4;background:#17332f;color:#e2f0eb; }
+html[data-public-theme="dark"] .rg-track-referral-map-frame { border-color:#3f5963; }
+html[data-public-theme="dark"] .rg-track-referral h2 { color:#eff8f4; }
 html[data-public-theme="dark"] .rg-track-nearest { border-color:#3f6764;border-left-color:#61d0b4;background:#17332f;color:#e2f0eb; }
 html[data-public-theme="dark"] .rg-track-nearest-icon { background:#244940;color:#9ce5ce; }
 html[data-public-theme="dark"] .rg-track-nearest-kicker { color:#8bdfca; }
@@ -102,7 +109,7 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
         </div>
     @endif
 
-    @if ($incident->latitude && $incident->longitude)
+    @if ($incident->latitude !== null && $incident->longitude !== null)
         <div class="card raniag-card rg-app-card mb-4 overflow-hidden">
             <div class="card-header raniag-card-header py-3 d-flex justify-content-between align-items-center gap-2">
                 <strong><i class="bi bi-broadcast-pin text-primary me-1"></i>Live response map</strong>
@@ -251,7 +258,6 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
 @endsection
 
 @push('scripts')
-@if ($incident->latitude && $incident->longitude)
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="{{ asset('js/incident-map-icons.js') }}?v={{ @filemtime(public_path('js/incident-map-icons.js')) }}"></script>
 <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
@@ -260,13 +266,14 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
 document.addEventListener('DOMContentLoaded', function () {
     window.RANIAG_TrackMap?.init({
         el: 'track-live-map',
-        lat: {{ (float) $incident->latitude }},
-        lng: {{ (float) $incident->longitude }},
+        lat: @json($incident->latitude !== null ? (float) $incident->latitude : null),
+        lng: @json($incident->longitude !== null ? (float) $incident->longitude : null),
         map: @json($map ?? config('raniag.map')),
         icon: @json($incident->incidentType?->icon),
         color: @json($incident->incidentType?->color),
         priority: @json($incident->priority?->value ?? $incident->priority),
         scenePopup: @json(($incident->incidentType?->name ?: 'Incident').' location'),
+        referralPoint: @json($referralPoint),
         unitsUrl: @json($unitsUrl ?? null),
         units: @json($liveUnits ?? []),
         statusEl: 'track-units-status',
@@ -274,7 +281,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-@endif
 @endpush
 
 @push('scripts')

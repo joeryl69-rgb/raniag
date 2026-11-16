@@ -158,10 +158,21 @@ class IncidentTrackController extends Controller
         $incident->loadMissing(['evidence', 'incidentType', 'assignments.agency']);
         $this->loadTrackingLiveData($incident);
 
+        $referralPoint = null;
+        if ($incident->referral?->latitude !== null && $incident->referral?->longitude !== null) {
+            $referralPoint = [
+                'latitude' => (float) $incident->referral->latitude,
+                'longitude' => (float) $incident->referral->longitude,
+                'municipality' => $incident->referral->municipality,
+                'office' => $incident->referral->office_name,
+            ];
+        }
+
         return response()->view('public.track.show', [
             'incident' => $incident,
             'nearestCenter' => $this->nearestOpenCenter($incident),
             'map' => config('raniag.map'),
+            'referralPoint' => $referralPoint,
             'unitsUrl' => route('public.track.units', [
                 'trackingNumber' => $incident->tracking_number,
                 't' => self::trackUnitsToken($incident),
@@ -176,6 +187,7 @@ class IncidentTrackController extends Controller
             'assignments.agency',
             'assignments.assignee',
             'statusUpdates.user.agency',
+            'referral',
         ]);
         $incident->setRelation('resolutions', $incident->resolutions()
             ->with('resolver.agency')

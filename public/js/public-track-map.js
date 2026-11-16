@@ -20,15 +20,75 @@
         });
     }
 
+    let referralOfficeMap = null;
+    let referralOfficeElement = null;
+    let referralOfficeMarker = null;
+
+    function syncReferralOfficeMap(cfg) {
+        const L = global.L;
+        if (!L) return;
+
+        const el = document.getElementById('rg-track-referral-map');
+        if (!el) {
+            if (referralOfficeMap) referralOfficeMap.remove();
+            referralOfficeMap = null;
+            referralOfficeElement = null;
+            referralOfficeMarker = null;
+            return;
+        }
+
+        const referral = document.getElementById('rg-track-referral');
+        const latitude = referral?.dataset.latitude;
+        const longitude = referral?.dataset.longitude;
+        if (latitude == null || longitude == null || latitude.trim() === '' || longitude.trim() === '') return;
+        const lat = Number(latitude);
+        const lng = Number(longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        if (referralOfficeElement !== el) {
+            if (referralOfficeMap) referralOfficeMap.remove();
+            referralOfficeMap = L.map(el).setView([lat, lng], 14);
+            global.RaniagMapScroll?.guard(referralOfficeMap);
+            if (global.RANIAG_Mapbox) global.RANIAG_Mapbox.addBasemap(referralOfficeMap, cfg.map || {});
+            else {
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OSM',
+                }).addTo(referralOfficeMap);
+            }
+            referralOfficeMarker = L.marker([lat, lng]).addTo(referralOfficeMap);
+            referralOfficeElement = el;
+        } else {
+            referralOfficeMarker.setLatLng([lat, lng]);
+            referralOfficeMap.setView([lat, lng], Math.max(referralOfficeMap.getZoom(), 14));
+        }
+
+        const label = `${esc(referral.dataset.office)} · ${esc(referral.dataset.municipality)}`;
+        referralOfficeMarker
+            .bindPopup(`<strong>Receiving office</strong><br>${label}`)
+            .bindTooltip('Receiving office');
+        window.setTimeout(() => referralOfficeMap?.invalidateSize(), 100);
+    }
+
     async function init(cfg) {
         const L = global.L;
         const Mapbox = global.RANIAG_Mapbox;
-        if (!L || !cfg?.el || cfg.lat == null || cfg.lng == null) return;
+        if (!L || !cfg?.el) return;
+        const refreshReferralOfficeMap = () => syncReferralOfficeMap(cfg);
+        document.addEventListener('rg:tracking-updated', refreshReferralOfficeMap);
+        refreshReferralOfficeMap();
+
+        const hasScene = cfg?.lat != null && cfg?.lng != null;
+        const hasReferral = cfg?.referralPoint?.latitude != null && cfg?.referralPoint?.longitude != null;
+        if (!hasScene && !hasReferral) return;
 
         const el = document.getElementById(cfg.el);
         if (!el) return;
 
-        const map = L.map(el).setView([cfg.lat, cfg.lng], 14);
+        const initialPoint = hasScene
+            ? [cfg.lat, cfg.lng]
+            : [cfg.referralPoint.latitude, cfg.referralPoint.longitude];
+        const map = L.map(el).setView(initialPoint, 14);
         global.RaniagMapScroll?.guard(map);
         if (Mapbox) Mapbox.addBasemap(map, cfg.map || {});
         else {
@@ -38,30 +98,33 @@
             }).addTo(map);
         }
 
-        const sceneIcon = global.RaniagIcons?.buildDivIcon
-            ? global.RaniagIcons.buildDivIcon({
-                icon: cfg.icon,
-                color: cfg.color,
-                priority: cfg.priority,
-                size: 34,
-            })
-            : null;
-        if (sceneIcon) {
-            L.marker([cfg.lat, cfg.lng], { icon: sceneIcon, zIndexOffset: 400 })
-                .bindPopup(cfg.scenePopup || 'Report location')
-                .addTo(map);
-        } else {
-            L.circleMarker([cfg.lat, cfg.lng], {
-                radius: 8,
-                color: '#fff',
-                weight: 2,
-                fillColor: cfg.color || '#64748b',
-                fillOpacity: 1,
-            }).bindPopup(cfg.scenePopup || 'Report location').addTo(map);
+        if (hasScene) {
+            const sceneIcon = global.RaniagIcons?.buildDivIcon
+                ? global.RaniagIcons.buildDivIcon({
+                    icon: cfg.icon,
+                    color: cfg.color,
+                    priority: cfg.priority,
+                    size: 34,
+                })
+                : null;
+            if (sceneIcon) {
+                L.marker([cfg.lat, cfg.lng], { icon: sceneIcon, zIndexOffset: 400 })
+                    .bindPopup(cfg.scenePopup || 'Report location')
+                    .addTo(map);
+            } else {
+                L.circleMarker([cfg.lat, cfg.lng], {
+                    radius: 8,
+                    color: '#fff',
+                    weight: 2,
+                    fillColor: cfg.color || '#64748b',
+                    fillOpacity: 1,
+                }).bindPopup(cfg.scenePopup || 'Report location').addTo(map);
+            }
         }
 
         const unitGroup = L.layerGroup().addTo(map);
         const routeGroup = L.layerGroup().addTo(map);
+        const referralGroup = L.layerGroup().addTo(map);
         const markerByKey = new Map();
         let fitted = false;
         let userPannedMap = false;
@@ -74,11 +137,84 @@
             userPannedMap = true;
         });
 
+        function knownLocations() {
+            const points = [];
+            if (hasScene) points.push([cfg.lat, cfg.lng]);
+            if (cfg.referralPoint) {
+                const lat = Number(cfg.referralPoint.latitude);
+                const lng = Number(cfg.referralPoint.longitude);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) points.push([lat, lng]);
+            }
+            return points;
+        }
+
+        let referralMarker = null;
+        function setReferral(point) {
+            if (!point || point.latitude == null || point.longitude == null
+                || String(point.latitude).trim() === '' || String(point.longitude).trim() === '') {
+                referralGroup.clearLayers();
+                referralMarker = null;
+                cfg.referralPoint = null;
+                return;
+            }
+            const lat = Number(point?.latitude);
+            const lng = Number(point?.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                referralGroup.clearLayers();
+                referralMarker = null;
+                cfg.referralPoint = null;
+                return;
+            }
+            cfg.referralPoint = {
+                latitude: lat,
+                longitude: lng,
+                municipality: String(point.municipality || ''),
+                office: String(point.office || ''),
+            };
+            const label = `${esc(cfg.referralPoint.office)} · ${esc(cfg.referralPoint.municipality)}`;
+            if (referralMarker) {
+                referralMarker.setLatLng([lat, lng]);
+                referralMarker.setPopupContent(`<strong>Referral destination</strong><br>${label}`);
+            } else {
+                referralMarker = L.marker([lat, lng], { zIndexOffset: 600 })
+                    .bindPopup(`<strong>Referral destination</strong><br>${label}`)
+                    .bindTooltip('Referral office')
+                    .addTo(referralGroup);
+            }
+            if (!userPannedMap) {
+                const points = knownLocations();
+                map.fitBounds(L.latLngBounds(points).pad(0.18), { maxZoom: 15, padding: [28, 28] });
+                fitted = true;
+            }
+        }
+
+        function refreshReferralFromPage() {
+            const node = document.getElementById('rg-track-referral');
+            if (!node) {
+                setReferral(null);
+                return;
+            }
+            setReferral({
+                latitude: node.dataset.latitude,
+                longitude: node.dataset.longitude,
+                municipality: node.dataset.municipality,
+                office: node.dataset.office,
+            });
+        }
+
+        if (cfg.referralPoint) setReferral(cfg.referralPoint);
+        document.addEventListener('rg:tracking-updated', refreshReferralFromPage);
+        const initialLocations = knownLocations();
+        if (initialLocations.length > 1) {
+            map.fitBounds(L.latLngBounds(initialLocations).pad(0.18), { maxZoom: 15, padding: [28, 28] });
+            fitted = true;
+        }
+
         async function paint(units) {
             const raw = Array.isArray(units) ? units : [];
             const list = Mapbox?.spreadUnitPositions ? Mapbox.spreadUnitPositions(raw) : raw;
 
-            const bounds = L.latLngBounds([[cfg.lat, cfg.lng]]);
+            const bounds = L.latLngBounds(knownLocations());
             let plotted = 0;
             const seen = new Set();
             list.forEach((u) => {
@@ -125,6 +261,7 @@
                 return;
             }
 
+            if (!hasScene) return;
             const primary = list.find((u) => {
                 const phase = String(u.field_phase || '');
                 return (phase === 'en_route' || phase === 'on_scene')

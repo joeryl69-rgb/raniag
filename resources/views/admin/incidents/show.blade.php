@@ -332,9 +332,9 @@
                                 <label for="validation_action" class="form-label">Review Verdict</label>
                                 <select class="form-select" name="action" id="validation_action" required onchange="toggleValidationView()">
                                     <option value="">Choose action...</option>
-                                    <option value="approve">Approve & Assign Agency</option>
-                                    <option value="outside_aor">Mark as Outside AOR (Refer Externally)</option>
-                                    <option value="reject">Reject Report</option>
+                                    <option value="approve" @selected(old('action') === 'approve')>Approve & Assign Agency</option>
+                                    <option value="outside_aor" @selected(old('action') === 'outside_aor')>Refer to Another Municipality</option>
+                                    <option value="reject" @selected(old('action') === 'reject')>Reject Report</option>
                                 </select>
                                 @if(($incident->meta['within_jurisdiction'] ?? null) === false)
                                     <div class="form-text text-warning">
@@ -369,11 +369,46 @@
                                 </div>
                             </div>
 
+                            <div class="mb-3 d-none" id="referral-contact-container">
+                                <label for="municipality_contact_id" class="form-label">Receiving municipality / office</label>
+                                <select class="form-select" name="municipality_contact_id" id="municipality_contact_id">
+                                    <option value="">Select a referral contact...</option>
+                                    @foreach ($referralContacts as $contact)
+                                        <option value="{{ $contact->id }}"
+                                            data-municipality="{{ $contact->municipality }}"
+                                            data-office="{{ $contact->office_name }}"
+                                            data-phone="{{ $contact->phone }}"
+                                            data-hotline="{{ $contact->hotline }}"
+                                            data-email="{{ $contact->email }}"
+                                            data-address="{{ $contact->address }}"
+                                            data-latitude="{{ $contact->latitude }}"
+                                            data-longitude="{{ $contact->longitude }}"
+                                            @selected((string) old('municipality_contact_id') === (string) $contact->id)>
+                                            {{ $contact->municipality }} · {{ $contact->office_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @if ($referralContacts->isEmpty())
+                                    <div class="form-text text-danger">No active referral contacts yet. Add one in the Referral contacts directory before referring this case.</div>
+                                @else
+                                    <div class="form-text">The selected office's public hotline and optional map pin will be included in the reporter's tracking page.</div>
+                                @endif
+                                <div id="referral-contact-actions" class="d-none mt-2">
+                                    <div class="small fw-semibold" id="referral-contact-label"></div>
+                                    <div class="d-flex flex-wrap gap-2 mt-1">
+                                        <a class="btn btn-sm btn-outline-primary d-none" id="referral-call" href="#"><i class="bi bi-telephone me-1"></i><span></span></a>
+                                        <a class="btn btn-sm btn-outline-primary d-none" id="referral-hotline-call" href="#"><i class="bi bi-telephone-forward me-1"></i><span></span></a>
+                                        <a class="btn btn-sm btn-outline-secondary d-none" id="referral-email" href="#"><i class="bi bi-envelope me-1"></i><span></span></a>
+                                    </div>
+                                    <div class="form-text" id="referral-contact-location"></div>
+                                </div>
+                            </div>
+
 
                             <div class="mb-3">
                                 <label for="notes" class="form-label" id="notes_label">Validation Comments</label>
-                                <textarea class="form-control" name="notes" id="notes" rows="3" placeholder="Explain the decision or special directions..."></textarea>
-                                <div class="form-text d-none" id="notes-required-hint">Required — state which agency/municipality this was referred to.</div>
+                                <textarea class="form-control" name="notes" id="notes" rows="3" maxlength="1000" placeholder="Explain the decision or special directions...">{{ old('notes') }}</textarea>
+                                <div class="form-text d-none" id="notes-required-hint">Required. This note will be visible to the reporter on their tracking page.</div>
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100">
@@ -748,6 +783,8 @@
             function toggleValidationView() {
                 const action = document.getElementById('validation_action').value;
                 const container = document.getElementById('agency-select-container');
+                const referralContainer = document.getElementById('referral-contact-container');
+                const referralSelect = document.getElementById('municipality_contact_id');
                 const notes = document.getElementById('notes');
                 const hint = document.getElementById('notes-required-hint');
 
@@ -763,11 +800,59 @@
                 if (action === 'outside_aor') {
                     notes.setAttribute('required', 'required');
                     hint.classList.remove('d-none');
+                    referralContainer.classList.remove('d-none');
+                    referralSelect.setAttribute('required', 'required');
                 } else {
                     notes.removeAttribute('required');
                     hint.classList.add('d-none');
+                    referralContainer.classList.add('d-none');
+                    referralSelect.removeAttribute('required');
                 }
             }
+
+            function updateReferralContactActions() {
+                const select = document.getElementById('municipality_contact_id');
+                const option = select?.selectedOptions[0];
+                const panel = document.getElementById('referral-contact-actions');
+                if (!option || !option.value) {
+                    panel?.classList.add('d-none');
+                    return;
+                }
+
+                const setLink = (id, value, prefix) => {
+                    const link = document.getElementById(id);
+                    const text = link.querySelector('span');
+                    if (!value) {
+                        link.classList.add('d-none');
+                        link.removeAttribute('href');
+                        return;
+                    }
+                    link.href = prefix === 'tel:'
+                        ? prefix + value.replace(/[^0-9+*#]/g, '')
+                        : prefix + value;
+                    text.textContent = value;
+                    link.classList.remove('d-none');
+                };
+                document.getElementById('referral-contact-label').textContent =
+                    option.dataset.office + ' · ' + option.dataset.municipality;
+                setLink('referral-call', option.dataset.phone, 'tel:');
+                setLink('referral-hotline-call', option.dataset.hotline, 'tel:');
+                setLink('referral-email', option.dataset.email, 'mailto:');
+                const location = [
+                    option.dataset.address,
+                    option.dataset.latitude && option.dataset.longitude
+                        ? 'Map pin set for this office'
+                        : 'No office map pin set',
+                ].filter(Boolean);
+                document.getElementById('referral-contact-location').textContent = location.join(' · ');
+                panel.classList.remove('d-none');
+            }
+
+            document.getElementById('municipality_contact_id')?.addEventListener('change', updateReferralContactActions);
+            document.addEventListener('DOMContentLoaded', () => {
+                toggleValidationView();
+                updateReferralContactActions();
+            });
         </script>
 
     @endpush
