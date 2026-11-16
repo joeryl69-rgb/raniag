@@ -30,9 +30,11 @@ test('admins can manage multiple municipal office contacts and select their loca
     $this->actingAs($admin)
         ->get(route('admin.referral_contacts.index'))
         ->assertOk()
-        ->assertSee('Add a municipality office')
-        ->assertSee('Office map pins')
-        ->assertSee('js-edit-municipality-contact', false);
+        ->assertSee('Add referral contact')
+        ->assertSee('id="municipalityContactModal"', false)
+        ->assertSee('Office map pin', false)
+        ->assertDontSee('Map latitude', false)
+        ->assertDontSee('Map longitude', false);
 
     $this->post(route('admin.referral_contacts.store'), [
         'municipality' => 'Sanchez Mira',
@@ -53,6 +55,11 @@ test('admins can manage multiple municipal office contacts and select their loca
         ->and($contact->hotline)->toBe('0917-000-2222')
         ->and((float) $contact->latitude)->toBe(18.57)
         ->and($contact->is_active)->toBeTrue();
+
+    $this->get(route('admin.referral_contacts.index'))
+        ->assertOk()
+        ->assertSee('js-edit-municipality-contact', false)
+        ->assertSee('data-contact-id="'.$contact->id.'"', false);
 
     $this->post(route('admin.referral_contacts.store'), [
         'municipality' => 'Sanchez Mira',
