@@ -141,6 +141,8 @@
     let resolvedPlaceCoordinates = null;
     let pendingCapture = null;
     let lastGeocodedAt = 0;
+    let placeLookupToken = 0;
+    let activePlaceLookup = null;
     const captures = [];
     const manualFiles = [];
 
@@ -414,9 +416,9 @@
                     detail.province,
                     detail.country,
                 ].filter(Boolean);
-                placeEl.textContent = parts.length > 1
+                placeEl.textContent = detail.placeLabel || (parts.length > 1
                     ? parts.join(', ')
-                    : (detail.placeLabel || 'Address details unavailable');
+                    : 'Address details unavailable');
             }
         }
         updateCaptureReadiness();
@@ -524,109 +526,100 @@
                 lng,
                 barangay: place.barangay,
                 municipality: place.municipality,
+                inside: place.inside,
                 province: place.province,
                 country: place.country,
             },
         }));
     }
 
-    // Do not label the shot "Pamplona" until a boundary check says the
-    // point is inside a Pamplona barangay. A fix in Langagan (Sanchez Mira)
-    // was being stamped as Pamplona, and the shared GPS watch was dropping
-    // the accuracy reading, so the camera looked fixed and "Accuracy unknown".
     function resolvePlaceLocally(lat, lng) {
         const localPlace = resolvePlaceFromBoundaries(lat, lng);
-        if (localPlace) {
-            publishResolvedPlace(lat, lng, localPlace);
-            if (localPlace.inside) return;
-        } else if (!lastResolved) {
-            window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                detail: { lat, lng, coordinatesOnly: true },
-            }));
-        }
-
         const now = Date.now();
-        if (now - lastGeocodedAt < 4000) {
-            return;
-        }
-        lastGeocodedAt = now;
-        const base = config.barangayUrl || '/hazard-map/barangay';
-        const url = `${base}?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`;
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 2500);
-        fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal })
-            .then((res) => (res.ok ? res.json() : null))
-            .then((data) => {
-                clearTimeout(timer);
-                if (data?.inside && data.barangay) {
-                    window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                        detail: {
-                            placeResolved: true,
-                            lat,
-                            lng,
-                            barangay: data.barangay,
-                            municipality: data.municipality || 'Pamplona',
-                            province: data.province || 'Cagayan',
-                            country: data.country || 'Philippines',
-                        },
-                    }));
-                    return;
-                }
-                if (data && (data.barangay || data.municipality)) {
-                    window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                        detail: {
-                            placeResolved: true,
-                            lat,
-                            lng,
-                            barangay: data.barangay || null,
-                            municipality: data.municipality || null,
-                            province: data.province || null,
-                            country: data.country || null,
-                        },
-                    }));
-                    return;
-                }
-                resolvePlaceFromNominatim(lat, lng);
-            })
-            .catch(() => {
-                clearTimeout(timer);
-                resolvePlaceFromNominatim(lat, lng);
-            });
-    }
-
-    function resolvePlaceFromNominatim(lat, lng) {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4000);
-        fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal })
-            .then((res) => (res.ok ? res.json() : null))
-            .then((data) => {
-                clearTimeout(timer);
-                const addr = data?.address || {};
-                const barangay = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || addr.quarter || addr.locality || null;
-                const municipality = addr.municipality || addr.town || addr.city || addr.county || null;
-                if (!barangay && !municipality) {
-                    window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                        detail: { placeResolved: true, lat, lng, placeLabel: 'Address details unavailable' },
-                    }));
-                    return;
-                }
+        if (navigator.onLine === false) {
+            placeLookupToken += 1;
+            activePlaceLookup?.abort();
+            activePlaceLookup = null;
+            if (localPlace) {
+                publishResolvedPlace(lat, lng, localPlace);
+            } else {
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
                     detail: {
                         placeResolved: true,
                         lat,
                         lng,
-                        barangay,
-                        municipality,
-                        province: addr.state || addr.province || addr.state_district || null,
-                        country: addr.country || null,
+                        inside: null,
+                        placeLabel: 'Boundary check unavailable offline',
                     },
                 }));
+            }
+            return;
+        }
+
+        if (now - lastGeocodedAt < 4000) return;
+        lastGeocodedAt = now;
+        const requestToken = ++placeLookupToken;
+        activePlaceLookup?.abort();
+        const url = new URL(config.barangayUrl || '/hazard-map/barangay', window.location.href);
+        url.searchParams.set('lat', String(lat));
+        url.searchParams.set('lng', String(lng));
+        const controller = new AbortController();
+        activePlaceLookup = controller;
+        const timer = setTimeout(() => controller.abort(), 2500);
+        fetch(url.toString(), {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+            signal: controller.signal,
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Boundary lookup returned HTTP ${res.status}.`);
+                return res.json();
             })
-            .catch(() => {
+            .then((data) => {
                 clearTimeout(timer);
+                if (requestToken !== placeLookupToken) return;
+                if (typeof data.inside !== 'boolean') {
+                    throw new Error('Boundary lookup returned no jurisdiction result.');
+                }
+                activePlaceLookup = null;
+                publishResolvedPlace(lat, lng, {
+                    inside: data.inside,
+                    barangay: data.barangay || null,
+                    municipality: data.municipality || (data.inside ? 'Pamplona' : 'Outside Pamplona'),
+                    province: data.province || 'Cagayan',
+                    country: data.country || 'Philippines',
+                });
+            })
+            .catch((error) => {
+                clearTimeout(timer);
+                if (requestToken !== placeLookupToken) return;
+                activePlaceLookup = null;
+                if (navigator.onLine === false) {
+                    if (localPlace) {
+                        publishResolvedPlace(lat, lng, localPlace);
+                    } else {
+                        window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                            detail: {
+                                placeResolved: true,
+                                lat,
+                                lng,
+                                inside: null,
+                                placeLabel: 'Boundary check unavailable offline',
+                            },
+                        }));
+                    }
+                    return;
+                }
+
+                console.warn('Active Pamplona boundary could not be verified.', error);
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                    detail: { placeResolved: true, lat, lng, placeLabel: 'Address details unavailable' },
+                    detail: {
+                        placeResolved: true,
+                        lat,
+                        lng,
+                        inside: null,
+                        placeLabel: 'Pamplona boundary check unavailable',
+                    },
                 }));
             });
     }

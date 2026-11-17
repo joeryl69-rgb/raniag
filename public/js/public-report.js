@@ -308,20 +308,64 @@
         return barangayList.find((b) => needle.includes(b.toLowerCase())) || null;
     }
 
-    function resolveLocation(lat, lng) {
+    async function resolveLocation(lat, lng) {
         clearTimeout(geocodeTimer);
         const myToken = ++geocodeToken;
-        const withinMunicipality = boundaryGeometry ? pointInGeometry(lng, lat, boundaryGeometry) : null;
 
         [barangayInput, addressInput,
             document.getElementById('latitude'), document.getElementById('longitude')]
             .forEach((field) => field?.classList.remove('is-invalid'));
 
-        const geofenced = withinMunicipality === false
+        let activeJurisdiction = null;
+        let jurisdictionUnavailable = false;
+        if (navigator.onLine !== false) {
+            setResolveStatus('Checking the active Pamplona boundary…', 'arrow-repeat', 'text-primary');
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3000);
+            try {
+                const endpoint = window.RANIAG_GPS?.barangayUrl || '/hazard-map/barangay';
+                const url = new URL(endpoint, window.location.href);
+                url.searchParams.set('lat', String(lat));
+                url.searchParams.set('lng', String(lng));
+                const response = await fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                    signal: controller.signal,
+                });
+                if (!response.ok) throw new Error(`Boundary lookup returned HTTP ${response.status}.`);
+                const result = await response.json();
+                if (typeof result.inside !== 'boolean') throw new Error('Boundary lookup returned no jurisdiction result.');
+                activeJurisdiction = result;
+            } catch (error) {
+                if (myToken !== geocodeToken) return;
+                if (navigator.onLine === false) {
+                    // The page-loaded outline remains the best available offline snapshot.
+                } else {
+                    jurisdictionUnavailable = true;
+                    console.warn('Active Pamplona boundary could not be verified.', error);
+                }
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+        if (myToken !== geocodeToken) return;
+
+        const withinMunicipality = activeJurisdiction
+            ? activeJurisdiction.inside
+            : navigator.onLine === false && boundaryGeometry
+                ? pointInGeometry(lng, lat, boundaryGeometry)
+                : null;
+        const geofenced = jurisdictionUnavailable || withinMunicipality === false
             ? null
-            : resolveBarangayFromBoundaries(lat, lng);
-        if (withinMunicipality === false) {
+            : activeJurisdiction?.barangay || resolveBarangayFromBoundaries(lat, lng);
+        if (withinMunicipality === false
+            || jurisdictionUnavailable
+            || (withinMunicipality === true && !geofenced)) {
             if (barangayInput) barangayInput.value = '';
+        }
+        if (withinMunicipality === false
+            || jurisdictionUnavailable
+            || (withinMunicipality === true && !geofenced)) {
             if (addressInput) addressInput.value = '';
         }
         if (barangayInput && geofenced) barangayInput.value = geofenced;
@@ -343,9 +387,26 @@
                     lat, lng,
                     barangay: geofenced,
                     municipality: addressDefaults.municipality,
+                    inside: true,
                     province: addressDefaults.province,
                     country: addressDefaults.country,
                     label: `Detected: Barangay ${geofenced}, ${addressDefaults.municipality}`,
+                },
+            }));
+        } else if (withinMunicipality === true) {
+            setResolveStatus('Inside Pamplona municipal boundary; barangay not identified yet.', 'check-circle', 'text-success');
+            setOutsideBanner(false);
+            lastResolvedLabel = 'Within Pamplona municipal boundary';
+            window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                detail: {
+                    placeResolved: true,
+                    lat, lng,
+                    barangay: null,
+                    municipality: addressDefaults.municipality,
+                    inside: true,
+                    province: addressDefaults.province,
+                    country: addressDefaults.country,
+                    label: lastResolvedLabel,
                 },
             }));
         } else if (withinMunicipality === false) {
@@ -361,6 +422,23 @@
                     lat, lng,
                     barangay: null,
                     municipality: 'Outside Pamplona',
+                    inside: false,
+                    province: addressDefaults.province,
+                    country: addressDefaults.country,
+                    label: lastResolvedLabel,
+                },
+            }));
+        } else if (jurisdictionUnavailable) {
+            setResolveStatus('Pamplona boundary could not be verified. Your coordinates are retained.', 'exclamation-triangle', 'text-warning');
+            setOutsideBanner(false);
+            lastResolvedLabel = 'Pamplona boundary check unavailable';
+            window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
+                detail: {
+                    placeResolved: true,
+                    lat, lng,
+                    barangay: null,
+                    municipality: 'Boundary check unavailable',
+                    inside: null,
                     province: addressDefaults.province,
                     country: addressDefaults.country,
                     label: lastResolvedLabel,
@@ -375,6 +453,8 @@
             if (withinMunicipality === false) {
                 setResolveStatus('Pin saved outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
                 setOutsideBanner(true, null);
+            } else if (withinMunicipality === true) {
+                setResolveStatus('Pin is inside Pamplona. Address and barangay lookup need an internet connection.', 'geo-alt', 'text-warning');
             } else {
                 setResolveStatus('Pin saved. Address and barangay lookup need an internet connection.', 'geo-alt', 'text-warning');
             }
@@ -391,7 +471,8 @@
                 clearTimeout(timeout);
                 if (myToken !== geocodeToken) return;
                 const addr = data.address || {};
-                const municipality = addr.municipality || addr.town || addr.city || addr.county || addressDefaults.municipality;
+                const reverseMunicipality = addr.municipality || addr.town || addr.city || addr.county || addressDefaults.municipality;
+                const municipality = withinMunicipality === true ? addressDefaults.municipality : reverseMunicipality;
                 const province = addr.state || addr.province || addressDefaults.province;
                 const country = addr.country || addressDefaults.country;
                 const locationCandidates = [
@@ -410,13 +491,19 @@
                 ].filter(Boolean);
                 const areaName = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || addr.quarter || addr.locality || null;
                 const textMatched = locationCandidates.map((candidate) => matchBarangay(candidate)).find(Boolean) || null;
-                const matched = withinMunicipality === false ? null : (geofenced || textMatched);
+                const matched = jurisdictionUnavailable
+                    ? null
+                    : activeJurisdiction
+                        ? (activeJurisdiction.inside ? geofenced : null)
+                        : withinMunicipality === false ? null : (geofenced || textMatched);
                 // Outside Pamplona's mapped barangays, "areaName" (e.g. "Langagan")
                 // is still a real barangay — just of a neighboring municipality —
                 // so it belongs in the Barangay field, not buried in Street/Landmark.
-                const barangayDisplay = matched || (!geofenced ? areaName : null);
+                const barangayDisplay = matched || (!geofenced && withinMunicipality !== true && !jurisdictionUnavailable ? areaName : null);
                 const outsideMunicipality = withinMunicipality === false
-                    || municipality.toLowerCase() !== addressDefaults.municipality.toLowerCase();
+                    || (!jurisdictionUnavailable
+                        && withinMunicipality === null
+                        && municipality.toLowerCase() !== addressDefaults.municipality.toLowerCase());
 
                 if (barangayInput) {
                     barangayInput.value = barangayDisplay || '';
@@ -433,21 +520,26 @@
                 // and municipality up front, then the jurisdiction note as a
                 // separate clause — instead of a "Near X (outside Y...)"
                 // phrasing that read like a distance estimate.
-                const label = matched
+                const label = jurisdictionUnavailable
+                    ? `Pamplona boundary could not be verified — ${municipality}`
+                    : matched
                     ? `Detected: Barangay ${matched}, ${municipality}`
                     : barangayDisplay
                         ? `Detected: Barangay ${barangayDisplay}, ${municipality} — outside Pamplona`
                         : `Near ${municipality} — could not match a specific barangay (outside Pamplona's mapped area)`;
-                setResolveStatus(label, barangayDisplay ? 'check-circle' : 'exclamation-circle', barangayDisplay ? 'text-success' : 'text-warning');
+                setResolveStatus(label, barangayDisplay || withinMunicipality === true ? 'check-circle' : 'exclamation-circle', barangayDisplay || withinMunicipality === true ? 'text-success' : 'text-warning');
                 lastResolvedLabel = label;
 
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                    detail: { placeResolved: true, lat, lng, barangay: barangayDisplay, municipality, province, country, label },
+                    detail: { placeResolved: true, lat, lng, barangay: barangayDisplay, municipality, inside: withinMunicipality, province, country, label },
                 }));
             } catch (err) {
                 clearTimeout(timeout);
                 if (myToken !== geocodeToken) return;
-                if (withinMunicipality === false) {
+                if (jurisdictionUnavailable) {
+                    setResolveStatus('Pamplona boundary could not be verified. Check your connection and try again.', 'exclamation-triangle', 'text-warning');
+                    setOutsideBanner(false);
+                } else if (withinMunicipality === false) {
                     setResolveStatus('Outside Pamplona municipality limits. You can still submit this report.', 'exclamation-triangle', 'text-warning');
                     setOutsideBanner(true, null);
                 } else if (!geofenced) {
@@ -462,7 +554,12 @@
                         placeResolved: true,
                         lat, lng,
                         barangay: geofenced,
-                        municipality: geofenced ? addressDefaults.municipality : (withinMunicipality === false ? 'Outside Pamplona' : addressDefaults.municipality),
+                        municipality: jurisdictionUnavailable
+                            ? 'Boundary check unavailable'
+                            : geofenced
+                                ? addressDefaults.municipality
+                                : (withinMunicipality === false ? 'Outside Pamplona' : addressDefaults.municipality),
+                        inside: jurisdictionUnavailable ? null : withinMunicipality,
                     },
                 }));
                 lastResolvedLabel = lastResolvedLabel || 'resolved (offline fallback)';

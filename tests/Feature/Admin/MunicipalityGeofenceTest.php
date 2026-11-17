@@ -36,9 +36,16 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
         ->assertSee('Pamplona municipal boundary')
         ->assertSee('Reset to default')
         ->assertSee('leaflet.draw.js', false)
-        ->assertSee('id="boundary-undo"', false)
-        ->assertSee('id="boundary-redo"', false)
-        ->assertSee('js/geometry-history.js', false)
+        ->assertSee('id="boundary-adjust"', false)
+        ->assertSee('id="boundary-replace"', false)
+        ->assertSee('id="boundary-finish"', false)
+        ->assertSee('id="boundary-cancel"', false)
+        ->assertSee('validateBoundaryGeometry', false)
+        ->assertSee('Adjust outline', false)
+        ->assertSee('Replace outline', false)
+        ->assertDontSee('id="boundary-undo"', false)
+        ->assertDontSee('id="boundary-redo"', false)
+        ->assertSee('municipal-geofence.js', false)
         ->assertSee('Barangay boundaries remain unchanged.');
 
     $this->put(route('admin.geofence.update'), [
@@ -52,9 +59,10 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
         ->and(app(GeofenceService::class)->isWithinPamplona(18.47, 121.32))->toBeFalse()
         ->and(SystemSetting::query()->sole()->municipality_boundary['type'])->toBe('Polygon');
 
-    $this->getJson(route('public.hazard.barangay', ['lat' => 18.51, 'lng' => 121.41]))
+    $classificationResponse = $this->getJson(route('public.hazard.barangay', ['lat' => 18.51, 'lng' => 121.41]))
         ->assertOk()
         ->assertJsonPath('inside', true);
+    expect($classificationResponse->headers->get('Cache-Control'))->toContain('no-store');
 
     expect(app(GeofenceService::class)->resolveBarangay(18.47, 121.32))->not->toBeNull();
     Http::fake([
@@ -70,6 +78,7 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
         ->assertOk()
         ->assertSee('window.RANIAG_BOUNDARY', false)
         ->assertSee('municipal-geofence.js', false)
+        ->assertSee('hazard-map\\/barangay', false)
         ->assertSee('121.4', false);
     $this->get(route('public.hazard.map'))
         ->assertOk()

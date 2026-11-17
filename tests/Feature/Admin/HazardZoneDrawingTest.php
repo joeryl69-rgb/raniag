@@ -35,10 +35,9 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('Cancel and return to saved items', false)
         ->assertSee('id="hz-map-workspace"', false)
         ->assertSee('id="add-map-item"', false)
-        ->assertSee('id="geometry-undo"', false)
-        ->assertSee('id="geometry-redo"', false)
-        ->assertSee('Undo and redo affect map geometry only', false)
-        ->assertSee('js/geometry-history.js', false)
+        ->assertDontSee('id="geometry-undo"', false)
+        ->assertDontSee('id="geometry-redo"', false)
+        ->assertDontSee('js/geometry-history.js', false)
         ->assertSee('Hazard areas', false)
         ->assertSee('Shelters', false)
         ->assertSee('max-width: 575.98px', false)
@@ -49,8 +48,7 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('#hz-editor-workspace.is-editor-open[data-editor-view="details"] #hz-map-column { display: none; }', false)
         ->assertSee('.hz-panel.is-editing .hz-form-body { min-height: auto; overflow: visible; }', false)
         ->assertSee('.hz-legend { position: relative;', false)
-        ->assertSee('function showEditForm(form, title, lead)', false)
-        ->assertSee('window.RaniagGeometryHistory.create', false);
+        ->assertSee('function showEditForm(form, title, lead)', false);
 });
 
 test('hazard area creation rejects incomplete or non polygon geojson', function () {

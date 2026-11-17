@@ -28,6 +28,10 @@ const ASSETS_TO_CACHE = [
 ];
 
 function shouldBypassCache(pathname) {
+    if (isActiveBoundaryLookup(pathname)) {
+        return true;
+    }
+
     const blocked = [
         '/admin',
         '/agency',
@@ -63,6 +67,10 @@ function isReportPath(pathname) {
     return pathname === REPORT_URL || pathname === REPORT_URL + '/';
 }
 
+function isActiveBoundaryLookup(pathname) {
+    return pathname === '/hazard-map/barangay' || pathname.endsWith('/hazard-map/barangay');
+}
+
 function networkTimeout(ms) {
     return new Promise((_, reject) => {
         setTimeout(() => reject(new Error('network timeout')), ms);
@@ -82,13 +90,17 @@ function putInCache(request, response) {
 }
 
 async function matchCached(request) {
+    const path = new URL(request.url, self.location.origin).pathname;
+    if (isActiveBoundaryLookup(path)) {
+        return undefined;
+    }
+
     const exact = await caches.match(request);
     if (exact) return exact;
     if (String(request.url).startsWith(self.location.origin)) {
         const loose = await caches.match(request, { ignoreSearch: true });
         if (loose) return loose;
     }
-    const path = new URL(request.url, self.location.origin).pathname;
     if (isReportPath(path)) {
         return caches.match(REPORT_URL);
     }

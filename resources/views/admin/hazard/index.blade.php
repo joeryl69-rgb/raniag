@@ -90,12 +90,6 @@
                             <span class="hz-map-state" id="map-lock-note">Map locked</span>
                         </div>
                         <div class="hz-tool-group" role="group" aria-label="Boundary tools">
-                            <button type="button" class="hz-tool" id="geometry-undo" disabled aria-label="Undo geometry change" title="Undo geometry change">
-                                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span>Undo</span>
-                            </button>
-                            <button type="button" class="hz-tool" id="geometry-redo" disabled aria-label="Redo geometry change" title="Redo geometry change">
-                                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span>Redo</span>
-                            </button>
                             <button type="button" class="hz-tool" id="tool-polygon"><i class="bi bi-pentagon" aria-hidden="true"></i><span>Draw area</span></button>
                             <button type="button" class="hz-tool" id="tool-box"><i class="bi bi-square" aria-hidden="true"></i><span>Draw box</span></button>
                             <button type="button" class="hz-tool" id="tool-edit" disabled><i class="bi bi-bezier2" aria-hidden="true"></i><span>Adjust boundary</span></button>
@@ -125,7 +119,6 @@
                     <span class="hz-kicker" id="hz-editor-kicker">HAZARD MAP / EDITOR</span>
                     <h2 id="hz-editor-title">Edit hazard area</h2>
                     <p id="hz-editor-lead">Update details and adjust the map geometry.</p>
-                    <p class="small text-muted mt-2 mb-0">Undo and redo affect map geometry only; form details stay as entered.</p>
                 </div>
                 <div class="card-body">
                     <div id="hz-list-controls">
@@ -680,7 +673,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-<script src="{{ asset('js/geometry-history.js') }}?v={{ @filemtime(public_path('js/geometry-history.js')) }}"></script>
 <script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
 <script>
 (function () {
@@ -715,8 +707,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const editorLead = document.getElementById('hz-editor-lead');
     let activeEditForm = null;
     let editorOpen = false;
-    let activeHistory = null;
-    let centerHistory = null;
     const zoneList = document.getElementById('zone-list');
     const centerList = document.getElementById('center-list');
     const latInput = document.getElementById('center_latitude');
@@ -740,14 +730,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (geometryHint) geometryHint.textContent = message;
         if (boundaryNote) boundaryNote.textContent = message;
         boundaryStep?.classList.toggle('is-ready', !!ready);
-    }
-
-    function syncHistoryControls() {
-        const state = activeHistory?.state() || { canUndo: false, canRedo: false };
-        const undo = document.getElementById('geometry-undo');
-        const redo = document.getElementById('geometry-redo');
-        if (undo) undo.disabled = !activeEditForm || !state.canUndo;
-        if (redo) redo.disabled = !activeEditForm || !state.canRedo;
     }
 
     function setEditorView(view) {
@@ -780,7 +762,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (editorLead) editorLead.textContent = lead;
         editorPanel?.classList.add('is-editing');
         setEditorView('map');
-        syncHistoryControls();
         requestAnimationFrame(() => {
             map.invalidateSize({ pan: false });
             if (window.matchMedia('(max-width: 991.98px)').matches) {
@@ -801,8 +782,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         listControls?.classList.remove('d-none');
         editorHeader?.classList.add('d-none');
         editorPanel?.classList.remove('is-editing');
-        activeHistory = null;
-        syncHistoryControls();
         requestAnimationFrame(() => map.invalidateSize());
     }
 
@@ -1026,7 +1005,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (drawnLayer && drawnLayer.setStyle) drawnLayer.setStyle(shapeOptions());
     }
 
-    function capture(layer, preserveTool = false) {
+    function capture(layer) {
         const geo = layer.toGeoJSON();
         const geometry = geo.geometry || geo;
         if (geometry?.type === 'Polygon' && Array.isArray(geometry.coordinates)) {
@@ -1041,50 +1020,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         geometryInput.value = JSON.stringify(geometry);
         if (zoneSave) zoneSave.disabled = !typeSelect?.value;
         if (editTool) editTool.disabled = false;
-        if (!preserveTool) markTool('');
+        markTool('');
         say('Boundary ready. Adjust the corners, or save the hazard area.', true);
     }
 
-    function currentZoneGeometry() {
-        return drawnLayer?.toGeoJSON?.().geometry || null;
-    }
-
-    function applyZoneGeometry(geometry) {
-        const resumeEdit = !!editDrawer?._enabled;
-        if (resumeEdit) editDrawer.disable();
-        polygonDrawer.disable();
-        boxDrawer.disable();
-        drawnItems.clearLayers();
-        drawnLayer = null;
-
-        if (geometry) {
-            L.geoJSON(geometry).eachLayer((layer) => {
-                drawnLayer = layer;
-                drawnItems.addLayer(layer);
-                styleDrawn();
-            });
-        }
-
-        geometryInput.value = geometry ? JSON.stringify(geometry) : '';
-        if (zoneSave) zoneSave.disabled = !geometry || !typeSelect?.value;
-        if (editTool) editTool.disabled = !geometry;
-        if (resumeEdit && drawnLayer) {
-            editDrawer.enable();
-            setDrawHold(true);
-            markTool('tool-edit');
-        } else {
-            setDrawHold(false);
-            markTool('');
-        }
-        syncHistoryControls();
-        if (geometry) say('Boundary restored. Continue adjusting it or save the hazard area.', true);
-        else if (mapReady()) say('Drawing cleared. Trace the boundary again.', false);
-        else showLock();
-    }
-
-    const zoneHistory = window.RaniagGeometryHistory.create(null, applyZoneGeometry, syncHistoryControls);
-    document.getElementById('geometry-undo')?.addEventListener('click', () => activeHistory?.undo());
-    document.getElementById('geometry-redo')?.addEventListener('click', () => activeHistory?.redo());
     document.getElementById('hz-editor-map-tab')?.addEventListener('click', () => setEditorView('map'));
     document.getElementById('hz-editor-details-tab')?.addEventListener('click', () => setEditorView('details'));
 
@@ -1096,7 +1035,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         drawnItems.addLayer(drawnLayer);
         styleDrawn();
         capture(drawnLayer);
-        zoneHistory.push(currentZoneGeometry());
         polygonDrawer.disable();
         boxDrawer.disable();
         if (editDrawer._enabled) editDrawer.disable();
@@ -1108,18 +1046,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             drawnLayer = layer;
             capture(layer);
         });
-        zoneHistory.push(currentZoneGeometry());
-    });
-
-    let editHistoryTimer = null;
-    map.on(L.Draw.Event.EDITVERTEX, () => {
-        if (editHistoryTimer) clearTimeout(editHistoryTimer);
-        editHistoryTimer = setTimeout(() => {
-            editHistoryTimer = null;
-            if (activeEditForm !== zoneForm || !drawnLayer) return;
-            capture(drawnLayer, true);
-            zoneHistory.push(currentZoneGeometry());
-        }, 300);
     });
 
     document.getElementById('tool-polygon')?.addEventListener('click', () => {
@@ -1163,20 +1089,17 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             lngInput.value = '';
             centerSave.disabled = true;
             if (coordsLabel) coordsLabel.textContent = 'Pin not placed yet. Click the map to drop the shelter pin.';
-            centerHistory?.push(null);
             return;
         }
         polygonDrawer.disable();
         boxDrawer.disable();
         if (editDrawer._enabled) editDrawer.disable();
         setDrawHold(false);
-        const hadGeometry = !!drawnLayer;
         drawnItems.clearLayers();
         drawnLayer = null;
         geometryInput.value = '';
         if (zoneSave) zoneSave.disabled = true;
         if (editTool) editTool.disabled = true;
-        if (hadGeometry) zoneHistory.push(null);
         markTool('');
         if (editingZoneId) say('Boundary cleared. Draw the replacement, or cancel the edit to keep the saved shape.', false);
         else if (mapReady()) say('Drawing cleared. Trace the boundary again.', false);
@@ -1216,7 +1139,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     let editingCenterId = null;
     const centerStoreAction = centerForm?.getAttribute('action') || '';
 
-    function placeDraft(lat, lng, recordHistory = false) {
+    function placeDraft(lat, lng) {
         latInput.value = Number(lat).toFixed(7);
         lngInput.value = Number(lng).toFixed(7);
         if (!draftMarker) {
@@ -1227,7 +1150,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             }).addTo(map);
             draftMarker.on('dragend', () => {
                 const p = draftMarker.getLatLng();
-                placeDraft(p.lat, p.lng, true);
+                placeDraft(p.lat, p.lng);
             });
         } else {
             draftMarker.setLatLng([lat, lng]);
@@ -1238,29 +1161,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         const pinMessage = 'Pin placed at ' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5) + '. Drag it if it needs to move.';
         coordsLabel.textContent = pinMessage;
         if (geometryHint && !centerForm.classList.contains('d-none')) geometryHint.textContent = pinMessage;
-        if (recordHistory) centerHistory?.push({ type: 'Point', coordinates: [Number(lng), Number(lat)] });
     }
-
-    function applyCenterGeometry(geometry) {
-        if (!geometry) {
-            if (draftMarker) map.removeLayer(draftMarker);
-            draftMarker = null;
-            pinPlaced = false;
-            latInput.value = '';
-            lngInput.value = '';
-            centerSave.disabled = true;
-            if (coordsLabel) coordsLabel.textContent = 'Pin not placed yet. Click the map to drop the shelter pin.';
-            if (geometryHint) geometryHint.textContent = coordsLabel?.textContent || '';
-            syncHistoryControls();
-            return;
-        }
-
-        if (geometry.type !== 'Point' || !Array.isArray(geometry.coordinates)) return;
-        placeDraft(geometry.coordinates[1], geometry.coordinates[0]);
-        syncHistoryControls();
-    }
-
-    centerHistory = window.RaniagGeometryHistory.create(null, applyCenterGeometry, syncHistoryControls);
 
     colorInput?.addEventListener('input', () => {
         if (draftMarker) draftMarker.setIcon(shelterIcon(document.getElementById('centerOpen')?.checked !== false, true, pinColor()));
@@ -1273,7 +1174,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (centerForm.classList.contains('d-none')) return;
         if (!mapReady()) return;
         if (polygonDrawer._enabled || boxDrawer._enabled) return;
-        placeDraft(e.latlng.lat, e.latlng.lng, true);
+        placeDraft(e.latlng.lat, e.latlng.lng);
     });
 
     map.getContainer().addEventListener('raniag:map-mode', (event) => {
@@ -1301,8 +1202,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     function setMode(mode) {
         const center = mode === 'center';
         activeMode = center ? 'center' : 'zone';
-        activeHistory = center ? centerHistory : zoneHistory;
-        syncHistoryControls();
         zoneForm.classList.toggle('d-none', activeEditForm !== zoneForm);
         zoneList.classList.toggle('d-none', center);
         centerForm.classList.toggle('d-none', activeEditForm !== centerForm);
@@ -1372,8 +1271,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         placeDraft(latitude, longitude);
         centerSave.textContent = 'Save changes';
         document.getElementById('center-cancel-edit').textContent = 'Cancel edit';
-        centerHistory.reset({ type: 'Point', coordinates: [Number(lngInput.value), Number(latInput.value)] });
-        activeHistory = centerHistory;
         engageMap();
         if (modeKicker) modeKicker.textContent = 'Edit shelter';
         if (modeTitle) modeTitle.textContent = 'Update this shelter on the map';
@@ -1421,8 +1318,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (activeEditForm === centerForm) cancelCenterEdit();
         else cancelZoneEdit();
         setMode('zone');
-        zoneHistory.reset(null);
-        activeHistory = zoneHistory;
         showEditForm(zoneForm, 'New hazard area', 'Choose the incident type and details, then draw the area on the map.');
     }
 
@@ -1430,8 +1325,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (activeEditForm === zoneForm) cancelZoneEdit();
         else cancelCenterEdit();
         setMode('center');
-        centerHistory.reset(null);
-        activeHistory = centerHistory;
         showEditForm(centerForm, 'New evacuation shelter', 'Enter the shelter details, then place its pin on the map.');
     }
 
@@ -1456,12 +1349,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         beginCenterEdit(existingCenters.find((center) => String(center.id) === String(startCenterId)), true);
     } else if (hadPin && latInput.value && lngInput.value) {
         placeDraft(parseFloat(latInput.value), parseFloat(lngInput.value));
-        centerHistory.reset({ type: 'Point', coordinates: [Number(lngInput.value), Number(latInput.value)] });
-        activeHistory = centerHistory;
         showEditForm(centerForm, 'New evacuation shelter', 'Enter the shelter details, then place its pin on the map.');
     } else if (startCenter) {
-        centerHistory.reset(null);
-        activeHistory = centerHistory;
         showEditForm(centerForm, 'New evacuation shelter', 'Enter the shelter details, then place its pin on the map.');
     }
     syncMapLock();
@@ -1470,11 +1359,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (editDrawer?._enabled && typeof editDrawer.save === 'function') {
             try { editDrawer.save(); } catch (error) { console.error('Unable to finish the boundary edit.', error); }
         }
-        if (editHistoryTimer) {
-            clearTimeout(editHistoryTimer);
-            editHistoryTimer = null;
-        }
-        if (drawnLayer) zoneHistory.push(currentZoneGeometry());
         if (editingZoneId) {
             const method = document.getElementById('zone-form-method');
             if (method) {
@@ -1545,8 +1429,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
                 console.error('Unable to load this hazard boundary for editing.', e);
             }
         }
-        zoneHistory.reset(currentZoneGeometry());
-        activeHistory = zoneHistory;
         if (drawnLayer && drawnLayer.getBounds) {
             try { map.fitBounds(drawnLayer.getBounds(), { padding: [28, 28], maxZoom: 17 }); } catch (e) {}
         }
@@ -1622,7 +1504,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (modeLead) modeLead.textContent = 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
         if (!mapReady()) showLock();
         else say('Draw an area or a box, then name it in the panel.', false);
-        zoneHistory.reset(null);
         closeEditor();
     }
 
@@ -1641,8 +1522,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (zone) beginZoneEdit(zone, resumeButton?.dataset || {}, !!drawnLayer);
     } else if (startZone) {
         setMode('zone');
-        zoneHistory.reset(currentZoneGeometry());
-        activeHistory = zoneHistory;
         showEditForm(zoneForm, 'New hazard area', 'Choose the incident type and details, then draw the area on the map.');
     }
 

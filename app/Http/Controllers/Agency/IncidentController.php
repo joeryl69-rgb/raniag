@@ -102,6 +102,7 @@ class IncidentController extends Controller
             'gpsConfig' => [
                 'max_captures' => config('raniag.gps_camera.max_captures'),
                 'jpeg_quality' => config('raniag.gps_camera.jpeg_quality'),
+                'barangayUrl' => route('public.hazard.barangay'),
                 'geolocation' => [
                     'enableHighAccuracy' => config('raniag.geolocation.enable_high_accuracy'),
                     'timeout' => config('raniag.geolocation.timeout_ms'),

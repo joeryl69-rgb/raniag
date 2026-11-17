@@ -60,13 +60,29 @@
             </form>
         </header>
 
-        <div class="rg-geofence-editor-copy">
-            <div class="rg-geofence-step"><span>1</span><div><strong>Adjust the current outline</strong><small>Choose the pencil tool to move/add/remove boundary points.</small></div></div>
-            <div class="rg-geofence-step"><span>2</span><div><strong>Or redraw it</strong><small>Choose the polygon tool to replace the outline with a new Pamplona boundary.</small></div></div>
-            <div class="rg-geofence-step"><span>3</span><div><strong>Save once reviewed</strong><small>Changes apply system-wide; the original is always available with Reset to default.</small></div></div>
+        <div class="rg-geofence-tools">
+            <div class="rg-geofence-tools-copy">
+                <span class="rg-geofence-kicker">Boundary actions</span>
+                <strong id="boundary-tool-status" role="status" aria-live="polite">Choose how to update the outline</strong>
+                <small id="boundary-tool-help">Adjust existing points or draw a replacement. Finish the map action before saving.</small>
+            </div>
+            <div class="rg-geofence-tool-group" role="group" aria-label="Municipal boundary map actions">
+                <button type="button" class="rg-geofence-tool" id="boundary-adjust" aria-pressed="false">
+                    <i class="bi bi-bezier2" aria-hidden="true"></i><span>Adjust outline</span>
+                </button>
+                <button type="button" class="rg-geofence-tool" id="boundary-replace" aria-pressed="false">
+                    <i class="bi bi-pentagon" aria-hidden="true"></i><span>Replace outline</span>
+                </button>
+                <button type="button" class="rg-geofence-tool rg-geofence-tool-primary d-none" id="boundary-finish">
+                    <i class="bi bi-check2" aria-hidden="true"></i><span>Finish action</span>
+                </button>
+                <button type="button" class="rg-geofence-tool rg-geofence-tool-quiet d-none" id="boundary-cancel">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i><span>Cancel action</span>
+                </button>
+            </div>
         </div>
 
-        <div id="boundary-map-error" class="alert alert-danger mx-3 mt-3 d-none" role="alert"></div>
+        <div id="boundary-map-error" class="alert alert-danger mx-3 mt-3 d-none" role="alert" aria-live="assertive" tabindex="-1"></div>
         <div class="rg-geofence-map-wrap">
             <div id="municipal-boundary-map" aria-label="Interactive editor for the Pamplona municipal boundary"></div>
         </div>
@@ -75,15 +91,7 @@
             @csrf
             @method('PUT')
             <input type="hidden" name="geometry" id="municipal-boundary-geometry">
-            <div class="small text-muted">Undo and redo affect the outline only. Changes are recorded in the system audit log when saved.</div>
-            <div class="rg-geofence-history" role="group" aria-label="Boundary geometry history">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="boundary-undo" disabled>
-                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="boundary-redo" disabled>
-                    <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Redo
-                </button>
-            </div>
+            <div class="small text-muted">Review the outline before saving. The change is applied system-wide and recorded in the audit log.</div>
             <button type="submit" class="btn btn-primary" id="save-municipal-boundary" disabled>
                 <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save Pamplona boundary
             </button>
@@ -96,23 +104,29 @@
     .rg-geofence-editor { overflow: hidden; }
     .rg-geofence-editor .rg-table-desk-head { align-items: flex-start; }
     .rg-geofence-editor .rg-table-desk-head p { max-width: 720px; }
-    .rg-geofence-editor-copy { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; padding: 1rem 1.25rem; border-bottom: 1px solid #e8edf1; }
-    .rg-geofence-step { display: flex; align-items: flex-start; gap: .65rem; }
-    .rg-geofence-step > span { display: grid; place-items: center; flex: 0 0 1.7rem; height: 1.7rem; border-radius: 50%; background: #eaf2fb; color: #175ea8; font-size: .72rem; font-weight: 800; }
-    .rg-geofence-step strong, .rg-geofence-step small { display: block; }
-    .rg-geofence-step strong { color: #263d4b; font-size: .84rem; }
-    .rg-geofence-step small { margin-top: .12rem; color: #758592; font-size: .75rem; }
+    .rg-geofence-tools { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #e8edf1; background: #f8fafc; }
+    .rg-geofence-tools-copy { min-width: 0; }
+    .rg-geofence-tools-copy strong, .rg-geofence-tools-copy small, .rg-geofence-kicker { display: block; }
+    .rg-geofence-kicker { color: #687b89; font-size: .68rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .rg-geofence-tools-copy strong { margin-top: .15rem; color: #263d4b; font-size: .9rem; }
+    .rg-geofence-tools-copy small { margin-top: .15rem; color: #758592; font-size: .77rem; }
+    .rg-geofence-tool-group { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .5rem; }
+    .rg-geofence-tool { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: .45rem; padding: .5rem .8rem; border: 1px solid #d5dee6; border-radius: .65rem; background: #fff; color: #334b5b; font-size: .82rem; font-weight: 700; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+    .rg-geofence-tool:hover, .rg-geofence-tool[aria-pressed="true"] { border-color: #9dc5e9; background: #edf6ff; color: #145a8d; }
+    .rg-geofence-tool-primary { border-color: #175ea8; background: #175ea8; color: #fff; }
+    .rg-geofence-tool-primary:hover { border-color: #104c89; background: #104c89; color: #fff; }
+    .rg-geofence-tool-quiet { color: #657786; }
+    .rg-geofence-tool:focus-visible { outline: 3px solid rgba(23, 94, 168, .28); outline-offset: 2px; }
+    .rg-geofence-tool:disabled { cursor: not-allowed; opacity: .48; }
     .rg-geofence-map-wrap { height: min(68vh, 680px); min-height: 420px; background: #edf2f5; }
     #municipal-boundary-map { width: 100%; height: 100%; }
     .rg-geofence-savebar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-top: 1px solid #e8edf1; }
-    .rg-geofence-history { display: flex; flex: 0 0 auto; gap: .45rem; }
-    .rg-geofence-editor .leaflet-draw-toolbar a { background-color: #fff; }
     @media (max-width: 767.98px) {
-        .rg-geofence-editor-copy { grid-template-columns: 1fr; }
+        .rg-geofence-tools { align-items: stretch; flex-direction: column; }
+        .rg-geofence-tool-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .rg-geofence-tool { width: 100%; padding-inline: .5rem; }
         .rg-geofence-map-wrap { height: 60vh; min-height: 360px; }
         .rg-geofence-savebar { align-items: stretch; flex-direction: column; }
-        .rg-geofence-history { order: 2; }
-        #save-municipal-boundary { order: 3; }
     }
 </style>
 @endpush
@@ -120,7 +134,7 @@
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin=""></script>
-<script src="{{ asset('js/geometry-history.js') }}?v={{ @filemtime(public_path('js/geometry-history.js')) }}"></script>
+<script src="{{ asset('js/municipal-geofence.js') }}?v={{ @filemtime(public_path('js/municipal-geofence.js')) }}"></script>
 <script>
 (() => {
     const boundary = @json($boundaryGeometry);
@@ -130,10 +144,15 @@
     const form = document.getElementById('municipal-boundary-form');
     const geometryInput = document.getElementById('municipal-boundary-geometry');
     const status = document.getElementById('boundary-editor-status');
-    const undoButton = document.getElementById('boundary-undo');
-    const redoButton = document.getElementById('boundary-redo');
+    const adjustButton = document.getElementById('boundary-adjust');
+    const replaceButton = document.getElementById('boundary-replace');
+    const finishButton = document.getElementById('boundary-finish');
+    const cancelButton = document.getElementById('boundary-cancel');
+    const toolStatus = document.getElementById('boundary-tool-status');
+    const toolHelp = document.getElementById('boundary-tool-help');
+    const geofence = window.RANIAG_Geofence;
 
-    if (!window.L || !L.Control?.Draw) {
+    if (!window.L || !L.Draw?.Polygon || !L.EditToolbar?.Edit || !geofence?.validateBoundaryGeometry) {
         errorElement.textContent = 'The map editing tools could not be loaded. Check the connection and reload this page before editing.';
         errorElement.classList.remove('d-none');
         return;
@@ -149,94 +168,157 @@
     const boundaryStyle = { color: '#0b5ed7', weight: 3, opacity: 0.95, fillColor: '#0b5ed7', fillOpacity: 0.12 };
     L.geoJSON(boundary, { style: boundaryStyle }).eachLayer((layer) => editableBoundary.addLayer(layer));
 
-    map.addControl(new L.Control.Draw({
-        position: 'topleft',
-        draw: {
-            polygon: {
-                allowIntersection: false,
-                showArea: true,
-                shapeOptions: boundaryStyle,
-            },
-            polyline: false,
-            rectangle: false,
-            circle: false,
-            marker: false,
-            circlemarker: false,
-        },
-        edit: {
-            featureGroup: editableBoundary,
-            remove: false,
-        },
-    }));
-
     const currentBounds = editableBoundary.getBounds();
     map.fitBounds(currentBounds.pad(0.08));
     map.setMaxBounds(currentBounds.pad(2));
+
     function currentBoundaryGeometry() {
         const layers = editableBoundary.getLayers();
         return layers.length === 1 ? layers[0].toGeoJSON().geometry : null;
     }
 
-    function applyBoundaryGeometry(geometry) {
-        editableBoundary.clearLayers();
-        if (!geometry) return;
-        L.geoJSON(geometry, { style: boundaryStyle }).eachLayer((layer) => editableBoundary.addLayer(layer));
+    const originalGeometry = JSON.stringify(currentBoundaryGeometry());
+    const polygonDrawer = new L.Draw.Polygon(map, {
+        allowIntersection: false,
+        showArea: true,
+        shapeOptions: boundaryStyle,
+    });
+    const editDrawer = new L.EditToolbar.Edit(map, {
+        featureGroup: editableBoundary,
+        selectedPathOptions: { maintainColor: true },
+    });
+    let activeAction = null;
+
+    function showError(message) {
+        errorElement.textContent = message;
+        errorElement.classList.remove('d-none');
     }
 
-    let geometryInteractionActive = false;
-    let boundaryHistory;
-    function syncHistoryButtons(state) {
-        undoButton.disabled = geometryInteractionActive || !state.canUndo;
-        redoButton.disabled = geometryInteractionActive || !state.canRedo;
+    function clearError() {
+        errorElement.textContent = '';
+        errorElement.classList.add('d-none');
     }
-    boundaryHistory = window.RaniagGeometryHistory.create(
-        currentBoundaryGeometry(),
-        applyBoundaryGeometry,
-        syncHistoryButtons
-    );
 
-    map.on('draw:drawstart draw:editstart', () => {
-        geometryInteractionActive = true;
-        syncHistoryButtons(boundaryHistory.state());
+    function setActionMode(mode) {
+        activeAction = mode;
+        const idle = mode === null;
+        adjustButton.disabled = !idle || editableBoundary.getLayers().length !== 1;
+        replaceButton.disabled = !idle;
+        finishButton.classList.toggle('d-none', idle);
+        cancelButton.classList.toggle('d-none', idle);
+        finishButton.innerHTML = mode === 'draw'
+            ? '<i class="bi bi-check2" aria-hidden="true"></i><span>Finish drawing</span>'
+            : '<i class="bi bi-check2" aria-hidden="true"></i><span>Finish adjustments</span>';
+        adjustButton.setAttribute('aria-pressed', String(mode === 'edit'));
+        replaceButton.setAttribute('aria-pressed', String(mode === 'draw'));
+        saveButton.disabled = true;
+    }
+
+    function updateBoundaryState(message) {
+        const geometry = currentBoundaryGeometry();
+        const validation = geofence.validateBoundaryGeometry(geometry);
+        if (!validation.valid) {
+            showError(validation.message);
+            saveButton.disabled = true;
+            return;
+        }
+
+        clearError();
+        const changed = JSON.stringify(geometry) !== originalGeometry;
+        saveButton.disabled = !changed || activeAction !== null;
+        if (message) status.textContent = message;
+    }
+
+    function setIdleTools(message, help) {
+        setActionMode(null);
+        toolStatus.textContent = message;
+        toolHelp.textContent = help;
+        updateBoundaryState();
+    }
+
+    adjustButton.addEventListener('click', () => {
+        clearError();
+        setActionMode('edit');
+        toolStatus.textContent = 'Adjust the existing outline';
+        toolHelp.textContent = 'Drag boundary points to reshape Pamplona. Finish adjustments to validate and review the draft.';
+        editDrawer.enable();
     });
-    map.on('draw:drawstop draw:editstop', () => {
-        geometryInteractionActive = false;
-        syncHistoryButtons(boundaryHistory.state());
+
+    replaceButton.addEventListener('click', () => {
+        clearError();
+        setActionMode('draw');
+        toolStatus.textContent = 'Draw a replacement outline';
+        toolHelp.textContent = 'Click or tap to add corners. Close the polygon, or choose Finish drawing when it has at least three points.';
+        polygonDrawer.enable();
     });
+
+    finishButton.addEventListener('click', () => {
+        if (activeAction === 'draw') {
+            if (typeof polygonDrawer.completeShape !== 'function') {
+                showError('The drawing tool could not finish this outline. Close the polygon by selecting its first point.');
+                return;
+            }
+            polygonDrawer.completeShape();
+            return;
+        }
+
+        if (activeAction === 'edit') {
+            editDrawer.save();
+            editDrawer.disable();
+            setIdleTools('Boundary adjustments are ready for review', 'Check the outline and save to apply the updated municipal boundary.');
+            updateBoundaryState('Boundary adjustments are ready for review. Save to apply the updated municipal boundary.');
+        }
+    });
+
+    cancelButton.addEventListener('click', () => {
+        if (activeAction === 'draw') polygonDrawer.disable();
+        if (activeAction === 'edit') {
+            editDrawer.revertLayers();
+            editDrawer.disable();
+        }
+        setIdleTools('Map action canceled', 'The saved boundary is unchanged. Choose an action to continue editing.');
+        updateBoundaryState('Map action canceled. The saved boundary is unchanged.');
+    });
+
     map.on('draw:created', (event) => {
         editableBoundary.clearLayers();
         event.layer.setStyle(boundaryStyle);
         editableBoundary.addLayer(event.layer);
-        boundaryHistory.push(currentBoundaryGeometry());
-        status.textContent = 'A replacement outline is ready for review. Save it to apply this boundary.';
+        setIdleTools('Replacement outline is ready for review', 'Review the complete outline before saving it system-wide.');
+        updateBoundaryState('Replacement outline is ready for review. Save to apply this boundary.');
     });
+
     map.on('draw:edited', () => {
-        boundaryHistory.push(currentBoundaryGeometry());
-        status.textContent = 'Boundary points adjusted. Save to apply the updated outline.';
+        updateBoundaryState('Boundary adjustments are ready for review. Save to apply the updated municipal boundary.');
     });
-    undoButton.addEventListener('click', () => {
-        if (boundaryHistory.undo()) status.textContent = 'Geometry change undone. Review the outline, then save to apply it.';
-    });
-    redoButton.addEventListener('click', () => {
-        if (boundaryHistory.redo()) status.textContent = 'Geometry change restored. Review the outline, then save to apply it.';
+
+    map.on('draw:drawstop draw:editstop', () => {
+        if (activeAction !== null) return;
+        updateBoundaryState();
     });
 
     form.addEventListener('submit', (event) => {
-        boundaryHistory.push(currentBoundaryGeometry());
-        const layers = editableBoundary.getLayers();
-        if (layers.length !== 1) {
+        if (activeAction !== null) {
             event.preventDefault();
-            errorElement.textContent = 'Draw or restore one closed Pamplona boundary before saving.';
-            errorElement.classList.remove('d-none');
+            showError('Finish or cancel the current map action before saving.');
             return;
         }
 
-        geometryInput.value = JSON.stringify(layers[0].toGeoJSON().geometry);
+        const geometry = currentBoundaryGeometry();
+        const validation = geofence.validateBoundaryGeometry(geometry);
+        if (!validation.valid) {
+            event.preventDefault();
+            showError(validation.message);
+            errorElement.focus();
+            return;
+        }
+
+        geometryInput.value = JSON.stringify(geometry);
         saveButton.disabled = true;
         saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Saving boundary…';
     });
 
-    saveButton.disabled = false;
+    setIdleTools('Choose how to update the outline', 'Adjust existing points or draw a replacement. Finish the map action before saving.');
 })();
 </script>
 @endpush
