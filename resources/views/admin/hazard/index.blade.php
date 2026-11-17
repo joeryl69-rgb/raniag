@@ -661,8 +661,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-workspace { grid-template-columns: 1fr; }
     .hz-map-wrap { height: clamp(22rem, 62vh, 38rem); min-height: 22rem; }
     .hz-panel { max-height: none; }
-    .hz-edit-modal .modal-content { height: 94vh; height: min(94dvh, 62rem); max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); }
-    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; overflow-x: hidden; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+    .hz-edit-modal { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .hz-edit-modal .modal-dialog { height: auto; min-height: 100%; align-items: flex-start; }
+    .hz-edit-modal .modal-content { height: auto; min-height: 94vh; min-height: min(94dvh, 62rem); max-height: none; overflow: visible; }
+    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; flex: 0 0 auto; min-height: 0; overflow: visible; touch-action: auto; padding: 1rem; }
     .hz-editor-grid { display: grid; min-height: auto; grid-template-columns: minmax(0, 1fr); }
     #hazard-edit-form-slot { display: block; }
     #hazard-edit-map-slot { position: static; order: -1; }
@@ -672,8 +674,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-edit-modal .hz-form-body { min-height: auto; overflow: visible; }
 }
 @media (max-width: 575.98px) {
-    .hz-edit-modal .modal-dialog { width: 100%; height: 100%; max-width: none; margin: 0; }
-    .hz-edit-modal .modal-content { width: 100%; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
+    .hz-edit-modal .modal-dialog { width: 100%; height: auto; min-height: 100%; max-width: none; margin: 0; }
+    .hz-edit-modal .modal-content { width: 100%; height: auto; min-height: 100vh; min-height: 100dvh; max-height: none; overflow: visible; border-radius: 0; }
     .hz-edit-modal .modal-header { align-items: flex-start; gap: .75rem; padding: max(.75rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) .75rem max(1rem, env(safe-area-inset-left, 0px)); }
     .hz-edit-modal .modal-header > div:first-child { min-width: 0; }
     .hz-edit-modal .modal-header p { font-size: .82rem; line-height: 1.4; }
