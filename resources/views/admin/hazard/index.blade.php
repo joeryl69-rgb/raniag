@@ -658,23 +658,47 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-workspace { grid-template-columns: 1fr; }
     .hz-map-wrap { height: clamp(22rem, 62vh, 38rem); min-height: 22rem; }
     .hz-panel { max-height: none; }
-    .hz-edit-modal .modal-content { height: 94vh; max-height: calc(100vh - 1rem); }
+    .hz-edit-modal .modal-content { height: 94vh; height: min(94dvh, 62rem); max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); }
     .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { overflow-y: auto; }
     .hz-editor-grid { flex: 0 0 auto; grid-template-columns: minmax(0, 1fr); }
     #hazard-edit-form-slot { display: block; }
     #hazard-edit-map-slot { min-height: 22rem; }
-    #hazard-edit-map-slot #hz-map-workspace { height: clamp(22rem, 48vh, 34rem); }
+    #hazard-edit-map-slot #hz-map-workspace { height: clamp(22rem, 48dvh, 34rem); }
     .hz-edit-modal form { min-height: auto; }
     .hz-edit-modal .hz-form-body { min-height: auto; overflow: visible; }
 }
 @media (max-width: 575.98px) {
-    .hz-edit-modal .modal-header,
-    .hz-edit-modal .hz-form-body { padding-right: 1rem; padding-left: 1rem; }
-    .hz-edit-modal .hz-form-footer { padding-right: 1rem; padding-left: 1rem; }
+    .hz-edit-modal .modal-dialog { width: 100%; height: 100%; max-width: none; margin: 0; }
+    .hz-edit-modal .modal-content { width: 100%; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
+    .hz-edit-modal .modal-header { align-items: flex-start; gap: .75rem; padding: max(.75rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) .75rem max(1rem, env(safe-area-inset-left, 0px)); }
+    .hz-edit-modal .modal-header > div:first-child { min-width: 0; }
+    .hz-edit-modal .modal-header p { font-size: .82rem; line-height: 1.4; }
+    .hz-edit-modal .modal-header .btn-close { width: 2.75rem; height: 2.75rem; padding: .75rem; flex: 0 0 auto; background-size: .9rem; }
+    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .75rem max(1rem, env(safe-area-inset-right, 0px)) max(.75rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px)); }
+    .hz-editor-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+    #hazard-edit-map-slot { order: -1; min-height: 0; }
+    #hazard-edit-map-slot #hz-map-workspace { height: clamp(16rem, 38dvh, 23rem); }
+    .hz-edit-modal .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
+    .hz-edit-modal .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
+    .hz-edit-modal .hz-tool-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+    .hz-edit-modal .hz-tool { width: 100%; min-height: 44px; justify-content: center; }
+    .hz-edit-modal .hz-map-wrap { min-height: 0; }
+    .hz-edit-modal .hz-form-body { padding: .9rem .25rem; }
+    .hz-edit-modal .form-control,
+    .hz-edit-modal .form-select { min-height: 44px; font-size: 16px; }
+    .hz-edit-modal textarea.form-control { min-height: 5.5rem; }
+    .hz-edit-modal .btn { min-height: 44px; }
+    .hz-edit-modal .hz-form-footer { position: sticky; bottom: 0; z-index: 5; gap: .5rem; background: var(--raniag-card); box-shadow: 0 -8px 18px color-mix(in srgb, var(--raniag-ink) 8%, transparent); padding: .75rem .25rem max(.75rem, env(safe-area-inset-bottom, 0px)); }
+    .hz-edit-modal .hz-form-footer .btn { flex: 1 1 0; }
     .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
     .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
     .hz-tool-group { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
     .hz-tool { width: 100%; justify-content: center; }
+}
+@media (max-width: 575.98px) and (orientation: landscape) and (max-height: 500px) {
+    .hz-edit-modal .modal-header { padding-top: max(.35rem, env(safe-area-inset-top, 0px)); padding-bottom: .35rem; }
+    .hz-edit-modal .modal-header p { display: none; }
+    #hazard-edit-map-slot #hz-map-workspace { height: clamp(12rem, 42dvh, 17rem); }
 }
 </style>
 @endpush
