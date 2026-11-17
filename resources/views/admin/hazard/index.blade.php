@@ -640,11 +640,11 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-edit-modal .modal-header { flex: 0 0 auto; padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--raniag-border); }
 .hz-edit-modal .modal-header .hz-kicker { margin-bottom: .3rem; font-size: .64rem; letter-spacing: .13em; }
 .hz-edit-modal .modal-header p { max-width: 42rem; }
-.hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 1rem; }
+.hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; min-height: 0; overflow-x: hidden; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; padding: 1rem; }
 .hz-editor-grid { display: grid; align-items: start; width: 100%; grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr); gap: 1rem; }
 #hazard-edit-form-slot, #hazard-edit-map-slot { min-width: 0; min-height: 0; }
 #hazard-edit-form-slot { display: block; }
-#hazard-edit-map-slot { position: sticky; top: 0; }
+#hazard-edit-map-slot { position: static; }
 #hazard-edit-map-slot #hz-map-workspace { display: grid; height: auto; min-height: 0; grid-template-rows: auto auto auto; }
 #hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: min(50vh, 30rem); min-height: 22rem; }
 .hz-edit-modal form { display: flex; flex-direction: column; }
@@ -687,7 +687,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-edit-modal .form-select { min-height: 44px; font-size: 16px; }
     .hz-edit-modal textarea.form-control { min-height: 5.5rem; }
     .hz-edit-modal .btn { min-height: 44px; }
-    .hz-edit-modal .hz-form-footer { position: sticky; bottom: 0; z-index: 5; gap: .5rem; background: var(--raniag-card); box-shadow: 0 -8px 18px color-mix(in srgb, var(--raniag-ink) 8%, transparent); padding: .75rem .25rem max(.75rem, env(safe-area-inset-bottom, 0px)); }
+    .hz-edit-modal .hz-form-footer { gap: .5rem; padding: .75rem .25rem max(.75rem, env(safe-area-inset-bottom, 0px)); }
     .hz-edit-modal .hz-form-footer .btn { flex: 1 1 0; }
     .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
     .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
