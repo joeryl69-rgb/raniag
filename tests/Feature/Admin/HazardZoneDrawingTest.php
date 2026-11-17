@@ -28,12 +28,18 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('Edit hazard area', false)
         ->assertSee('Drag the corners to reshape this area, then save.', false)
         ->assertSee('id="hazardEditModal"', false)
-        ->assertSee('modal-dialog-centered modal-dialog-scrollable modal-lg', false)
+        ->assertSee('modal-dialog-centered modal-dialog-scrollable modal-xl', false)
         ->assertSee('class="modal-body hz-form-body"', false)
-        ->assertSee('Select an option above to add a map item.', false)
+        ->assertSee('id="hazard-edit-form-slot"', false)
+        ->assertSee('id="hazard-edit-map-slot"', false)
+        ->assertSee('id="hz-map-workspace"', false)
+        ->assertSee('id="add-map-item"', false)
+        ->assertSee('Hazard areas', false)
+        ->assertSee('Shelters', false)
         ->assertSee('showEditForm(', false)
-        ->assertSee('hideEditFormForMap', false)
-        ->assertSee('id="hazard-edit-reopen"', false);
+        ->assertSee('editMapSlot.append(mapWorkspace)', false)
+        ->assertDontSee('hazard-edit-map-toggle', false)
+        ->assertDontSee('hazard-edit-reopen', false);
 });
 
 test('hazard area creation rejects incomplete or non polygon geojson', function () {

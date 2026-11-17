@@ -77,40 +77,50 @@
     <div class="tab-pane fade {{ $openRegistry ? '' : 'show active' }}" id="tab-map">
         <div class="hz-workspace">
             <div>
-                <div class="hz-toolbar mb-2">
-                    <div class="hz-toolbar-copy">
-                        <span class="hz-kicker">Map the boundary</span>
-                        <strong id="geometry-hint" role="status" aria-live="polite">Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.</strong>
-                        <span class="hz-map-state" id="map-lock-note">Map locked</span>
+                <div id="hazard-map-home"></div>
+                <div id="hz-map-workspace">
+                    <div class="hz-toolbar mb-2">
+                        <div class="hz-toolbar-copy">
+                            <span class="hz-kicker">Map the boundary</span>
+                            <strong id="geometry-hint" role="status" aria-live="polite">Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.</strong>
+                            <span class="hz-map-state" id="map-lock-note">Map locked</span>
+                        </div>
+                        <div class="hz-tool-group" role="group" aria-label="Boundary tools">
+                            <button type="button" class="hz-tool" id="tool-polygon"><i class="bi bi-pentagon" aria-hidden="true"></i><span>Draw area</span></button>
+                            <button type="button" class="hz-tool" id="tool-box"><i class="bi bi-square" aria-hidden="true"></i><span>Draw box</span></button>
+                            <button type="button" class="hz-tool" id="tool-edit" disabled><i class="bi bi-bezier2" aria-hidden="true"></i><span>Adjust boundary</span></button>
+                            <button type="button" class="hz-tool hz-tool-quiet" id="tool-clear"><i class="bi bi-eraser" aria-hidden="true"></i><span>Clear</span></button>
+                        </div>
                     </div>
-                    <div class="hz-tool-group" role="group" aria-label="Boundary tools">
-                        <button type="button" class="hz-tool" id="tool-polygon"><i class="bi bi-pentagon" aria-hidden="true"></i><span>Draw area</span></button>
-                        <button type="button" class="hz-tool" id="tool-box"><i class="bi bi-square" aria-hidden="true"></i><span>Draw box</span></button>
-                        <button type="button" class="hz-tool" id="tool-edit" disabled><i class="bi bi-bezier2" aria-hidden="true"></i><span>Adjust boundary</span></button>
-                        <button type="button" class="hz-tool hz-tool-quiet" id="tool-clear"><i class="bi bi-eraser" aria-hidden="true"></i><span>Clear</span></button>
-                    </div>
-                </div>
-                <div class="hz-map-wrap">
-                    <div id="ops-map"></div>
-                    <div class="hz-legend" id="hz-legend">
-                        <span><i class="hz-swatch" id="legend-swatch"></i> New area</span>
-                        <span><i class="hz-shelter-key"></i> Evacuation shelter</span>
+                    <div class="hz-map-wrap">
+                        <div id="ops-map"></div>
+                        <div class="hz-legend" id="hz-legend">
+                            <span><i class="hz-swatch" id="legend-swatch"></i> New area</span>
+                            <span><i class="hz-shelter-key"></i> Evacuation shelter</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <aside class="hz-panel card border-0 shadow-sm">
                 <div class="hz-panel-head">
-                    <span class="hz-kicker" id="hz-mode-kicker">MAP PLANNING</span>
-                    <h2 id="hz-mode-title">Manage hazards and shelters</h2>
-                    <p id="hz-mode-lead">Choose a map tool to open its form. Saved items are listed below.</p>
+                    <span class="hz-kicker" id="hz-mode-kicker">{{ $openCenter ? 'Shelters' : 'Hazard areas' }}</span>
+                    <h2 id="hz-mode-title">{{ $openCenter ? 'Evacuation shelters' : 'Hazard areas' }}</h2>
+                    <p id="hz-mode-lead">{{ $openCenter ? 'Select a saved shelter to edit it, or add a new shelter and place its pin on the map.' : 'Select a saved hazard area to edit it, or add a new area and draw its boundary on the map.' }}</p>
                 </div>
                 <div class="card-body">
-                    <div class="hz-mode-switch" role="group" aria-label="What to add">
-                        <button type="button" class="{{ $openCenter ? '' : 'is-selected' }}" id="mode-zone"><i class="bi bi-pentagon" aria-hidden="true"></i> New hazard</button>
-                        <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center"><i class="bi bi-geo-alt" aria-hidden="true"></i> New shelter</button>
+                    <div class="hz-mode-switch" role="group" aria-label="Map items">
+                        <button type="button" class="{{ $openCenter ? '' : 'is-selected' }}" id="mode-zone" aria-pressed="{{ $openCenter ? 'false' : 'true' }}">
+                            <i class="bi bi-pentagon" aria-hidden="true"></i>Hazard areas <span class="badge rounded-pill text-bg-light">{{ $zones->count() }}</span>
+                        </button>
+                        <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center" aria-pressed="{{ $openCenter ? 'true' : 'false' }}">
+                            <i class="bi bi-geo-alt" aria-hidden="true"></i>Shelters <span class="badge rounded-pill text-bg-light">{{ $centers->count() }}</span>
+                        </button>
                     </div>
-                    <p class="small text-muted mb-3">Select an option above to add a map item. Edit saved items from their list.</p>
+                    <button class="btn btn-primary btn-sm w-100 mb-3" type="button" id="add-map-item">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i><span id="add-map-item-label">Add hazard area</span>
+                    </button>
+                    <p class="small text-muted mb-3">Choose a saved item to edit its details and map shape.</p>
 
                     <div id="hazard-zone-form-home"></div>
                     <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form" class="d-none">
@@ -317,28 +327,27 @@
     </div>
 
     <div class="modal fade hz-edit-modal" id="hazardEditModal" tabindex="-1" aria-labelledby="hazard-edit-modal-title" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
             <div class="modal-content rg-hazard-edit-modal">
                 <div class="modal-header">
                     <div>
-                        <span class="hz-kicker mb-1">HAZARD MAP / WORKSPACE</span>
+                        <span class="hz-kicker mb-1" id="hazard-edit-modal-kicker">HAZARD MAP / WORKSPACE</span>
                         <h2 class="modal-title fs-5 fw-bold" id="hazard-edit-modal-title">Edit hazard area</h2>
-                        <p class="small text-muted mb-0 mt-1" id="hazard-edit-modal-lead">Drag the boundary handles on the map to reshape this area.</p>
+                        <p class="small text-muted mb-0 mt-1" id="hazard-edit-modal-lead">Update details and adjust the map directly in this workspace.</p>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="hazard-edit-map-toggle" aria-label="Hide editor to adjust the map">
-                            <i class="bi bi-arrows-angle-contract me-1" aria-hidden="true"></i>Map
-                        </button>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close edit dialog"></button>
                     </div>
                 </div>
-                <div class="modal-body" id="hazard-edit-modal-body"></div>
+                <div class="modal-body">
+                    <div class="hz-editor-grid">
+                        <div id="hazard-edit-form-slot"></div>
+                        <div id="hazard-edit-map-slot"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <button type="button" class="btn btn-primary hz-reopen-editor d-none" id="hazard-edit-reopen">
-        <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Open edit details
-    </button>
 
     <div class="tab-pane fade {{ $openRegistry ? 'show active' : '' }}" id="tab-registry">
         <div class="rg-evacuee-toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -624,18 +633,24 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-panel { max-height: calc(100vh - 230px); overflow: auto; border: 1px solid var(--raniag-border) !important; border-radius: .9rem !important; background: var(--raniag-card) !important; color: var(--raniag-ink); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent) !important; }
 .hz-panel.is-editing .hz-edit-actions { margin-top: .25rem; }
 .hz-create-form-note { line-height: 1.45; }
-.hz-edit-modal .modal-content { border: 0; border-radius: .85rem; background: var(--raniag-card); color: var(--raniag-ink); box-shadow: 0 24px 70px rgba(10, 31, 45, .22); }
+.hz-edit-modal .modal-dialog { max-width: min(1240px, calc(100vw - 2rem)); }
+.hz-edit-modal .modal-content { height: min(88vh, 920px); max-height: calc(100vh - 2rem); border: 0; border-radius: .85rem; background: var(--raniag-card); color: var(--raniag-ink); box-shadow: 0 24px 70px rgba(10, 31, 45, .22); }
 .hz-edit-modal .modal-header { flex: 0 0 auto; padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--raniag-border); }
 .hz-edit-modal .modal-header .hz-kicker { margin-bottom: .3rem; font-size: .64rem; letter-spacing: .13em; }
 .hz-edit-modal .modal-header p { max-width: 42rem; }
+.hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: flex; min-height: 0; overflow: hidden; padding: 1rem; }
+.hz-editor-grid { display: grid; flex: 1 1 auto; min-height: 0; width: 100%; grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr); gap: 1rem; }
+#hazard-edit-form-slot, #hazard-edit-map-slot { min-width: 0; min-height: 0; }
+#hazard-edit-form-slot { display: flex; }
+#hazard-edit-map-slot #hz-map-workspace { display: grid; height: 100%; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
+#hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: 100%; min-height: 0; }
 .hz-edit-modal form { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; }
-.hz-edit-modal .hz-form-body { max-height: 72vh; padding: 1.3rem 1.4rem; }
+.hz-edit-modal .hz-form-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; padding: 1.3rem 1.4rem; }
 .hz-edit-modal .hz-form-footer { flex: 0 0 auto; padding: 1rem 1.4rem; border-top: 1px solid var(--raniag-border); }
 .hz-edit-modal .hz-section + .hz-section { margin-top: 1.25rem; padding-top: 1.2rem; }
 .hz-edit-modal .form-control,
 .hz-edit-modal .form-select { min-width: 0; }
 .hz-edit-modal #center-coords { max-width: 34rem; font-size: .88rem; line-height: 1.45; color: var(--raniag-muted); }
-.hz-reopen-editor { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 1040; box-shadow: 0 8px 24px rgba(15, 23, 42, .24); }
 .hz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .hz-type-chip { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; }
 .leaflet-draw-tooltip { font-size: 12px; }
@@ -643,12 +658,19 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-workspace { grid-template-columns: 1fr; }
     .hz-map-wrap { height: clamp(22rem, 62vh, 38rem); min-height: 22rem; }
     .hz-panel { max-height: none; }
+    .hz-edit-modal .modal-content { height: 94vh; max-height: calc(100vh - 1rem); }
+    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { overflow-y: auto; }
+    .hz-editor-grid { flex: 0 0 auto; grid-template-columns: minmax(0, 1fr); }
+    #hazard-edit-form-slot { display: block; }
+    #hazard-edit-map-slot { min-height: 22rem; }
+    #hazard-edit-map-slot #hz-map-workspace { height: clamp(22rem, 48vh, 34rem); }
+    .hz-edit-modal form { min-height: auto; }
+    .hz-edit-modal .hz-form-body { min-height: auto; overflow: visible; }
 }
 @media (max-width: 575.98px) {
     .hz-edit-modal .modal-header,
     .hz-edit-modal .hz-form-body { padding-right: 1rem; padding-left: 1rem; }
     .hz-edit-modal .hz-form-footer { padding-right: 1rem; padding-left: 1rem; }
-    .hz-reopen-editor { right: .75rem; bottom: .75rem; }
     .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
     .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
     .hz-tool-group { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
@@ -684,13 +706,14 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const zoneForm = document.getElementById('hazard-zone-form');
     const centerForm = document.getElementById('center-form');
     const editModalElement = document.getElementById('hazardEditModal');
-    const editModalBody = document.getElementById('hazard-edit-modal-body');
+    const editFormSlot = document.getElementById('hazard-edit-form-slot');
+    const editMapSlot = document.getElementById('hazard-edit-map-slot');
     const editModalTitle = document.getElementById('hazard-edit-modal-title');
     const editModalLead = document.getElementById('hazard-edit-modal-lead');
-    const editMapToggle = document.getElementById('hazard-edit-map-toggle');
-    const reopenEditButton = document.getElementById('hazard-edit-reopen');
+    const editModalKicker = document.getElementById('hazard-edit-modal-kicker');
+    const mapWorkspace = document.getElementById('hz-map-workspace');
+    const mapHome = document.getElementById('hazard-map-home');
     const editModal = bootstrap.Modal.getOrCreateInstance(editModalElement);
-    let preserveEditOnHide = false;
     let activeEditForm = null;
     const formHomes = new Map([
         [zoneForm, document.getElementById('hazard-zone-form-home')],
@@ -712,6 +735,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const modeKicker = document.getElementById('hz-mode-kicker');
     const modeTitle = document.getElementById('hz-mode-title');
     const modeLead = document.getElementById('hz-mode-lead');
+    const addMapItemLabel = document.getElementById('add-map-item-label');
+    let activeMode = startCenter ? 'center' : 'zone';
 
     function say(message, ready) {
         if (geometryHint) geometryHint.textContent = message;
@@ -720,29 +745,30 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     function showEditForm(form, title, lead) {
-        if (!form || !editModalBody) return;
+        if (!form || !editFormSlot || !editMapSlot || !mapWorkspace) return;
         activeEditForm = form;
-        editModalBody.append(form);
+        editFormSlot.append(form);
+        editMapSlot.append(mapWorkspace);
         form.classList.remove('d-none');
         editModalTitle.textContent = title;
         editModalLead.textContent = lead;
-        reopenEditButton.classList.add('d-none');
+        editModalKicker.textContent = form === centerForm
+            ? 'EVACUATION SHELTER / MAP EDITOR'
+            : 'HAZARD AREA / MAP EDITOR';
         editModal.show();
         requestAnimationFrame(() => map.invalidateSize());
     }
 
-    function hideEditFormForMap() {
-        preserveEditOnHide = true;
-        editModal.hide();
-    }
-
     function restoreEditForms() {
         formHomes.forEach((home, form) => {
-            if (form.parentElement === editModalBody && home?.parentNode) {
+            if (form.parentElement === editFormSlot && home?.parentNode) {
                 home.parentNode.insertBefore(form, home.nextSibling);
             }
             form.classList.add('d-none');
         });
+        if (mapWorkspace.parentElement === editMapSlot && mapHome?.parentNode) {
+            mapHome.parentNode.insertBefore(mapWorkspace, mapHome.nextSibling);
+        }
         activeEditForm = null;
         requestAnimationFrame(() => map.invalidateSize());
     }
@@ -1138,21 +1164,21 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 
     function setMode(mode) {
         const center = mode === 'center';
-        zoneForm.classList.toggle('d-none', center);
+        activeMode = center ? 'center' : 'zone';
+        zoneForm.classList.toggle('d-none', activeEditForm !== zoneForm);
         zoneList.classList.toggle('d-none', center);
-        centerForm.classList.toggle('d-none', !center);
+        centerForm.classList.toggle('d-none', activeEditForm !== centerForm);
         centerList.classList.toggle('d-none', !center);
         document.getElementById('mode-zone')?.classList.toggle('is-selected', !center);
         document.getElementById('mode-center')?.classList.toggle('is-selected', center);
-        if (modeKicker) modeKicker.textContent = center ? (editingCenterId ? 'Edit shelter' : 'New shelter') : 'New hazard area';
-        if (modeTitle) modeTitle.textContent = center
-            ? (editingCenterId ? 'Update this shelter on the map' : 'Drop a pin for the shelter')
-            : 'Trace the area, then name it';
+        document.getElementById('mode-zone')?.setAttribute('aria-pressed', String(!center));
+        document.getElementById('mode-center')?.setAttribute('aria-pressed', String(center));
+        if (addMapItemLabel) addMapItemLabel.textContent = center ? 'Add shelter' : 'Add hazard area';
+        if (modeKicker) modeKicker.textContent = center ? 'Shelters' : 'Hazard areas';
+        if (modeTitle) modeTitle.textContent = center ? 'Evacuation shelters' : 'Hazard areas';
         if (modeLead) modeLead.textContent = center
-            ? (editingCenterId
-                ? 'Update the shelter details and drag its pin or click the map to move it.'
-                : 'Click or tap "Click or tap to use the map", then click the map to place the shelter.')
-            : 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
+            ? 'Select a saved shelter to edit it, or add a new shelter and place its pin on the map.'
+            : 'Select a saved hazard area to edit it, or add a new area and draw its boundary on the map.';
         if (center) {
             polygonDrawer.disable();
             boxDrawer.disable();
@@ -1269,8 +1295,12 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         showEditForm(centerForm, 'New evacuation shelter', 'Enter the shelter details, then place its pin on the map.');
     }
 
-    document.getElementById('mode-zone')?.addEventListener('click', openNewZoneForm);
-    document.getElementById('mode-center')?.addEventListener('click', openNewCenterForm);
+    document.getElementById('mode-zone')?.addEventListener('click', () => setMode('zone'));
+    document.getElementById('mode-center')?.addEventListener('click', () => setMode('center'));
+    document.getElementById('add-map-item')?.addEventListener('click', () => {
+        if (activeMode === 'center') openNewCenterForm();
+        else openNewZoneForm();
+    });
     document.getElementById('center-cancel-edit')?.addEventListener('click', () => editModal.hide());
     centerList?.addEventListener('click', (event) => {
         const button = event.target.closest('.js-edit-center');
@@ -1444,22 +1474,12 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         editModal.hide();
     }
 
-    editMapToggle.addEventListener('click', hideEditFormForMap);
-    reopenEditButton.addEventListener('click', () => {
-        reopenEditButton.classList.add('d-none');
-        editModal.show();
-    });
     editModalElement.addEventListener('hidden.bs.modal', () => {
-        if (preserveEditOnHide) {
-            preserveEditOnHide = false;
-            reopenEditButton.classList.remove('d-none');
-            requestAnimationFrame(() => map.invalidateSize());
-            return;
-        }
         if (activeEditForm === zoneForm) cancelZoneEdit();
         if (activeEditForm === centerForm) cancelCenterEdit();
         restoreEditForms();
     });
+    editModalElement.addEventListener('shown.bs.modal', () => map.invalidateSize());
 
     document.querySelectorAll('.js-edit-zone').forEach((btn) => {
         btn.addEventListener('click', () => {
