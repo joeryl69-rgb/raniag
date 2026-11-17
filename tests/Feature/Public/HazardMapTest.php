@@ -16,6 +16,7 @@ test('public hazard map page renders live risk chrome', function () {
         ->assertSee('class="rg-hazard-tabs" role="tablist"', false)
         ->assertSee('class="rg-hazard-tab is-active" data-hazard-tab="risk"', false)
         ->assertSee('id="hazard-map"', false)
+        ->assertSee('boundaryUrl', false)
         ->assertSee('id="hazard-report-modal"', false)
         ->assertSee('id="hazard-report-picks"', false)
         ->assertSee('class="modal-dialog rg-report-sheet"', false)
@@ -25,6 +26,23 @@ test('public hazard map page renders live risk chrome', function () {
         ->assertSee('The path can switch when more than one shelter is open.', false)
         ->assertSee('data-lenis-prevent', false)
         ->assertSee('.rg-hazard-nearest-btn strong { color: #f0f5f6; }', false);
+
+    $liveMapScript = file_get_contents(public_path('js/public-hazard-map.js'));
+    expect($liveMapScript)
+        ->toContain('scheduleBoundaryRefresh')
+        ->toContain('refreshBoundary(true)')
+        ->toContain('renderBoundary(await response.json())');
+});
+
+test('public live boundary endpoint returns the active boundary without caching', function () {
+    $response = $this->getJson(route('public.hazard.boundary'))
+        ->assertOk()
+        ->assertJsonStructure([
+            'type',
+            'features' => [['type', 'geometry' => ['type', 'coordinates']]],
+        ]);
+
+    expect($response->headers->get('Cache-Control'))->toContain('no-store');
 });
 
 test('outside-area GPS reverse geocoding returns barangay municipality and country details', function () {

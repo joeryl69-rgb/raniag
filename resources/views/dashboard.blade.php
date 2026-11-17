@@ -882,9 +882,12 @@
             const CENTER = [{{ config('raniag.map.default_lat') }}, {{ config('raniag.map.default_lng') }}];
             const MAP_CONFIG = @json(config('raniag.map'));
             const REFRESH_MS = 30000;
+            const BOUNDARY_REFRESH_MS = 10000;
             let alertCursor = Number(@json($alertCursor ?? 0)) || 0;
 
             let map, streetLayer, satLayer, mapBasemap, boundaryLayer, barangayLayer, markerLayer, hazardLayer, evacLayer, jurisdictionBounds;
+            let boundarySignature = '';
+            let boundaryRequest = null;
             let mapFrameSet = false;
             let charts = {};
             let currentPoints = [];
@@ -912,7 +915,13 @@
                 loadData();
                 loadAlertFeed();
                 setInterval(loadData, REFRESH_MS);
+                setInterval(refreshBoundary, BOUNDARY_REFRESH_MS);
                 setInterval(loadAlertFeed, 10000);
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) refreshBoundary();
+                });
+                window.addEventListener('focus', refreshBoundary);
+                window.addEventListener('online', refreshBoundary);
                 bindToolbar();
                 bindIncidentAlert();
                 bindMapFilters();
@@ -1302,6 +1311,61 @@
                 }
             }
 
+            function refreshBoundary() {
+                if (!map || boundaryRequest || document.hidden) return;
+
+                const controller = new AbortController();
+                boundaryRequest = controller;
+                const url = new URL(BOUNDARY_URL, window.location.href);
+                url.searchParams.set('_', Date.now().toString());
+                fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    signal: controller.signal,
+                })
+                    .then((response) => {
+                        if (!response.ok) throw new Error('Boundary refresh failed (' + response.status + ').');
+                        return response.json();
+                    })
+                    .then((geo) => {
+                        if (!geo || !Array.isArray(geo.features)) {
+                            throw new Error('Boundary refresh returned invalid GeoJSON.');
+                        }
+
+                        const signature = JSON.stringify(geo);
+                        if (signature === boundarySignature) return;
+
+                        const style = {
+                            color: '#0b3a8c',
+                            weight: 3,
+                            opacity: 1,
+                            fillColor: '#3d8bfd',
+                            fillOpacity: 0.12,
+                        };
+                        const updatedLayer = L.geoJSON(geo, { style });
+                        updatedLayer.eachLayer((layer) => {
+                            layer.bindTooltip('Pamplona area of responsibility', { sticky: true });
+                        });
+
+                        const showBoundary = document.getElementById('layer-boundary')?.checked !== false;
+                        if (boundaryLayer && map.hasLayer(boundaryLayer)) map.removeLayer(boundaryLayer);
+                        boundaryLayer = updatedLayer;
+                        boundarySignature = signature;
+                        jurisdictionBounds = boundaryLayer.getBounds();
+                        if (showBoundary) boundaryLayer.addTo(map);
+                        if (!mapFrameSet) frameMapToPins(currentPoints, currentPoints.length > 0);
+                    })
+                    .catch((error) => {
+                        if (!controller.signal.aborted) {
+                            console.warn('Dashboard municipal boundary refresh failed.', error);
+                        }
+                    })
+                    .finally(() => {
+                        if (boundaryRequest === controller) boundaryRequest = null;
+                    });
+            }
+
             function initMap() {
                 const el = document.getElementById('dashboard-map');
                 if (!el) return;
@@ -1323,28 +1387,7 @@
                 hazardLayer = L.layerGroup().addTo(map);
                 evacLayer = L.layerGroup().addTo(map);
 
-                fetch(BOUNDARY_URL)
-                    .then(r => r.ok ? r.json() : null)
-                    .then(geo => {
-                        if (!geo) return;
-                        boundaryLayer = L.geoJSON(geo, {
-                            style: {
-                                color: '#0b3a8c',
-                                weight: 3,
-                                opacity: 1,
-                                fillColor: '#3d8bfd',
-                                fillOpacity: 0.12,
-                            }
-                        }).addTo(map);
-                        boundaryLayer.eachLayer((layer) => {
-                            layer.bindTooltip('Pamplona area of responsibility', { sticky: true });
-                        });
-                        try {
-                            jurisdictionBounds = boundaryLayer.getBounds();
-                            frameMapToPins(currentPoints, currentPoints.length > 0);
-                        } catch (e) {}
-                    })
-                    .catch(() => {});
+                refreshBoundary();
 
                 fetch(BARANGAYS_URL)
                     .then(r => r.ok ? r.json() : null)

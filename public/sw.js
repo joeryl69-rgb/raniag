@@ -68,7 +68,10 @@ function isReportPath(pathname) {
 }
 
 function isActiveBoundaryLookup(pathname) {
-    return pathname === '/hazard-map/barangay' || pathname.endsWith('/hazard-map/barangay');
+    return pathname === '/hazard-map/barangay'
+        || pathname.endsWith('/hazard-map/barangay')
+        || pathname === '/hazard-map/boundary'
+        || pathname.endsWith('/hazard-map/boundary');
 }
 
 function networkTimeout(ms) {

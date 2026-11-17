@@ -239,5 +239,6 @@ test('offline reporting stays available from the offline page and the report for
         ->and($pushScript)->not->toContain("register('/sw.js?v=20')")
         ->and($worker)->toContain("const REPORT_URL = '/report'")
         ->and($worker)->toContain('preserveOfflineReportPages')
+        ->and($worker)->toContain("pathname === '/hazard-map/boundary'")
         ->and($worker)->toContain('raniag-cache-dev-v31');
 });

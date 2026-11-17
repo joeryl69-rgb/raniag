@@ -142,6 +142,7 @@ window.RANIAG_HAZARD = {
     risk: @json($risk),
     openReports: @json($openReports),
     snapshotUrl: @json($snapshotUrl),
+    boundaryUrl: @json($boundaryUrl),
     nearestUrl: @json($nearestUrl),
 };
 document.addEventListener('DOMContentLoaded', function () {

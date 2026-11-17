@@ -78,6 +78,10 @@
         let lastRouteLatLng = null;
         let snapshotController = null;
         let snapshotTimer = null;
+        let boundaryController = null;
+        let boundaryTimer = null;
+        let activeBoundary = null;
+        let boundarySignature = '';
         let trailLine = null;
         const trail = [];
         const ROUTE_OFF = 'Turn on My location, then choose an open center. The path can switch when more than one shelter is open.';
@@ -103,8 +107,16 @@
         const riskSummary = document.getElementById('risk-summary');
         const riskList = document.getElementById('risk-list');
 
-        if (cfg.boundary) {
-            leaflet.geoJSON(cfg.boundary, {
+        function renderBoundary(geometry) {
+            const nextBoundary = geometry || null;
+            if (nextBoundary && !['FeatureCollection', 'Feature', 'Polygon', 'MultiPolygon'].includes(nextBoundary.type)) {
+                throw new Error('Boundary refresh returned invalid GeoJSON.');
+            }
+
+            const signature = JSON.stringify(nextBoundary);
+            if (signature === boundarySignature) return;
+
+            const updatedLayer = nextBoundary ? leaflet.geoJSON(nextBoundary, {
                 style: {
                     color: '#f0c96d',
                     weight: 3,
@@ -114,13 +126,24 @@
                     className: 'rg-geofence-boundary',
                 },
                 interactive: false,
-            }).addTo(geofenceGroup);
-        } else if (chkGeofence) {
-            chkGeofence.disabled = true;
-            chkGeofence.title = 'Pamplona boundary data is unavailable';
+            }) : null;
+
+            geofenceGroup.clearLayers();
+            if (updatedLayer) geofenceGroup.addLayer(updatedLayer);
+            activeBoundary = nextBoundary;
+            boundarySignature = signature;
+
+            if (chkGeofence) {
+                chkGeofence.disabled = !activeBoundary;
+                chkGeofence.title = activeBoundary
+                    ? 'Show or hide Pamplona’s area-of-responsibility boundary'
+                    : 'Pamplona boundary data is unavailable';
+                if (activeBoundary && chkGeofence.checked) map.addLayer(geofenceGroup);
+                else map.removeLayer(geofenceGroup);
+            }
         }
 
-        if (chkGeofence && !chkGeofence.checked) map.removeLayer(geofenceGroup);
+        renderBoundary(cfg.boundary);
 
         if (routeProfile === 'driving' && routeDrive) {
             routeDrive.checked = true;
@@ -192,7 +215,7 @@
         function collectBoundsLayers() {
             const on = layersOn();
             const layers = [];
-            if (on.geofence && cfg.boundary && geofenceGroup.getLayers().length) {
+            if (on.geofence && activeBoundary && geofenceGroup.getLayers().length) {
                 layers.push(geofenceGroup);
             }
             if (on.risk && riskLayer) layers.push(riskLayer);
@@ -1190,6 +1213,58 @@
             }
         }
 
+        function scheduleBoundaryRefresh() {
+            if (boundaryTimer !== null) {
+                window.clearTimeout(boundaryTimer);
+                boundaryTimer = null;
+            }
+            if (!document.hidden && cfg.boundaryUrl) {
+                boundaryTimer = window.setTimeout(() => {
+                    boundaryTimer = null;
+                    refreshBoundary();
+                }, 10000);
+            }
+        }
+
+        async function refreshBoundary(force = false) {
+            if (!cfg.boundaryUrl) return;
+            if (document.hidden && !force) {
+                scheduleBoundaryRefresh();
+                return;
+            }
+            if (boundaryController) {
+                if (!force) return;
+                boundaryController.abort();
+            }
+
+            const controller = new AbortController();
+            boundaryController = controller;
+            const timeout = window.setTimeout(() => controller.abort(), 10000);
+            try {
+                const url = new URL(cfg.boundaryUrl, window.location.href);
+                url.searchParams.set('_', Date.now().toString());
+                const response = await fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                    signal: controller.signal,
+                });
+                if (!response.ok) {
+                    throw new Error('Boundary refresh failed with HTTP status ' + response.status + '.');
+                }
+                renderBoundary(await response.json());
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    console.warn('[public-hazard-map] Boundary refresh failed.', error);
+                }
+            } finally {
+                window.clearTimeout(timeout);
+                if (boundaryController === controller) {
+                    boundaryController = null;
+                    scheduleBoundaryRefresh();
+                }
+            }
+        }
+
         async function refreshSnapshot(force = false) {
             if (!cfg.snapshotUrl) return;
             if (document.hidden && !force) {
@@ -1231,6 +1306,7 @@
         }
 
         refreshSnapshot();
+        refreshBoundary(true);
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 if (snapshotTimer !== null) {
@@ -1238,12 +1314,24 @@
                     snapshotTimer = null;
                 }
                 snapshotController?.abort();
+                if (boundaryTimer !== null) {
+                    window.clearTimeout(boundaryTimer);
+                    boundaryTimer = null;
+                }
+                boundaryController?.abort();
             } else {
                 refreshSnapshot(true);
+                refreshBoundary(true);
             }
         });
-        window.addEventListener('focus', () => refreshSnapshot(true));
-        window.addEventListener('online', () => refreshSnapshot(true));
+        window.addEventListener('focus', () => {
+            refreshSnapshot(true);
+            refreshBoundary(true);
+        });
+        window.addEventListener('online', () => {
+            refreshSnapshot(true);
+            refreshBoundary(true);
+        });
     }
 
     window.RANIAG_HazardMap = { init };

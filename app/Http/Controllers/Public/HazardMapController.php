@@ -36,8 +36,16 @@ class HazardMapController extends Controller
             'risk' => $snapshot['risk'],
             'openReports' => $snapshot['open_reports'],
             'snapshotUrl' => route('public.hazard.snapshot'),
+            'boundaryUrl' => route('public.hazard.boundary'),
             'nearestUrl' => route('public.hazard.nearest'),
         ]);
+    }
+
+    public function boundary(): JsonResponse
+    {
+        return response()
+            ->json($this->geofence->boundaryFeatureCollection())
+            ->header('Cache-Control', 'no-store');
     }
 
     public function snapshot(): JsonResponse

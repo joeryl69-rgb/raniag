@@ -65,6 +65,11 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
         ->assertJsonPath('inside', true);
     expect($classificationResponse->headers->get('Cache-Control'))->toContain('no-store');
 
+    $liveBoundaryResponse = $this->getJson(route('public.hazard.boundary'))
+        ->assertOk()
+        ->assertJsonPath('features.0.geometry.coordinates.0.0.0', 121.4);
+    expect($liveBoundaryResponse->headers->get('Cache-Control'))->toContain('no-store');
+
     expect(app(GeofenceService::class)->resolveBarangay(18.47, 121.32))->not->toBeNull();
     Http::fake([
         'nominatim.openstreetmap.org/reverse*' => Http::response([
@@ -83,7 +88,8 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
         ->assertSee('121.4', false);
     $this->get(route('public.hazard.map'))
         ->assertOk()
-        ->assertSee('121.4', false);
+        ->assertSee('121.4', false)
+        ->assertSee('boundaryUrl', false);
 
     foreach ([
         ['administrator', route('admin.dashboard.boundary')],
@@ -102,6 +108,12 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
             ->assertJsonPath('features.0.geometry.coordinates.0.0.0', 121.4);
         expect($response->headers->get('Cache-Control'))->toContain('no-store');
     }
+
+    $this->actingAs($admin)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('BOUNDARY_REFRESH_MS = 10000', false)
+        ->assertSee('setInterval(refreshBoundary, BOUNDARY_REFRESH_MS)', false);
 
     expect(ActivityLog::query()->where('event', 'municipality_boundary.updated')->count())->toBe(1);
 });
