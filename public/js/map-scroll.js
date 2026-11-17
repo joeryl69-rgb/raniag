@@ -70,7 +70,7 @@
                 setMapInteractions(map, true);
                 cover.remove();
                 publish(map, true);
-                const doneControl = global.L.control({ position: 'bottomleft' });
+                const doneControl = global.L.control({ position: state.donePosition });
                 doneControl.onAdd = function () {
                     const control = global.L.DomUtil.create('div', 'leaflet-control rg-map-scroll-done-control');
                     const doneButton = global.L.DomUtil.create('button', 'rg-map-scroll-done', control);
@@ -107,10 +107,11 @@
         const interactive = options?.interactive !== false;
         let state = guardedMaps.get(map);
         if (!state) {
-            state = { interactive, doneControl: null };
+            state = { interactive, doneControl: null, donePosition: options?.donePosition || 'bottomleft' };
             guardedMaps.set(map, state);
         }
         state.interactive = interactive;
+        state.donePosition = options?.donePosition || state.donePosition;
 
         if (interactive) bindWheel(map);
         if (interactive || coarsePointer()) {
