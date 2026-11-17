@@ -27,14 +27,24 @@ const context = {
 
 vm.runInNewContext(`${source}\nself.__testing = { shouldBypassCache, matchCached };`, context);
 
-test('active boundary lookups neither enter nor use the service-worker cache', async () => {
+test('active boundary and community dashboard data bypass the service-worker cache', async () => {
     assert.equal(self.__testing.shouldBypassCache('/hazard-map/barangay'), true);
     assert.equal(self.__testing.shouldBypassCache('/raniag/hazard-map/barangay'), true);
+    assert.equal(self.__testing.shouldBypassCache('/community-dashboard/data.json'), true);
+    assert.equal(self.__testing.shouldBypassCache('/raniag/community-dashboard/data.json'), true);
 
     const cached = await self.__testing.matchCached(
         new Request('https://raniag.test/hazard-map/barangay?lat=18.5&lng=121.4')
     );
+    const dashboardCached = await self.__testing.matchCached(
+        new Request('https://raniag.test/community-dashboard/data.json')
+    );
+    const prefixedDashboardCached = await self.__testing.matchCached(
+        new Request('https://raniag.test/raniag/community-dashboard/data.json')
+    );
 
     assert.equal(cached, undefined);
+    assert.equal(dashboardCached, undefined);
+    assert.equal(prefixedDashboardCached, undefined);
     assert.equal(cacheLookups.length, 0);
 });

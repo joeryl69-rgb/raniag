@@ -76,6 +76,13 @@
         let routePendingForce = false;
         let lastRouteAt = 0;
         let lastRouteLatLng = null;
+        let lastNearestAt = 0;
+        let lastNearestLatLng = null;
+        let pendingNearestLatLng = null;
+        let routeModalOpen = false;
+        let routeFollowEnabled = false;
+        let routePreviousTab = 'risk';
+        let nearestRequestInFlight = false;
         let snapshotController = null;
         let snapshotTimer = null;
         let boundaryController = null;
@@ -88,6 +95,8 @@
         const ROUTE_MIN_MOVE_M = 25;
         const ROUTE_MIN_INTERVAL_MS = 12000;
         const TRAIL_MIN_MOVE_M = 8;
+        const NEAREST_MIN_MOVE_M = 25;
+        const NEAREST_MIN_INTERVAL_MS = 8000;
 
         const chkZones = document.getElementById('layer-zones');
         const chkCenters = document.getElementById('layer-centers');
@@ -102,8 +111,21 @@
         const routeBox = document.getElementById('route-box');
         const routeSummary = document.getElementById('route-summary');
         const routeStatus = document.getElementById('route-status');
+        const routeDistanceValue = document.getElementById('route-distance-value');
+        const routeDurationValue = document.getElementById('route-duration-value');
         const routeWalk = document.getElementById('route-walk');
         const routeDrive = document.getElementById('route-drive');
+        const routeModalElement = document.getElementById('route-focus-modal');
+        const routeModalMapSlot = document.getElementById('route-modal-map-slot');
+        const routeModalDetails = document.getElementById('route-modal-details');
+        const routeDestinationName = document.getElementById('route-destination-name');
+        const routeModalGpsStatus = document.getElementById('route-modal-gps-status');
+        const routeFollowToggle = document.getElementById('route-follow-toggle');
+        const routeStage = mapEl.closest('.rg-hazard-stage');
+        const routeStageHome = routeStage?.parentElement;
+        const routeStageNextSibling = routeStage?.nextSibling;
+        const routeBoxHome = routeBox?.parentElement;
+        const routeBoxNextSibling = routeBox?.nextSibling;
         const riskSummary = document.getElementById('risk-summary');
         const riskList = document.getElementById('risk-list');
 
@@ -159,6 +181,11 @@
         }
 
         function setGeoStatus(msg, isError) {
+            if (routeModalGpsStatus) {
+                routeModalGpsStatus.textContent = msg || (layersOn().you ? 'Live location is on.' : 'Your location is off.');
+                routeModalGpsStatus.classList.toggle('text-danger', !!isError);
+                routeModalGpsStatus.classList.toggle('text-muted', !isError);
+            }
             if (!geoStatus) return;
             if (!msg) {
                 geoStatus.classList.add('d-none');
@@ -274,9 +301,21 @@
             routeStatus.classList.remove('d-none');
         }
 
+        function setRouteMetrics(distanceMeters, durationSeconds) {
+            const distance = distanceMeters == null ? NaN : Number(distanceMeters);
+            const duration = durationSeconds == null ? NaN : Number(durationSeconds);
+            const distanceLabel = Number.isFinite(distance)
+                ? `${(distance / 1000).toFixed(distance < 1000 ? 2 : 1)} km`
+                : '—';
+            const durationLabel = Number.isFinite(duration) ? formatDuration(duration) : '—';
+            if (routeDistanceValue) routeDistanceValue.textContent = distanceLabel;
+            if (routeDurationValue) routeDurationValue.textContent = durationLabel;
+        }
+
         function clearRouteLineOnly() {
             routeGroup.clearLayers();
             routeLayer = null;
+            setRouteMetrics(null, null);
         }
 
         function clearRoute() {
@@ -333,7 +372,7 @@
             highlightCenter(next);
             renderRouteTargets();
             if (fly) flyToCenter(next);
-            document.querySelector('[data-hazard-tab="route"]')?.click();
+            if (!routeModalOpen) document.querySelector('[data-hazard-tab="route"]')?.click();
             if (!layersOn().you) {
                 setLocationEnabled(true);
                 return;
@@ -362,6 +401,9 @@
                 trail.length = 0;
                 trailLine = null;
                 nearestData = null;
+                lastNearestAt = 0;
+                lastNearestLatLng = null;
+                pendingNearestLatLng = null;
                 chosenCenterId = null;
                 lastRouteCenterId = null;
                 renderRouteTargets();
@@ -383,9 +425,73 @@
             routeBox.classList.remove('d-none');
         }
 
+        function setRouteFollowState(enabled) {
+            routeFollowEnabled = !!enabled;
+            if (!routeFollowToggle) return;
+            routeFollowToggle.classList.toggle('is-on', routeFollowEnabled);
+            routeFollowToggle.setAttribute('aria-pressed', String(routeFollowEnabled));
+            const label = routeFollowToggle.querySelector('span');
+            if (label) label.textContent = routeFollowEnabled ? 'Following' : 'Follow me';
+        }
+
+        function openRouteModal() {
+            if (!routeModalElement || !window.bootstrap?.Modal) {
+                console.error('Live route modal could not open: Bootstrap modal support is unavailable.');
+                return false;
+            }
+            routePreviousTab = document.querySelector('[data-hazard-tab].is-active')?.dataset.hazardTab || 'risk';
+            window.bootstrap.Modal.getOrCreateInstance(routeModalElement).show();
+            return true;
+        }
+
+        routeModalElement?.addEventListener('show.bs.modal', () => {
+            routeModalOpen = true;
+            setRouteFollowState(layersOn().you);
+            if (routeStage && routeModalMapSlot) routeModalMapSlot.appendChild(routeStage);
+            if (routeBox && routeModalDetails) routeModalDetails.appendChild(routeBox);
+            if (!layersOn().you) setLocationEnabled(true);
+        });
+        routeModalElement?.addEventListener('shown.bs.modal', () => {
+            map.invalidateSize();
+            if (routeFollowEnabled && youLatLng) {
+                map.setView(youLatLng, Math.max(map.getZoom(), 15), { animate: !REDUCE });
+            }
+        });
+        routeModalElement?.addEventListener('hide.bs.modal', () => {
+            routeModalOpen = false;
+            setRouteFollowState(false);
+        });
+        routeModalElement?.addEventListener('hidden.bs.modal', () => {
+            if (routeStage && routeStageHome) {
+                routeStageHome.insertBefore(
+                    routeStage,
+                    routeStageNextSibling && routeStageNextSibling.parentNode === routeStageHome
+                        ? routeStageNextSibling
+                        : null
+                );
+            }
+            if (routeBox && routeBoxHome) {
+                routeBoxHome.insertBefore(
+                    routeBox,
+                    routeBoxNextSibling && routeBoxNextSibling.parentNode === routeBoxHome
+                        ? routeBoxNextSibling
+                        : null
+                );
+            }
+            map.invalidateSize();
+            document.querySelector(`[data-hazard-tab="${routePreviousTab}"]`)?.click();
+        });
+        routeFollowToggle?.addEventListener('click', () => {
+            setRouteFollowState(!routeFollowEnabled);
+            if (routeFollowEnabled && youLatLng) {
+                map.setView(youLatLng, Math.max(map.getZoom(), 15), { animate: !REDUCE });
+            }
+        });
+
         document.querySelectorAll('[data-hazard-tab]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const name = btn.dataset.hazardTab;
+                if (name === 'route' && openRouteModal()) return;
                 document.querySelectorAll('[data-hazard-tab]').forEach((other) => {
                     const on = other === btn;
                     other.classList.toggle('is-active', on);
@@ -406,15 +512,45 @@
             }
 
             const nc = activeCenter();
-            if (!mapboxToken || !youLatLng || !nc) {
+            if (!youLatLng || !nc) {
                 clearRoute();
                 if (routeSummary) {
-                    routeSummary.textContent = mapboxToken
-                        ? (youLatLng ? 'Looking for the nearest open center…' : ROUTE_OFF)
-                        : 'Mapbox token not configured — route unavailable.';
+                    routeSummary.textContent = youLatLng
+                        ? 'Looking for the nearest open center…'
+                        : ROUTE_OFF;
                 }
-                showRouteBox(!!mapboxToken);
+                setRouteMetrics(null, null);
+                showRouteBox();
                 setRouteStatus('');
+                return;
+            }
+
+            if (!mapboxToken) {
+                clearRoute();
+                const fallback = Mapbox?.showFallbackRoute?.({
+                    from: youLatLng,
+                    to: { lat: Number(nc.latitude), lng: Number(nc.longitude) },
+                    routeGroup,
+                    profile: routeProfile,
+                    color: '#0b5ed7',
+                });
+                if (fallback) {
+                    routeLayer = fallback.layer;
+                    setRouteMetrics(fallback.distance, fallback.duration);
+                    lastRouteAt = Date.now();
+                    lastRouteLatLng = youLatLng;
+                    lastRouteCenterId = nc.id;
+                    const label = routeProfile === 'driving' ? 'drive' : 'walk';
+                    if (routeSummary) {
+                        routeSummary.textContent = `Estimate: ${formatDistance(fallback.distance)} · ~${formatDuration(fallback.duration)} ${label} to ${nc.name} (straight-line; Mapbox routing unavailable)`;
+                    }
+                    setRouteStatus('This is a straight-line estimate, not a road route.', false);
+                } else {
+                    if (routeSummary) routeSummary.textContent = 'Mapbox routing is not configured — route unavailable.';
+                    setRouteMetrics(null, null);
+                    setRouteStatus('Mapbox routing is not configured.', true);
+                }
+                showRouteBox();
                 return;
             }
 
@@ -446,6 +582,7 @@
                 if (!result?.layer) throw new Error('No route');
 
                 routeLayer = result.layer;
+                setRouteMetrics(result.distance, result.duration);
                 lastRouteAt = Date.now();
                 lastRouteLatLng = from;
                 lastRouteCenterId = nc.id;
@@ -462,15 +599,18 @@
                     from,
                     to: { lat: Number(nc.latitude), lng: Number(nc.longitude) },
                     routeGroup,
+                    profile: routeProfile,
                     color: '#0b5ed7',
                 });
                 if (fallback) {
                     routeLayer = fallback.layer;
+                    setRouteMetrics(fallback.distance, fallback.duration);
                     lastRouteAt = Date.now();
                     lastRouteLatLng = from;
                     lastRouteCenterId = nc.id;
                     if (routeSummary) {
-                        routeSummary.textContent = `${formatDistance(fallback.distance)} · ~${formatDuration(fallback.duration)} straight-line to ${nc.name}`;
+                        const label = routeProfile === 'driving' ? 'drive' : 'walk';
+                        routeSummary.textContent = `Estimate: ${formatDistance(fallback.distance)} · ~${formatDuration(fallback.duration)} ${label} to ${nc.name} (straight-line)`;
                     }
                     setRouteStatus('Road route unavailable. Showing a straight line and an estimated time.', false);
                     fitActiveView({ animate: true });
@@ -482,6 +622,7 @@
                 if (!routeLayer && routeSummary) {
                     routeSummary.textContent = `Nearest: ${nc.name} (~${formatDistance(nc.distance_m)} straight-line).`;
                     setRouteStatus('Could not load a route for this center.', true);
+                    setRouteMetrics(nc.distance_m, null);
                 }
             } finally {
                 if (seq === routeFetchSeq) routeInFlight = false;
@@ -500,6 +641,13 @@
             const mode = focusMode();
             updateJoTip(mode === 'both' && on.you ? 'both' : mode);
             syncListVisibility();
+
+            if (routeModalOpen && routeFollowEnabled && on.you && youLatLng) {
+                map.setView(youLatLng, Math.max(map.getZoom(), 15), {
+                    animate: !REDUCE && animate !== false,
+                });
+                return;
+            }
 
             if (on.you && youLatLng && (routeLayer || nearestData?.nearest_center)) {
                 const focus = [];
@@ -763,10 +911,17 @@
             if (!box) return;
             const centers = layersOn().you ? openCenters() : [];
             const active = activeCenter();
+            if (routeDestinationName) {
+                routeDestinationName.textContent = active
+                    ? active.name
+                    : layersOn().you
+                        ? 'No open evacuation centers are available'
+                        : 'Turn on My location to find a center';
+            }
             if (centers.length < 2) {
                 box.classList.add('d-none');
                 box.innerHTML = '';
-                if (heading) heading.textContent = 'Nearest open center';
+                if (heading) heading.textContent = active?.name || 'Nearest open center';
                 return;
             }
             box.classList.remove('d-none');
@@ -798,7 +953,7 @@
                             data-nearest-center-id="${nc.id}">
                         <span class="d-block small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Nearest open center</span>
                         <strong class="d-block">${esc(nc.name)}</strong>
-                        <span class="text-muted" style="font-size:.78rem">~${esc(nc.distance_m)} m · tap to view on map</span>
+                        <span class="text-muted" style="font-size:.78rem">${esc(formatDistance(nc.distance_m))} straight-line · tap to view on map</span>
                     </button>`;
                 box.querySelector('[data-nearest-center-id]')?.addEventListener('click', () => {
                     if (chkCenters && !chkCenters.checked) {
@@ -853,14 +1008,54 @@
             renderRouteTargets();
         }
 
-        async function fetchNearest(lat, lng) {
+        async function fetchNearest(lat, lng, force = false) {
+            const current = leaflet.latLng(lat, lng);
+            if (nearestRequestInFlight) {
+                pendingNearestLatLng = current;
+                return;
+            }
+            if (!force && lastNearestAt
+                && Date.now() - lastNearestAt < NEAREST_MIN_INTERVAL_MS
+                && haversineMeters(lastNearestLatLng, current) < NEAREST_MIN_MOVE_M) {
+                fetchRoute();
+                return;
+            }
+
+            nearestRequestInFlight = true;
+            lastNearestAt = Date.now();
+            lastNearestLatLng = current;
             try {
-                const res = await fetch(`${cfg.nearestUrl}?lat=${lat}&lng=${lng}`);
-                if (!res.ok) return;
-                nearestData = await res.json();
+                const url = new URL(cfg.nearestUrl, window.location.href);
+                url.searchParams.set('lat', String(lat));
+                url.searchParams.set('lng', String(lng));
+                url.searchParams.set('_', Date.now().toString());
+                const res = await fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                });
+                if (!res.ok) throw new Error('Nearest-center lookup failed with HTTP status ' + res.status + '.');
+                const data = await res.json();
+                if (!layersOn().you) return;
+                nearestData = data;
                 renderNearest();
                 await fetchRoute({ force: !routeLayer });
-            } catch (e) { /* offline */ }
+            } catch (error) {
+                if (layersOn().you && navigator.onLine !== false) {
+                    console.warn('[public-hazard-map] Nearest-center lookup failed.', error);
+                }
+                if (layersOn().you) {
+                    setRouteStatus('Could not load evacuation centers. Check your connection and try again.', true);
+                    if (routeSummary) routeSummary.textContent = 'Evacuation-center locations are temporarily unavailable.';
+                }
+            } finally {
+                nearestRequestInFlight = false;
+                const pending = pendingNearestLatLng;
+                pendingNearestLatLng = null;
+                if (pending && layersOn().you
+                    && haversineMeters(lastNearestLatLng, pending) >= NEAREST_MIN_MOVE_M) {
+                    fetchNearest(pending.lat, pending.lng, true);
+                }
+            }
         }
 
         function recordTrail(latlng) {
@@ -883,6 +1078,10 @@
 
         function followYou(latlng) {
             if (!didInitialYouFit || !latlng) return;
+            if (routeModalOpen) {
+                if (routeFollowEnabled) map.panTo(latlng, { animate: !REDUCE, duration: 0.35 });
+                return;
+            }
             try {
                 if (!map.getBounds().pad(-0.15).contains(latlng)) {
                     map.panTo(latlng, { animate: !REDUCE });

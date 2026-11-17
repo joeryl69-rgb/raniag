@@ -355,6 +355,7 @@
             : navigator.onLine === false && boundaryGeometry
                 ? pointInGeometry(lng, lat, boundaryGeometry)
                 : null;
+        const locationAddress = activeJurisdiction?.location_address || null;
         const geofenced = jurisdictionUnavailable || withinMunicipality === false
             ? null
             : activeJurisdiction?.barangay || resolveBarangayFromBoundaries(lat, lng);
@@ -366,7 +367,7 @@
         if (withinMunicipality === false
             || jurisdictionUnavailable
             || (withinMunicipality === true && !geofenced)) {
-            if (addressInput) addressInput.value = '';
+            if (addressInput) addressInput.value = withinMunicipality === false ? (locationAddress || '') : '';
         }
         if (barangayInput && geofenced) barangayInput.value = geofenced;
 
@@ -426,6 +427,7 @@
                     province: addressDefaults.province,
                     country: addressDefaults.country,
                     label: lastResolvedLabel,
+                    locationAddress,
                 },
             }));
         } else if (jurisdictionUnavailable) {
@@ -447,7 +449,7 @@
         }
 
         if (navigator.onLine === false) {
-            if (addressInput) addressInput.value = '';
+            if (addressInput) addressInput.value = locationAddress || '';
             if (geofenced) return;
 
             if (withinMunicipality === false) {
@@ -471,8 +473,10 @@
                 clearTimeout(timeout);
                 if (myToken !== geocodeToken) return;
                 const addr = data.address || {};
-                const reverseMunicipality = addr.municipality || addr.town || addr.city || addr.county || addressDefaults.municipality;
-                const municipality = withinMunicipality === true ? addressDefaults.municipality : reverseMunicipality;
+                const reverseMunicipality = addr.municipality || addr.town || addr.city || addr.county || activeJurisdiction?.municipality;
+                const municipality = withinMunicipality === true
+                    ? addressDefaults.municipality
+                    : reverseMunicipality || (withinMunicipality === false ? 'Municipality not identified' : addressDefaults.municipality);
                 const province = addr.state || addr.province || addressDefaults.province;
                 const country = addr.country || addressDefaults.country;
                 const locationCandidates = [
@@ -504,14 +508,22 @@
                     || (!jurisdictionUnavailable
                         && withinMunicipality === null
                         && municipality.toLowerCase() !== addressDefaults.municipality.toLowerCase());
+                const fullAddress = typeof data.display_name === 'string' && data.display_name.trim()
+                    ? data.display_name.trim()
+                    : [
+                        addr.house_number,
+                        addr.road,
+                        barangayDisplay ? `Barangay ${barangayDisplay}` : areaName,
+                        municipality,
+                        province,
+                        country,
+                    ].filter(Boolean).join(', ');
 
                 if (barangayInput) {
                     barangayInput.value = barangayDisplay || '';
                 }
                 if (addressInput) {
-                    // Street/Landmark never repeats the barangay/area name —
-                    // just the road (if OSM has one) plus the municipality.
-                    addressInput.value = [addr.road, municipality].filter(Boolean).join(', ') || municipality || 'Unknown';
+                    addressInput.value = (fullAddress || municipality || 'Address not identified').slice(0, 500);
                 }
                 setOutsideWarning(outsideMunicipality);
                 setOutsideBanner(outsideMunicipality, municipality);
@@ -523,15 +535,26 @@
                 const label = jurisdictionUnavailable
                     ? `Pamplona boundary could not be verified — ${municipality}`
                     : matched
-                    ? `Detected: Barangay ${matched}, ${municipality}`
+                    ? `Detected: Barangay ${matched}, ${municipality}${outsideMunicipality ? ' — outside Pamplona response boundary' : ''}`
                     : barangayDisplay
-                        ? `Detected: Barangay ${barangayDisplay}, ${municipality} — outside Pamplona`
-                        : `Near ${municipality} — could not match a specific barangay (outside Pamplona's mapped area)`;
+                        ? `Detected: Barangay ${barangayDisplay}, ${municipality} — outside Pamplona response boundary`
+                        : `Near ${municipality} — outside Pamplona's response boundary`;
                 setResolveStatus(label, barangayDisplay || withinMunicipality === true ? 'check-circle' : 'exclamation-circle', barangayDisplay || withinMunicipality === true ? 'text-success' : 'text-warning');
                 lastResolvedLabel = label;
 
                 window.dispatchEvent(new CustomEvent('raniag:location-resolved', {
-                    detail: { placeResolved: true, lat, lng, barangay: barangayDisplay, municipality, inside: withinMunicipality, province, country, label },
+                    detail: {
+                        placeResolved: true,
+                        lat,
+                        lng,
+                        barangay: barangayDisplay,
+                        municipality,
+                        inside: withinMunicipality,
+                        province,
+                        country,
+                        label,
+                        locationAddress: fullAddress || locationAddress,
+                    },
                 }));
             } catch (err) {
                 clearTimeout(timeout);
@@ -558,8 +581,11 @@
                             ? 'Boundary check unavailable'
                             : geofenced
                                 ? addressDefaults.municipality
-                                : (withinMunicipality === false ? 'Outside Pamplona' : addressDefaults.municipality),
+                                : (withinMunicipality === false
+                                    ? activeJurisdiction?.municipality || 'Municipality not identified'
+                                    : addressDefaults.municipality),
                         inside: jurisdictionUnavailable ? null : withinMunicipality,
+                        locationAddress: locationAddress || null,
                     },
                 }));
                 lastResolvedLabel = lastResolvedLabel || 'resolved (offline fallback)';

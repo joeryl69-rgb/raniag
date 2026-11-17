@@ -445,7 +445,7 @@
                         @error('barangay')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-8">
-                        <label for="location_address" class="form-label">Street / Landmark</label>
+                        <label for="location_address" class="form-label">Full address / landmark</label>
                         <input type="text" class="form-control @error('location_address') is-invalid @enderror"
                                id="location_address" name="location_address" value="{{ old('location_address') }}"
                                placeholder="Auto-filled from GPS"

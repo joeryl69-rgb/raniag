@@ -128,6 +128,7 @@ class HazardMapController extends Controller
             'municipality' => $outside['municipality'],
             'province' => $outside['province'],
             'country' => $outside['country'],
+            'location_address' => $outside['location_address'],
             'inside' => false,
         ])->header('Cache-Control', 'no-store');
     }
@@ -215,7 +216,13 @@ class HazardMapController extends Controller
      */
     private function reverseOutsidePamplona(float $lat, float $lng): array
     {
-        $empty = ['barangay' => null, 'municipality' => null, 'province' => null, 'country' => null];
+        $empty = [
+            'barangay' => null,
+            'municipality' => null,
+            'province' => null,
+            'country' => null,
+            'location_address' => null,
+        ];
 
         try {
             $response = Http::timeout(3)
@@ -241,12 +248,26 @@ class HazardMapController extends Controller
         $addr = $response->json('address') ?? [];
         $barangay = $addr['village'] ?? $addr['suburb'] ?? $addr['hamlet'] ?? $addr['neighbourhood'] ?? $addr['city_district'] ?? $addr['quarter'] ?? $addr['locality'] ?? null;
         $municipality = $addr['municipality'] ?? $addr['town'] ?? $addr['city'] ?? $addr['county'] ?? null;
+        $province = $addr['state'] ?? $addr['province'] ?? $addr['state_district'] ?? null;
+        $country = $addr['country'] ?? null;
+        $displayName = $response->json('display_name');
+        $locationAddress = is_string($displayName) && trim($displayName) !== ''
+            ? trim($displayName)
+            : implode(', ', array_filter([
+                $addr['house_number'] ?? null,
+                $addr['road'] ?? null,
+                $barangay,
+                $municipality,
+                $province,
+                $country,
+            ], fn ($part) => is_string($part) && trim($part) !== ''));
 
         return [
             'barangay' => is_string($barangay) ? $barangay : null,
             'municipality' => is_string($municipality) ? $municipality : null,
-            'province' => is_string($addr['state'] ?? null) ? $addr['state'] : (is_string($addr['province'] ?? null) ? $addr['province'] : (is_string($addr['state_district'] ?? null) ? $addr['state_district'] : null)),
-            'country' => is_string($addr['country'] ?? null) ? $addr['country'] : null,
+            'province' => is_string($province) ? $province : null,
+            'country' => is_string($country) ? $country : null,
+            'location_address' => $locationAddress !== '' ? $locationAddress : null,
         ];
     }
 

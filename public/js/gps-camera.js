@@ -416,7 +416,7 @@
                     detail.province,
                     detail.country,
                 ].filter(Boolean);
-                placeEl.textContent = detail.placeLabel || (parts.length > 1
+                placeEl.textContent = detail.locationAddress || detail.placeLabel || (parts.length > 1
                     ? parts.join(', ')
                     : 'Address details unavailable');
             }
@@ -529,6 +529,7 @@
                 inside: place.inside,
                 province: place.province,
                 country: place.country,
+                locationAddress: place.locationAddress || null,
             },
         }));
     }
@@ -588,6 +589,7 @@
                     municipality: data.municipality || (data.inside ? 'Pamplona' : 'Outside Pamplona'),
                     province: data.province || 'Cagayan',
                     country: data.country || 'Philippines',
+                    locationAddress: data.location_address || null,
                 });
             })
             .catch((error) => {

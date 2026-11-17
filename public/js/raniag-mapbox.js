@@ -185,6 +185,8 @@
         if (!L || !opts?.routeGroup || !opts.from || !opts.to) return null;
         const distance = haversineMeters(opts.from, opts.to);
         if (!Number.isFinite(distance)) return null;
+        const profile = opts.profile === 'walking' ? 'walking' : 'driving';
+        const speedKph = profile === 'walking' ? 5 : 28;
         const layer = L.polyline(
             [[opts.from.lat, opts.from.lng], [opts.to.lat, opts.to.lng]],
             {
@@ -199,8 +201,8 @@
         return {
             layer,
             distance,
-            duration: (distance / 1000) / 28 * 3600,
-            profile: 'estimate',
+            duration: (distance / 1000) / speedKph * 3600,
+            profile,
             fallback: true,
         };
     }

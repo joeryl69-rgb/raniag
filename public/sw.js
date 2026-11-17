@@ -53,6 +53,7 @@ function shouldBypassCache(pathname) {
         '/verify-email',
         '/track',
         '/support',
+        '/community-dashboard',
         '/debug-session',
     ];
 
@@ -60,7 +61,10 @@ function shouldBypassCache(pathname) {
         return true;
     }
 
-    return blocked.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+    return blocked.some((prefix) => pathname === prefix
+        || pathname.startsWith(prefix + '/')
+        || pathname.endsWith(prefix)
+        || pathname.includes(prefix + '/'));
 }
 
 function isReportPath(pathname) {
@@ -94,7 +98,7 @@ function putInCache(request, response) {
 
 async function matchCached(request) {
     const path = new URL(request.url, self.location.origin).pathname;
-    if (isActiveBoundaryLookup(path)) {
+    if (shouldBypassCache(path)) {
         return undefined;
     }
 

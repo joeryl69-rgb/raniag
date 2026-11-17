@@ -125,6 +125,26 @@
                 </div>
                 <div id="pd-activity-list" class="rg-activity-list"></div>
             </section>
+
+            <section class="rg-situation-card rg-centers-card" aria-labelledby="pd-centers-title">
+                <div class="rg-card-head">
+                    <div>
+                        <span class="rg-community-label">Public shelter locations</span>
+                        <h2 id="pd-centers-title">Evacuation centers</h2>
+                    </div>
+                    <div class="rg-center-status-legend" aria-label="Center status legend">
+                        <span><i class="is-open"></i>Open</span>
+                        <span><i class="is-closed"></i>Closed</span>
+                    </div>
+                </div>
+                <div class="rg-centers-layout">
+                    <div id="community-center-map" role="application" aria-label="Map of evacuation-center locations"></div>
+                    <div id="pd-centers-list" class="rg-center-list" aria-live="polite">
+                        <div class="text-muted small">Loading evacuation centers…</div>
+                    </div>
+                </div>
+                <p class="rg-center-note">Center status refreshes automatically. Report locations remain private and are not shown on this map.</p>
+            </section>
         </div>
 
         <p class="rg-community-updated" id="pd-updated"></p>
@@ -133,6 +153,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
 .rg-community { max-width: 1240px; }
 .rg-community-head { position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,.58fr);align-items:center;gap:clamp(22px,4vw,54px);margin-bottom:26px;padding:20px 0; }
@@ -202,6 +223,32 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
 .rg-repeat-row:last-child { border-bottom:0; }
 .rg-repeat-row strong { font-size:.86rem; }
 .rg-repeat-row small { display:block; color:#64748b; }
+.rg-centers-card { grid-column:1 / -1; }
+.rg-centers-layout { display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.75fr);gap:14px;align-items:stretch; }
+#community-center-map { height:360px;min-height:280px;border:1px solid rgba(15,28,51,.12);border-radius:12px;background:#e8eef5; }
+.rg-center-list { display:grid;align-content:start;gap:8px;max-height:360px;overflow:auto;padding-right:2px; }
+.rg-center-item { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;width:100%;padding:12px;border:1px solid rgba(15,28,51,.1);border-radius:12px;background:#fff;color:inherit;text-align:left; }
+.rg-center-item:hover,.rg-center-item:focus-visible { border-color:#0f766e;box-shadow:0 0 0 2px rgba(15,118,110,.12); }
+.rg-center-item strong { min-width:0;font-size:.86rem; }
+.rg-center-item small { grid-column:1 / -1;color:#64748b;font-size:.75rem;line-height:1.4; }
+.rg-center-status { align-self:start;border-radius:999px;padding:3px 8px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em; }
+.rg-center-status.is-open { background:#dcfce7;color:#166534; }
+.rg-center-status.is-closed { background:#e2e8f0;color:#475569; }
+.rg-center-status-legend { display:flex;flex-wrap:wrap;gap:10px;font-size:.72rem;font-weight:700;color:#52677a; }
+.rg-center-status-legend span { display:inline-flex;align-items:center;gap:5px; }
+.rg-center-status-legend i { width:9px;height:9px;border-radius:50%;background:#15803d; }
+.rg-center-status-legend i.is-closed { background:#64748b; }
+.rg-center-note { margin:12px 0 0;color:#64748b;font-size:.72rem; }
+.rg-center-marker { background:transparent;border:0; }
+.rg-center-marker span { display:grid;place-items:center;width:30px;height:30px;border:2px solid #fff;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:#15803d;color:#fff;box-shadow:0 4px 10px rgba(15,28,51,.3); }
+.rg-center-marker span i { transform:rotate(45deg);font-size:14px; }
+.rg-center-marker.is-closed span { background:#64748b; }
+.rg-center-popup-status { display:inline-block;margin-top:5px;border-radius:999px;padding:2px 7px;background:#dcfce7;color:#166534;font-size:.68rem;font-weight:800;text-transform:uppercase; }
+.rg-center-popup-status.is-closed { background:#e2e8f0;color:#475569; }
+[data-theme="dark"] #community-center-map { border-color:#405862; }
+[data-theme="dark"] .rg-center-item { border-color:#405862;background:#172c36;color:#e8f0f0; }
+[data-theme="dark"] .rg-center-item small,[data-theme="dark"] .rg-center-status-legend,[data-theme="dark"] .rg-center-note { color:#b6c8cc; }
+[data-theme="dark"] .rg-center-status.is-closed { background:#334550;color:#d4e0e2; }
 [data-theme="dark"] .rg-kpi { background:#142630; border-color:#304955; }
 [data-theme="dark"] .rg-kpi strong { color:#f0f6f5; }
 [data-theme="dark"] .rg-kpi-open strong, [data-theme="dark"] .rg-kpi-open { color:#fff; }
@@ -228,6 +275,9 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
   .rg-kpi-open { grid-column:1 / -1; }
   .rg-kpi-open strong { font-size:2.4rem; }
   .rg-community-grid { grid-template-columns:1fr; }
+  .rg-centers-layout { grid-template-columns:minmax(0,1fr); }
+  #community-center-map { height:300px; }
+  .rg-center-list { max-height:320px; }
   .rg-period-bar, .rg-active-callout { align-items:flex-start; flex-direction:column; }
   .rg-period-switch { max-width:100%;overflow-x:auto; }
   .rg-chart-stage { height:235px; }
@@ -237,12 +287,20 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
 @endpush
 
 @push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{{ asset('js/raniag-mapbox.js') }}?v={{ @filemtime(public_path('js/raniag-mapbox.js')) }}"></script>
+<script src="{{ asset('js/public-community-centers.js') }}?v={{ @filemtime(public_path('js/public-community-centers.js')) }}"></script>
+<script>
+window.RANIAG_COMMUNITY_MAP_CONFIG = @json(config('raniag.map'));
+window.RANIAG_CommunityCenters?.init(window.RANIAG_COMMUNITY_MAP_CONFIG);
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 (function () {
     const DATA_URL = document.querySelector('.rg-community')?.dataset.dashboardUrl;
     let trendChart = null;
     let currentPeriod = 'month';
+    let loadInFlight = false;
 
     function applyTrendChartTheme() {
         if (!trendChart) return;
@@ -277,20 +335,33 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
                 item.setAttribute('aria-pressed', String(item === button));
             });
             load();
+            window.setInterval(load, 30000);
         });
     });
 
     load();
 
     function load() {
+        if (!DATA_URL || loadInFlight) return;
+        loadInFlight = true;
         const glue = DATA_URL.includes('?') ? '&' : '?';
-        fetch(DATA_URL + glue + 'period=' + encodeURIComponent(currentPeriod), { headers: { Accept: 'application/json' } })
-            .then(r => r.json())
+        fetch(DATA_URL + glue + 'period=' + encodeURIComponent(currentPeriod), {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+        })
+            .then((response) => {
+                if (!response.ok) throw new Error('Community dashboard refresh failed (' + response.status + ').');
+                return response.json();
+            })
             .then(render)
-            .catch(() => {
+            .catch((error) => {
+                console.warn('Community dashboard refresh failed.', error);
                 document.getElementById('pd-loading').classList.remove('d-none');
                 document.getElementById('pd-loading').innerHTML =
                     '<div class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Unable to load statistics right now. Please try again later.</div>';
+            })
+            .finally(() => {
+                loadInFlight = false;
             });
     }
 
@@ -304,6 +375,7 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
     function render(data) {
         document.getElementById('pd-loading').classList.add('d-none');
         document.getElementById('pd-content').classList.remove('d-none');
+        window.RANIAG_CommunityCenters?.update(data.evacuation_centers || []);
         // Content was hidden (d-none) when GSAP/ScrollTrigger first scanned
         // the page, so it never got a reveal animation. Trigger it manually
         // now that the container is actually visible.

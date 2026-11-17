@@ -23,6 +23,11 @@ test('public hazard map page renders live risk chrome', function () {
         ->assertSee('aria-label="Close"', false)
         ->assertSee('viewport-fit=cover', false)
         ->assertSee('id="route-targets"', false)
+        ->assertSee('id="route-focus-modal"', false)
+        ->assertSee('id="route-modal-map-slot"', false)
+        ->assertSee('id="route-follow-toggle"', false)
+        ->assertSee('id="route-distance-value"', false)
+        ->assertSee('id="route-duration-value"', false)
         ->assertSee('The path can switch when more than one shelter is open.', false)
         ->assertSee('data-lenis-prevent', false)
         ->assertSee('.rg-hazard-nearest-btn strong { color: #f0f5f6; }', false);
@@ -45,10 +50,13 @@ test('public live boundary endpoint returns the active boundary without caching'
     expect($response->headers->get('Cache-Control'))->toContain('no-store');
 });
 
-test('outside-area GPS reverse geocoding returns barangay municipality and country details', function () {
+test('outside-area GPS reverse geocoding returns full address and municipality details', function () {
     Http::fake([
         'https://nominatim.openstreetmap.org/reverse*' => Http::response([
+            'display_name' => '12 Main Road, Langagan, Sanchez Mira, Cagayan, Philippines',
             'address' => [
+                'house_number' => '12',
+                'road' => 'Main Road',
                 'village' => 'Langagan',
                 'county' => 'Sanchez Mira',
                 'state' => 'Cagayan',
@@ -66,7 +74,8 @@ test('outside-area GPS reverse geocoding returns barangay municipality and count
         ->assertJsonPath('barangay', 'Langagan')
         ->assertJsonPath('municipality', 'Sanchez Mira')
         ->assertJsonPath('province', 'Cagayan')
-        ->assertJsonPath('country', 'Philippines');
+        ->assertJsonPath('country', 'Philippines')
+        ->assertJsonPath('location_address', '12 Main Road, Langagan, Sanchez Mira, Cagayan, Philippines');
 });
 
 test('nearest center lists every open evacuation center by distance', function () {

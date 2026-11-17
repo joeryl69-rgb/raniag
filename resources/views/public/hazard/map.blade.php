@@ -4,6 +4,40 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+.rg-route-dialog { width:min(1360px,96vw);max-width:none; }
+.rg-route-modal .modal-content { height:min(92dvh,900px);overflow:hidden;border:1px solid #cbd8dc;border-radius:12px; }
+.rg-route-modal .modal-header { flex:0 0 auto;gap:12px;background:#102338;color:#f0f5f6;border-bottom:1px solid #294257; }
+.rg-route-kicker { color:#79d8c2;font:700 .62rem/1.2 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase; }
+.rg-route-modal .modal-title { margin:.25rem 0 0;font-size:1.1rem;font-weight:800; }
+.rg-route-modal .btn-close { filter:invert(1); }
+.rg-route-modal .modal-body { display:grid;grid-template-columns:minmax(0,1.65fr) minmax(320px,.8fr);min-height:0;padding:0; }
+#route-modal-map-slot { min-width:0;min-height:0;padding:12px;background:#e8eef5; }
+#route-modal-map-slot .rg-hazard-stage { height:100%;min-height:0;border-radius:10px; }
+#route-modal-map-slot #hazard-map { height:100%;min-height:0;border-radius:10px; }
+#route-modal-details { display:flex;min-width:0;min-height:0;flex-direction:column;gap:12px;overflow:auto;padding:16px;background:#f8fafc; }
+.rg-route-destination { display:grid;gap:3px;padding:13px;border:1px solid #d6e0e5;border-radius:10px;background:#fff; }
+.rg-route-destination span,.rg-route-stat span { color:#64748b;font-size:.67rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase; }
+.rg-route-destination strong { font-size:1rem; }
+.rg-route-stats { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+.rg-route-stat { display:grid;gap:3px;padding:12px;border:1px solid #d6e0e5;border-radius:10px;background:#fff; }
+.rg-route-stat strong { color:#0f766e;font-size:1.12rem;font-variant-numeric:tabular-nums; }
+.rg-route-gps-status { min-height:1.4em;color:#52677a;font-size:.77rem; }
+.rg-route-follow.is-on { background:#0f766e;color:#fff;border-color:#0f766e; }
+html[data-theme="dark"] .rg-route-modal .modal-content { border-color:#405862;background:#142630;color:#e8f0f0; }
+html[data-theme="dark"] .rg-route-modal .modal-header { background:#0e2032; }
+html[data-theme="dark"] #route-modal-details { background:#142630; }
+html[data-theme="dark"] .rg-route-destination,html[data-theme="dark"] .rg-route-stat { border-color:#405862;background:#172c36; }
+html[data-theme="dark"] .rg-route-destination span,html[data-theme="dark"] .rg-route-stat span,html[data-theme="dark"] .rg-route-gps-status { color:#b6c8cc; }
+html[data-theme="dark"] .rg-route-destination strong { color:#f0f6f5; }
+@media(max-width:767.98px) {
+    .rg-route-dialog { width:100%;height:100%;margin:0; }
+    .rg-route-modal .modal-content { height:100dvh;border:0;border-radius:0; }
+    .rg-route-modal .modal-body { grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(240px,44dvh) minmax(0,1fr); }
+    #route-modal-map-slot { padding:8px 8px 0; }
+    #route-modal-details { padding:10px 12px calc(12px + env(safe-area-inset-bottom)); }
+}
+</style>
 @endpush
 
 @section('content')
@@ -60,7 +94,7 @@
             <div class="rg-hazard-tabs" role="tablist" aria-label="Map details">
                 <button type="button" class="rg-hazard-tab is-active" data-hazard-tab="risk" role="tab" aria-selected="true">Risk</button>
                 <button type="button" class="rg-hazard-tab" data-hazard-tab="places" role="tab" aria-selected="false">Places</button>
-                <button type="button" class="rg-hazard-tab" data-hazard-tab="route" role="tab" aria-selected="false">Route</button>
+                <button type="button" class="rg-hazard-tab" data-hazard-tab="route" role="tab" aria-selected="false" aria-haspopup="dialog">Route</button>
             </div>
 
             <div class="rg-hazard-pane" data-hazard-pane="risk">
@@ -92,11 +126,46 @@
                         </div>
                     </div>
                     <p class="mb-1 text-muted" id="route-summary">Turn on My location, then choose an open center. The path can switch when more than one shelter is open.</p>
+                    <div class="rg-route-stats">
+                        <div class="rg-route-stat"><span>Route distance</span><strong id="route-distance-value">—</strong></div>
+                        <div class="rg-route-stat"><span>Estimated time</span><strong id="route-duration-value">—</strong></div>
+                    </div>
                     <div id="route-targets" class="rg-hazard-route-targets d-none"></div>
                     <p class="mb-0 small text-danger d-none" id="route-status" role="status"></p>
                 </div>
             </div>
         </aside>
+    </div>
+</div>
+
+<div class="modal fade rg-route-modal" id="route-focus-modal" tabindex="-1" aria-labelledby="route-focus-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered rg-route-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="min-w-0">
+                    <span class="rg-route-kicker">Live navigation · Mapbox</span>
+                    <h2 class="modal-title" id="route-focus-title">Route to an open evacuation center</h2>
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <button type="button" class="btn btn-sm btn-outline-light rg-route-follow" id="route-follow-toggle" aria-pressed="false">
+                        <i class="bi bi-crosshair me-1" aria-hidden="true"></i><span>Follow me</span>
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close route"></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="route-modal-map-slot"></div>
+                <aside id="route-modal-details" aria-label="Route details">
+                    <div class="rg-route-destination">
+                        <span>Nearest open destination</span>
+                        <strong id="route-destination-name">Turn on My location to find a center</strong>
+                    </div>
+                    <p class="rg-route-gps-status mb-0" id="route-modal-gps-status" role="status">Your location is off.</p>
+                    <div id="route-modal-route-slot"></div>
+                    <p class="small text-muted mb-0">Your blue marker updates as GPS moves. Routes and estimates refresh as your position changes.</p>
+                </aside>
+            </div>
+        </div>
     </div>
 </div>
 

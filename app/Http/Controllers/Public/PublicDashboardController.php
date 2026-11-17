@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Enums\IncidentStatus;
 use App\Http\Controllers\Controller;
+use App\Models\EvacuationCenter;
 use App\Models\Incident;
 use App\Support\PeriodRange;
 use Carbon\Carbon;
@@ -106,6 +107,19 @@ class PublicDashboardController extends Controller
             ]);
 
         $hotspots = $this->hotspots($periodQuery());
+        $evacuationCenters = EvacuationCenter::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'barangay', 'address', 'latitude', 'longitude', 'is_open'])
+            ->map(fn (EvacuationCenter $center) => [
+                'id' => $center->id,
+                'name' => $center->name,
+                'barangay' => $center->barangay,
+                'address' => $center->address,
+                'latitude' => (float) $center->latitude,
+                'longitude' => (float) $center->longitude,
+                'is_open' => (bool) $center->is_open,
+            ])
+            ->values();
 
         return response()->json([
             'period' => [
@@ -125,8 +139,9 @@ class PublicDashboardController extends Controller
             'most_active' => $hotspots['most_active'],
             'repeat_areas' => $hotspots['repeat_areas'],
             'recent_activity' => $recentActivity,
+            'evacuation_centers' => $evacuationCenters,
             'generated_at' => now()->toIso8601String(),
-        ]);
+        ])->header('Cache-Control', 'no-store');
     }
 
     /**
