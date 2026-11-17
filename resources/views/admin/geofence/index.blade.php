@@ -12,13 +12,6 @@
         </a>
     </x-workspace-intro>
 
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="status">
-            <i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
-        </div>
-    @endif
-
     @if ($errors->has('geometry'))
         <div class="alert alert-danger" role="alert">
             <strong>The boundary was not saved.</strong>
@@ -82,7 +75,15 @@
             @csrf
             @method('PUT')
             <input type="hidden" name="geometry" id="municipal-boundary-geometry">
-            <div class="small text-muted">Only the municipal outline is editable here. Changes are recorded in the system audit log.</div>
+            <div class="small text-muted">Undo and redo affect the outline only. Changes are recorded in the system audit log when saved.</div>
+            <div class="rg-geofence-history" role="group" aria-label="Boundary geometry history">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="boundary-undo" disabled>
+                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="boundary-redo" disabled>
+                    <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Redo
+                </button>
+            </div>
             <button type="submit" class="btn btn-primary" id="save-municipal-boundary" disabled>
                 <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save Pamplona boundary
             </button>
@@ -104,11 +105,14 @@
     .rg-geofence-map-wrap { height: min(68vh, 680px); min-height: 420px; background: #edf2f5; }
     #municipal-boundary-map { width: 100%; height: 100%; }
     .rg-geofence-savebar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-top: 1px solid #e8edf1; }
+    .rg-geofence-history { display: flex; flex: 0 0 auto; gap: .45rem; }
     .rg-geofence-editor .leaflet-draw-toolbar a { background-color: #fff; }
     @media (max-width: 767.98px) {
         .rg-geofence-editor-copy { grid-template-columns: 1fr; }
         .rg-geofence-map-wrap { height: 60vh; min-height: 360px; }
         .rg-geofence-savebar { align-items: stretch; flex-direction: column; }
+        .rg-geofence-history { order: 2; }
+        #save-municipal-boundary { order: 3; }
     }
 </style>
 @endpush
@@ -116,6 +120,7 @@
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin=""></script>
+<script src="{{ asset('js/geometry-history.js') }}?v={{ @filemtime(public_path('js/geometry-history.js')) }}"></script>
 <script>
 (() => {
     const boundary = @json($boundaryGeometry);
@@ -125,6 +130,8 @@
     const form = document.getElementById('municipal-boundary-form');
     const geometryInput = document.getElementById('municipal-boundary-geometry');
     const status = document.getElementById('boundary-editor-status');
+    const undoButton = document.getElementById('boundary-undo');
+    const redoButton = document.getElementById('boundary-redo');
 
     if (!window.L || !L.Control?.Draw) {
         errorElement.textContent = 'The map editing tools could not be loaded. Check the connection and reload this page before editing.';
@@ -165,17 +172,57 @@
     const currentBounds = editableBoundary.getBounds();
     map.fitBounds(currentBounds.pad(0.08));
     map.setMaxBounds(currentBounds.pad(2));
+    function currentBoundaryGeometry() {
+        const layers = editableBoundary.getLayers();
+        return layers.length === 1 ? layers[0].toGeoJSON().geometry : null;
+    }
+
+    function applyBoundaryGeometry(geometry) {
+        editableBoundary.clearLayers();
+        if (!geometry) return;
+        L.geoJSON(geometry, { style: boundaryStyle }).eachLayer((layer) => editableBoundary.addLayer(layer));
+    }
+
+    let geometryInteractionActive = false;
+    let boundaryHistory;
+    function syncHistoryButtons(state) {
+        undoButton.disabled = geometryInteractionActive || !state.canUndo;
+        redoButton.disabled = geometryInteractionActive || !state.canRedo;
+    }
+    boundaryHistory = window.RaniagGeometryHistory.create(
+        currentBoundaryGeometry(),
+        applyBoundaryGeometry,
+        syncHistoryButtons
+    );
+
+    map.on('draw:drawstart draw:editstart', () => {
+        geometryInteractionActive = true;
+        syncHistoryButtons(boundaryHistory.state());
+    });
+    map.on('draw:drawstop draw:editstop', () => {
+        geometryInteractionActive = false;
+        syncHistoryButtons(boundaryHistory.state());
+    });
     map.on('draw:created', (event) => {
         editableBoundary.clearLayers();
         event.layer.setStyle(boundaryStyle);
         editableBoundary.addLayer(event.layer);
+        boundaryHistory.push(currentBoundaryGeometry());
         status.textContent = 'A replacement outline is ready for review. Save it to apply this boundary.';
     });
     map.on('draw:edited', () => {
+        boundaryHistory.push(currentBoundaryGeometry());
         status.textContent = 'Boundary points adjusted. Save to apply the updated outline.';
+    });
+    undoButton.addEventListener('click', () => {
+        if (boundaryHistory.undo()) status.textContent = 'Geometry change undone. Review the outline, then save to apply it.';
+    });
+    redoButton.addEventListener('click', () => {
+        if (boundaryHistory.redo()) status.textContent = 'Geometry change restored. Review the outline, then save to apply it.';
     });
 
     form.addEventListener('submit', (event) => {
+        boundaryHistory.push(currentBoundaryGeometry());
         const layers = editableBoundary.getLayers();
         if (layers.length !== 1) {
             event.preventDefault();

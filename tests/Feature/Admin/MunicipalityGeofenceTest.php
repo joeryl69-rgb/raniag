@@ -36,11 +36,17 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
         ->assertSee('Pamplona municipal boundary')
         ->assertSee('Reset to default')
         ->assertSee('leaflet.draw.js', false)
+        ->assertSee('id="boundary-undo"', false)
+        ->assertSee('id="boundary-redo"', false)
+        ->assertSee('js/geometry-history.js', false)
         ->assertSee('Barangay boundaries remain unchanged.');
 
     $this->put(route('admin.geofence.update'), [
         'geometry' => json_encode($customBoundary, JSON_THROW_ON_ERROR),
     ])->assertRedirect(route('admin.geofence.index'));
+
+    $successResponse = $this->get(route('admin.geofence.index'))->assertOk();
+    expect(substr_count($successResponse->getContent(), 'Pamplona’s municipal boundary was updated across the system.'))->toBe(1);
 
     expect(app(GeofenceService::class)->isWithinPamplona(18.51, 121.41))->toBeTrue()
         ->and(app(GeofenceService::class)->isWithinPamplona(18.47, 121.32))->toBeFalse()
