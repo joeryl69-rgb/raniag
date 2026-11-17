@@ -101,23 +101,25 @@
 
             <aside class="hz-panel card border-0 shadow-sm">
                 <div class="hz-panel-head">
-                    <span class="hz-kicker" id="hz-mode-kicker">{{ $openCenter ? 'New shelter' : 'New hazard area' }}</span>
-                    <h2 id="hz-mode-title">{{ $openCenter ? 'Drop a pin for the shelter' : 'Trace the area, then name it' }}</h2>
-                    <p id="hz-mode-lead">{{ $openCenter ? 'Click or tap "Click or tap to use the map", then click the map to place the shelter.' : 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.' }}</p>
+                    <span class="hz-kicker" id="hz-mode-kicker">MAP PLANNING</span>
+                    <h2 id="hz-mode-title">Manage hazards and shelters</h2>
+                    <p id="hz-mode-lead">Choose a map tool to open its form. Saved items are listed below.</p>
                 </div>
                 <div class="card-body">
                     <div class="hz-mode-switch" role="group" aria-label="What to add">
-                        <button type="button" class="{{ $openCenter ? '' : 'is-selected' }}" id="mode-zone"><i class="bi bi-pentagon" aria-hidden="true"></i> Hazard area</button>
-                        <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center"><i class="bi bi-geo-alt" aria-hidden="true"></i> Shelter pin</button>
+                        <button type="button" class="{{ $openCenter ? '' : 'is-selected' }}" id="mode-zone"><i class="bi bi-pentagon" aria-hidden="true"></i> New hazard</button>
+                        <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center"><i class="bi bi-geo-alt" aria-hidden="true"></i> New shelter</button>
                     </div>
+                    <p class="small text-muted mb-3">Select an option above to add a map item. Edit saved items from their list.</p>
 
                     <div id="hazard-zone-form-home"></div>
-                    <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form" class="{{ $openCenter ? 'd-none' : '' }}">
+                    <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form" class="d-none">
                         @csrf
                         <input type="hidden" id="zone-form-method" value="PATCH" disabled>
                         <input type="hidden" name="editing_zone_id" id="editing-zone-id" value="{{ old('editing_zone_id') }}">
                         <input type="hidden" name="workspace" value="zone">
                         <input type="hidden" name="geometry_json" id="geometry_json" value="{{ old('workspace') === 'center' ? '' : old('geometry_json') }}">
+                        <div class="modal-body hz-form-body">
                         <section class="hz-section">
                             <span class="hz-kicker">1 · Type</span>
                             <label class="form-label" for="incident_type_id">Incident type</label>
@@ -142,15 +144,21 @@
                         </section>
                         <section class="hz-section">
                             <span class="hz-kicker">2 · Place</span>
-                            <label class="form-label" for="zone-name">Area name</label>
-                            <input name="name" id="zone-name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'zone' ? old('name') : '' }}" placeholder="e.g. Pamplona riverside">
-                            <label class="form-label mt-2" for="zone-barangay">Barangay</label>
-                            <select name="barangay" id="zone-barangay" class="form-select">
-                                <option value="">Covers more than one</option>
-                                @foreach ($barangays as $b)
-                                    <option value="{{ $b }}" @selected(old('workspace') === 'zone' && old('barangay') === $b)>{{ $b }}</option>
-                                @endforeach
-                            </select>
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <label class="form-label" for="zone-name">Area name</label>
+                                    <input name="name" id="zone-name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'zone' ? old('name') : '' }}" placeholder="e.g. Pamplona riverside">
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label" for="zone-barangay">Barangay</label>
+                                    <select name="barangay" id="zone-barangay" class="form-select">
+                                        <option value="">Multiple barangays</option>
+                                        @foreach ($barangays as $b)
+                                            <option value="{{ $b }}" @selected(old('workspace') === 'zone' && old('barangay') === $b)>{{ $b }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
                         </section>
                         <section class="hz-section" id="boundary-step">
                             <span class="hz-kicker">3 · Boundary</span>
@@ -166,55 +174,78 @@
                         @error('geometry_json')
                             <div class="alert alert-danger py-2 small" role="alert">{{ $message }}</div>
                         @enderror
-                        <div class="hz-edit-actions" id="zone-edit-actions">
-                            <button class="btn btn-primary w-100" type="submit" id="zone-save" @disabled($incidentTypes->isEmpty() || ! old('geometry_json'))>Save hazard area</button>
-                            <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="zone-cancel-edit">Cancel edit</button>
+                        </div>
+                        <div class="modal-footer hz-form-footer">
+                            <button class="btn btn-outline-secondary" type="button" id="zone-cancel-edit">Cancel</button>
+                            <button class="btn btn-primary" type="submit" id="zone-save" @disabled($incidentTypes->isEmpty() || ! old('geometry_json'))>Save hazard area</button>
                         </div>
                     </form>
 
                     <div id="center-form-home"></div>
-                    <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
+                    <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="d-none">
                         @csrf
                         <input type="hidden" id="center-form-method" value="PATCH" disabled>
                         <input type="hidden" name="editing_center_id" id="editing-center-id" value="{{ old('editing_center_id') }}">
                         <input type="hidden" name="workspace" value="center">
+                        <div class="modal-body hz-form-body">
                         <section class="hz-section" id="pin-step">
                             <span class="hz-kicker">1 · Pin</span>
-                            <p id="center-coords">Pin not placed yet. Click or tap "Click or tap to use the map", then click the map to drop the shelter.</p>
-                            <label class="form-label" for="center-color">Pin color</label>
-                            <input type="color" name="color" id="center-color" class="form-control form-control-color" value="{{ old('color', '#0f766e') }}" title="Color residents see on the live map">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                <p id="center-coords" class="mb-0">Pin not placed yet. Click or tap "Click or tap to use the map", then click the map to drop the shelter.</p>
+                                <div>
+                                    <label class="form-label" for="center-color">Pin color</label>
+                                    <input type="color" name="color" id="center-color" class="form-control form-control-color" value="{{ old('color', '#0f766e') }}" title="Color residents see on the live map">
+                                </div>
+                            </div>
                             <div class="form-text">This is the shelter pin color on the public Live Map.</div>
                         </section>
                         <section class="hz-section">
                             <span class="hz-kicker">2 · Place</span>
-                            <label class="form-label" for="center-name">Shelter name</label>
-                            <input name="name" id="center-name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'center' ? old('name') : '' }}" placeholder="e.g. Tabba elementary school">
-                            <label class="form-label mt-2" for="center-barangay">Barangay</label>
-                            <select name="barangay" id="center-barangay" class="form-select">
-                                <option value="">Covers more than one</option>
-                                @foreach ($barangays as $b)
-                                    <option value="{{ $b }}" @selected(old('workspace') === 'center' && old('barangay') === $b)>{{ $b }}</option>
-                                @endforeach
-                            </select>
-                            <label class="form-label mt-2" for="center-address">Address</label>
-                            <input name="address" id="center-address" class="form-control" maxlength="255" value="{{ old('workspace') === 'center' ? old('address') : '' }}" placeholder="Street or landmark">
-                            <label class="form-label mt-2" for="center-notes">Notes</label>
-                            <textarea name="notes" id="center-notes" class="form-control" rows="2" maxlength="2000" placeholder="Optional shelter details">{{ old('workspace') === 'center' ? old('notes') : '' }}</textarea>
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <label class="form-label" for="center-name">Shelter name</label>
+                                    <input name="name" id="center-name" class="form-control" required maxlength="120" value="{{ old('workspace') === 'center' ? old('name') : '' }}" placeholder="e.g. Tabba elementary school">
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label" for="center-barangay">Barangay</label>
+                                    <select name="barangay" id="center-barangay" class="form-select">
+                                        <option value="">Multiple barangays</option>
+                                        @foreach ($barangays as $b)
+                                            <option value="{{ $b }}" @selected(old('workspace') === 'center' && old('barangay') === $b)>{{ $b }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="center-address">Address</label>
+                                    <input name="address" id="center-address" class="form-control" maxlength="255" value="{{ old('workspace') === 'center' ? old('address') : '' }}" placeholder="Street or landmark">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="center-notes">Notes</label>
+                                    <textarea name="notes" id="center-notes" class="form-control" rows="2" maxlength="2000" placeholder="Optional shelter details">{{ old('workspace') === 'center' ? old('notes') : '' }}</textarea>
+                                </div>
+                            </div>
                         </section>
                         <section class="hz-section">
                             <span class="hz-kicker">3 · Capacity</span>
-                            <label class="form-label" for="center-capacity">People it can hold</label>
-                            <input name="capacity" id="center-capacity" type="number" min="1" class="form-control" value="{{ old('workspace') === 'center' ? old('capacity') : '' }}" placeholder="Leave blank if unknown">
                             <input type="hidden" name="latitude" id="center_latitude" value="{{ old('latitude', $map['default_lat']) }}">
                             <input type="hidden" name="longitude" id="center_longitude" value="{{ old('longitude', $map['default_lng']) }}">
-                            <div class="form-check mt-3 mb-0">
-                                <input class="form-check-input" type="checkbox" name="is_open" value="1" id="centerOpen" @checked(old('workspace') !== 'center' || old('is_open'))>
-                                <label class="form-check-label" for="centerOpen">Open for evacuees</label>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="center-capacity">People it can hold</label>
+                                    <input name="capacity" id="center-capacity" type="number" min="1" class="form-control" value="{{ old('workspace') === 'center' ? old('capacity') : '' }}" placeholder="Leave blank if unknown">
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="is_open" value="1" id="centerOpen" @checked(old('workspace') !== 'center' || old('is_open'))>
+                                        <label class="form-check-label" for="centerOpen">Open for evacuees</label>
+                                    </div>
+                                </div>
                             </div>
                         </section>
-                        <div class="hz-edit-actions">
-                            <button class="btn btn-primary w-100" type="submit" id="center-save" disabled>Save shelter</button>
-                            <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="center-cancel-edit">Cancel edit</button>
+                        </div>
+                        <div class="modal-footer hz-form-footer">
+                            <button class="btn btn-outline-secondary" type="button" id="center-cancel-edit">Cancel</button>
+                            <button class="btn btn-primary" type="submit" id="center-save" disabled>Save shelter</button>
                         </div>
                     </form>
                 </div>
@@ -285,12 +316,12 @@
         </div>
     </div>
 
-    <div class="modal fade hz-edit-modal" id="hazardEditModal" tabindex="-1" aria-labelledby="hazard-edit-modal-title" aria-hidden="true" data-bs-backdrop="false">
-        <div class="modal-dialog modal-dialog-scrollable">
-            <div class="modal-content">
+    <div class="modal fade hz-edit-modal" id="hazardEditModal" tabindex="-1" aria-labelledby="hazard-edit-modal-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content rg-hazard-edit-modal">
                 <div class="modal-header">
                     <div>
-                        <span class="hz-kicker mb-1">HAZARD MAP / EDIT</span>
+                        <span class="hz-kicker mb-1">HAZARD MAP / WORKSPACE</span>
                         <h2 class="modal-title fs-5 fw-bold" id="hazard-edit-modal-title">Edit hazard area</h2>
                         <p class="small text-muted mb-0 mt-1" id="hazard-edit-modal-lead">Drag the boundary handles on the map to reshape this area.</p>
                     </div>
@@ -591,12 +622,19 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-swatch { width: 14px; height: 10px; border-radius: 2px; background: #b45309; display: inline-block; }
 .hz-shelter-key { width: 12px; height: 12px; border-radius: 50%; background: #0f766e; display: inline-block; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #0f766e; }
 .hz-panel { max-height: calc(100vh - 230px); overflow: auto; border: 1px solid var(--raniag-border) !important; border-radius: .9rem !important; background: var(--raniag-card) !important; color: var(--raniag-ink); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent) !important; }
-.hz-panel.is-editing .hz-edit-actions { position: sticky; bottom: 0; z-index: 3; margin-top: .25rem; padding-top: .75rem; background: var(--raniag-card); box-shadow: 0 -10px 16px color-mix(in srgb, var(--raniag-card) 88%, transparent); }
-.hz-edit-modal .modal-dialog { width: min(440px, calc(100vw - 2rem)); max-width: none; height: calc(100% - 2rem); margin: 1rem 1rem 1rem auto; }
-.hz-edit-modal .modal-content { height: 100%; border: 1px solid var(--raniag-border); border-radius: .9rem; background: var(--raniag-card); color: var(--raniag-ink); box-shadow: 0 18px 55px rgba(15, 23, 42, .22); }
-.hz-edit-modal .modal-header { flex: 0 0 auto; padding: 1rem 1.15rem; border-bottom: 1px solid var(--raniag-border); }
-.hz-edit-modal .modal-body { overflow-y: auto; padding: 1rem 1.15rem; }
-.hz-edit-modal .hz-edit-actions { position: sticky; bottom: -1rem; z-index: 3; margin: 0 -1.15rem -1rem; padding: .85rem 1.15rem 1rem; background: var(--raniag-card); box-shadow: 0 -10px 16px color-mix(in srgb, var(--raniag-card) 88%, transparent); }
+.hz-panel.is-editing .hz-edit-actions { margin-top: .25rem; }
+.hz-create-form-note { line-height: 1.45; }
+.hz-edit-modal .modal-content { border: 0; border-radius: .85rem; background: var(--raniag-card); color: var(--raniag-ink); box-shadow: 0 24px 70px rgba(10, 31, 45, .22); }
+.hz-edit-modal .modal-header { flex: 0 0 auto; padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--raniag-border); }
+.hz-edit-modal .modal-header .hz-kicker { margin-bottom: .3rem; font-size: .64rem; letter-spacing: .13em; }
+.hz-edit-modal .modal-header p { max-width: 42rem; }
+.hz-edit-modal form { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; }
+.hz-edit-modal .hz-form-body { max-height: 72vh; padding: 1.3rem 1.4rem; }
+.hz-edit-modal .hz-form-footer { flex: 0 0 auto; padding: 1rem 1.4rem; border-top: 1px solid var(--raniag-border); }
+.hz-edit-modal .hz-section + .hz-section { margin-top: 1.25rem; padding-top: 1.2rem; }
+.hz-edit-modal .form-control,
+.hz-edit-modal .form-select { min-width: 0; }
+.hz-edit-modal #center-coords { max-width: 34rem; font-size: .88rem; line-height: 1.45; color: var(--raniag-muted); }
 .hz-reopen-editor { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 1040; box-shadow: 0 8px 24px rgba(15, 23, 42, .24); }
 .hz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .hz-type-chip { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; }
@@ -607,7 +645,9 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-panel { max-height: none; }
 }
 @media (max-width: 575.98px) {
-    .hz-edit-modal .modal-dialog { width: calc(100vw - 1rem); height: calc(100% - 1rem); margin: .5rem; }
+    .hz-edit-modal .modal-header,
+    .hz-edit-modal .hz-form-body { padding-right: 1rem; padding-left: 1rem; }
+    .hz-edit-modal .hz-form-footer { padding-right: 1rem; padding-left: 1rem; }
     .hz-reopen-editor { right: .75rem; bottom: .75rem; }
     .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
     .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
@@ -632,6 +672,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const advisories = @json($advisoryMap);
     const startCenter = @json($openCenter);
     const startCenterId = @json(old('editing_center_id'));
+    const startZone = @json(old('workspace') === 'zone' && $errors->any());
     const hadPin = @json(old('workspace') === 'center');
 
     const typeSelect = document.getElementById('incident_type_id');
@@ -650,6 +691,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const reopenEditButton = document.getElementById('hazard-edit-reopen');
     const editModal = bootstrap.Modal.getOrCreateInstance(editModalElement);
     let preserveEditOnHide = false;
+    let activeEditForm = null;
     const formHomes = new Map([
         [zoneForm, document.getElementById('hazard-zone-form-home')],
         [centerForm, document.getElementById('center-form-home')],
@@ -679,7 +721,9 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 
     function showEditForm(form, title, lead) {
         if (!form || !editModalBody) return;
+        activeEditForm = form;
         editModalBody.append(form);
+        form.classList.remove('d-none');
         editModalTitle.textContent = title;
         editModalLead.textContent = lead;
         reopenEditButton.classList.add('d-none');
@@ -697,7 +741,9 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             if (form.parentElement === editModalBody && home?.parentNode) {
                 home.parentNode.insertBefore(form, home.nextSibling);
             }
+            form.classList.add('d-none');
         });
+        activeEditForm = null;
         requestAnimationFrame(() => map.invalidateSize());
     }
 
@@ -1162,7 +1208,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         const longitude = preserveValues ? parseFloat(lngInput.value) : Number(center.lng);
         placeDraft(latitude, longitude);
         centerSave.textContent = 'Save changes';
-        document.getElementById('center-cancel-edit')?.classList.remove('d-none');
+        document.getElementById('center-cancel-edit').textContent = 'Cancel edit';
         document.querySelector('.hz-panel')?.classList.add('is-editing');
         engageMap();
         if (modeKicker) modeKicker.textContent = 'Edit shelter';
@@ -1189,7 +1235,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (editingCenterInput) editingCenterInput.value = '';
         if (centerForm && centerStoreAction) centerForm.action = centerStoreAction;
         document.querySelector('.hz-panel')?.classList.remove('is-editing');
-        document.getElementById('center-cancel-edit')?.classList.add('d-none');
+        document.getElementById('center-cancel-edit').textContent = 'Cancel';
         document.getElementById('center-name').value = '';
         document.getElementById('center-barangay').value = '';
         document.getElementById('center-address').value = '';
@@ -1207,25 +1253,38 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         editModal.hide();
     }
 
-    document.getElementById('mode-zone')?.addEventListener('click', () => setMode('zone'));
-    document.getElementById('mode-center')?.addEventListener('click', () => {
-        if (editingZoneId) cancelZoneEdit();
+    function openNewZoneForm() {
+        if (activeEditForm === centerForm) cancelCenterEdit();
+        else cancelZoneEdit();
+        restoreEditForms();
+        setMode('zone');
+        showEditForm(zoneForm, 'New hazard area', 'Choose the incident type and details, then draw the area on the map.');
+    }
+
+    function openNewCenterForm() {
+        if (activeEditForm === zoneForm) cancelZoneEdit();
+        else cancelCenterEdit();
+        restoreEditForms();
         setMode('center');
-    });
-    document.getElementById('center-cancel-edit')?.addEventListener('click', cancelCenterEdit);
+        showEditForm(centerForm, 'New evacuation shelter', 'Enter the shelter details, then place its pin on the map.');
+    }
+
+    document.getElementById('mode-zone')?.addEventListener('click', openNewZoneForm);
+    document.getElementById('mode-center')?.addEventListener('click', openNewCenterForm);
+    document.getElementById('center-cancel-edit')?.addEventListener('click', () => editModal.hide());
     centerList?.addEventListener('click', (event) => {
         const button = event.target.closest('.js-edit-center');
         if (!button) return;
         beginCenterEdit(existingCenters.find((center) => String(center.id) === button.dataset.centerId));
     });
-    document.getElementById('mode-zone')?.addEventListener('click', () => {
-        if (editingCenterId) cancelCenterEdit();
-    }, { capture: true });
     if (startCenter) setMode('center');
     if (startCenterId) {
         beginCenterEdit(existingCenters.find((center) => String(center.id) === String(startCenterId)), true);
     } else if (hadPin && latInput.value && lngInput.value) {
         placeDraft(parseFloat(latInput.value), parseFloat(lngInput.value));
+        showEditForm(centerForm, 'New evacuation shelter', 'Enter the shelter details, then place its pin on the map.');
+    } else if (startCenter) {
+        showEditForm(centerForm, 'New evacuation shelter', 'Enter the shelter details, then place its pin on the map.');
     }
     syncMapLock();
 
@@ -1329,7 +1388,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             styleDrawn();
         }
         if (zoneSave) zoneSave.textContent = 'Save changes';
-        document.getElementById('zone-cancel-edit')?.classList.remove('d-none');
+        document.getElementById('zone-cancel-edit').textContent = 'Cancel edit';
         if (modeKicker) modeKicker.textContent = 'Edit hazard area';
         if (modeTitle) modeTitle.textContent = 'Adjust this boundary on the map';
         if (modeLead) modeLead.textContent = 'Drag the corners to reshape the area. The boundary on the map is the one that will be saved.';
@@ -1357,7 +1416,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         const editingInput = document.getElementById('editing-zone-id');
         if (editingInput) editingInput.value = '';
         if (zoneForm && zoneStoreAction) zoneForm.action = zoneStoreAction;
-        document.getElementById('zone-cancel-edit')?.classList.add('d-none');
+        document.getElementById('zone-cancel-edit').textContent = 'Cancel';
         if (zoneSave) {
             zoneSave.textContent = 'Save hazard area';
             zoneSave.disabled = true;
@@ -1397,8 +1456,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             requestAnimationFrame(() => map.invalidateSize());
             return;
         }
-        if (editingZoneId) cancelZoneEdit();
-        if (editingCenterId) cancelCenterEdit();
+        if (activeEditForm === zoneForm) cancelZoneEdit();
+        if (activeEditForm === centerForm) cancelCenterEdit();
         restoreEditForms();
     });
 
@@ -1409,12 +1468,15 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             beginZoneEdit(zone, btn.dataset, false);
         });
     });
-    document.getElementById('zone-cancel-edit')?.addEventListener('click', cancelZoneEdit);
+    document.getElementById('zone-cancel-edit')?.addEventListener('click', () => editModal.hide());
     const resumeEditId = document.getElementById('editing-zone-id')?.value || '';
     if (/^\d+$/.test(resumeEditId)) {
         const zone = existingZones.find((z) => String(z.id) === resumeEditId);
         const resumeButton = document.querySelector('.js-edit-zone[data-id="' + resumeEditId + '"]');
         if (zone) beginZoneEdit(zone, resumeButton?.dataset || {}, !!drawnLayer);
+    } else if (startZone) {
+        setMode('zone');
+        showEditForm(zoneForm, 'New hazard area', 'Choose the incident type and details, then draw the area on the map.');
     }
 
     const advisoryModal = document.getElementById('advisoryModal');

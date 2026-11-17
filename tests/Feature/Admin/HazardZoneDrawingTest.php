@@ -28,7 +28,9 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('Edit hazard area', false)
         ->assertSee('Drag the corners to reshape this area, then save.', false)
         ->assertSee('id="hazardEditModal"', false)
-        ->assertSee('data-bs-backdrop="false"', false)
+        ->assertSee('modal-dialog-centered modal-dialog-scrollable modal-lg', false)
+        ->assertSee('class="modal-body hz-form-body"', false)
+        ->assertSee('Select an option above to add a map item.', false)
         ->assertSee('showEditForm(', false)
         ->assertSee('hideEditFormForMap', false)
         ->assertSee('id="hazard-edit-reopen"', false);
