@@ -640,15 +640,15 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-edit-modal .modal-header { flex: 0 0 auto; padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--raniag-border); }
 .hz-edit-modal .modal-header .hz-kicker { margin-bottom: .3rem; font-size: .64rem; letter-spacing: .13em; }
 .hz-edit-modal .modal-header p { max-width: 42rem; }
-.hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; min-height: 0; overflow-x: hidden; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; padding: 1rem; }
-.hz-editor-grid { display: grid; align-items: start; width: 100%; grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr); gap: 1rem; }
+.hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: flex; min-height: 0; overflow: hidden; padding: 1rem; }
+.hz-editor-grid { display: grid; flex: 1 1 auto; min-height: 0; width: 100%; grid-template-columns: minmax(280px, .82fr) minmax(0, 1.18fr); gap: 1rem; }
 #hazard-edit-form-slot, #hazard-edit-map-slot { min-width: 0; min-height: 0; }
-#hazard-edit-form-slot { display: block; }
+#hazard-edit-form-slot { display: flex; }
 #hazard-edit-map-slot { position: static; }
-#hazard-edit-map-slot #hz-map-workspace { display: grid; height: auto; min-height: 0; grid-template-rows: auto auto auto; }
-#hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: min(50vh, 30rem); min-height: 22rem; }
-.hz-edit-modal form { display: flex; flex-direction: column; }
-.hz-edit-modal .hz-form-body { max-height: none; overflow: visible; padding: 1.3rem 1.4rem; }
+#hazard-edit-map-slot #hz-map-workspace { display: grid; height: 100%; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
+#hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: 100%; min-height: 0; }
+.hz-edit-modal form { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; }
+.hz-edit-modal .hz-form-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 1.3rem 1.4rem; }
 .hz-edit-modal .hz-form-footer { flex: 0 0 auto; padding: 1rem 1.4rem; border-top: 1px solid var(--raniag-border); }
 .hz-edit-modal .hz-section + .hz-section { margin-top: 1.25rem; padding-top: 1.2rem; }
 .hz-edit-modal .form-control,
@@ -662,10 +662,14 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-map-wrap { height: clamp(22rem, 62vh, 38rem); min-height: 22rem; }
     .hz-panel { max-height: none; }
     .hz-edit-modal .modal-content { height: 94vh; height: min(94dvh, 62rem); max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); }
-    .hz-editor-grid { grid-template-columns: minmax(0, 1fr); }
+    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; overflow-x: hidden; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+    .hz-editor-grid { display: grid; min-height: auto; grid-template-columns: minmax(0, 1fr); }
     #hazard-edit-form-slot { display: block; }
     #hazard-edit-map-slot { position: static; order: -1; }
+    #hazard-edit-map-slot #hz-map-workspace { height: auto; grid-template-rows: auto auto auto; }
     #hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: clamp(22rem, 48dvh, 34rem); min-height: 22rem; }
+    .hz-edit-modal form { min-height: auto; }
+    .hz-edit-modal .hz-form-body { min-height: auto; overflow: visible; }
 }
 @media (max-width: 575.98px) {
     .hz-edit-modal .modal-dialog { width: 100%; height: 100%; max-width: none; margin: 0; }
