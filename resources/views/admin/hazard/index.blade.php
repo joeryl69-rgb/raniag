@@ -94,10 +94,10 @@
                     </div>
                     <div class="hz-map-wrap">
                         <div id="ops-map"></div>
-                        <div class="hz-legend" id="hz-legend">
-                            <span><i class="hz-swatch" id="legend-swatch"></i> New area</span>
-                            <span><i class="hz-shelter-key"></i> Evacuation shelter</span>
-                        </div>
+                    </div>
+                    <div class="hz-legend" id="hz-legend">
+                        <span><i class="hz-swatch" id="legend-swatch"></i> New area</span>
+                        <span><i class="hz-shelter-key"></i> Evacuation shelter</span>
                     </div>
                 </div>
             </div>
@@ -628,8 +628,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-list-label { background: color-mix(in srgb, var(--raniag-ink) 4%, var(--raniag-card)) !important; color: var(--raniag-muted) !important; font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .hz-map-wrap { position: relative; height: calc(100vh - 280px); min-height: 520px; border-radius: 12px; overflow: hidden; border: 1px solid var(--raniag-border); background: var(--raniag-card-raised); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent); }
 #ops-map { height: 100%; width: 100%; }
-.hz-legend { position: absolute; left: 12px; bottom: 12px; z-index: 500; background: var(--raniag-card); color: var(--raniag-ink); border: 1px solid var(--raniag-border); border-radius: 8px; padding: 6px 10px; display: flex; gap: 12px; font-size: .75rem; box-shadow: 0 4px 14px rgba(15,23,42,.12); }
-.hz-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hz-legend { position: relative; z-index: 1; width: fit-content; max-width: 100%; margin-top: .5rem; background: var(--raniag-card); color: var(--raniag-ink); border: 1px solid var(--raniag-border); border-radius: 8px; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: .35rem .75rem; font-size: .75rem; line-height: 1.35; box-shadow: 0 4px 14px rgba(15,23,42,.12); }
+.hz-legend span { display: inline-flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .hz-swatch { width: 14px; height: 10px; border-radius: 2px; background: #b45309; display: inline-block; }
 .hz-shelter-key { width: 12px; height: 12px; border-radius: 50%; background: #0f766e; display: inline-block; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #0f766e; }
 .hz-panel { max-height: calc(100vh - 230px); overflow: auto; border: 1px solid var(--raniag-border) !important; border-radius: .9rem !important; background: var(--raniag-card) !important; color: var(--raniag-ink); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent) !important; }
@@ -640,14 +640,15 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-edit-modal .modal-header { flex: 0 0 auto; padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--raniag-border); }
 .hz-edit-modal .modal-header .hz-kicker { margin-bottom: .3rem; font-size: .64rem; letter-spacing: .13em; }
 .hz-edit-modal .modal-header p { max-width: 42rem; }
-.hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: flex; min-height: 0; overflow: hidden; padding: 1rem; }
-.hz-editor-grid { display: grid; flex: 1 1 auto; min-height: 0; width: 100%; grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr); gap: 1rem; }
+.hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 1rem; }
+.hz-editor-grid { display: grid; align-items: start; width: 100%; grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr); gap: 1rem; }
 #hazard-edit-form-slot, #hazard-edit-map-slot { min-width: 0; min-height: 0; }
-#hazard-edit-form-slot { display: flex; }
-#hazard-edit-map-slot #hz-map-workspace { display: grid; height: 100%; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
-#hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: 100%; min-height: 0; }
-.hz-edit-modal form { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; }
-.hz-edit-modal .hz-form-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; padding: 1.3rem 1.4rem; }
+#hazard-edit-form-slot { display: block; }
+#hazard-edit-map-slot { position: sticky; top: 0; }
+#hazard-edit-map-slot #hz-map-workspace { display: grid; height: auto; min-height: 0; grid-template-rows: auto auto auto; }
+#hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: min(50vh, 30rem); min-height: 22rem; }
+.hz-edit-modal form { display: flex; flex-direction: column; }
+.hz-edit-modal .hz-form-body { max-height: none; overflow: visible; padding: 1.3rem 1.4rem; }
 .hz-edit-modal .hz-form-footer { flex: 0 0 auto; padding: 1rem 1.4rem; border-top: 1px solid var(--raniag-border); }
 .hz-edit-modal .hz-section + .hz-section { margin-top: 1.25rem; padding-top: 1.2rem; }
 .hz-edit-modal .form-control,
@@ -661,14 +662,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-map-wrap { height: clamp(22rem, 62vh, 38rem); min-height: 22rem; }
     .hz-panel { max-height: none; }
     .hz-edit-modal .modal-content { height: 94vh; height: min(94dvh, 62rem); max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); }
-    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { overflow-y: auto; }
-    .hz-editor-grid { flex: 0 0 auto; grid-template-columns: minmax(0, 1fr); }
+    .hz-editor-grid { grid-template-columns: minmax(0, 1fr); }
     #hazard-edit-form-slot { display: block; }
-    #hazard-edit-map-slot { min-height: 22rem; }
-    #hazard-edit-map-slot #hz-map-workspace { height: auto; grid-template-rows: auto auto; }
+    #hazard-edit-map-slot { position: static; order: -1; }
     #hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: clamp(22rem, 48dvh, 34rem); min-height: 22rem; }
-    .hz-edit-modal form { min-height: auto; }
-    .hz-edit-modal .hz-form-body { min-height: auto; overflow: visible; }
 }
 @media (max-width: 575.98px) {
     .hz-edit-modal .modal-dialog { width: 100%; height: 100%; max-width: none; margin: 0; }
@@ -677,10 +674,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-edit-modal .modal-header > div:first-child { min-width: 0; }
     .hz-edit-modal .modal-header p { font-size: .82rem; line-height: 1.4; }
     .hz-edit-modal .modal-header .btn-close { width: 2.75rem; height: 2.75rem; padding: .75rem; flex: 0 0 auto; background-size: .9rem; }
-    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { display: block; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .75rem max(1rem, env(safe-area-inset-right, 0px)) max(.75rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px)); }
-    .hz-editor-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; }
-    #hazard-edit-map-slot { order: -1; min-height: 0; }
-    #hazard-edit-map-slot #hz-map-workspace { height: auto; grid-template-rows: auto auto; }
+    .hz-edit-modal > .modal-dialog > .modal-content > .modal-body { padding: .75rem max(1rem, env(safe-area-inset-right, 0px)) max(.75rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px)); }
+    .hz-editor-grid { gap: .75rem; }
     #hazard-edit-map-slot #hz-map-workspace .hz-map-wrap { height: clamp(18rem, 44dvh, 27rem); min-height: 18rem; }
     .hz-edit-modal .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
     .hz-edit-modal .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
@@ -743,6 +738,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const mapHome = document.getElementById('hazard-map-home');
     const editModal = bootstrap.Modal.getOrCreateInstance(editModalElement);
     let activeEditForm = null;
+    let editModalIsShown = false;
     const formHomes = new Map([
         [zoneForm, document.getElementById('hazard-zone-form-home')],
         [centerForm, document.getElementById('center-form-home')],
@@ -784,7 +780,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             ? 'EVACUATION SHELTER / MAP EDITOR'
             : 'HAZARD AREA / MAP EDITOR';
         editModal.show();
-        requestAnimationFrame(() => map.invalidateSize());
     }
 
     function restoreEditForms() {
@@ -946,8 +941,12 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     if ('ResizeObserver' in window) {
         let mapResizeFrame = null;
         const mapResizeObserver = new ResizeObserver(() => {
+            if (!editModalIsShown) return;
             if (mapResizeFrame) cancelAnimationFrame(mapResizeFrame);
-            mapResizeFrame = requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+            mapResizeFrame = requestAnimationFrame(() => {
+                mapResizeFrame = null;
+                if (editModalIsShown) map.invalidateSize({ pan: false });
+            });
         });
         mapResizeObserver.observe(map.getContainer());
     }
@@ -1230,7 +1229,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         } else {
             say('Boundary ready. Adjust the corners, or save the hazard area.', true);
         }
-        setTimeout(() => map.invalidateSize(), 50);
     }
 
     function restoreCenterMarker(id) {
@@ -1511,11 +1509,15 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     editModalElement.addEventListener('hidden.bs.modal', () => {
+        editModalIsShown = false;
         if (activeEditForm === zoneForm) cancelZoneEdit();
         if (activeEditForm === centerForm) cancelCenterEdit();
         restoreEditForms();
     });
-    editModalElement.addEventListener('shown.bs.modal', () => map.invalidateSize());
+    editModalElement.addEventListener('shown.bs.modal', () => {
+        editModalIsShown = true;
+        map.invalidateSize({ pan: false });
+    });
 
     document.querySelectorAll('.js-edit-zone').forEach((btn) => {
         btn.addEventListener('click', () => {
