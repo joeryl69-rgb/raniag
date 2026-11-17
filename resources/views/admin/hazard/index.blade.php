@@ -111,6 +111,7 @@
                         <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center"><i class="bi bi-geo-alt" aria-hidden="true"></i> Shelter pin</button>
                     </div>
 
+                    <div id="hazard-zone-form-home"></div>
                     <form method="POST" action="{{ route('admin.hazard.zones.store') }}" id="hazard-zone-form" class="{{ $openCenter ? 'd-none' : '' }}">
                         @csrf
                         <input type="hidden" id="zone-form-method" value="PATCH" disabled>
@@ -171,6 +172,7 @@
                         </div>
                     </form>
 
+                    <div id="center-form-home"></div>
                     <form method="POST" action="{{ route('admin.hazard.centers.store') }}" id="center-form" class="{{ $openCenter ? '' : 'd-none' }}">
                         @csrf
                         <input type="hidden" id="center-form-method" value="PATCH" disabled>
@@ -210,8 +212,10 @@
                                 <label class="form-check-label" for="centerOpen">Open for evacuees</label>
                             </div>
                         </section>
-                        <button class="btn btn-primary w-100" type="submit" id="center-save" disabled>Save shelter</button>
-                        <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="center-cancel-edit">Cancel edit</button>
+                        <div class="hz-edit-actions">
+                            <button class="btn btn-primary w-100" type="submit" id="center-save" disabled>Save shelter</button>
+                            <button class="btn btn-outline-secondary w-100 mt-2 d-none" type="button" id="center-cancel-edit">Cancel edit</button>
+                        </div>
                     </form>
                 </div>
 
@@ -280,6 +284,30 @@
             </aside>
         </div>
     </div>
+
+    <div class="modal fade hz-edit-modal" id="hazardEditModal" tabindex="-1" aria-labelledby="hazard-edit-modal-title" aria-hidden="true" data-bs-backdrop="false">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <span class="hz-kicker mb-1">HAZARD MAP / EDIT</span>
+                        <h2 class="modal-title fs-5 fw-bold" id="hazard-edit-modal-title">Edit hazard area</h2>
+                        <p class="small text-muted mb-0 mt-1" id="hazard-edit-modal-lead">Drag the boundary handles on the map to reshape this area.</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="hazard-edit-map-toggle" aria-label="Hide editor to adjust the map">
+                            <i class="bi bi-arrows-angle-contract me-1" aria-hidden="true"></i>Map
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close edit dialog"></button>
+                    </div>
+                </div>
+                <div class="modal-body" id="hazard-edit-modal-body"></div>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="btn btn-primary hz-reopen-editor d-none" id="hazard-edit-reopen">
+        <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Open edit details
+    </button>
 
     <div class="tab-pane fade {{ $openRegistry ? 'show active' : '' }}" id="tab-registry">
         <div class="rg-evacuee-toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -564,6 +592,12 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-shelter-key { width: 12px; height: 12px; border-radius: 50%; background: #0f766e; display: inline-block; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #0f766e; }
 .hz-panel { max-height: calc(100vh - 230px); overflow: auto; border: 1px solid var(--raniag-border) !important; border-radius: .9rem !important; background: var(--raniag-card) !important; color: var(--raniag-ink); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent) !important; }
 .hz-panel.is-editing .hz-edit-actions { position: sticky; bottom: 0; z-index: 3; margin-top: .25rem; padding-top: .75rem; background: var(--raniag-card); box-shadow: 0 -10px 16px color-mix(in srgb, var(--raniag-card) 88%, transparent); }
+.hz-edit-modal .modal-dialog { width: min(440px, calc(100vw - 2rem)); max-width: none; height: calc(100% - 2rem); margin: 1rem 1rem 1rem auto; }
+.hz-edit-modal .modal-content { height: 100%; border: 1px solid var(--raniag-border); border-radius: .9rem; background: var(--raniag-card); color: var(--raniag-ink); box-shadow: 0 18px 55px rgba(15, 23, 42, .22); }
+.hz-edit-modal .modal-header { flex: 0 0 auto; padding: 1rem 1.15rem; border-bottom: 1px solid var(--raniag-border); }
+.hz-edit-modal .modal-body { overflow-y: auto; padding: 1rem 1.15rem; }
+.hz-edit-modal .hz-edit-actions { position: sticky; bottom: -1rem; z-index: 3; margin: 0 -1.15rem -1rem; padding: .85rem 1.15rem 1rem; background: var(--raniag-card); box-shadow: 0 -10px 16px color-mix(in srgb, var(--raniag-card) 88%, transparent); }
+.hz-reopen-editor { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 1040; box-shadow: 0 8px 24px rgba(15, 23, 42, .24); }
 .hz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .hz-type-chip { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; }
 .leaflet-draw-tooltip { font-size: 12px; }
@@ -573,6 +607,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-panel { max-height: none; }
 }
 @media (max-width: 575.98px) {
+    .hz-edit-modal .modal-dialog { width: calc(100vw - 1rem); height: calc(100% - 1rem); margin: .5rem; }
+    .hz-reopen-editor { right: .75rem; bottom: .75rem; }
     .hz-toolbar { align-items: stretch; justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; }
     .hz-toolbar-copy { flex: 0 0 auto; width: 100%; }
     .hz-tool-group { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
@@ -606,6 +642,18 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const typeIcon = document.getElementById('type-icon');
     const zoneForm = document.getElementById('hazard-zone-form');
     const centerForm = document.getElementById('center-form');
+    const editModalElement = document.getElementById('hazardEditModal');
+    const editModalBody = document.getElementById('hazard-edit-modal-body');
+    const editModalTitle = document.getElementById('hazard-edit-modal-title');
+    const editModalLead = document.getElementById('hazard-edit-modal-lead');
+    const editMapToggle = document.getElementById('hazard-edit-map-toggle');
+    const reopenEditButton = document.getElementById('hazard-edit-reopen');
+    const editModal = bootstrap.Modal.getOrCreateInstance(editModalElement);
+    let preserveEditOnHide = false;
+    const formHomes = new Map([
+        [zoneForm, document.getElementById('hazard-zone-form-home')],
+        [centerForm, document.getElementById('center-form-home')],
+    ]);
     const zoneList = document.getElementById('zone-list');
     const centerList = document.getElementById('center-list');
     const latInput = document.getElementById('center_latitude');
@@ -627,6 +675,30 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (geometryHint) geometryHint.textContent = message;
         if (boundaryNote) boundaryNote.textContent = message;
         boundaryStep?.classList.toggle('is-ready', !!ready);
+    }
+
+    function showEditForm(form, title, lead) {
+        if (!form || !editModalBody) return;
+        editModalBody.append(form);
+        editModalTitle.textContent = title;
+        editModalLead.textContent = lead;
+        reopenEditButton.classList.add('d-none');
+        editModal.show();
+        requestAnimationFrame(() => map.invalidateSize());
+    }
+
+    function hideEditFormForMap() {
+        preserveEditOnHide = true;
+        editModal.hide();
+    }
+
+    function restoreEditForms() {
+        formHomes.forEach((home, form) => {
+            if (form.parentElement === editModalBody && home?.parentNode) {
+                home.parentNode.insertBefore(form, home.nextSibling);
+            }
+        });
+        requestAnimationFrame(() => map.invalidateSize());
     }
 
     function markTool(id) {
@@ -1096,6 +1168,11 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (modeKicker) modeKicker.textContent = 'Edit shelter';
         if (modeTitle) modeTitle.textContent = 'Update this shelter on the map';
         if (modeLead) modeLead.textContent = 'Update the shelter details and drag its pin or click the map to move it.';
+        showEditForm(
+            centerForm,
+            `Edit shelter · ${center.name || 'Shelter'}`,
+            'Update the details here. Drag the shelter pin or click the map to move it.'
+        );
     }
 
     function cancelCenterEdit() {
@@ -1127,6 +1204,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         centerSave.textContent = 'Save shelter';
         if (coordsLabel) coordsLabel.textContent = 'Pin not placed yet. Click or tap "Click or tap to use the map", then click the map to drop the shelter.';
         setMode('center');
+        editModal.hide();
     }
 
     document.getElementById('mode-zone')?.addEventListener('click', () => setMode('zone'));
@@ -1261,6 +1339,11 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         panel?.classList.add('is-editing');
         if (panel) panel.scrollTop = 0;
         document.getElementById('hz-mode-kicker')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        showEditForm(
+            zoneForm,
+            `Edit hazard area · ${zone.name || data.name || 'Hazard area'}`,
+            'Update the details here. Drag the boundary handles on the map to reshape this area.'
+        );
     }
 
     function cancelZoneEdit() {
@@ -1299,7 +1382,25 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (modeLead) modeLead.textContent = 'Click or tap "Click or tap to use the map" before drawing. Then choose the type, trace the boundary, and save.';
         if (!mapReady()) showLock();
         else say('Draw an area or a box, then name it in the panel.', false);
+        editModal.hide();
     }
+
+    editMapToggle.addEventListener('click', hideEditFormForMap);
+    reopenEditButton.addEventListener('click', () => {
+        reopenEditButton.classList.add('d-none');
+        editModal.show();
+    });
+    editModalElement.addEventListener('hidden.bs.modal', () => {
+        if (preserveEditOnHide) {
+            preserveEditOnHide = false;
+            reopenEditButton.classList.remove('d-none');
+            requestAnimationFrame(() => map.invalidateSize());
+            return;
+        }
+        if (editingZoneId) cancelZoneEdit();
+        if (editingCenterId) cancelCenterEdit();
+        restoreEditForms();
+    });
 
     document.querySelectorAll('.js-edit-zone').forEach((btn) => {
         btn.addEventListener('click', () => {

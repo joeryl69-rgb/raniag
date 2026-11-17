@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\EvacuationCenter;
 use App\Models\HazardZone;
 use App\Models\IncidentType;
 use App\Models\User;
@@ -26,7 +27,11 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('id="zone-cancel-edit"', false)
         ->assertSee('Edit hazard area', false)
         ->assertSee('Drag the corners to reshape this area, then save.', false)
-        ->assertDontSee('id="editZoneModal"', false);
+        ->assertSee('id="hazardEditModal"', false)
+        ->assertSee('data-bs-backdrop="false"', false)
+        ->assertSee('showEditForm(', false)
+        ->assertSee('hideEditFormForMap', false)
+        ->assertSee('id="hazard-edit-reopen"', false);
 });
 
 test('hazard area creation rejects incomplete or non polygon geojson', function () {
@@ -203,7 +208,7 @@ test('editing a hazard area closes an open boundary before saving it', function 
 
 test('saved shelters can be edited from the hazard workspace', function () {
     $administrator = User::factory()->administrator()->create();
-    $center = \App\Models\EvacuationCenter::query()->create([
+    $center = EvacuationCenter::query()->create([
         'name' => 'Original Shelter',
         'barangay' => 'Centro',
         'address' => 'Old address',
@@ -221,7 +226,9 @@ test('saved shelters can be edited from the hazard workspace', function () {
         ->assertSee('js-edit-center', false)
         ->assertSee('Edit')
         ->assertSee('id="center-cancel-edit"', false)
-        ->assertSee('center-notes', false);
+        ->assertSee('center-notes', false)
+        ->assertSee('Edit shelter ·', false)
+        ->assertSee('Drag the shelter pin or click the map to move it.', false);
 
     $this->from(route('admin.hazard.index'))
         ->patch(route('admin.hazard.centers.update', $center), [
@@ -253,7 +260,7 @@ test('saved shelters can be edited from the hazard workspace', function () {
 
 test('editing a shelter pin color alone preserves its other saved details', function () {
     $administrator = User::factory()->administrator()->create();
-    $center = \App\Models\EvacuationCenter::query()->create([
+    $center = EvacuationCenter::query()->create([
         'name' => 'Color Test Shelter',
         'barangay' => 'Centro',
         'address' => 'Existing address',
@@ -282,7 +289,7 @@ test('editing a shelter pin color alone preserves its other saved details', func
 
 test('invalid shelter edits return to edit mode with the selected shelter identified', function () {
     $administrator = User::factory()->administrator()->create();
-    $center = \App\Models\EvacuationCenter::query()->create([
+    $center = EvacuationCenter::query()->create([
         'name' => 'Validation Shelter',
         'latitude' => 18.45,
         'longitude' => 121.34,
