@@ -23,6 +23,7 @@ class ApplySystemBranding
             'raniag.address.region' => $branding['response_area_label'],
         ]);
         View::share('siteBranding', $branding);
+        View::share('publicHomeContent', $setting->publicHomeContent());
 
         return $next($request);
     }

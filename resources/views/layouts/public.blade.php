@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="description" content="{{ $siteBranding['system_name'] }} — Incident reporting for {{ $siteBranding['organization_name'] }}">
+    <meta name="description" content="{{ request()->routeIs('public.home') ? $publicHomeContent['shell']['meta_description'] : $siteBranding['system_name'].' — Incident reporting for '.$siteBranding['organization_name'] }}">
     <meta name="theme-color" content="{{ $siteBranding['primary_color'] }}">
 
     <title>@yield('title', $siteBranding['system_name']) — {{ $siteBranding['organization_name'] }}</title>
@@ -12,7 +12,7 @@
     {{-- Social preview --}}
     <meta property="og:type" content="website">
     <meta property="og:title" content="@yield('title', $siteBranding['system_name']) — {{ $siteBranding['organization_name'] }}">
-    <meta property="og:description" content="Report incidents fast, track them transparently.">
+    <meta property="og:description" content="{{ request()->routeIs('public.home') ? $publicHomeContent['shell']['social_description'] : 'Report incidents fast, track them transparently.' }}">
     <meta name="twitter:card" content="summary_large_image">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
@@ -1237,7 +1237,7 @@
     {{-- ================= top strip ================= --}}
     <div class="rg-strip py-2 d-none d-md-block">
         <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span><span class="rg-dot"></span>{{ $siteBranding['system_name'] }} <span class="rg-strip-separator">/</span> PUBLIC REPORTING</span>
+            <span><span class="rg-dot"></span>{{ $siteBranding['system_name'] }} <span class="rg-strip-separator">/</span> {{ $publicHomeContent['shell']['public_reporting_label'] }}</span>
             <span class="rg-strip-location"><i class="bi bi-geo-alt me-1"></i>{{ $siteBranding['location_label'] }}@if ($siteBranding['show_header_text'] && $siteBranding['header_text'])<span class="ms-2">{{ $siteBranding['header_text'] }}</span>@endif</span>
         </div>
     </div>
@@ -1255,7 +1255,7 @@
 
             <div class="rg-nav-actions">
                 <button type="button" class="rg-theme-toggle rg-theme-toggle--mobile" data-rg-theme-toggle aria-label="Change color theme" aria-pressed="false">
-                    <i class="bi bi-circle-half" aria-hidden="true"></i><span data-rg-theme-label>Theme</span>
+                    <i class="bi bi-circle-half" aria-hidden="true"></i><span data-rg-theme-label>{{ $publicHomeContent['shell']['navigation']['theme'] }}</span>
                 </button>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav"
                         aria-controls="publicNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -1269,53 +1269,53 @@
                         <a class="nav-link {{ request()->routeIs('public.home') ? 'active' : '' }}"
                            data-rg-tour="home"
                            href="{{ route('public.home') }}">
-                            <i class="bi bi-house-door me-1 d-lg-none"></i>{{ __('Home') }}
+                            <i class="bi bi-house-door me-1 d-lg-none"></i>{{ $publicHomeContent['shell']['navigation']['home'] }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.track*') ? 'active' : '' }}"
                            data-rg-tour="track"
                            href="{{ route('public.track') }}">
-                            <i class="bi bi-search me-1 d-lg-none"></i>{{ __('Track Report') }}
+                            <i class="bi bi-search me-1 d-lg-none"></i>{{ $publicHomeContent['shell']['navigation']['track'] }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.hazard.*') ? 'active' : '' }}"
                            data-rg-tour="hazard"
                            href="{{ route('public.hazard.map') }}">
-                            <i class="bi bi-map me-1 d-lg-none"></i>Live Map
+                            <i class="bi bi-map me-1 d-lg-none"></i>{{ $publicHomeContent['shell']['navigation']['live_map'] }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('public.dashboard') ? 'active' : '' }}"
                            data-rg-tour="dashboard"
                            href="{{ route('public.dashboard') }}">
-                            <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>{{ __('Community Dashboard') }}
+                            <i class="bi bi-bar-chart-line me-1 d-lg-none"></i>{{ $publicHomeContent['shell']['navigation']['community'] }}
                         </a>
                     </li>
                     @auth
                         <li class="nav-item">
                             <a class="nav-link rg-btn-ghost" href="{{ route('dashboard') }}">
-                                <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                <i class="bi bi-speedometer2 me-1"></i>{{ $publicHomeContent['shell']['navigation']['staff'] }}
                             </a>
                         </li>
                     @else
                         <li class="nav-item">
                             <a class="nav-link rg-btn-ghost" href="{{ route('login') }}">
-                                <i class="bi bi-person-badge me-1"></i>{{ __('Staff Login') }}
+                                <i class="bi bi-person-badge me-1"></i>{{ $publicHomeContent['shell']['navigation']['staff_login'] }}
                             </a>
                         </li>
                     @endauth
                     <li class="nav-item">
                         <button type="button" class="rg-theme-toggle" data-rg-theme-toggle aria-label="Change color theme" aria-pressed="false">
-                            <i class="bi bi-circle-half" aria-hidden="true"></i><span data-rg-theme-label>Theme</span>
+                            <i class="bi bi-circle-half" aria-hidden="true"></i><span data-rg-theme-label>{{ $publicHomeContent['shell']['navigation']['theme'] }}</span>
                         </button>
                     </li>
                     <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
                         <a class="nav-link rg-btn-report {{ request()->routeIs('public.report.*') ? 'active' : '' }}"
                            data-rg-tour="report"
                            href="{{ route('public.report.create') }}">
-                            <i class="bi bi-megaphone-fill me-1"></i>{{ __('Report an Incident') }}
+                            <i class="bi bi-megaphone-fill me-1"></i>{{ $publicHomeContent['shell']['navigation']['report'] }}
                         </a>
                     </li>
                 </ul>
@@ -1353,7 +1353,7 @@
     <footer class="raniag-footer pt-5 pb-4 mt-auto">
         <div class="container">
             <div class="rg-footer-commandline">
-                <span class="rg-footer-mark"><i class="bi bi-broadcast-pin" aria-hidden="true"></i>Public information desk <span class="rg-dot" aria-hidden="true"></span>Community channel</span>
+                <span class="rg-footer-mark"><i class="bi bi-broadcast-pin" aria-hidden="true"></i>{{ $publicHomeContent['shell']['footer']['desk_label'] }} <span class="rg-dot" aria-hidden="true"></span>{{ $publicHomeContent['shell']['footer']['community_label'] }}</span>
                 <span class="rg-footer-location"><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ $siteBranding['location_label'] }}</span>
             </div>
             <div class="row g-4">
@@ -1363,44 +1363,43 @@
                         <span class="text-white fw-semibold">{{ $siteBranding['system_name'] }}</span>
                     </div>
                     <p class="small mb-0" style="max-width: 34ch;">
-                        Incident Reporting and Analytics System for {{ $siteBranding['organization_name'] }}.
-                        Every report is logged, routed, and auditable.
+                        {{ $publicHomeContent['shell']['footer']['description'] }}
                     </p>
                     @if ($siteBranding['contact_address'] || $siteBranding['contact_phone'] || $siteBranding['contact_email'] || $siteBranding['contact_hotline'])
                         <address class="small mt-3 mb-0 d-grid gap-1">
                             @if ($siteBranding['contact_address'])<span><i class="bi bi-geo-alt me-1"></i>{{ $siteBranding['contact_address'] }}</span>@endif
                             @if ($siteBranding['contact_phone'])<span><i class="bi bi-telephone me-1"></i><a href="tel:{{ $siteBranding['contact_phone'] }}">{{ $siteBranding['contact_phone'] }}</a></span>@endif
-                            @if ($siteBranding['contact_hotline'])<span><i class="bi bi-exclamation-circle me-1"></i>Hotline: <a href="tel:{{ $siteBranding['contact_hotline'] }}">{{ $siteBranding['contact_hotline'] }}</a></span>@endif
+                            @if ($siteBranding['contact_hotline'])<span><i class="bi bi-exclamation-circle me-1"></i>{{ $publicHomeContent['shell']['footer']['hotline_label'] }}: <a href="tel:{{ $siteBranding['contact_hotline'] }}">{{ $siteBranding['contact_hotline'] }}</a></span>@endif
                             @if ($siteBranding['contact_email'])<span><i class="bi bi-envelope me-1"></i><a href="mailto:{{ $siteBranding['contact_email'] }}">{{ $siteBranding['contact_email'] }}</a></span>@endif
                         </address>
                     @endif
                     <div class="rg-footer-caption">
-                        <strong>PUBLIC REPORTING CHANNEL</strong>
+                        <strong>{{ $publicHomeContent['shell']['footer']['report_channel_label'] }}</strong>
                         @if ($siteBranding['show_footer_text'])
-                            <span>{{ $siteBranding['footer_text'] ?: 'Share a clear location and incident details so responders can review and route reports.' }}</span>
+                            <span>{{ $siteBranding['footer_text'] ?: $publicHomeContent['shell']['footer']['default_report_text'] }}</span>
                         @endif
                     </div>
                 </div>
 
                 <div class="col-6 col-lg-3">
-                    <div class="rg-foot-title mb-2">Report</div>
+                    <div class="rg-foot-title mb-2">{{ $publicHomeContent['shell']['footer']['report_section'] }}</div>
                     <ul class="list-unstyled small mb-0 d-grid gap-2">
-                        <li><a href="{{ route('public.report.create') }}">File an incident</a></li>
-                        <li><a href="{{ route('public.track') }}">Track a report</a></li>
-                        <li><a href="{{ route('public.home') }}">How it works</a></li>
+                        <li><a href="{{ route('public.report.create') }}">{{ $publicHomeContent['shell']['footer']['file_report'] }}</a></li>
+                        <li><a href="{{ route('public.track') }}">{{ $publicHomeContent['shell']['footer']['track_report'] }}</a></li>
+                        <li><a href="{{ route('public.home') }}">{{ $publicHomeContent['shell']['footer']['how_it_works'] }}</a></li>
                     </ul>
                 </div>
 
                 <div class="col-6 col-lg-4">
-                    <div class="rg-foot-title mb-2">Access</div>
+                    <div class="rg-foot-title mb-2">{{ $publicHomeContent['shell']['footer']['access_section'] }}</div>
                     <ul class="list-unstyled small mb-0 d-grid gap-2">
                         @auth
-                            <li><a href="{{ route('dashboard') }}">Staff dashboard</a></li>
+                            <li><a href="{{ route('dashboard') }}">{{ $publicHomeContent['shell']['footer']['staff_dashboard'] }}</a></li>
                         @else
-                            <li><a href="{{ route('login') }}">Staff login</a></li>
+                            <li><a href="{{ route('login') }}">{{ $publicHomeContent['shell']['footer']['staff_login'] }}</a></li>
                         @endauth
-                        <li><a href="#" id="jo-replay-tour">Ask JO again</a></li>
-                        <li><a href="{{ route('public.support') }}">Support center</a></li>
+                        <li><a href="#" id="jo-replay-tour">{{ $publicHomeContent['shell']['footer']['replay_tour'] }}</a></li>
+                        <li><a href="{{ route('public.support') }}">{{ $publicHomeContent['shell']['footer']['support'] }}</a></li>
                     </ul>
                 </div>
             </div>

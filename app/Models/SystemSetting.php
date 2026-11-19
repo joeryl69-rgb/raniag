@@ -36,6 +36,7 @@ class SystemSetting extends Model
         'municipality_label',
         'province_label',
         'response_area_label',
+        'public_home_content',
     ];
 
     protected function casts(): array
@@ -47,6 +48,7 @@ class SystemSetting extends Model
             'municipality_boundary_updated_at' => 'datetime',
             'show_header_text' => 'boolean',
             'show_footer_text' => 'boolean',
+            'public_home_content' => 'array',
         ];
     }
 
@@ -126,5 +128,65 @@ class SystemSetting extends Model
             'response_area_label' => $this->response_area_label ?: config('system_branding.response_area', 'Cagayan Valley'),
             'location_label' => implode(', ', array_filter([$municipality, $province])),
         ];
+    }
+
+    /**
+     * Editable public copy with optional live brand tokens for the public UI.
+     *
+     * @return array<string, mixed>
+     */
+    public function publicHomeContent(bool $resolveTokens = true): array
+    {
+        $content = self::mergePublicHomeContent(
+            config('public_home', []),
+            $this->public_home_content ?? []
+        );
+
+        if (! $resolveTokens) {
+            return $content;
+        }
+
+        $branding = $this->brandingValues();
+        $tokens = [
+            '{system_name}' => $branding['system_name'],
+            '{organization}' => $branding['organization_name'],
+            '{municipality}' => $branding['municipality_label'],
+            '{province}' => $branding['province_label'],
+            '{region}' => $branding['response_area_label'],
+            '{tagline}' => (string) config('raniag.tagline', ''),
+        ];
+        array_walk_recursive($content, static function (&$value) use ($tokens): void {
+            if (is_string($value)) {
+                $value = strtr($value, $tokens);
+            }
+        });
+
+        return $content;
+    }
+
+    /**
+     * Merge object-like sections while allowing editors to replace whole lists.
+     *
+     * @param  array<string, mixed>  $defaults
+     * @param  array<string, mixed>  $saved
+     * @return array<string, mixed>
+     */
+    private static function mergePublicHomeContent(array $defaults, array $saved): array
+    {
+        foreach ($saved as $key => $value) {
+            if (
+                is_array($value)
+                && is_array($defaults[$key] ?? null)
+                && ! array_is_list($value)
+            ) {
+                $defaults[$key] = self::mergePublicHomeContent($defaults[$key], $value);
+
+                continue;
+            }
+
+            $defaults[$key] = $value;
+        }
+
+        return $defaults;
     }
 }

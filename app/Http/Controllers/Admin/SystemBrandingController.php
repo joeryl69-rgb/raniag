@@ -20,6 +20,7 @@ class SystemBrandingController extends Controller
         return view('admin.branding.index', [
             'setting' => $setting,
             'branding' => $setting->brandingValues(),
+            'homeContent' => $setting->publicHomeContent(false),
         ]);
     }
 
@@ -44,6 +45,56 @@ class SystemBrandingController extends Controller
             'municipality_label' => ['required', 'string', 'max:120'],
             'province_label' => ['required', 'string', 'max:120'],
             'response_area_label' => ['required', 'string', 'max:120'],
+            'home_content' => ['sometimes', 'array:shell,hero,shortcuts,qr,journey,briefing,faqs,app,support'],
+            'home_content.shell' => ['required_with:home_content', 'array:home_title,meta_description,social_description,public_reporting_label,navigation,footer'],
+            'home_content.shell.home_title' => ['required_with:home_content', 'string', 'max:120'],
+            'home_content.shell.meta_description' => ['required_with:home_content', 'string', 'max:180'],
+            'home_content.shell.social_description' => ['required_with:home_content', 'string', 'max:240'],
+            'home_content.shell.public_reporting_label' => ['required_with:home_content', 'string', 'max:80'],
+            'home_content.shell.navigation' => ['required_with:home_content', 'array:home,track,live_map,community,staff,staff_login,theme,report'],
+            'home_content.shell.navigation.*' => ['required', 'string', 'max:80'],
+            'home_content.shell.footer' => ['required_with:home_content', 'array:desk_label,community_label,description,report_channel_label,default_report_text,report_section,file_report,track_report,how_it_works,access_section,staff_dashboard,staff_login,replay_tour,support,hotline_label'],
+            'home_content.shell.footer.*' => ['required', 'string', 'max:500'],
+            'home_content.hero' => ['required_with:home_content', 'array:eyebrow,desk_label,title_lead,title_emphasis,tagline,description,report_button,track_button,latitude,longitude,location_label'],
+            'home_content.hero.*' => ['required', 'string', 'max:500'],
+            'home_content.shortcuts' => ['required_with:home_content', 'array', 'size:3'],
+            'home_content.shortcuts.*' => ['required', 'array:kicker,title'],
+            'home_content.shortcuts.*.*' => ['required', 'string', 'max:100'],
+            'home_content.qr' => ['required_with:home_content', 'array:eyebrow,stage,title,description,link_label,download_label,code_alt'],
+            'home_content.qr.*' => ['required', 'string', 'max:1000'],
+            'home_content.journey' => ['required_with:home_content', 'array:eyebrow,sequence,title_lead,title_emphasis,description,visual_label,guide_label,guide_alt,tour_label,tour_hint,steps'],
+            'home_content.journey.steps' => ['required_with:home_content', 'array', 'size:4'],
+            'home_content.journey.steps.*' => ['required', 'array:eyebrow,title,description,link_label,visual_status,visual_note'],
+            'home_content.journey.steps.*.*' => ['required', 'string', 'max:600'],
+            'home_content.journey.eyebrow' => ['required_with:home_content', 'string', 'max:100'],
+            'home_content.journey.sequence' => ['required_with:home_content', 'string', 'max:40'],
+            'home_content.journey.title_lead' => ['required_with:home_content', 'string', 'max:140'],
+            'home_content.journey.title_emphasis' => ['required_with:home_content', 'string', 'max:140'],
+            'home_content.journey.description' => ['required_with:home_content', 'string', 'max:600'],
+            'home_content.journey.visual_label' => ['required_with:home_content', 'string', 'max:100'],
+            'home_content.journey.guide_label' => ['required_with:home_content', 'string', 'max:100'],
+            'home_content.journey.guide_alt' => ['required_with:home_content', 'string', 'max:180'],
+            'home_content.journey.tour_label' => ['required_with:home_content', 'string', 'max:120'],
+            'home_content.journey.tour_hint' => ['required_with:home_content', 'string', 'max:120'],
+            'home_content.briefing' => ['required_with:home_content', 'array:eyebrow,sequence,title_lead,title_emphasis,description,announcements,faq'],
+            'home_content.briefing.eyebrow' => ['required_with:home_content', 'string', 'max:100'],
+            'home_content.briefing.sequence' => ['required_with:home_content', 'string', 'max:40'],
+            'home_content.briefing.title_lead' => ['required_with:home_content', 'string', 'max:140'],
+            'home_content.briefing.title_emphasis' => ['required_with:home_content', 'string', 'max:140'],
+            'home_content.briefing.description' => ['required_with:home_content', 'string', 'max:500'],
+            'home_content.briefing.announcements' => ['required_with:home_content', 'array:badge,local_desk,title,empty_title,empty_description'],
+            'home_content.briefing.announcements.*' => ['required', 'string', 'max:500'],
+            'home_content.briefing.faq' => ['required_with:home_content', 'array:badge,title,support_link'],
+            'home_content.briefing.faq.*' => ['required', 'string', 'max:160'],
+            'home_content.faqs' => ['required_with:home_content', 'array', 'min:1', 'max:12'],
+            'home_content.faqs.*' => ['required', 'array:question,answer,link_label'],
+            'home_content.faqs.*.question' => ['required', 'string', 'max:180'],
+            'home_content.faqs.*.answer' => ['required', 'string', 'max:2000'],
+            'home_content.faqs.*.link_label' => ['nullable', 'string', 'max:100'],
+            'home_content.app' => ['required_with:home_content', 'array:aside_label,field_tool_label,index,title,description,download_button,illustration_alt,install_success,install_cancelled,already_installed,install_instructions'],
+            'home_content.app.*' => ['required', 'string', 'max:400'],
+            'home_content.support' => ['required_with:home_content', 'array:index,title,description,button'],
+            'home_content.support.*' => ['required', 'string', 'max:500'],
         ]);
 
         $setting = SystemSetting::current();
@@ -75,6 +126,9 @@ class SystemBrandingController extends Controller
         ]));
         $setting->show_header_text = $request->boolean('show_header_text');
         $setting->show_footer_text = $request->boolean('show_footer_text');
+        if (array_key_exists('home_content', $validated)) {
+            $setting->public_home_content = $validated['home_content'];
+        }
 
         if ($newLogoPath !== null) {
             $setting->logo_path = $newLogoPath;
@@ -117,6 +171,7 @@ class SystemBrandingController extends Controller
             'municipality_label' => $defaults['municipality'],
             'province_label' => $defaults['province'],
             'response_area_label' => $defaults['response_area'],
+            'public_home_content' => null,
         ])->save();
 
         if ($oldLogoPath) {
@@ -125,6 +180,6 @@ class SystemBrandingController extends Controller
 
         return redirect()
             ->route('admin.branding.index')
-            ->with('success', 'Branding settings were reset to their defaults.');
+            ->with('success', 'Branding and public page content were reset to their defaults.');
     }
 }

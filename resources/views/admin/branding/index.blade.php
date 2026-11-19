@@ -1,29 +1,103 @@
 <x-app-layout>
     <x-slot name="header">Branding &amp; System Settings</x-slot>
 
+    @push('styles')
+        <style>
+            .branding-settings-card {
+                --branding-panel-bg: color-mix(in srgb, var(--raniag-surface, #eaf0f2) 58%, #fff);
+                overflow: hidden;
+                border: 1px solid color-mix(in srgb, var(--raniag-border, #d7e0e3) 70%, transparent) !important;
+                border-radius: .85rem;
+                background: var(--branding-panel-bg);
+                box-shadow: 0 8px 24px rgba(20, 45, 62, .07) !important;
+            }
+            .branding-settings-card > .card-header,
+            .branding-settings-card > .card-body {
+                background: var(--branding-panel-bg) !important;
+            }
+            .branding-settings-card > .card-header {
+                border-bottom: 1px solid color-mix(in srgb, var(--raniag-border, #d7e0e3) 76%, transparent);
+            }
+            .branding-copy-group {
+                overflow: hidden;
+                margin-bottom: .85rem;
+                border: 1px solid var(--raniag-border, #d7e0e3);
+                border-radius: .7rem;
+                background: var(--branding-panel-bg);
+            }
+            .branding-copy-group:last-child { margin-bottom: 0; }
+            .branding-copy-group > summary {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                padding: .9rem 1rem;
+                background: color-mix(in srgb, var(--branding-panel-bg) 88%, var(--raniag-primary, #086b78) 12%);
+                color: var(--raniag-text, #203749);
+                cursor: pointer;
+                font-weight: 700;
+                list-style: none;
+            }
+            .branding-copy-group > summary::-webkit-details-marker { display: none; }
+            .branding-copy-group > summary::after {
+                content: "+";
+                color: var(--raniag-primary, #086b78);
+                font-size: 1.15rem;
+                line-height: 1;
+            }
+            .branding-copy-group[open] > summary::after { content: "−"; }
+            .branding-copy-group-body { padding: 1rem; }
+            .branding-faq-row {
+                padding: 1rem;
+                border: 1px solid var(--raniag-border, #d7e0e3);
+                border-radius: .65rem;
+                background: color-mix(in srgb, var(--branding-panel-bg) 74%, #fff);
+            }
+            html[data-theme="dark"] .branding-settings-card {
+                --branding-panel-bg: var(--raniag-card, #172635);
+            }
+            html[data-theme="dark"] .branding-copy-group > summary,
+            html[data-theme="dark"] .branding-faq-row {
+                color: var(--raniag-text, #e7eef4);
+                background: color-mix(in srgb, var(--branding-panel-bg) 88%, var(--raniag-accent, #29aa96) 12%);
+            }
+        </style>
+    @endpush
+
     <main class="container-fluid px-0">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
             <div>
                 <span class="text-uppercase small fw-bold text-primary">Administrator controls</span>
                 <h1 class="h3 fw-bold mb-1">Branding &amp; System Settings</h1>
-                <p class="text-muted mb-0">Manage the identity, colors, public contact details, and display labels shown across RANIAG.</p>
+                <p class="text-muted mb-0">Manage the system identity, public page copy, contact details, colors, and display labels.</p>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <span class="badge rounded-pill text-bg-light border py-2 px-3"><i class="bi bi-shield-lock me-1"></i>Visible to administrators only</span>
                 <form method="POST" action="{{ route('admin.branding.reset') }}"
-                      onsubmit="return confirm('Reset branding, contact details, and display labels to their defaults? The municipality boundary and personal appearance settings will not change.');">
+                      onsubmit="return confirm('Reset branding and public page content to their defaults? The municipality boundary and personal appearance settings will not change.');">
                     @csrf
                     <button type="submit" class="btn btn-outline-danger"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset to defaults</button>
                 </form>
             </div>
         </div>
 
+        @if ($errors->any())
+            <div class="alert alert-danger" role="alert">
+                <strong>Settings were not saved.</strong> Please correct the following:
+                <ul class="mb-0 mt-2">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('admin.branding.update') }}" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
-            <section class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
+            <section class="card branding-settings-card mb-4">
+                <div class="card-header py-3">
                     <h2 class="h6 fw-bold mb-0"><i class="bi bi-building me-2 text-primary"></i>System identity</h2>
                 </div>
                 <div class="card-body">
@@ -61,8 +135,10 @@
                 </div>
             </section>
 
-            <section class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
+            @include('admin.branding._public_home_content', ['homeContent' => $homeContent])
+
+            <section class="card branding-settings-card mb-4">
+                <div class="card-header py-3">
                     <h2 class="h6 fw-bold mb-0"><i class="bi bi-palette me-2 text-primary"></i>Brand colors</h2>
                 </div>
                 <div class="card-body">
@@ -86,9 +162,9 @@
                 </div>
             </section>
 
-            <section class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <h2 class="h6 fw-bold mb-0"><i class="bi bi-layout-text-window-reverse me-2 text-primary"></i>Public header and footer</h2>
+            <section class="card branding-settings-card mb-4">
+                <div class="card-header py-3">
+                    <h2 class="h6 fw-bold mb-0"><i class="bi bi-layout-text-window-reverse me-2 text-primary"></i>Optional public header and footer message</h2>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
@@ -115,12 +191,12 @@
                         </div>
                         @error('footer_text')<div class="text-danger small">{{ $message }}</div>@enderror
                     </div>
-                    <div class="form-text mt-3">Navigation and essential footer links stay visible so visitors can continue using the site.</div>
+                    <div class="form-text mt-3">The full public navigation and footer copy are editable in Public site content; these optional messages remain separate.</div>
                 </div>
             </section>
 
-            <section class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
+            <section class="card branding-settings-card mb-4">
+                <div class="card-header py-3">
                     <h2 class="h6 fw-bold mb-0"><i class="bi bi-telephone me-2 text-primary"></i>Organization contact details</h2>
                 </div>
                 <div class="card-body">
@@ -146,8 +222,8 @@
                 </div>
             </section>
 
-            <section class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
+            <section class="card branding-settings-card mb-4">
+                <div class="card-header py-3">
                     <h2 class="h6 fw-bold mb-0"><i class="bi bi-geo-alt me-2 text-primary"></i>Location display labels</h2>
                 </div>
                 <div class="card-body">

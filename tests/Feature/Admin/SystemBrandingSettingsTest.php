@@ -195,6 +195,13 @@ test('administrator can reset branding to configured defaults without changing t
         'municipality_label' => 'Custom City',
         'province_label' => 'Custom Province',
         'response_area_label' => 'Custom Region',
+        'public_home_content' => [
+            'faqs' => [[
+                'question' => 'Custom question',
+                'answer' => 'Custom answer',
+                'link_label' => '',
+            ]],
+        ],
     ]);
     $defaults = config('system_branding');
 
@@ -220,7 +227,13 @@ test('administrator can reset branding to configured defaults without changing t
         ->and($setting->contact_hotline)->toBeNull()
         ->and($setting->municipality_label)->toBe($defaults['municipality'])
         ->and($setting->province_label)->toBe($defaults['province'])
-        ->and($setting->response_area_label)->toBe($defaults['response_area']);
+        ->and($setting->response_area_label)->toBe($defaults['response_area'])
+        ->and($setting->public_home_content)->toBeNull();
 
     Storage::disk('public')->assertMissing($logoPath);
+
+    $this->get(route('public.home'))
+        ->assertOk()
+        ->assertSee('Is my report really anonymous if I choose to be?')
+        ->assertDontSee('Custom question');
 });

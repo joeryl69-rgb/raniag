@@ -1,27 +1,42 @@
 @extends('layouts.public')
 
-@section('title', 'Home')
+@section('title', $publicHomeContent['shell']['home_title'])
 
 @section('content')
+@php
+    $home = $publicHomeContent;
+    $journeyImages = [
+        '/images/guide/jo-greeting.png?v=1',
+        '/images/guide/jo-camera.png?v=1',
+        '/images/guide/jo-map.png?v=1',
+        '/images/guide/jo-clipboard.png?v=1',
+    ];
+    $journeyRoutes = [
+        route('public.report.create'),
+        route('public.track'),
+        route('public.hazard.map'),
+        route('public.track'),
+    ];
+@endphp
 <div class="container rg-home-container">
     <section class="rg-home-hero" aria-labelledby="home-title">
         <div class="rg-home-hero-photo" aria-hidden="true"></div>
         <div class="rg-home-hero-content">
-            <p class="rg-home-kicker" data-rg-hero-eyebrow><span></span>{{ config('raniag.organization') }} <b>/</b> PUBLIC SAFETY DESK</p>
-            <h1 id="home-title" data-rg-hero-title>When something happens,<br><em>start here.</em></h1>
-            <p class="rg-home-tagline" data-rg-hero-tag>{{ config('raniag.tagline') }}</p>
-            <p class="rg-home-lead" data-rg-hero-desc>Send a report to the local response team, follow its progress, and see public safety information for Pamplona.</p>
+            <p class="rg-home-kicker" data-rg-hero-eyebrow><span></span>{{ $home['hero']['eyebrow'] }} <b>/</b> {{ $home['hero']['desk_label'] }}</p>
+            <h1 id="home-title" data-rg-hero-title>{{ $home['hero']['title_lead'] }}<br><em>{{ $home['hero']['title_emphasis'] }}</em></h1>
+            <p class="rg-home-tagline" data-rg-hero-tag>{{ $home['hero']['tagline'] }}</p>
+            <p class="rg-home-lead" data-rg-hero-desc>{{ $home['hero']['description'] }}</p>
             <div class="rg-home-actions" data-rg-hero-btns>
                 <a href="{{ route('public.report.create') }}" class="rg-home-primary-action">
-                    <span class="bi bi-plus-lg" aria-hidden="true"></span> Report an incident
+                    <span class="bi bi-plus-lg" aria-hidden="true"></span> {{ $home['hero']['report_button'] }}
                 </a>
                 <a href="{{ route('public.track') }}" class="rg-home-secondary-action">
-                    Track a report <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                    {{ $home['hero']['track_button'] }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
                 </a>
             </div>
         </div>
         <div class="rg-home-coordinate" aria-hidden="true">
-            <span>17° 27′ N</span><i></i><span>121° 28′ E</span><b>PAMPLONA · CAGAYAN</b>
+            <span>{{ $home['hero']['latitude'] }}</span><i></i><span>{{ $home['hero']['longitude'] }}</span><b>{{ $home['hero']['location_label'] }}</b>
         </div>
         <div class="rg-home-orbit" aria-hidden="true">
             <img src="{{ $siteBranding['logo_url'] }}" alt="" width="54" height="54">
@@ -32,89 +47,84 @@
     <nav class="rg-home-shortcuts" aria-label="Public information">
         <a href="{{ route('public.hazard.map') }}" data-rg-tour="hazard">
             <span class="rg-shortcut-index">01</span><i class="bi bi-map" aria-hidden="true"></i>
-            <span><small>Explore</small><strong>Live map</strong></span><i class="bi bi-arrow-up-right rg-shortcut-arrow" aria-hidden="true"></i>
+            <span><small>{{ $home['shortcuts'][0]['kicker'] }}</small><strong>{{ $home['shortcuts'][0]['title'] }}</strong></span><i class="bi bi-arrow-up-right rg-shortcut-arrow" aria-hidden="true"></i>
         </a>
         <a href="{{ route('public.dashboard') }}" data-rg-tour="dashboard">
             <span class="rg-shortcut-index">02</span><i class="bi bi-bar-chart-line" aria-hidden="true"></i>
-            <span><small>Understand</small><strong>Community reports</strong></span><i class="bi bi-arrow-up-right rg-shortcut-arrow" aria-hidden="true"></i>
+            <span><small>{{ $home['shortcuts'][1]['kicker'] }}</small><strong>{{ $home['shortcuts'][1]['title'] }}</strong></span><i class="bi bi-arrow-up-right rg-shortcut-arrow" aria-hidden="true"></i>
         </a>
         <a href="{{ route('public.support') }}" data-rg-tour="support">
             <span class="rg-shortcut-index">03</span><i class="bi bi-chat-square-text" aria-hidden="true"></i>
-            <span><small>Get assistance</small><strong>Support center</strong></span><i class="bi bi-arrow-up-right rg-shortcut-arrow" aria-hidden="true"></i>
+            <span><small>{{ $home['shortcuts'][2]['kicker'] }}</small><strong>{{ $home['shortcuts'][2]['title'] }}</strong></span><i class="bi bi-arrow-up-right rg-shortcut-arrow" aria-hidden="true"></i>
         </a>
     </nav>
 
     <section class="rg-home-qr" aria-labelledby="home-qr-title">
         <div class="rg-home-qr-copy">
-            <p class="rg-section-index"><span>REPORT</span> <i></i> SCAN</p>
-            <h2 id="home-qr-title">Scan to start a report.</h2>
-            <p>This opens the same form as Report an incident. It does not choose a barangay. Use the GPS camera on the form so the location is the place you are reporting.</p>
-            <a href="{{ route('public.report.create') }}">Open the form <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            <p class="rg-section-index"><span>{{ $home['qr']['eyebrow'] }}</span> <i></i> {{ $home['qr']['stage'] }}</p>
+            <h2 id="home-qr-title">{{ $home['qr']['title'] }}</h2>
+            <p>{{ $home['qr']['description'] }}</p>
+            <a href="{{ route('public.report.create') }}">{{ $home['qr']['link_label'] }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
         </div>
         <div class="rg-home-qr-actions">
-            <div id="home-report-qr" class="rg-home-qr-code" data-report-qr data-qr-url="{{ route('public.report.create') }}" aria-label="QR code for the public report form"></div>
-            <button type="button" class="rg-home-qr-download" data-report-qr-download="home-report-qr">Download QR image</button>
+            <div id="home-report-qr" class="rg-home-qr-code" data-report-qr data-qr-url="{{ route('public.report.create') }}" aria-label="{{ $home['qr']['code_alt'] }}"></div>
+            <button type="button" class="rg-home-qr-download" data-report-qr-download="home-report-qr">{{ $home['qr']['download_label'] }}</button>
         </div>
     </section>
 
     <section class="rg-report-journey" id="how-it-works" aria-labelledby="rg-how-title" data-rg-journey>
         <header class="rg-journey-heading">
-            <p class="rg-section-index"><span>FIELD GUIDE</span> <i></i> 01 — 04</p>
-            <h2 id="rg-how-title">A report becomes<br><em>a response.</em></h2>
-            <p>Follow the path from first observation to a clear update from MDRRMO Pamplona.</p>
+            <p class="rg-section-index"><span>{{ $home['journey']['eyebrow'] }}</span> <i></i> {{ $home['journey']['sequence'] }}</p>
+            <h2 id="rg-how-title">{{ $home['journey']['title_lead'] }}<br><em>{{ $home['journey']['title_emphasis'] }}</em></h2>
+            <p>{{ $home['journey']['description'] }}</p>
         </header>
         <div class="rg-journey-layout">
             <div class="rg-journey-visual">
-                <div class="rg-journey-visual-top"><span><i></i> REPORT PATH</span><span id="rg-journey-counter">01 / 04</span></div>
+                <div class="rg-journey-visual-top"><span><i></i> {{ $home['journey']['visual_label'] }}</span><span id="rg-journey-counter">01 / 04</span></div>
                 <div class="rg-journey-map" aria-hidden="true">
                     <span class="rg-map-contour contour-one"></span><span class="rg-map-contour contour-two"></span>
                     <span class="rg-map-road road-one"></span><span class="rg-map-road road-two"></span><span class="rg-map-route"></span>
                     <span class="rg-map-point point-one"></span><span class="rg-map-point point-two"></span><span class="rg-map-point point-three"></span>
-                    <span class="rg-map-axis axis-x">121° 28′ E</span><span class="rg-map-axis axis-y">17° 27′ N</span>
+                    <span class="rg-map-axis axis-x">{{ $home['hero']['longitude'] }}</span><span class="rg-map-axis axis-y">{{ $home['hero']['latitude'] }}</span>
                 </div>
                 <div class="rg-journey-mascot">
-                    <img id="rg-journey-jo" src="/images/guide/jo-greeting.png?v=1" alt="JO, RANIAG's reporting guide" width="190" height="253">
-                    <div class="rg-journey-jo-note"><span>JO · YOUR GUIDE</span><strong id="rg-journey-jo-line">Every clear report helps the team know where to begin.</strong></div>
+                    <img id="rg-journey-jo" src="{{ $journeyImages[0] }}" alt="{{ $home['journey']['guide_alt'] }}" width="190" height="253">
+                    <div class="rg-journey-jo-note"><span>{{ $home['journey']['guide_label'] }}</span><strong id="rg-journey-jo-line">{{ $home['journey']['steps'][0]['visual_note'] }}</strong></div>
                 </div>
-                <div class="rg-journey-visual-foot"><span id="rg-journey-status">01 — INTAKE</span><span class="rg-signal-bars"><i></i><i></i><i></i><i></i><i></i></span></div>
+                <div class="rg-journey-visual-foot"><span id="rg-journey-status">{{ $home['journey']['steps'][0]['visual_status'] }}</span><span class="rg-signal-bars"><i></i><i></i><i></i><i></i><i></i></span></div>
             </div>
             <div class="rg-journey-steps">
-                <article class="rg-journey-step is-active" data-journey-step="0" data-jo="/images/guide/jo-greeting.png?v=1" data-status="01 — INTAKE" data-line="Every clear report helps the team know where to begin.">
-                    <span class="rg-journey-step-no">01</span>
-                    <div><p>FIRST, TELL US</p><h3>Send what you know.</h3><span>Choose the incident type and pin the location. A photo or a few details can help responders prepare.</span><a href="{{ route('public.report.create') }}">Start a report <i class="bi bi-arrow-up-right"></i></a></div>
-                </article>
-                <article class="rg-journey-step" data-journey-step="1" data-jo="/images/guide/jo-camera.png?v=1" data-status="02 — REFERENCE" data-line="Keep your reference number somewhere safe. It opens your case updates.">
-                    <span class="rg-journey-step-no">02</span>
-                    <div><p>THEN, KEEP YOUR NUMBER</p><h3>Your case gets a reference.</h3><span>After you send the report, save the tracking number. You can use it later without creating an account.</span><a href="{{ route('public.track') }}">Find a report <i class="bi bi-arrow-up-right"></i></a></div>
-                </article>
-                <article class="rg-journey-step" data-journey-step="2" data-jo="/images/guide/jo-map.png?v=1" data-status="03 — COORDINATION" data-line="The right location helps MDRRMO coordinate a response in the right area.">
-                    <span class="rg-journey-step-no">03</span>
-                    <div><p>THE TEAM COORDINATES</p><h3>MDRRMO reviews and routes it.</h3><span>The local response team reviews incoming reports and coordinates with responders for the affected area.</span><a href="{{ route('public.hazard.map') }}">Open the live map <i class="bi bi-arrow-up-right"></i></a></div>
-                </article>
-                <article class="rg-journey-step" data-journey-step="3" data-jo="/images/guide/jo-clipboard.png?v=1" data-status="04 — FOLLOW-THROUGH" data-line="Check your case page for the latest status and messages from the team.">
-                    <span class="rg-journey-step-no">04</span>
-                    <div><p>FINALLY, FOLLOW THROUGH</p><h3>See what happens next.</h3><span>Open your case page to check its status and read any updates or requests from the response team.</span><a href="{{ route('public.track') }}">Track your report <i class="bi bi-arrow-up-right"></i></a></div>
-                </article>
+                @foreach ($home['journey']['steps'] as $index => $step)
+                    <article class="rg-journey-step{{ $loop->first ? ' is-active' : '' }}" data-journey-step="{{ $index }}" data-jo="{{ $journeyImages[$index] }}" data-status="{{ $step['visual_status'] }}" data-line="{{ $step['visual_note'] }}">
+                        <span class="rg-journey-step-no">{{ str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) }}</span>
+                        <div>
+                            <p>{{ $step['eyebrow'] }}</p>
+                            <h3>{{ $step['title'] }}</h3>
+                            <span>{{ $step['description'] }}</span>
+                            <a href="{{ $journeyRoutes[$index] }}">{{ $step['link_label'] }} <i class="bi bi-arrow-up-right"></i></a>
+                        </div>
+                    </article>
+                @endforeach
             </div>
         </div>
-        <button type="button" class="rg-journey-tour" id="jo-start-tour-home"><i class="bi bi-compass" aria-hidden="true"></i> Take a quick site tour <span>JO can show you around</span></button>
+        <button type="button" class="rg-journey-tour" id="jo-start-tour-home"><i class="bi bi-compass" aria-hidden="true"></i> {{ $home['journey']['tour_label'] }} <span>{{ $home['journey']['tour_hint'] }}</span></button>
     </section>
 
     <section class="rg-home-briefing" aria-labelledby="rg-briefing-title">
         <header class="rg-home-briefing-head" data-rg-reveal>
-            <p class="rg-section-index"><span>PUBLIC INFORMATION</span><i></i> 02 — 02</p>
-            <h2 id="rg-briefing-title">Stay ready between<br><em>reports.</em></h2>
-            <p>Local updates, practical answers, and direct help from the Pamplona response desk.</p>
+            <p class="rg-section-index"><span>{{ $home['briefing']['eyebrow'] }}</span><i></i> {{ $home['briefing']['sequence'] }}</p>
+            <h2 id="rg-briefing-title">{{ $home['briefing']['title_lead'] }}<br><em>{{ $home['briefing']['title_emphasis'] }}</em></h2>
+            <p>{{ $home['briefing']['description'] }}</p>
         </header>
         <div class="rg-home-briefing-grid">
             <div class="rg-home-briefing-main">
                 <section class="rg-home-updates" id="updates" aria-labelledby="rg-updates-title" data-rg-reveal>
                     <div class="rg-home-module-head">
                         <div>
-                            <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>UPDATES</span>
-                            <h2 id="rg-updates-title">{{ __('Updates and announcements') }}</h2>
+                            <span class="rg-announce-badge"><i class="bi bi-megaphone-fill me-1"></i>{{ $home['briefing']['announcements']['badge'] }}</span>
+                            <h2 id="rg-updates-title">{{ $home['briefing']['announcements']['title'] }}</h2>
                         </div>
-                        <span class="rg-home-live-tag"><i></i> LOCAL DESK</span>
+                        <span class="rg-home-live-tag"><i></i> {{ $home['briefing']['announcements']['local_desk'] }}</span>
                     </div>
                     <div data-live-refresh data-live-refresh-target="#rg-public-announcements" data-live-refresh-interval="4000">
                         <div id="rg-public-announcements">
@@ -137,7 +147,7 @@
                         @else
                             <div class="rg-home-empty-update">
                                 <span class="bi bi-broadcast-pin" aria-hidden="true"></span>
-                                <div><strong>No new advisories</strong><p>Check back here for updates from {{ config('raniag.organization') }}.</p></div>
+                                <div><strong>{{ $home['briefing']['announcements']['empty_title'] }}</strong><p>{{ $home['briefing']['announcements']['empty_description'] }}</p></div>
                             </div>
                         @endif
                         </div>
@@ -147,91 +157,59 @@
                 <section class="rg-home-faq" id="faq" aria-labelledby="rg-faq-title" data-rg-reveal>
                     <div class="rg-home-module-head">
                         <div>
-                            <span class="rg-announce-badge"><i class="bi bi-question-circle me-1"></i>FIELD NOTES</span>
-                            <h2 id="rg-faq-title">{{ __('Frequently Asked Questions') }}</h2>
+                            <span class="rg-announce-badge"><i class="bi bi-question-circle me-1"></i>{{ $home['briefing']['faq']['badge'] }}</span>
+                            <h2 id="rg-faq-title">{{ $home['briefing']['faq']['title'] }}</h2>
                         </div>
-                        <a href="{{ route('public.support') }}">Ask the support team <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+                        <a href="{{ route('public.support') }}">{{ $home['briefing']['faq']['support_link'] }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
                     </div>
                     <div class="accordion rg-faq-accordion" id="rgFaqAccordion">
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq1">
-                                    Is my report really anonymous if I choose to be?
-                                </button>
-                            </h3>
-                            <div id="rgFaq1" class="accordion-collapse collapse show" data-bs-parent="#rgFaqAccordion">
-                                <div class="accordion-body">Yes, when you attach a GPS photo, video, or file. With that evidence you can turn on Report anonymously and leave your name blank. Without a photo, a phone number or email is required so the team can verify the report. Only you hold the tracking number.</div>
+                        @foreach ($home['faqs'] as $index => $faq)
+                            @php($faqId = 'rgFaq' . ($index + 1))
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button{{ $loop->first ? '' : ' collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $faqId }}" aria-controls="{{ $faqId }}" aria-expanded="{{ $loop->first ? 'true' : 'false' }}">
+                                        {{ $faq['question'] }}
+                                    </button>
+                                </h3>
+                                <div id="{{ $faqId }}" class="accordion-collapse collapse{{ $loop->first ? ' show' : '' }}" data-bs-parent="#rgFaqAccordion">
+                                    <div class="accordion-body">
+                                        {{ $faq['answer'] }}
+                                        @if (! empty($faq['link_label']))
+                                            <a href="{{ route('public.dashboard') }}">{{ $faq['link_label'] }}</a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq2">
-                                    How fast will {{ config('raniag.organization') }} respond?
-                                </button>
-                            </h3>
-                            <div id="rgFaq2" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
-                                <div class="accordion-body">Response time depends on the incident's priority and current caseload, but every report is reviewed and assigned to a responder — you'll see the status change on your tracking page as it moves.</div>
-                            </div>
-                        </div>
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq3">
-                                    Do I need to install the app to file a report?
-                                </button>
-                            </h3>
-                            <div id="rgFaq3" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
-                                <div class="accordion-body">No — the website works on any browser. Installing the app just makes reporting faster and lets you keep using it with limited functionality when you're offline.</div>
-                            </div>
-                        </div>
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq4">
-                                    What happens if my location is outside Pamplona?
-                                </button>
-                            </h3>
-                            <div id="rgFaq4" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
-                                <div class="accordion-body">Your report is flagged as outside MDRRMO Pamplona's area of responsibility and referred onward — it won't just sit unprocessed. Your tracking page will show this status clearly.</div>
-                            </div>
-                        </div>
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rgFaq5">
-                                    Where can I see community-wide incident trends?
-                                </button>
-                            </h3>
-                            <div id="rgFaq5" class="accordion-collapse collapse" data-bs-parent="#rgFaqAccordion">
-                                <div class="accordion-body">The <a href="{{ route('public.dashboard') }}">Community Dashboard</a> shows aggregated, anonymized counts by month, barangay, and incident type — never individual reports or reporter details.</div>
-                            </div>
-                        </div>
+                        @endforeach
                     </div>
                 </section>
             </div>
 
-            <aside class="rg-home-aside" id="help" aria-label="Install the app or contact support">
+            <aside class="rg-home-aside" id="help" aria-label="{{ $home['app']['aside_label'] }}">
                 <article class="rg-download-cta">
                     <div class="rg-app-stage" aria-hidden="true">
                         <div class="rg-app-orbit"><span></span><i></i><b></b></div>
                         <img class="rg-app-mark" src="{{ $siteBranding['logo_url'] }}" alt="" width="48" height="48">
                     </div>
-                    <div class="rg-app-label"><img src="{{ $siteBranding['logo_url'] }}" alt="" width="18" height="18"><i></i> {{ strtoupper($siteBranding['system_name']) }} FIELD TOOL</div>
-                    <img src="/images/guide/jo-phone.png?v=1" alt="JO holding a phone with the location ready" width="180" height="240" loading="lazy">
+                    <div class="rg-app-label"><img src="{{ $siteBranding['logo_url'] }}" alt="" width="18" height="18"><i></i> {{ strtoupper($siteBranding['system_name']) }} {{ $home['app']['field_tool_label'] }}</div>
+                    <img src="/images/guide/jo-phone.png?v=1" alt="{{ $home['app']['illustration_alt'] }}" width="180" height="240" loading="lazy">
                     <div class="rg-app-copy">
-                        <span class="rg-app-index">APP / 01</span>
-                        <h2>{{ $siteBranding['system_name'] }}, ready when you are.</h2>
-                        <p>{{ __('Install it for faster reporting and offline access.') }}</p>
+                        <span class="rg-app-index">{{ $home['app']['index'] }}</span>
+                        <h2>{{ $home['app']['title'] }}</h2>
+                        <p>{{ $home['app']['description'] }}</p>
                         <button type="button" id="rgInstallBtn" class="rg-install-button" aria-describedby="rg-install-feedback">
-                            <i class="bi bi-download" aria-hidden="true"></i>{{ __('Download App') }}<span class="bi bi-arrow-up-right" aria-hidden="true"></span>
+                            <i class="bi bi-download" aria-hidden="true"></i>{{ $home['app']['download_button'] }}<span class="bi bi-arrow-up-right" aria-hidden="true"></span>
                         </button>
                         <p class="rg-install-feedback" id="rg-install-feedback" role="status" aria-live="polite"></p>
                     </div>
                 </article>
                 <article class="rg-home-support-card">
                     <div class="rg-support-orbit" aria-hidden="true"><img src="{{ $siteBranding['logo_url'] }}" alt="" width="26" height="26"></div>
-                    <span class="rg-app-index">HUMAN SUPPORT / 02</span>
-                    <h2>{{ __('Need help or have a concern?') }}</h2>
-                    <p>A problem with the site, a suggestion, or a response concern goes straight to the team.</p>
+                    <span class="rg-app-index">{{ $home['support']['index'] }}</span>
+                    <h2>{{ $home['support']['title'] }}</h2>
+                    <p>{{ $home['support']['description'] }}</p>
                     <a href="{{ route('public.support') }}" data-rg-tour="support" class="rg-home-support-button">
-                        <i class="bi bi-chat-square-dots" aria-hidden="true"></i>{{ __('Go to Support Center') }}<i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                        <i class="bi bi-chat-square-dots" aria-hidden="true"></i>{{ $home['support']['button'] }}<i class="bi bi-arrow-up-right" aria-hidden="true"></i>
                     </a>
                 </article>
             </aside>
@@ -480,6 +458,12 @@ html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; backgrou
 <script src="{{ asset('js/report-qr.js') }}?v={{ @filemtime(public_path('js/report-qr.js')) }}"></script>
 <script>
     // PWA install prompt for the "Download App" button.
+    const rgInstallMessages = {
+        accepted: @js($home['app']['install_success']),
+        cancelled: @js($home['app']['install_cancelled']),
+        installed: @js($home['app']['already_installed']),
+        instructions: @js($home['app']['install_instructions']),
+    };
     let rgDeferredPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
@@ -493,14 +477,14 @@ html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; backgrou
             rgDeferredPrompt = null;
             if (feedback) {
                 feedback.textContent = choice.outcome === 'accepted'
-                    ? 'RANIAG is being added to your device.'
-                    : 'Install cancelled. You can continue using the website in your browser.';
+                    ? rgInstallMessages.accepted
+                    : rgInstallMessages.cancelled;
             }
         } else {
             if (feedback) {
                 feedback.textContent = window.matchMedia('(display-mode: standalone)').matches
-                    ? 'RANIAG is already running as an installed app.'
-                    : 'Open your browser menu and choose “Install app” or “Add to Home Screen”.';
+                    ? rgInstallMessages.installed
+                    : rgInstallMessages.instructions;
             }
         }
     });
