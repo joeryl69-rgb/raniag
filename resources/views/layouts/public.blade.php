@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-system-name="{{ $siteBranding['system_name'] }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="description" content="{{ config('raniag.name') }} — Incident reporting for {{ config('raniag.organization') }}">
-    <meta name="theme-color" content="#0b1726">
+    <meta name="description" content="{{ $siteBranding['system_name'] }} — Incident reporting for {{ $siteBranding['organization_name'] }}">
+    <meta name="theme-color" content="{{ $siteBranding['primary_color'] }}">
 
-    <title>@yield('title', config('raniag.name')) — {{ config('raniag.organization') }}</title>
+    <title>@yield('title', $siteBranding['system_name']) — {{ $siteBranding['organization_name'] }}</title>
 
     {{-- Social preview --}}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="@yield('title', config('raniag.name')) — {{ config('raniag.organization') }}">
+    <meta property="og:title" content="@yield('title', $siteBranding['system_name']) — {{ $siteBranding['organization_name'] }}">
     <meta property="og:description" content="Report incidents fast, track them transparently.">
     <meta name="twitter:card" content="summary_large_image">
 
@@ -20,9 +20,9 @@
     <link rel="manifest" href="/manifest.json?v=8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg?v=8">
+    <link rel="icon" href="{{ $siteBranding['logo_url'] }}">
     <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192.png?v=8">
+    <link rel="apple-touch-icon" href="{{ $siteBranding['logo_url'] }}">
     <script src="{{ asset('js/public-theme.js') }}?v={{ @filemtime(public_path('js/public-theme.js')) }}"></script>
     <script src="{{ asset('js/map-scroll.js') }}?v={{ @filemtime(public_path('js/map-scroll.js')) }}"></script>
     <meta name="vapid-public-key" content="{{ config('services.webpush.public_key') }}">
@@ -1196,6 +1196,28 @@
             .rg-theme-toggle--mobile [data-rg-theme-label] { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap; }
         }
     </style>
+    <style>
+        html:not([data-public-theme="dark"]) {
+            --rg-brand: {{ $siteBranding['primary_color'] }};
+            --rg-brand-soft: {{ $siteBranding['accent_color'] }};
+            --rg-surface: {{ $siteBranding['page_background_color'] }};
+            --raniag-primary: {{ $siteBranding['primary_color'] }};
+            --raniag-accent: {{ $siteBranding['accent_color'] }};
+            --raniag-surface: {{ $siteBranding['page_background_color'] }};
+            --bs-primary: {{ $siteBranding['primary_color'] }};
+            --bs-primary-rgb: {{ $siteBranding['primary_color_rgb'] }};
+            --bs-link-color: {{ $siteBranding['primary_color'] }};
+        }
+        html[data-public-theme="dark"] {
+            --rg-brand: {{ $siteBranding['primary_color'] }};
+            --rg-brand-soft: {{ $siteBranding['accent_color'] }};
+            --raniag-primary: {{ $siteBranding['primary_color'] }};
+            --raniag-accent: {{ $siteBranding['accent_color'] }};
+            --bs-primary: {{ $siteBranding['primary_color'] }};
+            --bs-primary-rgb: {{ $siteBranding['primary_color_rgb'] }};
+            --bs-link-color: {{ $siteBranding['accent_color'] }};
+        }
+    </style>
 </head>
 <body class="raniag-public d-flex flex-column min-vh-100" @php
     $joPage = match (true) {
@@ -1215,8 +1237,8 @@
     {{-- ================= top strip ================= --}}
     <div class="rg-strip py-2 d-none d-md-block">
         <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span><span class="rg-dot"></span>RANIAG <span class="rg-strip-separator">/</span> PUBLIC REPORTING</span>
-            <span class="rg-strip-location"><i class="bi bi-geo-alt me-1"></i>Pamplona, Cagayan</span>
+            <span><span class="rg-dot"></span>{{ $siteBranding['system_name'] }} <span class="rg-strip-separator">/</span> PUBLIC REPORTING</span>
+            <span class="rg-strip-location"><i class="bi bi-geo-alt me-1"></i>{{ $siteBranding['location_label'] }}@if ($siteBranding['show_header_text'] && $siteBranding['header_text'])<span class="ms-2">{{ $siteBranding['header_text'] }}</span>@endif</span>
         </div>
     </div>
 
@@ -1224,10 +1246,10 @@
     <nav class="navbar navbar-expand-xl navbar-dark raniag-navbar" id="rg-nav">
         <div class="container">
             <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ route('public.home') }}">
-                <span class="raniag-brand-icon"><img src="/images/icons/raniag-master.svg" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
+                <span class="raniag-brand-icon"><img src="{{ $siteBranding['logo_url'] }}" alt="{{ $siteBranding['system_name'] }}" class="w-100 h-100" style="object-fit:contain;"></span>
                 <span class="d-flex flex-column lh-1">
-                    {{ config('raniag.name') }}
-                    <span class="raniag-brand-sub">{{ config('raniag.organization') }}</span>
+                    {{ $siteBranding['system_name'] }}
+                    <span class="raniag-brand-sub">{{ $siteBranding['organization_name'] }}</span>
                 </span>
             </a>
 
@@ -1332,21 +1354,31 @@
         <div class="container">
             <div class="rg-footer-commandline">
                 <span class="rg-footer-mark"><i class="bi bi-broadcast-pin" aria-hidden="true"></i>Public information desk <span class="rg-dot" aria-hidden="true"></span>Community channel</span>
-                <span class="rg-footer-location"><i class="bi bi-geo-alt" aria-hidden="true"></i>Pamplona, Cagayan</span>
+                <span class="rg-footer-location"><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ $siteBranding['location_label'] }}</span>
             </div>
             <div class="row g-4">
                 <div class="col-lg-5">
                     <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="raniag-brand-icon"><img src="/images/icons/raniag-master.svg" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;"></span>
-                        <span class="text-white fw-semibold">{{ config('raniag.name') }}</span>
+                        <span class="raniag-brand-icon"><img src="{{ $siteBranding['logo_url'] }}" alt="{{ $siteBranding['system_name'] }}" class="w-100 h-100" style="object-fit:contain;"></span>
+                        <span class="text-white fw-semibold">{{ $siteBranding['system_name'] }}</span>
                     </div>
                     <p class="small mb-0" style="max-width: 34ch;">
-                        Incident Reporting and Analytics System for {{ config('raniag.organization') }}.
+                        Incident Reporting and Analytics System for {{ $siteBranding['organization_name'] }}.
                         Every report is logged, routed, and auditable.
                     </p>
+                    @if ($siteBranding['contact_address'] || $siteBranding['contact_phone'] || $siteBranding['contact_email'] || $siteBranding['contact_hotline'])
+                        <address class="small mt-3 mb-0 d-grid gap-1">
+                            @if ($siteBranding['contact_address'])<span><i class="bi bi-geo-alt me-1"></i>{{ $siteBranding['contact_address'] }}</span>@endif
+                            @if ($siteBranding['contact_phone'])<span><i class="bi bi-telephone me-1"></i><a href="tel:{{ $siteBranding['contact_phone'] }}">{{ $siteBranding['contact_phone'] }}</a></span>@endif
+                            @if ($siteBranding['contact_hotline'])<span><i class="bi bi-exclamation-circle me-1"></i>Hotline: <a href="tel:{{ $siteBranding['contact_hotline'] }}">{{ $siteBranding['contact_hotline'] }}</a></span>@endif
+                            @if ($siteBranding['contact_email'])<span><i class="bi bi-envelope me-1"></i><a href="mailto:{{ $siteBranding['contact_email'] }}">{{ $siteBranding['contact_email'] }}</a></span>@endif
+                        </address>
+                    @endif
                     <div class="rg-footer-caption">
                         <strong>PUBLIC REPORTING CHANNEL</strong>
-                        <span>Share a clear location and incident details so responders can review and route reports.</span>
+                        @if ($siteBranding['show_footer_text'])
+                            <span>{{ $siteBranding['footer_text'] ?: 'Share a clear location and incident details so responders can review and route reports.' }}</span>
+                        @endif
                     </div>
                 </div>
 
@@ -1376,8 +1408,8 @@
             <hr class="rg-foot-rule my-4">
 
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 small">
-                <span>&copy; {{ date('Y') }} {{ config('raniag.organization') }} — {{ config('raniag.name') }}</span>
-                <span class="text-white-50">Incident Reporting and Analytics System</span>
+                <span>&copy; {{ date('Y') }} {{ $siteBranding['organization_name'] }} — {{ $siteBranding['system_name'] }}</span>
+                <span class="text-white-50">{{ $siteBranding['response_area_label'] }}</span>
             </div>
         </div>
     </footer>

@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg?v=8">
+        <link rel="icon" href="{{ $siteBranding['logo_url'] }}">
         <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
 
         <title>{{ config('app.name', 'Laravel') }}</title>

@@ -1,4 +1,4 @@
-<x-auth-split eyebrow="RANIAG PORTAL" title="Two Factor Authentication" subtitle="We emailed a 6-digit code to your account. Enter it below to finish signing in.">
+<x-auth-split :eyebrow="strtoupper($siteBranding['system_name']).' PORTAL'" title="Two Factor Authentication" subtitle="We emailed a 6-digit code to your account. Enter it below to finish signing in.">
     @if (session('status'))
         <div class="auth-alert auth-alert--info"><i class="bi bi-info-circle-fill"></i><div>{{ session('status') }}</div></div>
     @endif

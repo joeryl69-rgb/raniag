@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\ThemePresets;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class SystemSetting extends Model
 {
@@ -18,6 +19,23 @@ class SystemSetting extends Model
         'municipality_boundary',
         'municipality_boundary_updated_by',
         'municipality_boundary_updated_at',
+        'system_name',
+        'organization_name',
+        'logo_path',
+        'primary_color',
+        'accent_color',
+        'page_background_color',
+        'header_text',
+        'footer_text',
+        'show_header_text',
+        'show_footer_text',
+        'contact_address',
+        'contact_phone',
+        'contact_email',
+        'contact_hotline',
+        'municipality_label',
+        'province_label',
+        'response_area_label',
     ];
 
     protected function casts(): array
@@ -27,6 +45,8 @@ class SystemSetting extends Model
             'follow_system' => 'boolean',
             'municipality_boundary' => 'array',
             'municipality_boundary_updated_at' => 'datetime',
+            'show_header_text' => 'boolean',
+            'show_footer_text' => 'boolean',
         ];
     }
 
@@ -41,10 +61,8 @@ class SystemSetting extends Model
     }
 
     /**
-     * Singleton accessor — the whole app shares one settings row (id=1)
-     * for appearance preferences and the editable municipal boundary.
-     * Cached for the request so layouts/app.blade.php can call this on
-     * every page without an extra query per view.
+     * Singleton accessor — global branding and the editable municipal
+     * boundary share one settings row. Personal appearance lives on User.
      */
     public static function current(): self
     {
@@ -57,5 +75,56 @@ class SystemSetting extends Model
                 'font_size' => ThemePresets::DEFAULT_FONT_SIZE,
             ]);
         });
+    }
+
+    /**
+     * The administrator-managed, instance-wide brand and public identity.
+     * Geographic labels are presentation values; they do not affect map
+     * geometry or jurisdiction checks.
+     *
+     * @return array<string, string|bool>
+     */
+    public function brandingValues(): array
+    {
+        $systemName = $this->system_name ?: config('raniag.name', 'RANIAG');
+        $organization = $this->organization_name ?: config('raniag.organization', 'MDRRMO Pamplona');
+        $municipality = $this->municipality_label ?: config('raniag.address.municipality', 'Pamplona');
+        $province = $this->province_label ?: config('raniag.address.province', 'Cagayan');
+        $primaryColor = $this->primary_color ?: '#086b78';
+        if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $primaryColor)) {
+            $primaryColor = '#086b78';
+        }
+        $accentColor = $this->accent_color ?: '#29aa96';
+        if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $accentColor)) {
+            $accentColor = '#29aa96';
+        }
+        $pageBackgroundColor = $this->page_background_color ?: '#eaf0f2';
+        if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $pageBackgroundColor)) {
+            $pageBackgroundColor = '#eaf0f2';
+        }
+
+        return [
+            'system_name' => $systemName,
+            'organization_name' => $organization,
+            'logo_url' => $this->logo_path
+                ? Storage::disk('public')->url($this->logo_path)
+                : asset('/images/icons/raniag-master.svg'),
+            'primary_color' => $primaryColor,
+            'primary_color_rgb' => implode(', ', array_map('hexdec', str_split(substr($primaryColor, 1), 2))),
+            'accent_color' => $accentColor,
+            'page_background_color' => $pageBackgroundColor,
+            'header_text' => $this->header_text ?? '',
+            'footer_text' => $this->footer_text ?? '',
+            'show_header_text' => (bool) ($this->show_header_text ?? true),
+            'show_footer_text' => (bool) ($this->show_footer_text ?? true),
+            'contact_address' => $this->contact_address ?? '',
+            'contact_phone' => $this->contact_phone ?? '',
+            'contact_email' => $this->contact_email ?? '',
+            'contact_hotline' => $this->contact_hotline ?? '',
+            'municipality_label' => $municipality,
+            'province_label' => $province,
+            'response_area_label' => $this->response_area_label ?: 'Cagayan Valley',
+            'location_label' => implode(', ', array_filter([$municipality, $province])),
+        ];
     }
 }

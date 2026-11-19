@@ -1820,7 +1820,7 @@
         const pad = Math.max(8, Math.round(14 * scale));
         const gap = Math.max(3, Math.round(5 * scale));
         const maxThumb = Math.min(Math.round(180 * scale), Math.round(width * 0.22));
-        const title = 'RANIAG GPS CAMERA';
+        const title = `${document.documentElement.dataset.systemName || 'RANIAG'} GPS CAMERA`;
 
         function wrapText(text, maxWidth) {
             const wrapped = [];

@@ -18,12 +18,16 @@ use App\Http\Controllers\Admin\PrintableReportRequestController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReportRecordController;
 use App\Http\Controllers\Admin\ResolutionController;
+use App\Http\Controllers\Admin\SystemBrandingController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'verified', 'active', 'role:administrator', 'no-cache'])
     ->group(function () {
+        Route::get('/branding', [SystemBrandingController::class, 'index'])->name('branding.index');
+        Route::put('/branding', [SystemBrandingController::class, 'update'])->name('branding.update');
+
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');
         Route::get('/dashboard/alerts.json', \App\Http\Controllers\Shared\DashboardAlertFeedController::class)->name('dashboard.alerts');

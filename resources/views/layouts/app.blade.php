@@ -11,7 +11,7 @@
     ]);
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagAppearance->dark_mode && ! $__raniagAppearance->follow_system ? 'dark' : 'light' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $__raniagAppearance->dark_mode && ! $__raniagAppearance->follow_system ? 'dark' : 'light' }}" data-system-name="{{ $siteBranding['system_name'] }}">
 <head>
     <script>
         @if ($__raniagAppearance->follow_system)
@@ -45,7 +45,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="vapid-public-key" content="{{ config('services.webpush.public_key') }}">
 
-    <title>@yield('title', 'Staff Portal') — RANIAG · MDRRMO Pamplona</title>
+    <title>@yield('title', 'Staff Portal') — {{ $siteBranding['system_name'] }} · {{ $siteBranding['organization_name'] }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
     <link rel="preload" href="{{ asset('vendor/bootstrap-icons/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
@@ -57,12 +57,12 @@
     <link href="{{ asset('css/workspace.css') }}?v={{ @filemtime(public_path('css/workspace.css')) }}" rel="stylesheet">
     <link href="{{ asset('css/raniag-loader.css') }}?v={{ @filemtime(public_path('css/raniag-loader.css')) }}" rel="stylesheet">
     <link rel="manifest" href="/manifest.json?v=8">
-    <meta name="theme-color" content="#0e4a6b">
+    <meta name="theme-color" content="{{ $siteBranding['primary_color'] }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/svg+xml" href="/images/icons/raniag-master.svg?v=8">
+    <link rel="icon" href="{{ $siteBranding['logo_url'] }}">
     <link rel="alternate icon" type="image/png" href="/favicon.png?v=8">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192.png?v=8">
+    <link rel="apple-touch-icon" href="{{ $siteBranding['logo_url'] }}">
     @stack('styles')
 
     {{-- Per-user theme (System Settings) — overrides the --raniag-*
@@ -70,6 +70,19 @@
          tokens (109 usages across public/admin/agency/personnel layouts)
          recolors together, no per-page exceptions. --}}
     <style>{!! \App\Support\ThemePresets::cssVariables($__raniagAppearance->theme_key, $__raniagAppearance->dark_mode && ! $__raniagAppearance->follow_system, $__raniagAppearance->font_key, $__raniagAppearance->font_size, $__raniagAppearance->follow_system) !!}</style>
+    <style>
+        :root {
+            --raniag-primary: {{ $siteBranding['primary_color'] }};
+            --raniag-accent: {{ $siteBranding['accent_color'] }};
+            --bs-primary: {{ $siteBranding['primary_color'] }};
+            --bs-primary-rgb: {{ $siteBranding['primary_color_rgb'] }};
+            --bs-link-color: {{ $siteBranding['primary_color'] }};
+        }
+        html[data-theme="light"] {
+            --raniag-surface: {{ $siteBranding['page_background_color'] }};
+            --bs-body-bg: {{ $siteBranding['page_background_color'] }};
+        }
+    </style>
 
     <style>
         html {
@@ -443,11 +456,11 @@
             <div class="sidebar-brand">
                 <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2 fs-5" href="{{ route('dashboard') }}">
                     <span class="rg-brand-mark bg-primary text-white d-inline-flex align-items-center justify-content-center rounded overflow-hidden flex-shrink-0" style="width: 2rem; height: 2rem;">
-                        <img src="/images/icons/raniag-master.svg" alt="RANIAG" class="w-100 h-100" style="object-fit:contain;">
+                        <img src="{{ $siteBranding['logo_url'] }}" alt="{{ $siteBranding['system_name'] }}" class="w-100 h-100" style="object-fit:contain;">
                     </span>
                     <span class="d-flex flex-column lh-sm">
-                        <span>RANIAG</span>
-                        <span class="fw-normal text-white-50" style="font-size: 0.62rem; letter-spacing: 0.04em;">MDRRMO PAMPLONA</span>
+                        <span>{{ $siteBranding['system_name'] }}</span>
+                        <span class="fw-normal text-white-50" style="font-size: 0.62rem; letter-spacing: 0.04em;">{{ $siteBranding['organization_name'] }}</span>
                     </span>
                 </a>
             </div>

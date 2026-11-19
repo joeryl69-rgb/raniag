@@ -63,7 +63,7 @@
                                 <span class="gps-watermark-map-pin" id="gps-watermark-map-pin"></span>
                             </div>
                             <div class="gps-watermark-text">
-                                <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                                <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>{{ strtoupper($siteBranding['system_name']) }} GPS CAMERA</div>
                                 <div class="gps-watermark-line" id="gps-camera-coords">Waiting for GPS signal…</div>
                                 <div class="gps-watermark-line" id="gps-camera-place">Waiting for GPS…</div>
                                 <div class="gps-watermark-line" id="gps-camera-time">—</div>
@@ -82,7 +82,7 @@
                                     <span class="gps-watermark-map-pin is-visible"></span>
                                 </div>
                                 <div class="gps-watermark-text">
-                                    <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                                    <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>{{ strtoupper($siteBranding['system_name']) }} GPS CAMERA</div>
                                     <div class="gps-watermark-line" id="gps-review-coords">—</div>
                                     <div class="gps-watermark-line" id="gps-review-place">—</div>
                                     <div class="gps-watermark-line" id="gps-review-time">—</div>
@@ -154,7 +154,7 @@
                             <span class="gps-watermark-map-pin is-visible"></span>
                         </div>
                         <div class="gps-watermark-text">
-                            <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>RANIAG GPS CAMERA</div>
+                            <div class="gps-watermark-title"><i class="bi bi-broadcast me-1"></i>{{ strtoupper($siteBranding['system_name']) }} GPS CAMERA</div>
                             <div class="gps-watermark-line" id="gps-lightbox-coords">—</div>
                             <div class="gps-watermark-line" id="gps-lightbox-place">—</div>
                             <div class="gps-watermark-line" id="gps-lightbox-time">—</div>

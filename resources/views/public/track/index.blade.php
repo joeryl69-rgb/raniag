@@ -9,7 +9,7 @@
             <div class="rg-case-radar" aria-hidden="true">
                 <span class="rg-case-sweep"></span>
                 <span class="rg-case-blip"></span>
-                <img src="/images/icons/raniag-master.svg" alt="" width="28" height="28">
+                <img src="{{ $siteBranding['logo_url'] }}" alt="" width="28" height="28">
             </div>
             <p class="rg-case-kicker"><span></span>{{ config('raniag.organization') }} · CASE DESK</p>
             <h1 id="rg-track-title">Your report.<br><em>In clear view.</em></h1>
@@ -17,7 +17,7 @@
             <div class="rg-case-map-art" aria-hidden="true">
                 <span class="rg-case-map-grid"></span><i class="rg-case-route"></i><i class="rg-case-locator"></i>
                 <img src="/images/guide/jo-map.png?v=1" alt="" width="220" height="294">
-                <span class="rg-case-coordinates">17° 27′ N <i></i> 121° 28′ E<br><b>PAMPLONA / CAGAYAN</b></span>
+                <span class="rg-case-coordinates">17° 27′ N <i></i> 121° 28′ E<br><b>{{ strtoupper($siteBranding['municipality_label']) }} / {{ strtoupper($siteBranding['province_label']) }}</b></span>
             </div>
             <div class="rg-case-status-label"><i></i> REPORT STATUS · LIVE LOOKUP</div>
             <ol class="rg-case-path" aria-label="How a report moves after it is filed">

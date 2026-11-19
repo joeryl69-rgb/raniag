@@ -24,7 +24,7 @@
             <span>17° 27′ N</span><i></i><span>121° 28′ E</span><b>PAMPLONA · CAGAYAN</b>
         </div>
         <div class="rg-home-orbit" aria-hidden="true">
-            <img src="/images/icons/raniag-master.svg" alt="" width="54" height="54">
+            <img src="{{ $siteBranding['logo_url'] }}" alt="" width="54" height="54">
             <span></span><i></i><b></b>
         </div>
     </section>
@@ -211,13 +211,13 @@
                 <article class="rg-download-cta">
                     <div class="rg-app-stage" aria-hidden="true">
                         <div class="rg-app-orbit"><span></span><i></i><b></b></div>
-                        <img class="rg-app-mark" src="/images/icons/raniag-master.svg" alt="" width="48" height="48">
+                        <img class="rg-app-mark" src="{{ $siteBranding['logo_url'] }}" alt="" width="48" height="48">
                     </div>
-                    <div class="rg-app-label"><img src="/images/icons/raniag-master.svg" alt="" width="18" height="18"><i></i> RANIAG FIELD TOOL</div>
+                    <div class="rg-app-label"><img src="{{ $siteBranding['logo_url'] }}" alt="" width="18" height="18"><i></i> {{ strtoupper($siteBranding['system_name']) }} FIELD TOOL</div>
                     <img src="/images/guide/jo-phone.png?v=1" alt="JO holding a phone with the location ready" width="180" height="240" loading="lazy">
                     <div class="rg-app-copy">
                         <span class="rg-app-index">APP / 01</span>
-                        <h2>{{ __('RANIAG, ready when you are.') }}</h2>
+                        <h2>{{ $siteBranding['system_name'] }}, ready when you are.</h2>
                         <p>{{ __('Install it for faster reporting and offline access.') }}</p>
                         <button type="button" id="rgInstallBtn" class="rg-install-button" aria-describedby="rg-install-feedback">
                             <i class="bi bi-download" aria-hidden="true"></i>{{ __('Download App') }}<span class="bi bi-arrow-up-right" aria-hidden="true"></span>
@@ -226,7 +226,7 @@
                     </div>
                 </article>
                 <article class="rg-home-support-card">
-                    <div class="rg-support-orbit" aria-hidden="true"><img src="/images/icons/raniag-master.svg" alt="" width="26" height="26"></div>
+                    <div class="rg-support-orbit" aria-hidden="true"><img src="{{ $siteBranding['logo_url'] }}" alt="" width="26" height="26"></div>
                     <span class="rg-app-index">HUMAN SUPPORT / 02</span>
                     <h2>{{ __('Need help or have a concern?') }}</h2>
                     <p>A problem with the site, a suggestion, or a response concern goes straight to the team.</p>

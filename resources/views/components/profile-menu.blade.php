@@ -54,6 +54,13 @@
                 <span class="profile-item-icon"><i class="bi bi-gear-fill"></i></span>
                 <span>System Settings</span>
             </a>
+
+            @if (auth()->user()->isAdministrator())
+                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.branding.index') }}">
+                    <span class="profile-item-icon"><i class="bi bi-palette2"></i></span>
+                    <span>Branding &amp; System Settings</span>
+                </a>
+            @endif
         </div>
 
         <div class="border-top py-2">

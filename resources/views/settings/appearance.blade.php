@@ -7,7 +7,7 @@
         <header class="settings-hero">
             <div>
                 <span class="settings-eyebrow"><i class="bi bi-sliders2 me-2"></i>PERSONAL PREFERENCES</span>
-                <h1>Make RANIAG<br><em>work your way.</em></h1>
+                <h1>Make {{ $siteBranding['system_name'] }}<br><em>work your way.</em></h1>
                 <p>Set your display, colors, and notification preferences. These choices apply only to your account.</p>
             </div>
             <div class="settings-hero-meta">

@@ -341,7 +341,7 @@ class EvidenceService
             $timeText = $this->formatWatermarkTimestamp($timestamp);
 
             $this->compositeWatermarkLayer($image, $width, $height, [
-                ['text' => 'RANIAG GPS CAMERA', 'accent' => true],
+                ['text' => strtoupper(config('raniag.name', 'RANIAG')).' GPS CAMERA', 'accent' => true],
                 ['text' => $coordsText, 'accent' => false],
                 ['text' => $locationText, 'accent' => false],
                 ['text' => $timeText, 'accent' => false],

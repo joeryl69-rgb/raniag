@@ -1,4 +1,4 @@
-<x-auth-split eyebrow="RANIAG PORTAL" :title="'Sign in to your account'" :subtitle="config('raniag.two_factor.enabled') ? 'Welcome back. Sign in with your staff credentials, then verify with the code sent to your registered email.' : 'Welcome back. Sign in with your staff credentials to access the incident reporting dashboard.'">
+<x-auth-split :eyebrow="strtoupper($siteBranding['system_name']).' PORTAL'" :title="'Sign in to your account'" :subtitle="config('raniag.two_factor.enabled') ? 'Welcome back. Sign in with your staff credentials, then verify with the code sent to your registered email.' : 'Welcome back. Sign in with your staff credentials to access the incident reporting dashboard.'">
     @if (session('status'))
         <div class="auth-alert auth-alert--info"><i class="bi bi-info-circle-fill"></i><div>{{ session('status') }}</div></div>
     @endif

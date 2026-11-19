@@ -29,7 +29,8 @@
                     </button>
                     <button type="button" class="btn btn-outline-secondary" id="download-tracking"
                             data-tracking="{{ $trackingNumber }}"
-                            data-org="{{ config('raniag.organization') }}">
+                            data-org="{{ config('raniag.organization') }}"
+                            data-system-name="{{ config('raniag.name') }}">
                         <i class="bi bi-download me-2"></i>Download Image
                     </button>
                     <a href="{{ route('public.track', ['tracking_number' => $trackingNumber]) }}#rg-case-lookup"
@@ -96,7 +97,7 @@
 
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 28px system-ui, sans-serif';
-        ctx.fillText('RANIAG', 48, 72);
+        ctx.fillText(this.dataset.systemName || 'RANIAG', 48, 72);
         ctx.font = '18px system-ui, sans-serif';
         ctx.fillStyle = '#c8d4e4';
         ctx.fillText(org, 48, 104);
