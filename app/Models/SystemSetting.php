@@ -161,7 +161,7 @@ class SystemSetting extends Model
     }
 
     /**
-     * @return array<string, array{marker: string, label: string, value: string}>
+     * @return array<string, array{marker: string, label: string, value: string, source: string}>
      */
     public function publicHomePersonalizations(): array
     {
@@ -172,31 +172,37 @@ class SystemSetting extends Model
                 'marker' => '{system_name}',
                 'label' => 'System name',
                 'value' => $branding['system_name'],
+                'source' => 'Branding & System Settings > System identity > System name',
             ],
             'organization' => [
                 'marker' => '{organization}',
                 'label' => 'Organization name',
                 'value' => $branding['organization_name'],
+                'source' => 'Branding & System Settings > System identity > Organization name',
             ],
             'municipality' => [
                 'marker' => '{municipality}',
                 'label' => 'Municipality',
                 'value' => $branding['municipality_label'],
+                'source' => 'Branding & System Settings > Location display labels > Municipality',
             ],
             'province' => [
                 'marker' => '{province}',
                 'label' => 'Province',
                 'value' => $branding['province_label'],
+                'source' => 'Branding & System Settings > Location display labels > Province',
             ],
             'region' => [
                 'marker' => '{region}',
                 'label' => 'Response area',
                 'value' => $branding['response_area_label'],
+                'source' => 'Branding & System Settings > Location display labels > Response area / region',
             ],
             'tagline' => [
                 'marker' => '{tagline}',
                 'label' => 'Tagline',
                 'value' => (string) config('raniag.tagline', ''),
+                'source' => 'System-wide tagline setting',
             ],
         ];
     }

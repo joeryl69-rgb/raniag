@@ -6,6 +6,7 @@
     $copyGroups = [
         [
             'title' => 'Public header, navigation, and footer',
+            'key' => 'shell',
             'description' => 'These labels appear in the shared public site shell. Their destinations remain fixed.',
             'fields' => [
                 ['shell.home_title', 'Home page browser title', 120],
@@ -39,6 +40,7 @@
         ],
         [
             'title' => 'Home introduction, shortcuts, and report QR',
+            'key' => 'home',
             'description' => 'The visual layout stays intact. Headline emphasis is controlled by its separate accent-line field.',
             'fields' => [
                 ['hero.eyebrow', 'Hero organization line', 120],
@@ -69,6 +71,7 @@
         ],
         [
             'title' => 'Field guide and reporting steps',
+            'key' => 'journey',
             'description' => 'The four-step guide, illustrations, and destinations stay in their original places.',
             'fields' => [
                 ['journey.eyebrow', 'Guide eyebrow', 100],
@@ -109,6 +112,7 @@
         ],
         [
             'title' => 'Public updates and FAQ heading',
+            'key' => 'briefing',
             'description' => 'Announcement posts remain managed in Announcements; edit their section labels and the empty-state copy here.',
             'fields' => [
                 ['briefing.eyebrow', 'Public information eyebrow', 100],
@@ -128,6 +132,7 @@
         ],
         [
             'title' => 'App promotion and human support',
+            'key' => 'app',
             'description' => 'The install action and support destination keep their existing behavior.',
             'fields' => [
                 ['app.aside_label', 'Support sidebar description', 180],
@@ -162,24 +167,66 @@
     </div>
     <div class="card-body">
         <p class="small text-muted mb-3">Enter the words you want visitors to see.</p>
-        <p class="small text-muted mb-3" data-copy-js-only hidden>To add a name or place that updates with your system settings, select a text field, place the cursor, and insert a live detail below.</p>
-        <div class="branding-copy-toolbar mb-4" data-copy-toolbar hidden>
+        <p class="small text-muted mb-3" data-copy-js-only hidden>Click any text field to see the live-detail picker beside it. The homepage layout and links stay in place.</p>
+        <nav class="branding-home-map mb-4" aria-label="Public homepage layout" data-copy-home-map hidden>
+            <div class="branding-home-map-heading">
+                <div>
+                    <span class="text-uppercase small fw-bold text-primary">Homepage layout</span>
+                    <h3 class="h6 fw-bold mb-1">Where each editable section appears</h3>
+                    <p class="small text-muted mb-0">Choose a section to jump to its settings. This map follows the public page from top to bottom.</p>
+                </div>
+            </div>
+            <div class="branding-home-map-frame mb-2">
+                <span>Top of every page</span>
+                <a href="#home-copy-group-shell" data-copy-map-link="shell">Header and navigation</a>
+            </div>
+            <a class="branding-home-map-block mb-2" href="#home-copy-group-home" data-copy-map-link="home">
+                <span class="branding-home-map-index">01</span>
+                <span><strong>Introduction, shortcuts, and report QR</strong><small>First homepage section</small></span>
+            </a>
+            <a class="branding-home-map-block mb-2" href="#home-copy-group-journey" data-copy-map-link="journey">
+                <span class="branding-home-map-index">02</span>
+                <span><strong>Field guide and reporting steps</strong><small>After the introduction</small></span>
+            </a>
+            <div class="branding-home-map-columns mb-2">
+                <div class="branding-home-map-stack">
+                    <a class="branding-home-map-block" href="#home-copy-group-briefing" data-copy-map-link="briefing">
+                        <span class="branding-home-map-index">03</span>
+                        <span><strong>Public updates and FAQ heading</strong><small>Main information column</small></span>
+                    </a>
+                    <a class="branding-home-map-block" href="#home-copy-group-faqs" data-copy-map-link="faqs">
+                        <span class="branding-home-map-index">04</span>
+                        <span><strong>Frequently asked questions</strong><small>Under the updates section</small></span>
+                    </a>
+                </div>
+                <a class="branding-home-map-block" href="#home-copy-group-app" data-copy-map-link="app">
+                    <span class="branding-home-map-index">05</span>
+                    <span><strong>App promotion and support</strong><small>Beside updates on desktop; below on mobile</small></span>
+                </a>
+            </div>
+            <div class="branding-home-map-frame">
+                <span>Bottom of every page</span>
+                <a href="#home-copy-group-shell" data-copy-map-link="shell">Footer information</a>
+            </div>
+        </nav>
+        <div class="branding-copy-toolbar mb-3" data-copy-toolbar hidden>
             <label for="branding-copy-detail" class="form-label fw-semibold mb-1">Insert a live detail</label>
             <div class="d-flex flex-column flex-sm-row gap-2">
                 <select id="branding-copy-detail" class="form-select" data-copy-token-select>
                     @foreach ($homePersonalizations as $key => $personalization)
-                        <option value="{{ $key }}">{{ $personalization['label'] }}</option>
+                        <option value="{{ $key }}" data-current-value="{{ $personalization['value'] }}" data-source="{{ $personalization['source'] }}">{{ $personalization['label'] }}</option>
                     @endforeach
                 </select>
                 <button type="button" class="btn btn-outline-primary flex-shrink-0" data-copy-token-insert disabled>
                     <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Insert into selected field
                 </button>
             </div>
+            <div class="small text-muted mt-2" data-copy-detail-info aria-live="polite"></div>
             <div class="small text-muted mt-2" data-copy-active aria-live="polite">Choose a text field to begin.</div>
         </div>
 
         @foreach ($copyGroups as $group)
-            <details class="branding-copy-group" @if ($loop->first) open @endif>
+            <details id="home-copy-group-{{ $group['key'] }}" class="branding-copy-group" data-copy-group="{{ $group['key'] }}" @if ($loop->first) open @endif>
                 <summary>
                     <span>{{ $group['title'] }}</span>
                     <span class="small text-muted fw-normal">{{ count($group['fields']) }} fields</span>
@@ -212,7 +259,7 @@
             </details>
         @endforeach
 
-        <details class="branding-copy-group">
+        <details id="home-copy-group-faqs" class="branding-copy-group" data-copy-group="faqs">
             <summary>
                 <span>Frequently asked questions</span>
                 <span class="small text-muted fw-normal"><span data-faq-count>{{ count($faqs) }}</span> of 12</span>
@@ -339,8 +386,9 @@
             const tokenSelect = toolbar?.querySelector('[data-copy-token-select]');
             const insertButton = toolbar?.querySelector('[data-copy-token-insert]');
             const activeLabel = toolbar?.querySelector('[data-copy-active]');
+            const detailInfo = toolbar?.querySelector('[data-copy-detail-info]');
 
-            if (!form || !toolbar || !tokenSelect || !insertButton || !activeLabel) return;
+            if (!form || !toolbar || !tokenSelect || !insertButton || !activeLabel || !detailInfo) return;
 
             let activeEditor = null;
             let savedRange = null;
@@ -348,6 +396,27 @@
             const editorFrom = (target) => target instanceof Element
                 ? target.closest('[data-copy-editor]')
                 : null;
+
+            const sourceFields = {
+                system_name: 'system_name',
+                organization: 'organization_name',
+                municipality: 'municipality_label',
+                province: 'province_label',
+                region: 'response_area_label',
+            };
+
+            const updateDetailInfo = () => {
+                const selected = tokenSelect.selectedOptions[0];
+                if (!selected) return;
+
+                const fieldName = sourceFields[tokenSelect.value];
+                const field = fieldName ? form.querySelector(`[name="${fieldName}"]`) : null;
+                const value = field
+                    ? field.value.trim() || 'Not set'
+                    : selected.dataset.currentValue || 'Not set';
+                const source = selected.dataset.source || 'system settings';
+                detailInfo.textContent = `Current value: ${value}. Managed in ${source}.`;
+            };
 
             const serializeNode = (node) => {
                 if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
@@ -467,6 +536,9 @@
                 if (!editor) return;
 
                 activeEditor = editor;
+                const field = editor.closest('[data-copy-field]');
+                if (field && toolbar.parentElement !== field) field.insertBefore(toolbar, editor.nextSibling);
+                toolbar.hidden = false;
                 insertButton.disabled = false;
                 const label = document.getElementById(editor.getAttribute('aria-labelledby'));
                 activeLabel.textContent = label
@@ -485,7 +557,14 @@
 
             form.addEventListener('input', (event) => {
                 const editor = editorFrom(event.target);
-                if (!editor) return;
+                if (!editor) {
+                    if (event.target instanceof HTMLInputElement
+                        && Object.values(sourceFields).includes(event.target.name)) {
+                        updateDetailInfo();
+                    }
+
+                    return;
+                }
 
                 activeEditor = editor;
                 updateValue(editor);
@@ -547,6 +626,24 @@
                 insertNodes(activeEditor, [token]);
                 activeLabel.textContent = `${label} will update when its system setting changes.`;
             });
+            tokenSelect.addEventListener('change', updateDetailInfo);
+
+            form.addEventListener('click', (event) => {
+                if (!(event.target instanceof Element)) return;
+
+                const link = event.target.closest('[data-copy-map-link]');
+                if (!link) return;
+
+                const group = form.querySelector(`[data-copy-group="${link.dataset.copyMapLink}"]`);
+                if (!group) return;
+
+                event.preventDefault();
+                group.open = true;
+                group.scrollIntoView({
+                    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                    block: 'start',
+                });
+            });
 
             form.addEventListener('branding:copy-fields-added', () => {
                 form.querySelectorAll('[data-copy-editor]:not([data-copy-initialized])')
@@ -565,7 +662,10 @@
             });
 
             form.querySelectorAll('[data-copy-editor]').forEach(initializeEditor);
-            toolbar.hidden = false;
+            updateDetailInfo();
+            form.querySelectorAll('[data-copy-home-map]').forEach((element) => {
+                element.hidden = false;
+            });
             form.querySelectorAll('[data-copy-js-only]').forEach((element) => {
                 element.hidden = false;
             });

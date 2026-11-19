@@ -25,6 +25,11 @@ test('administrator can edit the public page copy and dynamic FAQ list without c
         ->assertSee('Enter the words you want visitors to see.')
         ->assertSee('Insert a live detail')
         ->assertSee('data-copy-token-select', false)
+        ->assertSee('data-current-value="Cagayan Valley"', false)
+        ->assertSee('data-source="Branding &amp; System Settings &gt; Location display labels &gt; Response area / region"', false)
+        ->assertSee('data-copy-home-map', false)
+        ->assertSee('data-copy-map-link="faqs"', false)
+        ->assertSee('data-copy-group="faqs"', false)
         ->assertSee('home_content[faqs][0][question]', false)
         ->assertSee('Add a question');
 

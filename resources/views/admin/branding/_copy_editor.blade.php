@@ -27,10 +27,12 @@
     }
 @endphp
 
+<div class="branding-copy-field" data-copy-field>
 <label
     id="{{ $fieldId }}-label"
     for="{{ $fieldId }}"
     class="form-label fw-semibold"
+    data-copy-label
     @if (isset($fieldKey)) data-faq-label="{{ $fieldKey }}" @endif
 >{{ $fieldLabel }}</label>
 <div
@@ -79,3 +81,4 @@
     @if (isset($fieldKey)) data-faq-key="{{ $fieldKey }}" @endif
 >
 <div class="text-danger small mt-1" data-copy-error hidden></div>
+</div>
