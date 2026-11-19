@@ -8,6 +8,7 @@ use App\Models\Evidence;
 use App\Models\HazardZone;
 use App\Services\GeofenceService;
 use App\Services\SituationalMapService;
+use App\Support\LocationAddressFormatter;
 use App\Support\PrivateIncidentFiles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -275,6 +276,10 @@ class HazardMapController extends Controller
                 $province,
                 $country,
             ], fn ($part) => is_string($part) && trim($part) !== ''));
+        $locationAddress = LocationAddressFormatter::normalize(
+            $locationAddress,
+            config('raniag.address.province')
+        ) ?? $locationAddress;
 
         return [
             'barangay' => is_string($barangay) ? $barangay : null,
@@ -300,16 +305,19 @@ class HazardMapController extends Controller
         $fullGeocodedAddress = $place['location_address'] ?? null;
 
         if ($street === '' && $barangay === null && is_string($fullGeocodedAddress) && trim($fullGeocodedAddress) !== '') {
-            return trim($fullGeocodedAddress);
+            return LocationAddressFormatter::normalize($fullGeocodedAddress, $address['province'] ?? null)
+                ?? trim($fullGeocodedAddress);
         }
 
-        return implode(', ', array_filter([
+        $locationAddress = implode(', ', array_filter([
             $street !== '' ? $street : null,
             $barangay ? 'Barangay '.$barangay : null,
             $address['municipality'] ?? 'Pamplona',
             $address['province'] ?? 'Cagayan',
             $address['country'] ?? 'Philippines',
         ], fn ($part) => is_string($part) && trim($part) !== ''));
+
+        return LocationAddressFormatter::normalize($locationAddress, $address['province'] ?? null) ?? $locationAddress;
     }
 
     /**

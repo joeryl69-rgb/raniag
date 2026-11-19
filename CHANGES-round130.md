@@ -34,5 +34,6 @@
 
 ### Fixed
 - Prevented barangay names from appearing twice in incident locations and improved GPS-camera barangay resolution with dynamic municipal boundaries.
+- Removed the misleading unresolved-barangay prefix when reverse-geocoded place details exist and eliminated duplicate province/region labels in GPS-camera addresses.
 - Focused the map on the selected shelter during editing and hid other shelter pins.
 - Kept new hazard and shelter forms visible on desktop by hiding saved-item lists while the editor is open.

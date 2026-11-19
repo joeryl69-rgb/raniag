@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\EvidenceType;
 use App\Models\Evidence;
 use App\Models\Incident;
+use App\Support\LocationAddressFormatter;
 use App\Support\PrivateIncidentFiles;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
@@ -378,11 +379,11 @@ class EvidenceService
      */
     private function resolveFullAddress(?string $barangay, ?string $locationAddress): string
     {
-        $locationAddress = trim((string) $locationAddress);
         $defaults = config('raniag.address', []);
         $municipality = $defaults['municipality'] ?? 'Pamplona';
         $province = $defaults['province'] ?? 'Cagayan';
         $country = $defaults['country'] ?? 'Philippines';
+        $locationAddress = LocationAddressFormatter::normalize($locationAddress, $province) ?? '';
 
         $parts = $locationAddress !== ''
             ? array_values(array_filter(array_map('trim', explode(',', $locationAddress))))
@@ -401,8 +402,6 @@ class EvidenceService
             $parts[$matchingBarangayIndex] = 'Barangay '.$parts[$matchingBarangayIndex];
         } elseif ($barangayLabel !== '' && ! $partsContainBarangay) {
             array_unshift($parts, 'Barangay '.$barangayLabel);
-        } elseif ($barangayLabel === '' && $parts !== [] && ! $partsContainBarangay) {
-            array_unshift($parts, 'Barangay not resolved');
         } elseif ($parts === []) {
             $parts[] = $barangayLabel !== '' ? 'Barangay '.$barangayLabel : 'Barangay not resolved';
         }

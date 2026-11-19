@@ -99,13 +99,14 @@ test('public live boundary endpoint returns the active boundary without caching'
 test('outside-area GPS reverse geocoding returns full address and municipality details', function () {
     Http::fake([
         'https://nominatim.openstreetmap.org/reverse*' => Http::response([
-            'display_name' => '12 Main Road, Langagan, Sanchez Mira, Cagayan, Philippines',
+            'display_name' => '12 Main Road, Langagan, Sanchez Mira, Cagayan, Cagayan Valley, Philippines',
             'address' => [
                 'house_number' => '12',
                 'road' => 'Main Road',
                 'barangay' => 'Langagan',
                 'county' => 'Sanchez Mira',
-                'state' => 'Cagayan',
+                'state_district' => 'Cagayan',
+                'state' => 'Cagayan Valley',
                 'country' => 'Philippines',
             ],
         ]),
@@ -119,9 +120,9 @@ test('outside-area GPS reverse geocoding returns full address and municipality d
         ->assertJsonPath('inside', false)
         ->assertJsonPath('barangay', 'Langagan')
         ->assertJsonPath('municipality', 'Sanchez Mira')
-        ->assertJsonPath('province', 'Cagayan')
+        ->assertJsonPath('province', 'Cagayan Valley')
         ->assertJsonPath('country', 'Philippines')
-        ->assertJsonPath('location_address', '12 Main Road, Langagan, Sanchez Mira, Cagayan, Philippines');
+        ->assertJsonPath('location_address', '12 Main Road, Langagan, Sanchez Mira, Cagayan Valley, Philippines');
 });
 
 test('live map location lookup returns a full address with the boundary-resolved barangay', function () {

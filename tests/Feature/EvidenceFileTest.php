@@ -18,7 +18,15 @@ test('gps watermark place labels include barangay municipality province and coun
     expect($resolveAddress->invoke($service, 'Langagan', 'Sanchez Mira'))
         ->toBe('Barangay Langagan, Sanchez Mira, Cagayan, Philippines')
         ->and($resolveAddress->invoke($service, null, 'Sanchez Mira'))
-        ->toBe('Barangay not resolved, Sanchez Mira, Cagayan, Philippines');
+        ->toBe('Sanchez Mira, Cagayan, Philippines')
+        ->and($resolveAddress->invoke(
+            $service,
+            null,
+            'Langagan, Sanchez Mira, Cagayan, Cagayan Valley, Philippines'
+        ))
+        ->toBe('Langagan, Sanchez Mira, Cagayan Valley, Philippines')
+        ->and($resolveAddress->invoke($service, null, null))
+        ->toBe('Barangay not resolved, Pamplona, Cagayan, Philippines');
 });
 
 test('gps watermark map crop keeps a fix near a tile edge centered', function () {
