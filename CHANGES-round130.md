@@ -30,6 +30,7 @@
 - Improved route-summary contrast on the dark route panel.
 - Kept the hazard/shelter switch and Add action visible while saved items scroll independently; the saved-list heading remains pinned and rows no longer overlap.
 - On smaller screens, kept the nearest-center suggestion above the open-report list and limited scrolling to the report list.
+- Matched community-dashboard shelter pins to each shelter’s saved map color and clarified that Open/Closed labels indicate arrival status.
 
 ### Fixed
 - Prevented barangay names from appearing twice in incident locations and improved GPS-camera barangay resolution with dynamic municipal boundaries.

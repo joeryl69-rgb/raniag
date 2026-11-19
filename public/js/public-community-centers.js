@@ -64,11 +64,14 @@
         return center.is_open === true && url ? url : null;
     }
 
-    function centerIcon(isOpen) {
+    function centerIcon(center) {
+        const isOpen = center.is_open === true;
         const status = isOpen ? 'is-open' : 'is-closed';
+        const candidate = String(center.color || '');
+        const color = /^#[0-9A-Fa-f]{6}$/.test(candidate) ? candidate : '#0f766e';
         return leaflet.divIcon({
             className: `rg-center-marker ${status}`,
-            html: `<span aria-hidden="true"><i class="bi bi-house-door-fill"></i></span>`,
+            html: `<span style="--center-pin-color:${color}" aria-hidden="true"><i class="bi bi-house-door-fill"></i></span>`,
             iconSize: [30, 30],
             iconAnchor: [15, 29],
             popupAnchor: [0, -27],
@@ -174,13 +177,13 @@
             const existing = centersById.get(id);
             if (existing) {
                 existing.setLatLng(position);
-                existing.setIcon(centerIcon(center.is_open === true));
+                existing.setIcon(centerIcon(center));
                 existing.setPopupContent(popupContent(center));
                 return;
             }
 
             const marker = leaflet.marker(position, {
-                icon: centerIcon(center.is_open === true),
+                icon: centerIcon(center),
                 title: String(center.name || 'Evacuation center'),
             }).bindPopup(popupContent(center));
             marker.addTo(markerLayer);

@@ -50,6 +50,7 @@ test('community dashboard exposes public shelter availability and internal route
         'longitude' => 121.341,
         'capacity' => 200,
         'is_open' => true,
+        'color' => '#a855f7',
         'notes' => 'Staff-only note',
     ]);
     Evacuee::query()->create([
@@ -79,6 +80,7 @@ test('community dashboard exposes public shelter availability and internal route
         ->assertJsonPath('evacuation_centers.0.name', 'Centro Open Shelter')
         ->assertJsonPath('evacuation_centers.0.is_open', true)
         ->assertJsonPath('evacuation_centers.0.address', 'Municipal Hall, Centro')
+        ->assertJsonPath('evacuation_centers.0.color', '#a855f7')
         ->assertJsonPath('evacuation_centers.0.capacity', 200)
         ->assertJsonPath('evacuation_centers.0.checked_in_count', 1)
         ->assertJsonPath('evacuation_centers.0.route_url', route('public.hazard.map', ['route_to_center' => $open->id], false))

@@ -73,7 +73,7 @@
                     <span class="rg-community-label">Public shelter locations</span>
                     <h2 id="pd-centers-title">Evacuation centers</h2>
                 </div>
-                <div class="rg-center-status-legend" aria-label="Center status legend">
+                <div class="rg-center-status-legend" aria-label="Shelter arrival status">
                     <span><i class="is-open"></i>Open</span>
                     <span><i class="is-closed"></i>Closed</span>
                 </div>
@@ -84,7 +84,7 @@
                     <div class="text-muted small">Loading evacuation centers…</div>
                 </div>
             </div>
-            <p class="rg-center-note">Select a center to focus its map pin. Choose Route here to start live routing inside RANIAG. Report locations remain private.</p>
+            <p class="rg-center-note">Pin colors match each shelter’s saved map color; Open and Closed show arrival status. Select a center to focus its pin, or choose Route here to start live routing inside RANIAG. Report locations remain private.</p>
         </section>
 
         <div class="rg-community-grid">
@@ -248,9 +248,8 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
 .rg-center-status-legend i.is-closed { background:#64748b; }
 .rg-center-note { margin:12px 0 0;color:#64748b;font-size:.72rem; }
 .rg-center-marker { background:transparent;border:0; }
-.rg-center-marker span { display:grid;place-items:center;width:30px;height:30px;border:2px solid #fff;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:#15803d;color:#fff;box-shadow:0 4px 10px rgba(15,28,51,.3); }
+.rg-center-marker span { display:grid;place-items:center;width:30px;height:30px;border:2px solid #fff;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:var(--center-pin-color,#0f766e);color:#fff;box-shadow:0 4px 10px rgba(15,28,51,.3); }
 .rg-center-marker span i { transform:rotate(45deg);font-size:14px; }
-.rg-center-marker.is-closed span { background:#64748b; }
 .rg-center-popup-status { display:inline-block;margin-top:5px;border-radius:999px;padding:2px 7px;background:#dcfce7;color:#166534;font-size:.68rem;font-weight:800;text-transform:uppercase; }
 .rg-center-popup-status.is-closed { background:#e2e8f0;color:#475569; }
 [data-theme="dark"] #community-center-map { border-color:#405862; }

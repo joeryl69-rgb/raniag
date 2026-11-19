@@ -108,7 +108,7 @@ class PublicDashboardController extends Controller
                 $query->whereNull('checked_out_at');
             }])
             ->orderBy('name')
-            ->get(['id', 'name', 'barangay', 'address', 'latitude', 'longitude', 'capacity', 'is_open'])
+            ->get(['id', 'name', 'barangay', 'address', 'latitude', 'longitude', 'capacity', 'is_open', 'color'])
             ->map(fn (EvacuationCenter $center) => [
                 'id' => $center->id,
                 'name' => $center->name,
@@ -116,6 +116,7 @@ class PublicDashboardController extends Controller
                 'address' => $center->address,
                 'latitude' => (float) $center->latitude,
                 'longitude' => (float) $center->longitude,
+                'color' => $center->color ?: '#0f766e',
                 'capacity' => $center->capacity,
                 'is_open' => (bool) $center->is_open,
                 'checked_in_count' => (int) $center->checked_in_count,
