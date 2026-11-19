@@ -24,15 +24,20 @@ class HazardMapController extends Controller
         private readonly SituationalMapService $situational,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $snapshot = $this->situational->publicSnapshot();
+        $routeCenterId = $request->integer('route_to_center');
+        if ($routeCenterId < 1 || ! EvacuationCenter::query()->whereKey($routeCenterId)->where('is_open', true)->exists()) {
+            $routeCenterId = null;
+        }
 
         return view('public.hazard.map', [
             'map' => config('raniag.map'),
             'boundary' => $this->geofence->boundaryGeometry(),
             'zones' => $snapshot['zones'],
             'centers' => $snapshot['centers'],
+            'routeCenterId' => $routeCenterId,
             'risk' => $snapshot['risk'],
             'openReports' => $snapshot['open_reports'],
             'snapshotUrl' => route('public.hazard.snapshot'),

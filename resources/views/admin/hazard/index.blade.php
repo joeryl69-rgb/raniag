@@ -760,6 +760,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         editorMobileTabs?.classList.remove('d-none');
         listHeader?.classList.add('d-none');
         listControls?.classList.add('d-none');
+        zoneList?.classList.add('d-none');
+        centerList?.classList.add('d-none');
         editorHeader?.classList.remove('d-none');
         if (editorKicker) editorKicker.textContent = form === centerForm
             ? 'EVACUATION SHELTER / MAP EDITOR'
@@ -786,6 +788,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         editorMobileTabs?.classList.add('d-none');
         listHeader?.classList.remove('d-none');
         listControls?.classList.remove('d-none');
+        zoneList?.classList.toggle('d-none', activeMode !== 'zone');
+        centerList?.classList.toggle('d-none', activeMode !== 'center');
         editorHeader?.classList.add('d-none');
         editorPanel?.classList.remove('is-editing');
         requestAnimationFrame(() => map.invalidateSize());

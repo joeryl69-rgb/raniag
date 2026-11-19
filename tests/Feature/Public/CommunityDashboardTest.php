@@ -2,6 +2,7 @@
 
 use App\Enums\IncidentStatus;
 use App\Models\EvacuationCenter;
+use App\Models\Evacuee;
 use App\Models\Incident;
 use App\Models\IncidentType;
 use Illuminate\Support\Facades\Hash;
@@ -40,8 +41,8 @@ test('community dashboard only counts incidents inside Pamplona', function () {
         ->not->toContain('Langagan');
 });
 
-test('community dashboard exposes evacuation-center locations and open status only', function () {
-    EvacuationCenter::query()->create([
+test('community dashboard exposes public shelter availability and internal route links only', function () {
+    $open = EvacuationCenter::query()->create([
         'name' => 'Centro Open Shelter',
         'barangay' => 'Centro',
         'address' => 'Municipal Hall, Centro',
@@ -50,6 +51,17 @@ test('community dashboard exposes evacuation-center locations and open status on
         'capacity' => 200,
         'is_open' => true,
         'notes' => 'Staff-only note',
+    ]);
+    Evacuee::query()->create([
+        'evacuation_center_id' => $open->id,
+        'full_name' => 'Active occupant',
+        'checked_in_at' => now(),
+    ]);
+    Evacuee::query()->create([
+        'evacuation_center_id' => $open->id,
+        'full_name' => 'Checked out occupant',
+        'checked_in_at' => now()->subHour(),
+        'checked_out_at' => now(),
     ]);
     EvacuationCenter::query()->create([
         'name' => 'Closed School Shelter',
@@ -68,11 +80,15 @@ test('community dashboard exposes evacuation-center locations and open status on
         ->assertJsonPath('evacuation_centers.0.is_open', true)
         ->assertJsonPath('evacuation_centers.0.address', 'Municipal Hall, Centro')
         ->assertJsonPath('evacuation_centers.0.capacity', 200)
+        ->assertJsonPath('evacuation_centers.0.checked_in_count', 1)
+        ->assertJsonPath('evacuation_centers.0.route_url', route('public.hazard.map', ['route_to_center' => $open->id], false))
         ->assertJsonPath('evacuation_centers.1.name', 'Closed School Shelter')
-        ->assertJsonPath('evacuation_centers.1.is_open', false);
+        ->assertJsonPath('evacuation_centers.1.is_open', false)
+        ->assertJsonPath('evacuation_centers.1.route_url', null);
 
     expect($response->headers->get('Cache-Control'))->toContain('no-store')
-        ->and(json_encode($response->json('evacuation_centers')))->not->toContain('Staff-only note');
+        ->and(json_encode($response->json('evacuation_centers')))->not->toContain('Staff-only note')
+        ->and(json_encode($response->json('evacuation_centers')))->not->toContain('Active occupant');
 });
 
 test('community dashboard renders a status-aware evacuation-center map', function () {

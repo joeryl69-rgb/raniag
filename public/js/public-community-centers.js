@@ -38,19 +38,30 @@
             : 'Address not provided';
     }
 
-    function centerCapacity(center) {
+    function centerAvailability(center) {
+        const checkedIn = Number(center.checked_in_count);
         const capacity = Number(center.capacity);
-        return Number.isFinite(capacity) && capacity > 0
-            ? `Capacity: ${capacity.toLocaleString()} people`
-            : 'Capacity not listed';
+        const hasCheckedIn = Number.isFinite(checkedIn) && checkedIn >= 0;
+        const occupants = hasCheckedIn ? checkedIn.toLocaleString() : null;
+
+        if (center.is_open !== true) {
+            return hasCheckedIn && checkedIn > 0
+                ? `Closed to arrivals · ${occupants} inside`
+                : 'Closed to arrivals';
+        }
+        if (!Number.isFinite(capacity) || capacity < 1) {
+            return hasCheckedIn && checkedIn > 0
+                ? `${occupants} inside · Capacity not listed`
+                : 'Capacity not listed';
+        }
+
+        const spaces = Math.max(0, capacity - (hasCheckedIn ? checkedIn : 0));
+        return `${spaces.toLocaleString()} spaces available · ${occupants ?? '—'} / ${capacity.toLocaleString()} inside`;
     }
 
-    function directionsUrl(center) {
-        const latitude = Number(center.latitude);
-        const longitude = Number(center.longitude);
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-
-        return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${latitude},${longitude}`)}`;
+    function routeUrl(center) {
+        const url = String(center.route_url || '').trim();
+        return center.is_open === true && url ? url : null;
     }
 
     function centerIcon(isOpen) {
@@ -67,14 +78,14 @@
     function popupContent(center) {
         const isOpen = center.is_open === true;
         const status = isOpen ? 'Open' : 'Closed';
-        const directions = directionsUrl(center);
+        const route = routeUrl(center);
         return `<strong>${escapeHtml(center.name)}</strong>
             <div class="rg-center-location">${escapeHtml(centerLocation(center))}</div>
             <div class="rg-center-popup-details">
                 <span class="rg-center-popup-status${isOpen ? '' : ' is-closed'}">${status}</span>
-                <span class="rg-center-capacity">${escapeHtml(centerCapacity(center))}</span>
+                <span class="rg-center-capacity">${escapeHtml(centerAvailability(center))}</span>
             </div>
-            ${directions ? `<a class="rg-center-directions mt-2" href="${escapeHtml(directions)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>Get directions</a>` : ''}`;
+            ${route ? `<a class="rg-center-directions mt-2" href="${escapeHtml(route)}"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>Route here</a>` : ''}`;
     }
 
     function renderList(centers) {
@@ -89,7 +100,7 @@
             const isOpen = center.is_open === true;
             const status = isOpen ? 'Open' : 'Closed';
             const statusClass = isOpen ? 'is-open' : 'is-closed';
-            const directions = directionsUrl(center);
+            const route = routeUrl(center);
             return `<article class="rg-center-item">
                 <button type="button" class="rg-center-select" data-community-center-id="${Number(center.id)}" aria-label="Show ${escapeHtml(center.name)} on the map">
                     <strong>${escapeHtml(center.name)}</strong>
@@ -97,8 +108,8 @@
                 </button>
                 <small class="rg-center-location">${escapeHtml(centerLocation(center))}</small>
                 <div class="rg-center-details">
-                    <span class="rg-center-capacity">${escapeHtml(centerCapacity(center))}</span>
-                    ${directions ? `<a class="rg-center-directions" href="${escapeHtml(directions)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>Get directions</a>` : ''}
+                    <span class="rg-center-capacity">${escapeHtml(centerAvailability(center))}</span>
+                    ${route ? `<a class="rg-center-directions" href="${escapeHtml(route)}" aria-label="Route to ${escapeHtml(center.name)}"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>Route here</a>` : ''}
                 </div>
             </article>`;
         }).join('');

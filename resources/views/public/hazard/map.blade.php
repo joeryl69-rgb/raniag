@@ -19,6 +19,7 @@
 .rg-route-destination { display:grid;gap:3px;padding:13px;border:1px solid #d6e0e5;border-radius:10px;background:#fff; }
 .rg-route-destination span,.rg-route-stat span { color:#64748b;font-size:.67rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase; }
 .rg-route-destination strong { font-size:1rem; }
+.rg-route-destination small { color:#64748b;font-size:.75rem;line-height:1.4; }
 .rg-route-stats { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
 .rg-route-stat { display:grid;gap:3px;padding:12px;border:1px solid #d6e0e5;border-radius:10px;background:#fff; }
 .rg-route-stat strong { color:#0f766e;font-size:1.12rem;font-variant-numeric:tabular-nums; }
@@ -28,7 +29,7 @@ html[data-theme="dark"] .rg-route-modal .modal-content { border-color:#405862;ba
 html[data-theme="dark"] .rg-route-modal .modal-header { background:#0e2032; }
 html[data-theme="dark"] #route-modal-details { background:#142630; }
 html[data-theme="dark"] .rg-route-destination,html[data-theme="dark"] .rg-route-stat { border-color:#405862;background:#172c36; }
-html[data-theme="dark"] .rg-route-destination span,html[data-theme="dark"] .rg-route-stat span,html[data-theme="dark"] .rg-route-gps-status { color:#b6c8cc; }
+html[data-theme="dark"] .rg-route-destination span,html[data-theme="dark"] .rg-route-destination small,html[data-theme="dark"] .rg-route-stat span,html[data-theme="dark"] .rg-route-gps-status { color:#b6c8cc; }
 html[data-theme="dark"] .rg-route-destination strong { color:#f0f6f5; }
 @media(max-width:767.98px) {
     .rg-route-dialog { width:100%;height:100%;margin:0; }
@@ -125,7 +126,7 @@ html[data-theme="dark"] .rg-route-destination strong { color:#f0f6f5; }
                             <label class="btn btn-sm rg-hazard-chip" for="route-drive">Drive</label>
                         </div>
                     </div>
-                    <p class="mb-1 text-muted" id="route-summary">Turn on My location, then choose an open center. The path can switch when more than one shelter is open.</p>
+                    <p class="mb-1 text-muted" id="route-summary">Turn on My location to see your live position. Choose an open shelter only if you want to start a route.</p>
                     <div class="rg-route-stats">
                         <div class="rg-route-stat"><span>Route distance</span><strong id="route-distance-value">—</strong></div>
                         <div class="rg-route-stat"><span>Estimated time</span><strong id="route-duration-value">—</strong></div>
@@ -156,13 +157,18 @@ html[data-theme="dark"] .rg-route-destination strong { color:#f0f6f5; }
             <div class="modal-body">
                 <div id="route-modal-map-slot"></div>
                 <aside id="route-modal-details" aria-label="Route details">
+                    <div class="rg-route-destination" id="route-current-location">
+                        <span>Your current location</span>
+                        <strong id="route-current-coordinates">Waiting for location</strong>
+                        <small id="route-current-details">Turn on My location to show your live position.</small>
+                    </div>
                     <div class="rg-route-destination">
-                        <span>Nearest open destination</span>
-                        <strong id="route-destination-name">Turn on My location to find a center</strong>
+                        <span>Route destination</span>
+                        <strong id="route-destination-name">No shelter selected</strong>
                     </div>
                     <p class="rg-route-gps-status mb-0" id="route-modal-gps-status" role="status">Your location is off.</p>
                     <div id="route-modal-route-slot"></div>
-                    <p class="small text-muted mb-0">Your blue marker updates as GPS moves. Routes and estimates refresh as your position changes.</p>
+                    <p class="small text-muted mb-0">Your location updates as GPS moves. Choose a shelter only when you want to start a route.</p>
                 </aside>
             </div>
         </div>
@@ -208,6 +214,7 @@ window.RANIAG_HAZARD = {
     boundary: @json($boundary),
     zones: @json($zones),
     centers: @json($centers),
+    routeCenterId: @json($routeCenterId),
     risk: @json($risk),
     openReports: @json($openReports),
     snapshotUrl: @json($snapshotUrl),

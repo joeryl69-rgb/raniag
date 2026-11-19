@@ -62,6 +62,8 @@
         let youMarker = null;
         let youAccuracy = null;
         let youLatLng = null;
+        let youAccuracyMeters = null;
+        let youPositionUpdatedAt = null;
         let watchId = null;
         let nearestData = null;
         let knownCenters = cfg.centers || [];
@@ -91,7 +93,7 @@
         let boundarySignature = '';
         let trailLine = null;
         const trail = [];
-        const ROUTE_OFF = 'Turn on My location, then choose an open center. The path can switch when more than one shelter is open.';
+        const ROUTE_OFF = 'Turn on My location to see your live position. Choose an open shelter only if you want to start a route.';
         const ROUTE_MIN_MOVE_M = 25;
         const ROUTE_MIN_INTERVAL_MS = 12000;
         const TRAIL_MIN_MOVE_M = 8;
@@ -119,6 +121,8 @@
         const routeModalMapSlot = document.getElementById('route-modal-map-slot');
         const routeModalDetails = document.getElementById('route-modal-details');
         const routeDestinationName = document.getElementById('route-destination-name');
+        const routeCurrentCoordinates = document.getElementById('route-current-coordinates');
+        const routeCurrentDetails = document.getElementById('route-current-details');
         const routeModalGpsStatus = document.getElementById('route-modal-gps-status');
         const routeFollowToggle = document.getElementById('route-follow-toggle');
         const routeStage = mapEl.closest('.rg-hazard-stage');
@@ -202,13 +206,13 @@
             tipMode = mode || tipMode;
             if (!joTip) return;
             const tips = {
-                centers: 'Viewing evacuation centers. Tap one for details, or use my current location to see the nearest open center.',
+                centers: 'Viewing evacuation centers. Turn on My location to see your position, then choose a shelter only if you want a route.',
                 zones: 'Viewing active hazard zones. Pulses mark the areas — tap a zone for the advisory.',
                 risk: 'Each pin is one open report inside Pamplona. Tap it for the tracking number and a GPS photo or video when one was sent. Names and contact details stay private.',
-                you: 'My location is on. Route updates as you move — switch Walk or Drive anytime.',
+                you: 'My location is on. Your position updates as you move. Choose a shelter only when you want a route.',
                 both: 'Open reports inside Pamplona are pins. Tap a pin for the tracking number and any GPS photo or video. Names and contact details stay private. Use Places for hazards and evacuation centers.',
-                route: 'The path follows the open center you pick. Tap another shelter to change it.',
-                off: 'My location is off. Turn it on to track yourself and show the route.',
+                route: 'Choose an open shelter to start a route. Your current location keeps updating as you move.',
+                off: 'My location is off. Turn it on to see your live position; choose a shelter separately to route.',
                 denied: 'Location is blocked. Enable GPS in the browser to use my current location.',
             };
             joTip.textContent = tips[tipMode] || tips.both;
@@ -282,6 +286,26 @@
             return `${(meters / 1000).toFixed(1)} km`;
         }
 
+        function renderCurrentLocation() {
+            if (!routeCurrentCoordinates || !routeCurrentDetails) return;
+            if (!youLatLng) {
+                routeCurrentCoordinates.textContent = layersOn().you ? 'Waiting for GPS location…' : 'Location is off';
+                routeCurrentDetails.textContent = layersOn().you
+                    ? 'Your position will appear here as soon as GPS is available.'
+                    : 'Turn on My location to display your current position.';
+                return;
+            }
+
+            routeCurrentCoordinates.textContent = `${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)}`;
+            const accuracy = Number.isFinite(youAccuracyMeters)
+                ? `GPS accuracy ±${formatDistance(youAccuracyMeters)}`
+                : 'GPS accuracy unavailable';
+            const updated = youPositionUpdatedAt
+                ? new Date(youPositionUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+                : '';
+            routeCurrentDetails.textContent = `Live · ${accuracy}${updated ? ` · Updated ${updated}` : ''}`;
+        }
+
         function formatDuration(seconds) {
             if (Mapbox) return Mapbox.formatDuration(seconds);
             if (seconds == null || Number.isNaN(seconds)) return '';
@@ -345,13 +369,11 @@
         }
 
         function activeCenter() {
-            const list = openCenters();
-            if (chosenCenterId) {
-                const picked = list.find((center) => Number(center.id) === Number(chosenCenterId));
-                if (picked) return picked;
-                if (nearestData) chosenCenterId = null;
-            }
-            return nearestData?.nearest_center || null;
+            if (!chosenCenterId) return null;
+            const picked = openCenters().find((center) => Number(center.id) === Number(chosenCenterId));
+            if (picked) return picked;
+            if (nearestData) chosenCenterId = null;
+            return null;
         }
 
         function shouldRefreshRoute(force) {
@@ -386,9 +408,13 @@
                 map.addLayer(youGroup);
                 if (!map.hasLayer(routeGroup)) map.addLayer(routeGroup);
                 showRouteBox(!!mapboxToken);
-                if (routeSummary) routeSummary.textContent = 'Locating you…';
+                if (routeSummary) routeSummary.textContent = chosenCenterId
+                    ? 'Locating you to calculate the selected route…'
+                    : 'Your current location will update here. Choose a shelter only if you want a route.';
                 setRouteStatus('');
                 setGeoStatus('Locating you…');
+                renderCurrentLocation();
+                renderRouteTargets();
                 updateJoTip('you');
                 startWatch();
             } else {
@@ -398,6 +424,8 @@
                 youMarker = null;
                 youAccuracy = null;
                 youLatLng = null;
+                youAccuracyMeters = null;
+                youPositionUpdatedAt = null;
                 trail.length = 0;
                 trailLine = null;
                 nearestData = null;
@@ -407,6 +435,7 @@
                 chosenCenterId = null;
                 lastRouteCenterId = null;
                 renderRouteTargets();
+                renderCurrentLocation();
                 didInitialYouFit = false;
                 youGroup.clearLayers();
                 document.getElementById('nearest-box')?.classList.add('d-none');
@@ -446,10 +475,10 @@
 
         routeModalElement?.addEventListener('show.bs.modal', () => {
             routeModalOpen = true;
-            setRouteFollowState(layersOn().you);
             if (routeStage && routeModalMapSlot) routeModalMapSlot.appendChild(routeStage);
             if (routeBox && routeModalDetails) routeModalDetails.appendChild(routeBox);
             if (!layersOn().you) setLocationEnabled(true);
+            setRouteFollowState(layersOn().you);
         });
         routeModalElement?.addEventListener('shown.bs.modal', () => {
             map.invalidateSize();
@@ -515,9 +544,13 @@
             if (!youLatLng || !nc) {
                 clearRoute();
                 if (routeSummary) {
-                    routeSummary.textContent = youLatLng
-                        ? 'Looking for the nearest open center…'
-                        : ROUTE_OFF;
+                    routeSummary.textContent = !layersOn().you
+                        ? ROUTE_OFF
+                        : (nc
+                            ? `Waiting for your current location to route to ${nc.name}.`
+                            : (youLatLng
+                                ? 'Your current location is active. Choose an open center to start a route.'
+                                : 'Locating your current position…'));
                 }
                 setRouteMetrics(null, null);
                 showRouteBox();
@@ -914,18 +947,16 @@
             if (routeDestinationName) {
                 routeDestinationName.textContent = active
                     ? active.name
-                    : layersOn().you
-                        ? 'No open evacuation centers are available'
-                        : 'Turn on My location to find a center';
+                    : 'No shelter selected';
             }
-            if (centers.length < 2) {
+            if (!centers.length) {
                 box.classList.add('d-none');
                 box.innerHTML = '';
-                if (heading) heading.textContent = active?.name || 'Nearest open center';
+                if (heading) heading.textContent = active?.name || 'Choose an open center';
                 return;
             }
             box.classList.remove('d-none');
-            if (heading) heading.textContent = 'Choose an open center';
+            if (heading) heading.textContent = active ? 'Choose another open center' : 'Choose an open center';
             box.innerHTML = centers.map((center) => {
                 const selected = active && Number(center.id) === Number(active.id);
                 const nearest = nearestData?.nearest_center && Number(center.id) === Number(nearestData.nearest_center.id);
@@ -961,8 +992,7 @@
                         map.addLayer(centerGroup);
                         syncListVisibility();
                     }
-                    if (layersOn().you) chooseCenter(nc.id, true);
-                    else flyToCenter(nc.id);
+                    flyToCenter(nc.id);
                     updateJoTip('centers');
                 });
             }
@@ -1038,7 +1068,7 @@
                 if (!layersOn().you) return;
                 nearestData = data;
                 renderNearest();
-                await fetchRoute({ force: !routeLayer });
+                await fetchRoute({ force: !!chosenCenterId && !routeLayer });
             } catch (error) {
                 if (layersOn().you && navigator.onLine !== false) {
                     console.warn('[public-hazard-map] Nearest-center lookup failed.', error);
@@ -1091,6 +1121,9 @@
 
         function upsertYou(lat, lng, acc) {
             youLatLng = leaflet.latLng(lat, lng);
+            youAccuracyMeters = Number.isFinite(Number(acc)) ? Number(acc) : null;
+            youPositionUpdatedAt = Date.now();
+            renderCurrentLocation();
             recordTrail(youLatLng);
             followYou(youLatLng);
             if (youAccuracy) {
@@ -1108,6 +1141,9 @@
             }
             if (youMarker) {
                 youMarker.setLatLng(youLatLng);
+                youMarker.setPopupContent(
+                    `<strong>Current location</strong><br>${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)}`
+                );
             } else {
                 youMarker = leaflet.circleMarker(youLatLng, {
                     radius: 7,
@@ -1115,7 +1151,9 @@
                     weight: 2,
                     fillColor: '#0b5ed7',
                     fillOpacity: 1,
-                }).bindPopup('My location').addTo(youGroup);
+                }).bindPopup(
+                    `<strong>Current location</strong><br>${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)}`
+                ).addTo(youGroup);
             }
         }
 
@@ -1141,7 +1179,10 @@
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     upsertYou(lat, lng, pos.coords.accuracy || 40);
-                    setGeoStatus('Live location is on. Your position updates as you move.');
+                    const accuracy = Number.isFinite(Number(pos.coords.accuracy))
+                        ? `GPS accuracy ±${formatDistance(pos.coords.accuracy)}`
+                        : 'GPS accuracy unavailable';
+                    setGeoStatus(`Current location ${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)} · ${accuracy}. Updates as you move.`);
                     fetchNearest(lat, lng).finally(() => {
                         if (!didInitialYouFit && layersOn().you && youLatLng) {
                             didInitialYouFit = true;
@@ -1293,8 +1334,7 @@
         document.getElementById('center-list')?.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-center-id]');
             if (!btn) return;
-            if (layersOn().you) chooseCenter(btn.dataset.centerId, true);
-            else flyToCenter(btn.dataset.centerId);
+            flyToCenter(btn.dataset.centerId);
         });
         document.getElementById('risk-list')?.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-risk-barangay]');
@@ -1367,6 +1407,7 @@
         });
 
         showRouteBox(!!mapboxToken);
+        renderCurrentLocation();
         updateJoTip(chkYou?.checked ? 'both' : 'off');
 
         locateBtn?.addEventListener('click', () => {
@@ -1398,6 +1439,13 @@
             open_reports: cfg.openReports || [],
         });
         fitActiveView({ animate: false });
+        const initialRouteCenterId = Number(cfg.routeCenterId);
+        if (Number.isInteger(initialRouteCenterId) && initialRouteCenterId > 0
+            && openCenters().some((center) => Number(center.id) === initialRouteCenterId)) {
+            chosenCenterId = initialRouteCenterId;
+            renderRouteTargets();
+            openRouteModal();
+        }
 
         function scheduleSnapshotRefresh() {
             if (snapshotTimer !== null) {

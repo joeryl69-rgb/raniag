@@ -84,7 +84,7 @@
                     <div class="text-muted small">Loading evacuation centers…</div>
                 </div>
             </div>
-            <p class="rg-center-note">Select a center to focus its map pin. Use Get directions to open turn-by-turn routing. Report locations remain private.</p>
+            <p class="rg-center-note">Select a center to focus its map pin. Choose Route here to start live routing inside RANIAG. Report locations remain private.</p>
         </section>
 
         <div class="rg-community-grid">
@@ -234,7 +234,7 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
 .rg-center-select strong { min-width:0;font-size:.86rem; }
 .rg-center-location { color:#64748b;font-size:.75rem;line-height:1.4; }
 .rg-center-details { display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px; }
-.rg-center-capacity { color:#52677a;font-size:.72rem;font-weight:700; }
+.rg-center-capacity { color:#52677a;font-size:.72rem;font-weight:700;line-height:1.4; }
 .rg-center-directions { display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:6px 10px;border:1px solid rgba(15,118,110,.24);border-radius:8px;background:#ecfdf5;color:#0f766e;font-size:.72rem;font-weight:800;text-decoration:none;white-space:nowrap; }
 .rg-center-directions:hover,.rg-center-directions:focus-visible { border-color:#0f766e;background:#d1fae5;color:#115e59; }
 .rg-center-popup-details { display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;margin-top:5px; }

@@ -54,6 +54,9 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee('#hz-editor-workspace.is-editor-open[data-editor-view="map"] #hz-editor-panel { display: none; }', false)
         ->assertSee('#hz-editor-workspace.is-editor-open[data-editor-view="details"] #hz-map-column { display: none; }', false)
         ->assertSee('.hz-panel.is-editing .hz-form-body { min-height: auto; overflow: visible; }', false)
+        ->assertSee("zoneList?.classList.add('d-none');", false)
+        ->assertSee("centerList?.classList.add('d-none');", false)
+        ->assertSee("zoneList?.classList.toggle('d-none', activeMode !== 'zone');", false)
         ->assertSee('.hz-legend { position: relative;', false)
         ->assertSee('function showEditForm(form, title, lead)', false);
 });

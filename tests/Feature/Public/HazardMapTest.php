@@ -29,7 +29,8 @@ test('public hazard map page renders live risk chrome', function () {
         ->assertSee('id="route-follow-toggle"', false)
         ->assertSee('id="route-distance-value"', false)
         ->assertSee('id="route-duration-value"', false)
-        ->assertSee('The path can switch when more than one shelter is open.', false)
+        ->assertSee('Choose an open shelter only if you want to start a route.', false)
+        ->assertSee('id="route-current-coordinates"', false)
         ->assertSee('data-lenis-prevent', false)
         ->assertSee('.rg-hazard-nearest-btn strong { color: #f0f5f6; }', false);
 
@@ -37,7 +38,32 @@ test('public hazard map page renders live risk chrome', function () {
     expect($liveMapScript)
         ->toContain('scheduleBoundaryRefresh')
         ->toContain('refreshBoundary(true)')
-        ->toContain('renderBoundary(await response.json())');
+        ->toContain('renderBoundary(await response.json())')
+        ->toContain('if (!chosenCenterId) return null;')
+        ->not->toContain('return nearestData?.nearest_center || null;');
+});
+
+test('live map only opens an explicitly requested open shelter route', function () {
+    $openCenter = \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Open Route Center',
+        'latitude' => 18.451,
+        'longitude' => 121.341,
+        'is_open' => true,
+    ]);
+    $closedCenter = \App\Models\EvacuationCenter::query()->create([
+        'name' => 'Closed Route Center',
+        'latitude' => 18.452,
+        'longitude' => 121.342,
+        'is_open' => false,
+    ]);
+
+    $this->get(route('public.hazard.map', ['route_to_center' => $openCenter->id]))
+        ->assertOk()
+        ->assertSee('routeCenterId: '.$openCenter->id.',', false);
+
+    $this->get(route('public.hazard.map', ['route_to_center' => $closedCenter->id]))
+        ->assertOk()
+        ->assertSee('routeCenterId: null,', false);
 });
 
 test('public live boundary endpoint returns the active boundary without caching', function () {

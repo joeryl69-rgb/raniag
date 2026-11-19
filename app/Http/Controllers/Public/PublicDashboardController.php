@@ -14,13 +14,9 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Community-facing situational dashboard. Every query here is
- * aggregate-only or strips identifying fields before it leaves the
- * controller — no reporter name/phone/email, no exact street address,
- * no personnel/agency internal notes. Only tracking number, incident
- * type, barangay (not street-level address), priority, status, and
- * timestamps are ever exposed. This mirrors what a public transparency
- * board would show, not the internal ops view.
+ * Community-facing situational dashboard. Incident data is aggregate-only
+ * or strips identifying fields before it leaves the controller. Shelter
+ * data is limited to public locations and aggregate availability.
  */
 class PublicDashboardController extends Controller
 {
@@ -108,6 +104,9 @@ class PublicDashboardController extends Controller
 
         $hotspots = $this->hotspots($periodQuery());
         $evacuationCenters = EvacuationCenter::query()
+            ->withCount(['evacuees as checked_in_count' => function ($query) {
+                $query->whereNull('checked_out_at');
+            }])
             ->orderBy('name')
             ->get(['id', 'name', 'barangay', 'address', 'latitude', 'longitude', 'capacity', 'is_open'])
             ->map(fn (EvacuationCenter $center) => [
@@ -119,6 +118,10 @@ class PublicDashboardController extends Controller
                 'longitude' => (float) $center->longitude,
                 'capacity' => $center->capacity,
                 'is_open' => (bool) $center->is_open,
+                'checked_in_count' => (int) $center->checked_in_count,
+                'route_url' => $center->is_open
+                    ? route('public.hazard.map', ['route_to_center' => $center->id], false)
+                    : null,
             ])
             ->values();
 
