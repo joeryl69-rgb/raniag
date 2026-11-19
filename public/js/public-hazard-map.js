@@ -352,16 +352,11 @@
         }
 
         function formatLocationContext(data) {
-            const locality = [
-                data.barangay ? `Barangay ${data.barangay}` : null,
-                data.municipality,
-                data.province,
-                data.country,
-            ].filter((part) => typeof part === 'string' && part.trim()).join(' · ');
+            const barangay = data.barangay ? `Barangay ${data.barangay}` : '';
             const boundary = data.inside === true
                 ? 'Inside Pamplona response area'
                 : (data.inside === false ? 'Outside Pamplona response area' : '');
-            return [locality, boundary].filter(Boolean).join(' · ');
+            return [barangay, boundary].filter(Boolean).join(' · ');
         }
 
         function schedulePlaceLookup(lat, lng) {
