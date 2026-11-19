@@ -86,19 +86,19 @@ class SystemSetting extends Model
      */
     public function brandingValues(): array
     {
-        $systemName = $this->system_name ?: config('raniag.name', 'RANIAG');
-        $organization = $this->organization_name ?: config('raniag.organization', 'MDRRMO Pamplona');
-        $municipality = $this->municipality_label ?: config('raniag.address.municipality', 'Pamplona');
-        $province = $this->province_label ?: config('raniag.address.province', 'Cagayan');
-        $primaryColor = $this->primary_color ?: '#086b78';
+        $systemName = $this->system_name ?: config('system_branding.name', 'RANIAG');
+        $organization = $this->organization_name ?: config('system_branding.organization', 'MDRRMO Pamplona');
+        $municipality = $this->municipality_label ?: config('system_branding.municipality', 'Pamplona');
+        $province = $this->province_label ?: config('system_branding.province', 'Cagayan');
+        $primaryColor = $this->primary_color ?: config('system_branding.primary_color', '#086b78');
         if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $primaryColor)) {
             $primaryColor = '#086b78';
         }
-        $accentColor = $this->accent_color ?: '#29aa96';
+        $accentColor = $this->accent_color ?: config('system_branding.accent_color', '#29aa96');
         if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $accentColor)) {
             $accentColor = '#29aa96';
         }
-        $pageBackgroundColor = $this->page_background_color ?: '#eaf0f2';
+        $pageBackgroundColor = $this->page_background_color ?: config('system_branding.page_background_color', '#eaf0f2');
         if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $pageBackgroundColor)) {
             $pageBackgroundColor = '#eaf0f2';
         }
@@ -123,7 +123,7 @@ class SystemSetting extends Model
             'contact_hotline' => $this->contact_hotline ?? '',
             'municipality_label' => $municipality,
             'province_label' => $province,
-            'response_area_label' => $this->response_area_label ?: 'Cagayan Valley',
+            'response_area_label' => $this->response_area_label ?: config('system_branding.response_area', 'Cagayan Valley'),
             'location_label' => implode(', ', array_filter([$municipality, $province])),
         ];
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Incident;
 use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -11,6 +12,18 @@ test('public branding defaults do not create the singleton settings row', functi
         ->assertSee('Share a clear location and incident details so responders can review and route reports.');
 
     expect(SystemSetting::query()->exists())->toBeFalse();
+});
+
+test('incident model stores and presents addresses without redundant province labels', function () {
+    config(['raniag.address.province' => 'Cagayan']);
+    $incident = new Incident([
+        'location_address' => 'Langagan, Sanchez Mira, Cagayan, Cagayan Valley, Philippines',
+    ]);
+
+    expect($incident->getAttributes()['location_address'])
+        ->toBe('Langagan, Sanchez Mira, Cagayan Valley, Philippines')
+        ->and($incident->location_address)
+        ->toBe('Langagan, Sanchez Mira, Cagayan Valley, Philippines');
 });
 
 test('only administrators can open and update global branding settings', function () {
@@ -25,6 +38,9 @@ test('only administrators can open and update global branding settings', functio
         ->assertDontSee(route('admin.branding.index'));
 
     $this->put(route('admin.branding.update'), [])
+        ->assertForbidden();
+
+    $this->post(route('admin.branding.reset'))
         ->assertForbidden();
 });
 
@@ -61,6 +77,7 @@ test('administrator branding updates apply to the public shell without changing 
         ->get(route('admin.branding.index'))
         ->assertOk()
         ->assertSee('Branding & System Settings')
+        ->assertSee('Reset to defaults')
         ->assertSee(route('admin.branding.index'));
 
     $this->put(route('admin.branding.update'), $payload)
@@ -148,4 +165,62 @@ test('branding settings reject unsafe colors and unsupported logo formats', func
         ->assertSessionHasErrors(['primary_color', 'logo']);
 
     expect(SystemSetting::query()->first()?->primary_color)->not->toBe('red;');
+});
+
+test('administrator can reset branding to configured defaults without changing the boundary', function () {
+    Storage::fake('public');
+    $admin = User::factory()->administrator()->create();
+    $logoPath = 'branding/custom-logo.png';
+    Storage::disk('public')->put($logoPath, 'logo-bytes');
+    $boundary = [
+        'type' => 'Polygon',
+        'coordinates' => [[[121.3, 18.4], [121.4, 18.4], [121.4, 18.5], [121.3, 18.4]]],
+    ];
+    $setting = SystemSetting::query()->create([
+        'municipality_boundary' => $boundary,
+        'system_name' => 'Custom Rescue',
+        'organization_name' => 'Custom Office',
+        'logo_path' => $logoPath,
+        'primary_color' => '#123456',
+        'accent_color' => '#654321',
+        'page_background_color' => '#ffffff',
+        'header_text' => 'Custom header',
+        'footer_text' => 'Custom footer',
+        'show_header_text' => false,
+        'show_footer_text' => false,
+        'contact_address' => 'Custom address',
+        'contact_phone' => '09170000000',
+        'contact_email' => 'custom@example.test',
+        'contact_hotline' => '911',
+        'municipality_label' => 'Custom City',
+        'province_label' => 'Custom Province',
+        'response_area_label' => 'Custom Region',
+    ]);
+    $defaults = config('system_branding');
+
+    $this->actingAs($admin)
+        ->post(route('admin.branding.reset'))
+        ->assertRedirect(route('admin.branding.index'));
+
+    $setting = $setting->fresh();
+    expect($setting->municipality_boundary)->toBe($boundary)
+        ->and($setting->system_name)->toBe($defaults['name'])
+        ->and($setting->organization_name)->toBe($defaults['organization'])
+        ->and($setting->logo_path)->toBeNull()
+        ->and($setting->primary_color)->toBe($defaults['primary_color'])
+        ->and($setting->accent_color)->toBe($defaults['accent_color'])
+        ->and($setting->page_background_color)->toBe($defaults['page_background_color'])
+        ->and($setting->header_text)->toBeNull()
+        ->and($setting->footer_text)->toBeNull()
+        ->and($setting->show_header_text)->toBeTrue()
+        ->and($setting->show_footer_text)->toBeTrue()
+        ->and($setting->contact_address)->toBeNull()
+        ->and($setting->contact_phone)->toBeNull()
+        ->and($setting->contact_email)->toBeNull()
+        ->and($setting->contact_hotline)->toBeNull()
+        ->and($setting->municipality_label)->toBe($defaults['municipality'])
+        ->and($setting->province_label)->toBe($defaults['province'])
+        ->and($setting->response_area_label)->toBe($defaults['response_area']);
+
+    Storage::disk('public')->assertMissing($logoPath);
 });

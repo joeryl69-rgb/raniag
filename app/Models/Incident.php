@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\IncidentDocumentType;
 use App\Enums\IncidentPriority;
 use App\Enums\IncidentStatus;
+use App\Support\LocationAddressFormatter;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Hash;
 
 class Incident extends Model
 {
@@ -71,6 +74,20 @@ class Incident extends Model
             'reporter_phone' => 'encrypted',
             'reporter_email' => 'encrypted',
         ];
+    }
+
+    protected function locationAddress(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?string => LocationAddressFormatter::normalize(
+                $value,
+                config('raniag.address.province')
+            ),
+            set: fn (?string $value): ?string => LocationAddressFormatter::normalize(
+                $value,
+                config('raniag.address.province')
+            ),
+        );
     }
 
     public function incidentType(): BelongsTo
@@ -202,7 +219,6 @@ class Incident extends Model
         return $this->hasOne(IncidentReferral::class);
     }
 
-
     public function smsLogs(): HasMany
     {
         return $this->hasMany(SmsLog::class);
@@ -264,7 +280,7 @@ class Incident extends Model
     {
         $digits = preg_replace('/\D+/', '', $code) ?? '';
 
-        if ($this->tracking_pin && $digits !== '' && \Illuminate\Support\Facades\Hash::check($digits, $this->tracking_pin)) {
+        if ($this->tracking_pin && $digits !== '' && Hash::check($digits, $this->tracking_pin)) {
             return true;
         }
 

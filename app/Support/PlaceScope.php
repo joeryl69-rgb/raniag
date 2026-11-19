@@ -35,8 +35,10 @@ class PlaceScope
         return $barangay !== '' && in_array($barangay, self::officialBarangays(), true);
     }
 
-    public static function addressWithoutBarangayPrefix(?string $address, ?string $barangay): string
+    public static function addressWithoutBarangayPrefix(?string $address, ?string $barangay, ?string $province = null): string
     {
+        $province ??= config('raniag.address.province');
+        $address = LocationAddressFormatter::normalize($address, $province);
         $parts = array_values(array_filter(array_map('trim', explode(',', trim((string) $address)))));
         $barangay = mb_strtolower(trim((string) $barangay));
 

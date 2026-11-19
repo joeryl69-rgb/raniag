@@ -27,6 +27,7 @@ Route::prefix('admin')
     ->group(function () {
         Route::get('/branding', [SystemBrandingController::class, 'index'])->name('branding.index');
         Route::put('/branding', [SystemBrandingController::class, 'update'])->name('branding.update');
+        Route::post('/branding/reset', [SystemBrandingController::class, 'reset'])->name('branding.reset');
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard.json', [DashboardController::class, 'api'])->name('dashboard.api');

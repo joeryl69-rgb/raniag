@@ -8,7 +8,14 @@
                 <h1 class="h3 fw-bold mb-1">Branding &amp; System Settings</h1>
                 <p class="text-muted mb-0">Manage the identity, colors, public contact details, and display labels shown across RANIAG.</p>
             </div>
-            <span class="badge rounded-pill text-bg-light border py-2 px-3"><i class="bi bi-shield-lock me-1"></i>Visible to administrators only</span>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge rounded-pill text-bg-light border py-2 px-3"><i class="bi bi-shield-lock me-1"></i>Visible to administrators only</span>
+                <form method="POST" action="{{ route('admin.branding.reset') }}"
+                      onsubmit="return confirm('Reset branding, contact details, and display labels to their defaults? The municipality boundary and personal appearance settings will not change.');">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-danger"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset to defaults</button>
+                </form>
+            </div>
         </div>
 
         <form method="POST" action="{{ route('admin.branding.update') }}" enctype="multipart/form-data">

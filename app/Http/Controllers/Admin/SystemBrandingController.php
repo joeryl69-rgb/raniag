@@ -92,4 +92,39 @@ class SystemBrandingController extends Controller
             ->route('admin.branding.index')
             ->with('success', 'Branding and system details were updated.');
     }
+
+    public function reset(): RedirectResponse
+    {
+        $setting = SystemSetting::current();
+        $oldLogoPath = $setting->logo_path;
+        $defaults = config('system_branding');
+
+        $setting->fill([
+            'system_name' => $defaults['name'],
+            'organization_name' => $defaults['organization'],
+            'logo_path' => null,
+            'primary_color' => $defaults['primary_color'],
+            'accent_color' => $defaults['accent_color'],
+            'page_background_color' => $defaults['page_background_color'],
+            'header_text' => null,
+            'footer_text' => null,
+            'show_header_text' => true,
+            'show_footer_text' => true,
+            'contact_address' => null,
+            'contact_phone' => null,
+            'contact_email' => null,
+            'contact_hotline' => null,
+            'municipality_label' => $defaults['municipality'],
+            'province_label' => $defaults['province'],
+            'response_area_label' => $defaults['response_area'],
+        ])->save();
+
+        if ($oldLogoPath) {
+            Storage::disk('public')->delete($oldLogoPath);
+        }
+
+        return redirect()
+            ->route('admin.branding.index')
+            ->with('success', 'Branding settings were reset to their defaults.');
+    }
 }
