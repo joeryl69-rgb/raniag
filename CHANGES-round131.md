@@ -12,3 +12,4 @@
 - Kept branding location labels separate from geofence and barangay boundary data.
 - Replaced technical placeholder instructions with a plain-language picker and labeled chips for details that update with system settings.
 - Added a clickable homepage layout map and a nearby live-detail picker that shows each selected value's current source.
+- Reworked hazard-area and municipal-boundary editors for narrower screens so detail forms remain accessible and boundary tools no longer cover the map controls.

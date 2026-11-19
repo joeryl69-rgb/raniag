@@ -75,7 +75,7 @@
 
 <div class="tab-content rg-hazard-content">
     <div class="tab-pane fade {{ $openRegistry ? '' : 'show active' }}" id="tab-map">
-        <div class="hz-editor-mobile-tabs d-lg-none d-none" id="hz-editor-mobile-tabs" role="group" aria-label="Hazard editor view">
+        <div class="hz-editor-mobile-tabs d-xl-none d-none" id="hz-editor-mobile-tabs" role="group" aria-label="Hazard editor view">
             <button type="button" class="is-selected" id="hz-editor-map-tab" aria-pressed="true">Map</button>
             <button type="button" id="hz-editor-details-tab" aria-pressed="false">Details</button>
         </div>
@@ -576,7 +576,7 @@
 .stat-trend.up { color:#b45309; }
 .stat-trend.down { color:#0f766e; }
 .stat-trend.flat { color:var(--raniag-muted); }
-.hz-workspace { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .9fr); gap: 16px; align-items: start; }
+.hz-workspace { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 31rem), 1fr)); gap: 16px; align-items: start; }
 #hz-map-column { min-width: 0; }
 .hz-editor-mobile-tabs { grid-template-columns: 1fr 1fr; gap: .4rem; margin-bottom: .65rem; padding: .3rem; border: 1px solid var(--raniag-border); border-radius: .75rem; background: var(--raniag-card); }
 .hz-editor-mobile-tabs:not(.d-none) { display: grid; }
@@ -652,7 +652,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .hz-type-chip { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; }
 .leaflet-draw-tooltip { font-size: 12px; }
-@media (max-width: 991.98px) {
+@media (max-width: 1199.98px) {
     .hz-workspace { grid-template-columns: 1fr; }
     .hz-map-wrap { height: clamp(22rem, 62vh, 38rem); min-height: 22rem; }
     .hz-panel { max-height: none; overflow: visible; }
@@ -778,11 +778,15 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (editorTitle) editorTitle.textContent = title;
         if (editorLead) editorLead.textContent = lead;
         editorPanel?.classList.add('is-editing');
-        setEditorView('map');
+        const narrowWorkspace = window.matchMedia('(max-width: 1199.98px)').matches;
+        setEditorView(narrowWorkspace ? 'details' : 'map');
         requestAnimationFrame(() => {
-            map.invalidateSize({ pan: false });
-            if (window.matchMedia('(max-width: 991.98px)').matches) {
-                editorWorkspace.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            if (editorWorkspace.dataset.editorView === 'map') map.invalidateSize({ pan: false });
+            if (narrowWorkspace) {
+                editorWorkspace.scrollIntoView({
+                    block: 'start',
+                    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                });
             }
         });
     }

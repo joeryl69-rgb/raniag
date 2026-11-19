@@ -48,9 +48,12 @@ test('hazard map creation uses the stepped authoring panel', function () {
             'id="hz-list-controls"',
         ], false)
         ->assertSee('max-width: 575.98px', false)
+        ->assertSee('grid-template-columns: repeat(auto-fit, minmax(min(100%, 31rem), 1fr));', false)
+        ->assertSee('@media (max-width: 1199.98px)', false)
         ->assertSee('.hz-map-wrap #ops-map .rg-map-scroll-done-control', false)
         ->assertSee('height: clamp(18rem, 44dvh, 27rem); min-height: 18rem;', false)
         ->assertSee("guard(map, { donePosition: 'topleft' })", false)
+        ->assertSee("setEditorView(narrowWorkspace ? 'details' : 'map');", false)
         ->assertSee('#hz-editor-workspace.is-editor-open[data-editor-view="map"] #hz-editor-panel { display: none; }', false)
         ->assertSee('#hz-editor-workspace.is-editor-open[data-editor-view="details"] #hz-map-column { display: none; }', false)
         ->assertSee('.hz-panel.is-editing .hz-form-body { min-height: auto; overflow: visible; }', false)

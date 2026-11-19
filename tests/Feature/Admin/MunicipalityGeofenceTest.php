@@ -44,6 +44,13 @@ test('administrators can edit the single Pamplona boundary used by maps and juri
         ->assertSee('Adjust outline', false)
         ->assertSee('Redraw boundary', false)
         ->assertSee('Map tools', false)
+        ->assertSeeInOrder([
+            'id="boundary-tool-status"',
+            'class="rg-geofence-map-wrap"',
+            'id="municipal-boundary-map"',
+        ], false)
+        ->assertSee('.rg-geofence-tools { position: relative; display: grid;', false)
+        ->assertSee('grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));', false)
         ->assertDontSee('id="boundary-undo"', false)
         ->assertDontSee('id="boundary-redo"', false)
         ->assertSee('municipal-geofence.js', false)
