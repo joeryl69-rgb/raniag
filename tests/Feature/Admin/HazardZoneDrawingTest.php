@@ -70,6 +70,10 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertSee("zoneList?.classList.add('d-none');", false)
         ->assertSee("centerList?.classList.add('d-none');", false)
         ->assertSee("zoneList?.classList.toggle('d-none', activeMode !== 'zone');", false)
+        ->assertSee('const zoneEditorOpen = editorOpen && activeEditForm === zoneForm;', false)
+        ->assertSee('const centerEditorOpen = editorOpen && activeEditForm === centerForm;', false)
+        ->assertSee('zoneList.classList.toggle(\'d-none\', center || zoneEditorOpen);', false)
+        ->assertSee('centerList.classList.toggle(\'d-none\', !center || centerEditorOpen);', false)
         ->assertSee('.hz-legend { position: relative;', false)
         ->assertSee('function showEditForm(form, title, lead)', false);
 });

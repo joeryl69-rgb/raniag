@@ -14,3 +14,4 @@
 - Added a clickable homepage layout map and a nearby live-detail picker that shows each selected value's current source.
 - Reworked hazard-area and municipal-boundary editors for narrower screens so detail forms remain accessible and boundary tools no longer cover the map controls.
 - Disabled hazard drawing and clear controls until an administrator opens the matching editor and activates the map; shelters only enable Clear after placing a pin.
+- Kept saved item lists hidden while their editor is open so starting a hazard boundary does not replace the editor form.

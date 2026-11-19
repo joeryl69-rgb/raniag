@@ -1319,10 +1319,12 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     function setMode(mode) {
         const center = mode === 'center';
         activeMode = center ? 'center' : 'zone';
+        const zoneEditorOpen = editorOpen && activeEditForm === zoneForm;
+        const centerEditorOpen = editorOpen && activeEditForm === centerForm;
         zoneForm.classList.toggle('d-none', activeEditForm !== zoneForm);
-        zoneList.classList.toggle('d-none', center);
+        zoneList.classList.toggle('d-none', center || zoneEditorOpen);
         centerForm.classList.toggle('d-none', activeEditForm !== centerForm);
-        centerList.classList.toggle('d-none', !center);
+        centerList.classList.toggle('d-none', !center || centerEditorOpen);
         document.getElementById('mode-zone')?.classList.toggle('is-selected', !center);
         document.getElementById('mode-center')?.classList.toggle('is-selected', center);
         document.getElementById('mode-zone')?.setAttribute('aria-pressed', String(!center));
