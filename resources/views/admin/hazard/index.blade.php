@@ -111,6 +111,14 @@
                     <span class="hz-kicker" id="hz-mode-kicker">{{ $openCenter ? 'Shelters' : 'Hazard areas' }}</span>
                     <h2 id="hz-mode-title">{{ $openCenter ? 'Evacuation shelters' : 'Hazard areas' }}</h2>
                     <p id="hz-mode-lead">{{ $openCenter ? 'Select a saved shelter to edit it, or add a new shelter and place its pin on the map.' : 'Select a saved hazard area to edit it, or add a new area and draw its boundary on the map.' }}</p>
+                    <div class="hz-mode-switch" role="group" aria-label="Map items">
+                        <button type="button" class="{{ $openCenter ? '' : 'is-selected' }}" id="mode-zone" aria-pressed="{{ $openCenter ? 'false' : 'true' }}">
+                            <i class="bi bi-pentagon" aria-hidden="true"></i>Hazard areas <span class="badge rounded-pill text-bg-light">{{ $zones->count() }}</span>
+                        </button>
+                        <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center" aria-pressed="{{ $openCenter ? 'true' : 'false' }}">
+                            <i class="bi bi-geo-alt" aria-hidden="true"></i>Shelters <span class="badge rounded-pill text-bg-light">{{ $centers->count() }}</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="hz-panel-head d-none" id="hz-editor-header">
                     <button class="btn btn-sm btn-link px-0 mb-2" type="button" id="hz-editor-back">
@@ -122,14 +130,6 @@
                 </div>
                 <div class="card-body">
                     <div id="hz-list-controls">
-                        <div class="hz-mode-switch" role="group" aria-label="Map items">
-                            <button type="button" class="{{ $openCenter ? '' : 'is-selected' }}" id="mode-zone" aria-pressed="{{ $openCenter ? 'false' : 'true' }}">
-                                <i class="bi bi-pentagon" aria-hidden="true"></i>Hazard areas <span class="badge rounded-pill text-bg-light">{{ $zones->count() }}</span>
-                            </button>
-                            <button type="button" class="{{ $openCenter ? 'is-selected' : '' }}" id="mode-center" aria-pressed="{{ $openCenter ? 'true' : 'false' }}">
-                                <i class="bi bi-geo-alt" aria-hidden="true"></i>Shelters <span class="badge rounded-pill text-bg-light">{{ $centers->count() }}</span>
-                            </button>
-                        </div>
                         <button class="btn btn-primary btn-sm w-100 mb-3" type="button" id="add-map-item">
                             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i><span id="add-map-item-label">Add hazard area</span>
                         </button>
@@ -605,10 +605,11 @@
 html[data-theme="dark"] .hz-map-state { color: #fdba74; }
 html[data-theme="dark"] .hz-map-state.is-ready { color: #5eead4; }
 .hz-tool-quiet { color: var(--raniag-muted); }
-.hz-panel-head { padding: 1rem 1rem .2rem; }
+.hz-panel-head { flex: 0 0 auto; padding: 1rem 1rem .2rem; }
 .hz-panel-head h2 { margin: 0 0 .3rem; font-size: 1.05rem; font-weight: 750; letter-spacing: -.02em; }
 .hz-panel-head p { margin: 0; font-size: .82rem; line-height: 1.45; color: var(--raniag-muted); }
 .hz-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; margin-bottom: .9rem; padding: .28rem; border: 1px solid var(--raniag-border); border-radius: .75rem; background: color-mix(in srgb, var(--raniag-ink) 4%, var(--raniag-card)); }
+.hz-panel-head .hz-mode-switch { margin-top: .8rem; margin-bottom: .2rem; }
 .hz-mode-switch button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.3rem; border: 0; border-radius: .55rem; background: transparent; color: var(--raniag-muted); font-size: .82rem; font-weight: 700; }
 .hz-mode-switch button.is-selected { background: var(--raniag-card); color: var(--raniag-primary); box-shadow: 0 1px 4px color-mix(in srgb, var(--raniag-ink) 10%, transparent); }
 .hz-section { margin: 0 0 .85rem; padding-bottom: .85rem; border-bottom: 1px solid var(--raniag-border); }
