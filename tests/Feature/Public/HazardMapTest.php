@@ -142,6 +142,34 @@ test('live map location lookup returns a full address with the boundary-resolved
         ->assertJsonPath('location_address', '12 Main Road, Barangay Centro, Pamplona, Cagayan, Philippines');
 });
 
+test('live map location lookup keeps reverse-geocoded detail when no official barangay matches', function () {
+    $this->mock(GeofenceService::class, function ($mock) {
+        $mock->shouldReceive('isWithinPamplona')->once()->andReturn(true);
+        $mock->shouldReceive('resolveBarangay')->once()->andReturn(null);
+    });
+    Http::fake([
+        'https://nominatim.openstreetmap.org/reverse*' => Http::response([
+            'display_name' => 'Ramyun, Pamplona, Cagayan, Philippines',
+            'address' => [
+                'village' => 'Ramyun',
+                'municipality' => 'Pamplona',
+                'state' => 'Cagayan',
+                'country' => 'Philippines',
+            ],
+        ]),
+    ]);
+
+    $this->getJson(route('public.hazard.barangay', [
+        'lat' => 18.51,
+        'lng' => 121.41,
+        'include_address' => 1,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('inside', true)
+        ->assertJsonPath('barangay', null)
+        ->assertJsonPath('location_address', 'Ramyun, Pamplona, Cagayan, Philippines');
+});
+
 test('expanded municipal boundary can resolve an official barangay from reverse-geocoded address components', function () {
     $this->mock(GeofenceService::class, function ($mock) {
         $mock->shouldReceive('isWithinPamplona')->once()->andReturn(true);

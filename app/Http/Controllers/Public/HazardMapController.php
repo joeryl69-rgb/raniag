@@ -297,6 +297,11 @@ class HazardMapController extends Controller
             $place['house_number'] ?? null,
             $place['road'] ?? null,
         ], fn ($part) => is_string($part) && trim($part) !== ''));
+        $fullGeocodedAddress = $place['location_address'] ?? null;
+
+        if ($street === '' && $barangay === null && is_string($fullGeocodedAddress) && trim($fullGeocodedAddress) !== '') {
+            return trim($fullGeocodedAddress);
+        }
 
         return implode(', ', array_filter([
             $street !== '' ? $street : null,
