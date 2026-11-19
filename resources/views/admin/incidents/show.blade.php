@@ -207,15 +207,15 @@
                     <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt me-2 text-primary"></i>Incident Location</h5>
                 </div>
                 <div class="card-body">
-                    @if ($incident->barangay || $incident->location_address)
-                        <div class="mb-3">
-                            @if ($incident->barangay)<strong>{{ $incident->barangay }}</strong>@endif
-                            @php $locationAddress = \App\Support\PlaceScope::addressWithoutBarangayPrefix($incident->location_address, $incident->barangay); @endphp
-                            @if ($locationAddress !== '')
-                                <div class="text-muted small">{{ $locationAddress }}</div>
-                            @endif
-                        </div>
+                    @php
+                        $location = \App\Support\IncidentLocationPresenter::present($incident);
+                    @endphp
+                    <div class="mb-3">
+                        <strong>{{ $location['primary'] }}</strong>
+                        @if ($location['secondary'])
+                            <div class="text-muted small">{{ $location['secondary'] }}</div>
                     @endif
+                    </div>
 
                     @if (! empty($incident->meta['needs_verification']))
                         <div class="alert alert-info py-2 px-3 mb-2 small">
@@ -232,7 +232,7 @@
                         @if ($withinJurisdiction === false)
                             <div class="alert alert-warning py-2 px-3 mb-2 small">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                Pinned location is outside Pamplona municipality limits.
+                                Pinned location is outside {{ \App\Support\PlaceScope::municipalityLabel() }} municipality limits.
                             </div>
                         @endif
                         <div class="case-map-frame mb-2">
@@ -339,7 +339,7 @@
                                 </select>
                                 @if(($incident->meta['within_jurisdiction'] ?? null) === false)
                                     <div class="form-text text-warning">
-                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Pinned location is outside Pamplona municipality limits — consider "Outside AOR" if another LGU/agency should handle this.
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Pinned location is outside {{ \App\Support\PlaceScope::municipalityLabel() }} municipality limits — consider "Outside AOR" if another LGU/agency should handle this.
                                     </div>
                                 @endif
                             </div>

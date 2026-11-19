@@ -6,6 +6,7 @@ use App\Models\Agency;
 use App\Models\Evidence;
 use App\Models\Incident;
 use App\Models\IncidentType;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
@@ -34,6 +35,67 @@ test('administrator incident queue restores summary cards and an icon-filtered s
         ->assertSee('type="date"', false)
         ->assertDontSee('rg-incident-shortcuts', false)
         ->assertDontSee('DISPATCH DOCKET');
+});
+
+test('administrator incident queue shows address or coordinates when barangay resolution is unavailable', function () {
+    $administrator = User::factory()->administrator()->create();
+    $type = IncidentType::factory()->create();
+    $setting = SystemSetting::query()->find(1) ?? new SystemSetting;
+    $setting->municipality_label = 'Northfield';
+    $setting->save();
+
+    Incident::query()->create([
+        'tracking_number' => 'RAN-LOCATION-ADDRESS',
+        'tracking_pin' => Hash::make('123456'),
+        'incident_type_id' => $type->id,
+        'status' => 'submitted',
+        'priority' => 'medium',
+        'description' => 'Address fallback test',
+        'location_address' => 'Langagan, Northfield, Cagayan, Cagayan Valley, Philippines',
+        'latitude' => 18.54895,
+        'longitude' => 121.24908,
+        'barangay' => null,
+        'meta' => ['within_jurisdiction' => false],
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+
+    Incident::query()->create([
+        'tracking_number' => 'RAN-LOCATION-COORDINATES',
+        'tracking_pin' => Hash::make('123456'),
+        'incident_type_id' => $type->id,
+        'status' => 'submitted',
+        'priority' => 'medium',
+        'description' => 'Coordinates fallback test',
+        'latitude' => 18.50001,
+        'longitude' => 121.30002,
+        'barangay' => null,
+        'meta' => ['within_jurisdiction' => false],
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+
+    Incident::query()->create([
+        'tracking_number' => 'RAN-LOCATION-UNAVAILABLE',
+        'tracking_pin' => Hash::make('123456'),
+        'incident_type_id' => $type->id,
+        'status' => 'submitted',
+        'priority' => 'medium',
+        'description' => 'Missing location fallback test',
+        'is_anonymous' => true,
+        'reported_at' => now(),
+    ]);
+
+    $this->actingAs($administrator)
+        ->get(route('admin.incidents.index'))
+        ->assertOk()
+        ->assertSee('Langagan, Northfield, Cagayan Valley, Philippines')
+        ->assertSee('Pinned location')
+        ->assertSee('18.50001, 121.30002')
+        ->assertSee('Location not provided')
+        ->assertSee('Outside Northfield')
+        ->assertSee('All outside Northfield')
+        ->assertDontSee('Not provided');
 });
 
 test('administrator incident queue filters by priority and exposes the selected sort', function () {

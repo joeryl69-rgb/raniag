@@ -18,12 +18,14 @@
         <div class="rg-case-identity">
             <span class="rg-case-tracking"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>{{ $incident->tracking_number }}</span>
             <h1 id="rg-case-title">{{ $incident->title ?: ($incident->incidentType?->name ?? 'Incident report') }}</h1>
-            @php $locationAddress = \App\Support\PlaceScope::addressWithoutBarangayPrefix($incident->location_address, $incident->barangay); @endphp
+            @php
+                $location = \App\Support\IncidentLocationPresenter::present($incident);
+            @endphp
             <p class="rg-case-hero-location">
                 <i class="bi bi-geo-alt" aria-hidden="true"></i>
-                {{ $incident->barangay ? 'Barangay '.$incident->barangay : ($incident->location_address ?: 'Location not provided') }}
-                @if ($locationAddress !== '' && $incident->barangay)
-                    <span>· {{ $locationAddress }}</span>
+                {{ $incident->barangay ? 'Barangay '.$location['primary'] : $location['primary'] }}
+                @if ($location['secondary'])
+                    <span>· {{ $location['secondary'] }}</span>
                 @endif
             </p>
         </div>

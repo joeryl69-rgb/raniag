@@ -16,6 +16,7 @@
     $isStale = $assignedAt
         && in_array($incident->status?->value, ['assigned', 'in_progress', 'pending_info'], true)
         && $assignedAt->diffInHours(now()) >= 4;
+    $location = \App\Support\IncidentLocationPresenter::present($incident);
 @endphp
 
 <li class="rg-docket-item rg-docket-{{ $priority }} {{ $isNew ? 'is-new' : '' }}">
@@ -32,7 +33,7 @@
             <span class="rg-docket-ref">{{ $incident->tracking_number }}</span>
             @if ($isNew)<span class="rg-queue-new">NEW</span>@endif
             @if ($showJurisdiction && ($incident->meta['within_jurisdiction'] ?? null) === false)
-                <span class="rg-docket-outside"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> Outside jurisdiction</span>
+                <span class="rg-docket-outside"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> Outside {{ \App\Support\PlaceScope::municipalityLabel() }}</span>
             @endif
         </div>
         <h3 class="rg-docket-title"><a href="{{ $detailUrl }}">{{ $queueTitle }}</a></h3>
@@ -40,7 +41,7 @@
             <p class="rg-docket-summary">{{ \Illuminate\Support\Str::limit(strip_tags($incident->description), 150) }}</p>
         @endif
         <div class="rg-docket-facts">
-            <span><i class="bi bi-geo-alt" aria-hidden="true"></i>@if ($incident->barangay)<x-place-label :barangay="$incident->barangay" />@else Location not provided @endif</span>
+            <span><i class="bi bi-geo-alt" aria-hidden="true"></i>@if ($incident->barangay)<x-place-label :barangay="$incident->barangay" />@else {{ $location['primary'] }}@endif @if ($location['secondary']) · {{ $location['secondary'] }} @endif</span>
             <span>
                 <i class="bi bi-clock" aria-hidden="true"></i>
                 <time datetime="{{ $incident->reported_at?->toIso8601String() }}">Reported {{ $incident->reported_at?->diffForHumans() ?? 'time unknown' }}</time>

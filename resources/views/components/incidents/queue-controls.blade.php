@@ -54,8 +54,8 @@
                     <span>Location</span>
                     <select name="jurisdiction">
                         <option value="">All barangays</option>
-                        <option value="outside" @selected(request('jurisdiction') === 'outside')>All outside Pamplona</option>
-                        <option value="inside" @selected(request('jurisdiction') === 'inside')>All inside Pamplona</option>
+                        <option value="outside" @selected(request('jurisdiction') === 'outside')>All outside {{ \App\Support\PlaceScope::municipalityLabel() }}</option>
+                        <option value="inside" @selected(request('jurisdiction') === 'inside')>All inside {{ \App\Support\PlaceScope::municipalityLabel() }}</option>
                     </select>
                 </label>
                 <label>

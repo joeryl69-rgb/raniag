@@ -20,12 +20,20 @@ class PlaceScope
 
     public static function label(?string $scope): string
     {
+        $municipality = self::municipalityLabel();
+
         return match (trim((string) $scope)) {
             '', 'all' => 'All barangays',
-            self::OUTSIDE => 'All outside Pamplona',
-            self::INSIDE => 'All inside Pamplona',
+            self::OUTSIDE => 'All outside '.$municipality,
+            self::INSIDE => 'All inside '.$municipality,
             default => trim((string) $scope),
         };
+    }
+
+    public static function municipalityLabel(): string
+    {
+        return trim((string) config('raniag.address.municipality'))
+            ?: (string) config('system_branding.municipality', 'municipality');
     }
 
     public static function isOfficial(?string $barangay): bool

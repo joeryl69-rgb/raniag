@@ -691,6 +691,7 @@
 .rg-table-reported small { color: var(--rg-incident-copy); font-size: .65rem; }
 .rg-table-location { display: inline-flex; align-items: center; gap: .28rem; white-space: nowrap; }
 .rg-table-location i { color: var(--rg-incident-accent); }
+.rg-table-address { display: block; margin: .2rem 0 0 1rem; color: var(--rg-incident-copy); font-size: .68rem; }
 .rg-table-outside { display: block; margin: .2rem 0 0 1rem; color: #a35419; font-size: .62rem; }
 .rg-table-reported { display: grid; gap: .08rem; white-space: nowrap; }
 .rg-table-open {

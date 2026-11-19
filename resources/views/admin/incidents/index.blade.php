@@ -63,9 +63,15 @@
                             <td><x-public.status-badge :status="$inc->status" /></td>
                             <td><x-priority-badge :priority="$inc->priority" /></td>
                             <td>
-                                <span class="rg-table-location"><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ $inc->barangay ?: 'Not provided' }}</span>
+                                @php
+                                    $location = \App\Support\IncidentLocationPresenter::present($inc);
+                                @endphp
+                                <span class="rg-table-location"><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ $location['primary'] }}</span>
+                                @if ($location['secondary'])
+                                    <small class="rg-table-address">{{ $location['secondary'] }}</small>
+                                @endif
                                 @if (($inc->meta['within_jurisdiction'] ?? null) === false)
-                                    <small class="rg-table-outside">Outside Pamplona</small>
+                                    <small class="rg-table-outside">Outside {{ \App\Support\PlaceScope::municipalityLabel() }}</small>
                                 @endif
                             </td>
                             <td><time class="rg-table-reported" datetime="{{ $inc->reported_at?->toIso8601String() }}">{{ $inc->reported_at?->format('M d, Y') }}<small>{{ $inc->reported_at?->format('h:i A') }}</small></time></td>
