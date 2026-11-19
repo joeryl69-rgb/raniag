@@ -158,7 +158,8 @@ html[data-public-theme="dark"] .rg-track-nearest .btn { color:#b9f1e0;border-col
                             <div>
                                 <div class="text-muted small">Location</div>
                                 @if ($incident->barangay)<div class="fw-semibold">{{ $incident->barangay }}</div>@endif
-                                @if ($incident->location_address)<div class="text-muted small">{{ $incident->location_address }}</div>@endif
+                                @php $locationAddress = \App\Support\PlaceScope::addressWithoutBarangayPrefix($incident->location_address, $incident->barangay); @endphp
+                                @if ($locationAddress !== '')<div class="text-muted small">{{ $locationAddress }}</div>@endif
                             </div>
                         </div>
                     @endif

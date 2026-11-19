@@ -89,8 +89,9 @@
             @if ($incident->barangay || $incident->location_address)
                 <div class="px-3 pt-3 pb-2 small">
                     <strong>{{ $incident->barangay ?: 'Location' }}</strong>
-                    @if ($incident->location_address)
-                        <span class="text-muted">· {{ $incident->location_address }}</span>
+                    @php $locationAddress = \App\Support\PlaceScope::addressWithoutBarangayPrefix($incident->location_address, $incident->barangay); @endphp
+                    @if ($locationAddress !== '')
+                        <span class="text-muted">· {{ $locationAddress }}</span>
                     @endif
                 </div>
             @endif

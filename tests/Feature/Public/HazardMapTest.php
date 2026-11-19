@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\GeofenceService;
 use Illuminate\Support\Facades\Http;
 
 test('public hazard map page renders live risk chrome', function () {
@@ -57,7 +58,7 @@ test('outside-area GPS reverse geocoding returns full address and municipality d
             'address' => [
                 'house_number' => '12',
                 'road' => 'Main Road',
-                'village' => 'Langagan',
+                'barangay' => 'Langagan',
                 'county' => 'Sanchez Mira',
                 'state' => 'Cagayan',
                 'country' => 'Philippines',
@@ -76,6 +77,29 @@ test('outside-area GPS reverse geocoding returns full address and municipality d
         ->assertJsonPath('province', 'Cagayan')
         ->assertJsonPath('country', 'Philippines')
         ->assertJsonPath('location_address', '12 Main Road, Langagan, Sanchez Mira, Cagayan, Philippines');
+});
+
+test('expanded municipal boundary can resolve an official barangay from reverse-geocoded address components', function () {
+    $this->mock(GeofenceService::class, function ($mock) {
+        $mock->shouldReceive('isWithinPamplona')->once()->andReturn(true);
+        $mock->shouldReceive('resolveBarangay')->once()->andReturn(null);
+    });
+    Http::fake([
+        'https://nominatim.openstreetmap.org/reverse*' => Http::response([
+            'display_name' => 'Purok 2, Abanqueruan, Pamplona, Cagayan, Philippines',
+            'address' => [
+                'barangay' => 'Abanqueruan',
+                'municipality' => 'Pamplona',
+                'state' => 'Cagayan',
+                'country' => 'Philippines',
+            ],
+        ]),
+    ]);
+
+    $this->getJson(route('public.hazard.barangay', ['lat' => 18.51, 'lng' => 121.41]))
+        ->assertOk()
+        ->assertJsonPath('inside', true)
+        ->assertJsonPath('barangay', 'Abanqueruan');
 });
 
 test('nearest center lists every open evacuation center by distance', function () {

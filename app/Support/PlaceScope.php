@@ -35,6 +35,22 @@ class PlaceScope
         return $barangay !== '' && in_array($barangay, self::officialBarangays(), true);
     }
 
+    public static function addressWithoutBarangayPrefix(?string $address, ?string $barangay): string
+    {
+        $parts = array_values(array_filter(array_map('trim', explode(',', trim((string) $address)))));
+        $barangay = mb_strtolower(trim((string) $barangay));
+
+        while ($barangay !== '' && $parts !== []) {
+            $firstPart = preg_replace('/^(?:barangay|brgy\.?)\s+/i', '', $parts[0]);
+            if (mb_strtolower(trim((string) $firstPart)) !== $barangay) {
+                break;
+            }
+            array_shift($parts);
+        }
+
+        return implode(', ', $parts);
+    }
+
     /**
      * @param  iterable<int, mixed>  $names
      * @return array{inside: list<string>, outside: list<string>}

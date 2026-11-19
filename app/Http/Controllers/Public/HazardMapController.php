@@ -106,12 +106,15 @@ class HazardMapController extends Controller
         $lat = (float) $data['lat'];
         $lng = (float) $data['lng'];
         $withinMunicipality = $this->geofence->isWithinPamplona($lat, $lng);
-        $name = $withinMunicipality === false
-            ? null
-            : $this->geofence->resolveBarangay($lat, $lng);
+        $name = $withinMunicipality === false ? null : $this->geofence->resolveBarangay($lat, $lng);
         $address = config('raniag.address');
 
         if ($withinMunicipality !== false && ($name !== null || $withinMunicipality === true)) {
+            if ($name === null) {
+                $place = $this->reverseGeocodedPlace($lat, $lng);
+                $name = $this->matchOfficialBarangay($place['barangay'], $place['location_address']);
+            }
+
             return response()->json([
                 'barangay' => $name,
                 'municipality' => $address['municipality'] ?? 'Pamplona',
@@ -121,7 +124,7 @@ class HazardMapController extends Controller
             ])->header('Cache-Control', 'no-store');
         }
 
-        $outside = $this->reverseOutsidePamplona($lat, $lng);
+        $outside = $this->reverseGeocodedPlace($lat, $lng);
 
         return response()->json([
             'barangay' => $outside['barangay'],
@@ -208,13 +211,9 @@ class HazardMapController extends Controller
     }
 
     /**
-     * A fix outside the Pamplona barangay polygons must not be labeled
-     * Pamplona. Ask the public geocoder once; if it is unreachable, return
-     * empty names so the camera keeps the raw coordinates.
-     *
-     * @return array{barangay: ?string, municipality: ?string, province: ?string, country: ?string}
+     * @return array{barangay: ?string, municipality: ?string, province: ?string, country: ?string, location_address: ?string}
      */
-    private function reverseOutsidePamplona(float $lat, float $lng): array
+    private function reverseGeocodedPlace(float $lat, float $lng): array
     {
         $empty = [
             'barangay' => null,
@@ -246,7 +245,7 @@ class HazardMapController extends Controller
         }
 
         $addr = $response->json('address') ?? [];
-        $barangay = $addr['village'] ?? $addr['suburb'] ?? $addr['hamlet'] ?? $addr['neighbourhood'] ?? $addr['city_district'] ?? $addr['quarter'] ?? $addr['locality'] ?? null;
+        $barangay = $addr['barangay'] ?? $addr['village'] ?? $addr['suburb'] ?? $addr['hamlet'] ?? $addr['neighbourhood'] ?? $addr['city_district'] ?? $addr['quarter'] ?? $addr['locality'] ?? null;
         $municipality = $addr['municipality'] ?? $addr['town'] ?? $addr['city'] ?? $addr['county'] ?? null;
         $province = $addr['state'] ?? $addr['province'] ?? $addr['state_district'] ?? null;
         $country = $addr['country'] ?? null;
@@ -269,6 +268,26 @@ class HazardMapController extends Controller
             'country' => is_string($country) ? $country : null,
             'location_address' => $locationAddress !== '' ? $locationAddress : null,
         ];
+    }
+
+    /**
+     * Only accept a reverse-geocoded label when it matches a configured
+     * Pamplona barangay; neighborhood and purok names are not barangays.
+     */
+    private function matchOfficialBarangay(?string $candidate, ?string $locationAddress): ?string
+    {
+        $components = array_map(
+            static fn (string $part): string => mb_strtolower(trim((string) preg_replace('/^(?:barangay|brgy\.?)\s+/i', '', trim($part)))),
+            array_filter(array_merge([$candidate], explode(',', (string) $locationAddress)), 'is_string')
+        );
+
+        foreach (config('raniag.barangays', []) as $barangay) {
+            if (in_array(mb_strtolower($barangay), $components, true)) {
+                return $barangay;
+            }
+        }
+
+        return null;
     }
 
     public function nearestCenter(Request $request): JsonResponse

@@ -209,9 +209,10 @@
                 <div class="card-body">
                     @if ($incident->barangay || $incident->location_address)
                         <div class="mb-3">
-                            <strong>{{ $incident->barangay }}</strong>
-                            @if ($incident->location_address)
-                                <div class="text-muted small">{{ $incident->location_address }}</div>
+                            @if ($incident->barangay)<strong>{{ $incident->barangay }}</strong>@endif
+                            @php $locationAddress = \App\Support\PlaceScope::addressWithoutBarangayPrefix($incident->location_address, $incident->barangay); @endphp
+                            @if ($locationAddress !== '')
+                                <div class="text-muted small">{{ $locationAddress }}</div>
                             @endif
                         </div>
                     @endif

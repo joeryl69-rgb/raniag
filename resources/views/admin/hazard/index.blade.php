@@ -1139,6 +1139,13 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     let editingCenterId = null;
     const centerStoreAction = centerForm?.getAttribute('action') || '';
 
+    function setSavedCenterMarkersVisible(visible) {
+        savedCenterMarkers.forEach((marker) => {
+            if (visible && !map.hasLayer(marker)) marker.addTo(map);
+            else if (!visible && map.hasLayer(marker)) map.removeLayer(marker);
+        });
+    }
+
     function placeDraft(lat, lng) {
         latInput.value = Number(lat).toFixed(7);
         lngInput.value = Number(lng).toFixed(7);
@@ -1233,14 +1240,9 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         }
     }
 
-    function restoreCenterMarker(id) {
-        const marker = savedCenterMarkers.get(String(id));
-        if (marker && !map.hasLayer(marker)) marker.addTo(map);
-    }
-
     function beginCenterEdit(center, preserveValues = false) {
         if (!center) return;
-        if (editingCenterId && editingCenterId !== String(center.id)) restoreCenterMarker(editingCenterId);
+        setSavedCenterMarkersVisible(false);
         if (draftMarker) {
             map.removeLayer(draftMarker);
             draftMarker = null;
@@ -1269,6 +1271,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         const latitude = preserveValues ? parseFloat(latInput.value) : Number(center.lat);
         const longitude = preserveValues ? parseFloat(lngInput.value) : Number(center.lng);
         placeDraft(latitude, longitude);
+        map.setView([latitude, longitude], Math.max(map.getZoom(), 16), { animate: false });
         centerSave.textContent = 'Save changes';
         document.getElementById('center-cancel-edit').textContent = 'Cancel edit';
         engageMap();
@@ -1283,7 +1286,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     function cancelCenterEdit() {
-        if (editingCenterId) restoreCenterMarker(editingCenterId);
+        setSavedCenterMarkersVisible(true);
         if (draftMarker) {
             map.removeLayer(draftMarker);
             draftMarker = null;
@@ -1572,6 +1575,13 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 
     function fitMap() {
         map.invalidateSize();
+        if (editingCenterId) {
+            const center = existingCenters.find((item) => String(item.id) === editingCenterId);
+            if (center) {
+                map.setView([center.lat, center.lng], Math.max(map.getZoom(), 16), { animate: false });
+                return;
+            }
+        }
         const hasZones = zoneLayer.getLayers().length > 0;
         if (!hasZones && existingCenters.length <= 1) {
             const spot = existingCenters[0];

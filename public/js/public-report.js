@@ -480,6 +480,7 @@
                 const province = addr.state || addr.province || addressDefaults.province;
                 const country = addr.country || addressDefaults.country;
                 const locationCandidates = [
+                    addr.barangay,
                     addr.village,
                     addr.suburb,
                     addr.hamlet,
@@ -493,12 +494,12 @@
                     addr.county,
                     data.display_name || '',
                 ].filter(Boolean);
-                const areaName = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || addr.quarter || addr.locality || null;
+                const areaName = addr.barangay || addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.city_district || addr.quarter || addr.locality || null;
                 const textMatched = locationCandidates.map((candidate) => matchBarangay(candidate)).find(Boolean) || null;
                 const matched = jurisdictionUnavailable
                     ? null
                     : activeJurisdiction
-                        ? (activeJurisdiction.inside ? geofenced : null)
+                        ? (activeJurisdiction.inside ? (geofenced || textMatched) : null)
                         : withinMunicipality === false ? null : (geofenced || textMatched);
                 // Outside Pamplona's mapped barangays, "areaName" (e.g. "Langagan")
                 // is still a real barangay — just of a neighboring municipality —
