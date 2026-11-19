@@ -825,6 +825,13 @@
             #hazard-map, .rg-hazard-stage { min-height: 330px; }
             .rg-hazard-panel { height: auto; }
             .rg-hazard-pane { max-height: 300px; }
+            .rg-hazard-pane[data-hazard-pane="risk"] { max-height: none; overflow: visible; }
+            .rg-hazard-pane[data-hazard-pane="risk"] #risk-list {
+                max-height: 8rem;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                padding-right: .25rem;
+            }
         }
         @media (max-width: 767.98px) {
             .raniag-hero { min-height: 0; }

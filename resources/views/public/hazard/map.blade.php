@@ -115,12 +115,12 @@ html[data-theme="dark"] .rg-route-destination strong { color:#f0f6f5; }
             </div>
 
             <div class="rg-hazard-pane" data-hazard-pane="risk">
+                <div id="nearest-box" class="rg-hazard-nearest small d-none"></div>
                 <div id="risk-box" class="rg-hazard-nearest small">
                     <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.68rem">Open reports</div>
                     <div id="risk-summary" class="fw-semibold">Loading…</div>
                     <div id="risk-list" class="mt-1 text-muted" style="font-size:.78rem"></div>
                 </div>
-                <div id="nearest-box" class="rg-hazard-nearest small d-none mt-2"></div>
                 <div id="containing-zones-box" class="alert alert-warning border py-2 px-3 small d-none mt-2 mb-0"></div>
             </div>
 

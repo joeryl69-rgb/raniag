@@ -50,6 +50,18 @@ test('public hazard map page renders live risk chrome', function () {
         ->not->toContain('return nearestData?.nearest_center || null;');
 });
 
+test('compact live map keeps the nearest-center suggestion ahead of the scrollable reports', function () {
+    $html = $this->get(route('public.hazard.map'))
+        ->assertOk()
+        ->getContent();
+
+    expect(strpos($html, 'id="nearest-box"'))
+        ->toBeLessThan(strpos($html, 'id="risk-box"'))
+        ->and($html)
+        ->toContain('.rg-hazard-pane[data-hazard-pane="risk"] #risk-list')
+        ->toContain('max-height: 8rem;');
+});
+
 test('live map only opens an explicitly requested open shelter route', function () {
     $openCenter = \App\Models\EvacuationCenter::query()->create([
         'name' => 'Open Route Center',
