@@ -86,14 +86,14 @@
                     <div class="hz-toolbar mb-2">
                         <div class="hz-toolbar-copy">
                             <span class="hz-kicker">Map the boundary</span>
-                            <strong id="geometry-hint" role="status" aria-live="polite">Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.</strong>
+                            <strong id="geometry-hint" role="status" aria-live="polite">Select Add hazard area first. Then turn on the map to draw its boundary.</strong>
                             <span class="hz-map-state" id="map-lock-note">Map locked</span>
                         </div>
                         <div class="hz-tool-group" role="group" aria-label="Boundary tools">
-                            <button type="button" class="hz-tool" id="tool-polygon"><i class="bi bi-pentagon" aria-hidden="true"></i><span>Draw area</span></button>
-                            <button type="button" class="hz-tool" id="tool-box"><i class="bi bi-square" aria-hidden="true"></i><span>Draw box</span></button>
+                            <button type="button" class="hz-tool" id="tool-polygon" disabled><i class="bi bi-pentagon" aria-hidden="true"></i><span>Draw area</span></button>
+                            <button type="button" class="hz-tool" id="tool-box" disabled><i class="bi bi-square" aria-hidden="true"></i><span>Draw box</span></button>
                             <button type="button" class="hz-tool" id="tool-edit" disabled><i class="bi bi-bezier2" aria-hidden="true"></i><span>Adjust boundary</span></button>
-                            <button type="button" class="hz-tool hz-tool-quiet" id="tool-clear"><i class="bi bi-eraser" aria-hidden="true"></i><span>Clear</span></button>
+                            <button type="button" class="hz-tool hz-tool-quiet" id="tool-clear" disabled><i class="bi bi-eraser" aria-hidden="true"></i><span>Clear</span></button>
                         </div>
                     </div>
                     <div class="hz-map-wrap">
@@ -185,7 +185,7 @@
                         </section>
                         <section class="hz-section" id="boundary-step">
                             <span class="hz-kicker">3 · Boundary</span>
-                            <p id="boundary-note">Click or tap "Click or tap to use the map" before drawing. The boundary tools stay off until the map is on.</p>
+                            <p id="boundary-note">Select Add hazard area first. Then turn on the map to draw its boundary.</p>
                         </section>
                         <section class="hz-section">
                             <span class="hz-kicker">4 · Public map</span>
@@ -731,7 +731,10 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     const centerMethod = document.getElementById('center-form-method');
     const editingCenterInput = document.getElementById('editing-center-id');
     const zoneSave = document.getElementById('zone-save');
+    const polygonTool = document.getElementById('tool-polygon');
+    const boxTool = document.getElementById('tool-box');
     const editTool = document.getElementById('tool-edit');
+    const clearTool = document.getElementById('tool-clear');
     const boundaryNote = document.getElementById('boundary-note');
     const boundaryStep = document.getElementById('boundary-step');
     const pinStep = document.getElementById('pin-step');
@@ -778,6 +781,20 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         if (editorTitle) editorTitle.textContent = title;
         if (editorLead) editorLead.textContent = lead;
         editorPanel?.classList.add('is-editing');
+        syncMapLock();
+        if (mapReady()) {
+            if (form === centerForm) {
+                if (geometryHint) geometryHint.textContent = pinPlaced
+                    ? coordsLabel.textContent
+                    : 'Map is on. Click the map to drop the shelter pin.';
+            } else if (geometryInput.value) {
+                say('Boundary ready. Adjust the corners, or save the hazard area.', true);
+            } else {
+                say('Choose Draw area or Draw box to create a boundary.', false);
+            }
+        } else {
+            showLock();
+        }
         const narrowWorkspace = window.matchMedia('(max-width: 1199.98px)').matches;
         setEditorView(narrowWorkspace ? 'details' : 'map');
         requestAnimationFrame(() => {
@@ -805,6 +822,14 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         centerList?.classList.toggle('d-none', activeMode !== 'center');
         editorHeader?.classList.add('d-none');
         editorPanel?.classList.remove('is-editing');
+        syncMapLock();
+        if (mapReady()) {
+            if (activeMode === 'center') {
+                if (geometryHint) geometryHint.textContent = 'Select Add shelter to place a pin.';
+            } else {
+                say('Select Add hazard area to enable boundary tools.', false);
+            }
+        }
         requestAnimationFrame(() => map.invalidateSize());
     }
 
@@ -836,15 +861,22 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     }
 
     function showLock() {
-        const shelter = centerForm && !centerForm.classList.contains('d-none');
-        if (shelter) {
+        const shelterEditorActive = editorOpen && activeEditForm === centerForm;
+        const zoneEditorActive = editorOpen && activeEditForm === zoneForm;
+        if (shelterEditorActive) {
             if (geometryHint) geometryHint.textContent = lockMessage(true);
             if (coordsLabel && !pinPlaced) coordsLabel.textContent = 'Pin not placed yet. Click or tap "Click or tap to use the map", then click the map to drop the shelter.';
-        } else {
+        } else if (zoneEditorActive) {
             say(lockMessage(false), !!geometryInput.value);
+        } else {
+            const message = activeMode === 'center'
+                ? 'Select Add shelter to open the editor and place its pin.'
+                : 'Select Add hazard area to open the editor and draw its boundary.';
+            if (geometryHint) geometryHint.textContent = message;
+            if (boundaryNote) boundaryNote.textContent = message;
         }
-        boundaryStep?.classList.toggle('is-locked', !shelter);
-        pinStep?.classList.toggle('is-locked', !!shelter);
+        boundaryStep?.classList.toggle('is-locked', zoneEditorActive);
+        pinStep?.classList.toggle('is-locked', shelterEditorActive);
     }
 
     function syncMapLock() {
@@ -854,11 +886,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             mapLockNote.classList.toggle('is-ready', ready);
         }
         map.getContainer().querySelector('.rg-map-scroll-action')?.classList.toggle('is-needed', !ready);
-        document.querySelectorAll('.hz-tool').forEach((button) => {
-            if (button.id === 'tool-clear') return;
-            button.classList.toggle('is-waiting', !ready);
-            button.title = ready ? '' : 'Click or tap "Click or tap to use the map" first';
-        });
+        syncDrawingTools();
         if (!ready) {
             boundaryStep?.classList.add('is-locked');
             pinStep?.classList.add('is-locked');
@@ -1000,6 +1028,9 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     });
 
     let drawnLayer = null;
+    let draftMarker = null;
+    let pinPlaced = false;
+    let editingCenterId = null;
     const drawnItems = new L.FeatureGroup().addTo(map);
     const shapeOptions = () => ({ color: currentColor(), fillColor: currentColor(), weight: 2.5, fillOpacity: 0.42 });
     let polygonDrawer = new L.Draw.Polygon(map, { allowIntersection: false, showArea: true, shapeOptions: shapeOptions() });
@@ -1022,6 +1053,45 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         setDrawHold(false);
         polygonDrawer = new L.Draw.Polygon(map, { allowIntersection: false, showArea: true, shapeOptions: shapeOptions() });
         boxDrawer = new L.Draw.Rectangle(map, { shapeOptions: shapeOptions() });
+        syncDrawingTools();
+    }
+
+    function syncDrawingTools() {
+        const zoneEditorActive = editorOpen && activeEditForm === zoneForm && activeMode === 'zone';
+        const centerEditorActive = editorOpen && activeEditForm === centerForm && activeMode === 'center';
+        const ready = mapReady();
+        const canDrawBoundary = zoneEditorActive && ready;
+        const hasBoundaryDraft = !!drawnLayer || drawing();
+
+        if (polygonTool) polygonTool.disabled = !canDrawBoundary;
+        if (boxTool) boxTool.disabled = !canDrawBoundary;
+        if (editTool) editTool.disabled = !canDrawBoundary || !drawnLayer;
+        if (clearTool) {
+            clearTool.disabled = !ready || !(
+                (zoneEditorActive && hasBoundaryDraft)
+                || (centerEditorActive && pinPlaced)
+            );
+        }
+
+        const zoneMessage = !zoneEditorActive
+            ? 'Add a hazard area to enable boundary tools.'
+            : !ready
+                ? 'Click or tap "Click or tap to use the map" first.'
+                : '';
+        [polygonTool, boxTool, editTool].forEach((button) => {
+            if (!button) return;
+            button.classList.toggle('is-waiting', zoneEditorActive && !ready);
+            button.title = button.disabled
+                ? zoneMessage || (button === editTool ? 'Draw an area before adjusting it.' : 'Boundary tool unavailable.')
+                : '';
+        });
+        if (clearTool) {
+            clearTool.title = clearTool.disabled
+                ? !ready
+                    ? 'Click or tap "Click or tap to use the map" first.'
+                    : 'Add a hazard area or place a shelter pin before clearing.'
+                : '';
+        }
     }
 
     function styleDrawn() {
@@ -1042,7 +1112,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         }
         geometryInput.value = JSON.stringify(geometry);
         if (zoneSave) zoneSave.disabled = !typeSelect?.value;
-        if (editTool) editTool.disabled = false;
+        syncDrawingTools();
         markTool('');
         say('Boundary ready. Adjust the corners, or save the hazard area.', true);
     }
@@ -1062,6 +1132,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         boxDrawer.disable();
         if (editDrawer._enabled) editDrawer.disable();
         setDrawHold(false);
+        syncDrawingTools();
     });
 
     map.on(L.Draw.Event.EDITED, function (event) {
@@ -1071,27 +1142,32 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         });
     });
 
-    document.getElementById('tool-polygon')?.addEventListener('click', () => {
+    polygonTool?.addEventListener('click', () => {
+        if (!editorOpen || activeEditForm !== zoneForm || activeMode !== 'zone') return;
         setMode('zone');
         if (!requireMap()) return;
         refreshDrawers();
         if (editDrawer._enabled) editDrawer.disable();
         polygonDrawer.enable();
         setDrawHold(true);
+        syncDrawingTools();
         markTool('tool-polygon');
         say('Click to add corners. Click the first corner again to close the area.', false);
     });
-    document.getElementById('tool-box')?.addEventListener('click', () => {
+    boxTool?.addEventListener('click', () => {
+        if (!editorOpen || activeEditForm !== zoneForm || activeMode !== 'zone') return;
         setMode('zone');
         if (!requireMap()) return;
         refreshDrawers();
         if (editDrawer._enabled) editDrawer.disable();
         boxDrawer.enable();
         setDrawHold(true);
+        syncDrawingTools();
         markTool('tool-box');
         say('Click one corner, then the opposite corner.', false);
     });
     editTool?.addEventListener('click', () => {
+        if (!editorOpen || activeEditForm !== zoneForm || activeMode !== 'zone') return;
         if (!drawnLayer) return;
         if (!requireMap()) return;
         polygonDrawer.disable();
@@ -1100,10 +1176,14 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             editDrawer.enable();
             setDrawHold(true);
             markTool('tool-edit');
+            syncDrawingTools();
             say('Drag the handles, then click Save on the map.', true);
         }
     });
-    document.getElementById('tool-clear')?.addEventListener('click', () => {
+    clearTool?.addEventListener('click', () => {
+        const zoneEditorActive = editorOpen && activeEditForm === zoneForm && activeMode === 'zone';
+        const centerEditorActive = editorOpen && activeEditForm === centerForm && activeMode === 'center';
+        if (!zoneEditorActive && !centerEditorActive) return;
         if (activeMode === 'center') {
             if (draftMarker) map.removeLayer(draftMarker);
             draftMarker = null;
@@ -1112,6 +1192,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             lngInput.value = '';
             centerSave.disabled = true;
             if (coordsLabel) coordsLabel.textContent = 'Pin not placed yet. Click the map to drop the shelter pin.';
+            syncDrawingTools();
             return;
         }
         polygonDrawer.disable();
@@ -1122,8 +1203,8 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         drawnLayer = null;
         geometryInput.value = '';
         if (zoneSave) zoneSave.disabled = true;
-        if (editTool) editTool.disabled = true;
         markTool('');
+        syncDrawingTools();
         if (editingZoneId) say('Boundary cleared. Draw the replacement, or cancel the edit to keep the saved shape.', false);
         else if (mapReady()) say('Drawing cleared. Trace the boundary again.', false);
         else showLock();
@@ -1157,9 +1238,6 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         }
     }
 
-    let draftMarker = null;
-    let pinPlaced = false;
-    let editingCenterId = null;
     const centerStoreAction = centerForm?.getAttribute('action') || '';
 
     function setSavedCenterMarkersVisible(visible) {
@@ -1188,6 +1266,7 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         pinPlaced = true;
         centerSave.disabled = false;
         pinStep?.classList.add('is-ready');
+        syncDrawingTools();
         const pinMessage = 'Pin placed at ' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5) + '. Drag it if it needs to move.';
         coordsLabel.textContent = pinMessage;
         if (geometryHint && !centerForm.classList.contains('d-none')) geometryHint.textContent = pinMessage;
@@ -1217,11 +1296,19 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
         }
         if (drawing()) setDrawHold(true);
         syncMapLock();
-        const shelter = centerForm && !centerForm.classList.contains('d-none');
+        const shelter = editorOpen && activeEditForm === centerForm;
         if (shelter) {
             if (geometryHint) geometryHint.textContent = pinPlaced
                 ? coordsLabel.textContent
                 : 'Map is on. Click the map to drop the shelter pin.';
+            return;
+        }
+        if (!editorOpen || activeEditForm !== zoneForm) {
+            if (activeMode === 'center') {
+                if (geometryHint) geometryHint.textContent = 'Select Add shelter to place a pin.';
+            } else {
+                say('Select Add hazard area to enable boundary tools.', false);
+            }
             return;
         }
         if (drawing()) return;
@@ -1253,14 +1340,25 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
             setDrawHold(false);
             markTool('');
             if (!mapReady()) showLock();
-            else if (geometryHint) geometryHint.textContent = pinPlaced ? 'Shelter pin is on the map. Drag it if it needs to move.' : 'Map is on. Click the map to drop the shelter pin.';
+            else if (geometryHint) {
+                if (editorOpen && activeEditForm === centerForm) {
+                    geometryHint.textContent = pinPlaced
+                        ? 'Shelter pin is on the map. Drag it if it needs to move.'
+                        : 'Map is on. Click the map to drop the shelter pin.';
+                } else {
+                    geometryHint.textContent = 'Select Add shelter to place a pin.';
+                }
+            }
         } else if (!mapReady()) {
             showLock();
+        } else if (!editorOpen || activeEditForm !== zoneForm) {
+            say('Select Add hazard area to enable boundary tools.', false);
         } else if (!geometryInput.value) {
             say('Draw an area or a box, then name it in the panel.', false);
         } else {
             say('Boundary ready. Adjust the corners, or save the hazard area.', true);
         }
+        syncDrawingTools();
     }
 
     function beginCenterEdit(center, preserveValues = false) {
