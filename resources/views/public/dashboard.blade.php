@@ -67,6 +67,26 @@
             <span class="rg-risk-pill" id="pd-most-active-band">Watch</span>
         </section>
 
+        <section class="rg-situation-card rg-centers-card" aria-labelledby="pd-centers-title">
+            <div class="rg-card-head">
+                <div>
+                    <span class="rg-community-label">Public shelter locations</span>
+                    <h2 id="pd-centers-title">Evacuation centers</h2>
+                </div>
+                <div class="rg-center-status-legend" aria-label="Center status legend">
+                    <span><i class="is-open"></i>Open</span>
+                    <span><i class="is-closed"></i>Closed</span>
+                </div>
+            </div>
+            <div class="rg-centers-layout">
+                <div id="community-center-map" role="application" aria-label="Map of evacuation-center locations"></div>
+                <div id="pd-centers-list" class="rg-center-list" aria-live="polite">
+                    <div class="text-muted small">Loading evacuation centers…</div>
+                </div>
+            </div>
+            <p class="rg-center-note">Select a center to focus its map pin. Use Get directions to open turn-by-turn routing. Report locations remain private.</p>
+        </section>
+
         <div class="rg-community-grid">
             <section class="rg-situation-card rg-trend-card">
                 <div class="rg-card-head">
@@ -126,25 +146,6 @@
                 <div id="pd-activity-list" class="rg-activity-list"></div>
             </section>
 
-            <section class="rg-situation-card rg-centers-card" aria-labelledby="pd-centers-title">
-                <div class="rg-card-head">
-                    <div>
-                        <span class="rg-community-label">Public shelter locations</span>
-                        <h2 id="pd-centers-title">Evacuation centers</h2>
-                    </div>
-                    <div class="rg-center-status-legend" aria-label="Center status legend">
-                        <span><i class="is-open"></i>Open</span>
-                        <span><i class="is-closed"></i>Closed</span>
-                    </div>
-                </div>
-                <div class="rg-centers-layout">
-                    <div id="community-center-map" role="application" aria-label="Map of evacuation-center locations"></div>
-                    <div id="pd-centers-list" class="rg-center-list" aria-live="polite">
-                        <div class="text-muted small">Loading evacuation centers…</div>
-                    </div>
-                </div>
-                <p class="rg-center-note">Center status refreshes automatically. Report locations remain private and are not shown on this map.</p>
-            </section>
         </div>
 
         <p class="rg-community-updated" id="pd-updated"></p>
@@ -223,14 +224,21 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
 .rg-repeat-row:last-child { border-bottom:0; }
 .rg-repeat-row strong { font-size:.86rem; }
 .rg-repeat-row small { display:block; color:#64748b; }
-.rg-centers-card { grid-column:1 / -1; }
+.rg-centers-card { margin-bottom:18px; }
 .rg-centers-layout { display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.75fr);gap:14px;align-items:stretch; }
 #community-center-map { height:360px;min-height:280px;border:1px solid rgba(15,28,51,.12);border-radius:12px;background:#e8eef5; }
 .rg-center-list { display:grid;align-content:start;gap:8px;max-height:360px;overflow:auto;padding-right:2px; }
-.rg-center-item { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;width:100%;padding:12px;border:1px solid rgba(15,28,51,.1);border-radius:12px;background:#fff;color:inherit;text-align:left; }
-.rg-center-item:hover,.rg-center-item:focus-visible { border-color:#0f766e;box-shadow:0 0 0 2px rgba(15,118,110,.12); }
-.rg-center-item strong { min-width:0;font-size:.86rem; }
-.rg-center-item small { grid-column:1 / -1;color:#64748b;font-size:.75rem;line-height:1.4; }
+.rg-center-item { display:grid;gap:8px;padding:12px;border:1px solid rgba(15,28,51,.1);border-radius:12px;background:#fff;color:inherit; }
+.rg-center-select { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left; }
+.rg-center-select:hover strong,.rg-center-select:focus-visible strong { color:#0f766e; }
+.rg-center-select strong { min-width:0;font-size:.86rem; }
+.rg-center-location { color:#64748b;font-size:.75rem;line-height:1.4; }
+.rg-center-details { display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px; }
+.rg-center-capacity { color:#52677a;font-size:.72rem;font-weight:700; }
+.rg-center-directions { display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:6px 10px;border:1px solid rgba(15,118,110,.24);border-radius:8px;background:#ecfdf5;color:#0f766e;font-size:.72rem;font-weight:800;text-decoration:none;white-space:nowrap; }
+.rg-center-directions:hover,.rg-center-directions:focus-visible { border-color:#0f766e;background:#d1fae5;color:#115e59; }
+.rg-center-popup-details { display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;margin-top:5px; }
+.rg-center-popup-details .rg-center-popup-status { margin-top:0; }
 .rg-center-status { align-self:start;border-radius:999px;padding:3px 8px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em; }
 .rg-center-status.is-open { background:#dcfce7;color:#166534; }
 .rg-center-status.is-closed { background:#e2e8f0;color:#475569; }
@@ -247,7 +255,9 @@ html[data-public-theme="dark"] #rg-main .rg-community-report { color:#092723!imp
 .rg-center-popup-status.is-closed { background:#e2e8f0;color:#475569; }
 [data-theme="dark"] #community-center-map { border-color:#405862; }
 [data-theme="dark"] .rg-center-item { border-color:#405862;background:#172c36;color:#e8f0f0; }
-[data-theme="dark"] .rg-center-item small,[data-theme="dark"] .rg-center-status-legend,[data-theme="dark"] .rg-center-note { color:#b6c8cc; }
+[data-theme="dark"] .rg-center-location,[data-theme="dark"] .rg-center-capacity,[data-theme="dark"] .rg-center-status-legend,[data-theme="dark"] .rg-center-note { color:#b6c8cc; }
+[data-theme="dark"] .rg-center-directions { border-color:#41706b;background:#173a38;color:#8ce4d0; }
+[data-theme="dark"] .rg-center-directions:hover,[data-theme="dark"] .rg-center-directions:focus-visible { background:#204a46;color:#b8f5e7; }
 [data-theme="dark"] .rg-center-status.is-closed { background:#334550;color:#d4e0e2; }
 [data-theme="dark"] .rg-kpi { background:#142630; border-color:#304955; }
 [data-theme="dark"] .rg-kpi strong { color:#f0f6f5; }

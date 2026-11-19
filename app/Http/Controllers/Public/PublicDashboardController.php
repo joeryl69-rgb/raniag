@@ -8,8 +8,8 @@ use App\Models\EvacuationCenter;
 use App\Models\Incident;
 use App\Support\PeriodRange;
 use Carbon\Carbon;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -109,7 +109,7 @@ class PublicDashboardController extends Controller
         $hotspots = $this->hotspots($periodQuery());
         $evacuationCenters = EvacuationCenter::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'barangay', 'address', 'latitude', 'longitude', 'is_open'])
+            ->get(['id', 'name', 'barangay', 'address', 'latitude', 'longitude', 'capacity', 'is_open'])
             ->map(fn (EvacuationCenter $center) => [
                 'id' => $center->id,
                 'name' => $center->name,
@@ -117,6 +117,7 @@ class PublicDashboardController extends Controller
                 'address' => $center->address,
                 'latitude' => (float) $center->latitude,
                 'longitude' => (float) $center->longitude,
+                'capacity' => $center->capacity,
                 'is_open' => (bool) $center->is_open,
             ])
             ->values();

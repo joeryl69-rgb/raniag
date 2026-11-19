@@ -40,6 +40,8 @@ test('hazard map creation uses the stepped authoring panel', function () {
         ->assertDontSee('js/geometry-history.js', false)
         ->assertSee('Hazard areas', false)
         ->assertSee('Shelters', false)
+        ->assertSee('hz-zone-actions', false)
+        ->assertSee('hz-center-actions', false)
         ->assertSeeInOrder([
             'id="hz-list-header"',
             'class="hz-mode-switch"',

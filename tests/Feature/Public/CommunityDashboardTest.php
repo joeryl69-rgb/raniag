@@ -47,6 +47,7 @@ test('community dashboard exposes evacuation-center locations and open status on
         'address' => 'Municipal Hall, Centro',
         'latitude' => 18.451,
         'longitude' => 121.341,
+        'capacity' => 200,
         'is_open' => true,
         'notes' => 'Staff-only note',
     ]);
@@ -66,6 +67,7 @@ test('community dashboard exposes evacuation-center locations and open status on
         ->assertJsonPath('evacuation_centers.0.name', 'Centro Open Shelter')
         ->assertJsonPath('evacuation_centers.0.is_open', true)
         ->assertJsonPath('evacuation_centers.0.address', 'Municipal Hall, Centro')
+        ->assertJsonPath('evacuation_centers.0.capacity', 200)
         ->assertJsonPath('evacuation_centers.1.name', 'Closed School Shelter')
         ->assertJsonPath('evacuation_centers.1.is_open', false);
 
@@ -80,5 +82,10 @@ test('community dashboard renders a status-aware evacuation-center map', functio
         ->assertSee('id="pd-centers-list"', false)
         ->assertSee('Evacuation centers', false)
         ->assertSee('public-community-centers.js', false)
+        ->assertSeeInOrder([
+            'id="pd-most-active"',
+            'id="pd-centers-title"',
+            'class="rg-community-grid"',
+        ], false)
         ->assertSee('window.setInterval(load, 30000)', false);
 });

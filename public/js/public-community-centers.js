@@ -19,9 +19,38 @@
     }
 
     function centerLocation(center) {
-        return [center.address, center.barangay ? `Barangay ${center.barangay}` : null]
-            .filter(Boolean)
-            .join(' · ') || 'Location details unavailable';
+        const address = String(center.address || '').trim();
+        const barangay = String(center.barangay || '').trim();
+        const normalizedAddress = ` ${address.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+        const mentions = (value) => normalizedAddress.includes(` ${String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `);
+        const parts = [address];
+
+        if (barangay && !mentions(barangay)) parts.push(`Barangay ${barangay}`);
+        if (!mentions('Pamplona')) parts.push('Pamplona');
+        if (!mentions('Cagayan')) parts.push('Cagayan');
+
+        if (address || barangay) return parts.filter(Boolean).join(' · ');
+
+        const latitude = Number(center.latitude);
+        const longitude = Number(center.longitude);
+        return Number.isFinite(latitude) && Number.isFinite(longitude)
+            ? `Pinned location ${latitude.toFixed(5)}, ${longitude.toFixed(5)} · Pamplona, Cagayan`
+            : 'Address not provided';
+    }
+
+    function centerCapacity(center) {
+        const capacity = Number(center.capacity);
+        return Number.isFinite(capacity) && capacity > 0
+            ? `Capacity: ${capacity.toLocaleString()} people`
+            : 'Capacity not listed';
+    }
+
+    function directionsUrl(center) {
+        const latitude = Number(center.latitude);
+        const longitude = Number(center.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+        return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${latitude},${longitude}`)}`;
     }
 
     function centerIcon(isOpen) {
@@ -38,9 +67,14 @@
     function popupContent(center) {
         const isOpen = center.is_open === true;
         const status = isOpen ? 'Open' : 'Closed';
+        const directions = directionsUrl(center);
         return `<strong>${escapeHtml(center.name)}</strong>
-            <div>${escapeHtml(centerLocation(center))}</div>
-            <span class="rg-center-popup-status${isOpen ? '' : ' is-closed'}">${status}</span>`;
+            <div class="rg-center-location">${escapeHtml(centerLocation(center))}</div>
+            <div class="rg-center-popup-details">
+                <span class="rg-center-popup-status${isOpen ? '' : ' is-closed'}">${status}</span>
+                <span class="rg-center-capacity">${escapeHtml(centerCapacity(center))}</span>
+            </div>
+            ${directions ? `<a class="rg-center-directions mt-2" href="${escapeHtml(directions)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>Get directions</a>` : ''}`;
     }
 
     function renderList(centers) {
@@ -55,12 +89,28 @@
             const isOpen = center.is_open === true;
             const status = isOpen ? 'Open' : 'Closed';
             const statusClass = isOpen ? 'is-open' : 'is-closed';
-            return `<button type="button" class="rg-center-item" data-community-center-id="${Number(center.id)}">
-                <strong>${escapeHtml(center.name)}</strong>
-                <span class="rg-center-status ${statusClass}">${status}</span>
-                <small>${escapeHtml(centerLocation(center))}</small>
-            </button>`;
+            const directions = directionsUrl(center);
+            return `<article class="rg-center-item">
+                <button type="button" class="rg-center-select" data-community-center-id="${Number(center.id)}" aria-label="Show ${escapeHtml(center.name)} on the map">
+                    <strong>${escapeHtml(center.name)}</strong>
+                    <span class="rg-center-status ${statusClass}">${status}</span>
+                </button>
+                <small class="rg-center-location">${escapeHtml(centerLocation(center))}</small>
+                <div class="rg-center-details">
+                    <span class="rg-center-capacity">${escapeHtml(centerCapacity(center))}</span>
+                    ${directions ? `<a class="rg-center-directions" href="${escapeHtml(directions)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>Get directions</a>` : ''}
+                </div>
+            </article>`;
         }).join('');
+    }
+
+    function focusCenterOnMap(event) {
+        const button = event.target.closest('button[data-community-center-id]');
+        if (!button) return;
+        const marker = centersById.get(Number(button.dataset.communityCenterId));
+        if (!marker) return;
+        map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
+        marker.openPopup();
     }
 
     function init(mapConfig) {
@@ -87,14 +137,8 @@
         }
 
         markerLayer = leaflet.layerGroup().addTo(map);
-        mapElement.addEventListener('click', (event) => {
-            const button = event.target.closest('[data-community-center-id]');
-            if (!button) return;
-            const marker = centersById.get(Number(button.dataset.communityCenterId));
-            if (!marker) return;
-            map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
-            marker.openPopup();
-        });
+        mapElement.addEventListener('click', focusCenterOnMap);
+        document.getElementById('pd-centers-list')?.addEventListener('click', focusCenterOnMap);
 
         window.addEventListener('resize', () => map.invalidateSize());
         return true;

@@ -275,29 +275,27 @@
                 <div class="list-group list-group-flush border-top" id="zone-list">
                     <div class="list-group-item hz-list-label">Saved areas</div>
                     @forelse ($zones as $zone)
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between gap-2">
-                                <div class="min-w-0">
-                                    <div class="fw-semibold text-truncate">
-                                        <span class="hz-dot" style="background:{{ $zone->displayColor() }}"></span>
-                                        {{ $zone->name }}
-                                    </div>
-                                    <div class="small text-muted">{{ $zone->type?->name ?? 'Hazard' }}@if($zone->barangay) · {{ $zone->barangay }}@endif · {{ $zone->is_active ? 'Public' : 'Hidden' }}</div>
+                        <div class="list-group-item hz-zone-row">
+                            <div class="hz-zone-info min-w-0">
+                                <div class="fw-semibold text-truncate">
+                                    <span class="hz-dot" style="background:{{ $zone->displayColor() }}"></span>
+                                    {{ $zone->name }}
                                 </div>
-                                <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end">
-                                    <button type="button" class="btn btn-sm btn-outline-primary js-edit-zone"
-                                        data-id="{{ $zone->id }}"
-                                        data-name="{{ $zone->name }}"
-                                        data-barangay="{{ $zone->barangay }}"
-                                        data-active="{{ $zone->is_active ? '1' : '0' }}"
-                                        data-type-id="{{ $incidentTypes->first(fn ($type) => $type->name === ($zone->type->name ?? null))?->id }}">Edit</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary js-advisory" data-id="{{ $zone->id }}">Advisory</button>
-                                    <form method="POST" action="{{ route('admin.hazard.zones.destroy', $zone) }}" onsubmit="return confirm('Remove this hazard area?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash3"></i></button>
-                                    </form>
-                                </div>
+                                <div class="small text-muted">{{ $zone->type?->name ?? 'Hazard' }}@if($zone->barangay) · {{ $zone->barangay }}@endif · {{ $zone->is_active ? 'Public' : 'Hidden' }}</div>
+                            </div>
+                            <div class="hz-zone-actions">
+                                <button type="button" class="btn btn-sm btn-outline-primary js-edit-zone"
+                                    data-id="{{ $zone->id }}"
+                                    data-name="{{ $zone->name }}"
+                                    data-barangay="{{ $zone->barangay }}"
+                                    data-active="{{ $zone->is_active ? '1' : '0' }}"
+                                    data-type-id="{{ $incidentTypes->first(fn ($type) => $type->name === ($zone->type->name ?? null))?->id }}">Edit</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary js-advisory" data-id="{{ $zone->id }}">Advisory</button>
+                                <form method="POST" action="{{ route('admin.hazard.zones.destroy', $zone) }}" onsubmit="return confirm('Remove this hazard area?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash3"></i></button>
+                                </form>
                             </div>
                         </div>
                     @empty
@@ -308,8 +306,8 @@
                 <div class="list-group list-group-flush border-top d-none" id="center-list">
                     <div class="list-group-item hz-list-label">Saved shelters</div>
                     @forelse ($centers as $c)
-                        <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
-                            <div class="min-w-0">
+                        <div class="list-group-item hz-center-row">
+                            <div class="hz-center-info min-w-0">
                                 <div class="fw-semibold text-truncate">{{ $c->name }}</div>
                                 <div class="small text-muted">
                                     {{ $c->barangay ?: 'No barangay' }}
@@ -318,17 +316,19 @@
                                     @if ($c->capacity) / {{ $c->capacity }} @endif
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary js-edit-center" data-center-id="{{ $c->id }}">Edit</button>
-                            <form method="POST" action="{{ route('admin.hazard.centers.update', $c) }}" class="d-flex align-items-center">
-                                @csrf
-                                @method('PATCH')
-                                <input type="color" name="color" class="form-control form-control-color" value="{{ $c->color ?: '#0f766e' }}" onchange="this.form.submit()" title="Pin color" aria-label="Pin color for {{ $c->name }}">
-                            </form>
-                            <form method="POST" action="{{ route('admin.hazard.centers.destroy', $c) }}" onsubmit="return confirm('Remove this shelter? People checked in here are removed with it.');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash3"></i></button>
-                            </form>
+                            <div class="hz-center-actions">
+                                <button type="button" class="btn btn-sm btn-outline-primary js-edit-center" data-center-id="{{ $c->id }}">Edit</button>
+                                <form method="POST" action="{{ route('admin.hazard.centers.update', $c) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="color" name="color" class="form-control form-control-color" value="{{ $c->color ?: '#0f766e' }}" onchange="this.form.submit()" title="Pin color" aria-label="Pin color for {{ $c->name }}">
+                                </form>
+                                <form method="POST" action="{{ route('admin.hazard.centers.destroy', $c) }}" onsubmit="return confirm('Remove this shelter? People checked in here are removed with it.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash3"></i></button>
+                                </form>
+                            </div>
                         </div>
                     @empty
                         <div class="list-group-item text-muted small">No shelters yet.</div>
@@ -621,6 +621,11 @@ html[data-theme="dark"] .hz-map-state.is-ready { color: #5eead4; }
 html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-type-preview { display: flex; align-items: center; gap: .6rem; margin-top: .7rem; font-size: .8rem; line-height: 1.35; color: var(--raniag-muted); }
 .hz-list-label { background: color-mix(in srgb, var(--raniag-ink) 4%, var(--raniag-card)) !important; color: var(--raniag-muted) !important; font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.hz-zone-row, .hz-center-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .65rem; }
+.hz-zone-actions, .hz-center-actions { display: grid; grid-template-columns: repeat(3, max-content); align-items: center; gap: .35rem; }
+.hz-zone-actions form, .hz-center-actions form { margin: 0; }
+.hz-zone-actions button, .hz-center-actions button { white-space: nowrap; }
+.hz-center-actions .form-control-color { width: 3rem; height: 2.25rem; padding: .25rem; }
 .hz-map-wrap { position: relative; height: calc(100vh - 280px); min-height: 520px; border-radius: 12px; overflow: hidden; border: 1px solid var(--raniag-border); background: var(--raniag-card-raised); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent); }
 #ops-map { height: 100%; width: 100%; }
 .hz-legend { position: relative; z-index: 1; width: fit-content; max-width: 100%; margin-top: .5rem; background: var(--raniag-card); color: var(--raniag-ink); border: 1px solid var(--raniag-border); border-radius: 8px; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: .35rem .75rem; font-size: .75rem; line-height: 1.35; box-shadow: 0 4px 14px rgba(15,23,42,.12); }
