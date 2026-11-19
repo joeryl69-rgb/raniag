@@ -634,6 +634,12 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
 .hz-shelter-key { width: 12px; height: 12px; border-radius: 50%; background: #0f766e; display: inline-block; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #0f766e; }
 .hz-panel { display: flex; max-height: calc(100vh - 230px); flex-direction: column; overflow: hidden; border: 1px solid var(--raniag-border) !important; border-radius: .9rem !important; background: var(--raniag-card) !important; color: var(--raniag-ink); box-shadow: 0 12px 30px color-mix(in srgb, var(--raniag-ink) 6%, transparent) !important; }
 .hz-panel > .card-body { min-height: 0; overflow: auto; }
+#hz-editor-panel:not(.is-editing) { height: calc(100vh - 230px); max-height: calc(100vh - 230px); }
+#hz-editor-panel:not(.is-editing) > .card-body { flex: 0 0 auto; overflow: visible; padding-bottom: .35rem; }
+#hz-editor-panel:not(.is-editing) > .list-group:not(.d-none) { flex: 1 1 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+#hz-editor-panel:not(.is-editing) .hz-list-label { position: sticky; top: 0; z-index: 2; }
+#hz-editor-panel:not(.is-editing) .hz-zone-row,
+#hz-editor-panel:not(.is-editing) .hz-center-row { flex: 0 0 auto; }
 .hz-panel.is-editing { height: calc(100vh - 230px); }
 .hz-panel.is-editing > .card-body { display: flex; flex: 1 1 auto; flex-direction: column; overflow: hidden; padding: 0; }
 #hazard-zone-form, #center-form { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; }
@@ -654,6 +660,9 @@ html[data-theme="dark"] .hz-section.is-locked p { color: #fdba74; }
     .hz-panel.is-editing { height: auto; }
     .hz-panel.is-editing > .card-body { display: block; overflow: visible; }
     .hz-panel.is-editing .hz-form-body { min-height: auto; overflow: visible; }
+    #hz-editor-panel:not(.is-editing) { height: 68vh; min-height: 22rem; max-height: calc(100dvh - 9rem); overflow: hidden; }
+    #hz-editor-panel:not(.is-editing) > .card-body { flex: 0 0 auto; min-height: auto; overflow: visible; }
+    #hz-editor-panel:not(.is-editing) > .list-group:not(.d-none) { flex: 1 1 0; min-height: 0; overflow-x: hidden; overflow-y: auto; }
     #hz-editor-workspace.is-editor-open[data-editor-view="map"] #hz-editor-panel { display: none; }
     #hz-editor-workspace.is-editor-open[data-editor-view="details"] #hz-map-column { display: none; }
 }

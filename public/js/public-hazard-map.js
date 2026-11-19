@@ -81,6 +81,15 @@
         let lastNearestAt = 0;
         let lastNearestLatLng = null;
         let pendingNearestLatLng = null;
+        let currentPlaceName = '';
+        let currentPlaceContext = '';
+        let currentPlaceError = false;
+        let placeLookupInFlight = false;
+        let pendingPlaceLookup = null;
+        let placeLookupTimer = null;
+        let lastPlaceLookupAt = 0;
+        let lastPlaceLookupLatLng = null;
+        let placeLookupSeq = 0;
         let routeModalOpen = false;
         let routeFollowEnabled = false;
         let routePreviousTab = 'risk';
@@ -99,6 +108,8 @@
         const TRAIL_MIN_MOVE_M = 8;
         const NEAREST_MIN_MOVE_M = 25;
         const NEAREST_MIN_INTERVAL_MS = 8000;
+        const PLACE_LOOKUP_MIN_MOVE_M = 50;
+        const PLACE_LOOKUP_MIN_INTERVAL_MS = 15000;
 
         const chkZones = document.getElementById('layer-zones');
         const chkCenters = document.getElementById('layer-centers');
@@ -121,7 +132,12 @@
         const routeModalMapSlot = document.getElementById('route-modal-map-slot');
         const routeModalDetails = document.getElementById('route-modal-details');
         const routeDestinationName = document.getElementById('route-destination-name');
-        const routeCurrentCoordinates = document.getElementById('route-current-coordinates');
+        const currentLocationCard = document.getElementById('hazard-current-location');
+        const currentLocationName = document.getElementById('hazard-current-location-name');
+        const currentLocationContext = document.getElementById('hazard-current-location-context');
+        const currentLocationMeta = document.getElementById('hazard-current-location-meta');
+        const routeCurrentAddress = document.getElementById('route-current-address');
+        const routeCurrentContext = document.getElementById('route-current-context');
         const routeCurrentDetails = document.getElementById('route-current-details');
         const routeModalGpsStatus = document.getElementById('route-modal-gps-status');
         const routeFollowToggle = document.getElementById('route-follow-toggle');
@@ -287,23 +303,155 @@
         }
 
         function renderCurrentLocation() {
-            if (!routeCurrentCoordinates || !routeCurrentDetails) return;
-            if (!youLatLng) {
-                routeCurrentCoordinates.textContent = layersOn().you ? 'Waiting for GPS location…' : 'Location is off';
-                routeCurrentDetails.textContent = layersOn().you
-                    ? 'Your position will appear here as soon as GPS is available.'
-                    : 'Turn on My location to display your current position.';
-                return;
-            }
-
-            routeCurrentCoordinates.textContent = `${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)}`;
+            const enabled = layersOn().you;
+            const waiting = enabled && !youLatLng;
+            const address = !enabled
+                ? 'Location is off'
+                : (youLatLng
+                    ? (currentPlaceName || (currentPlaceError ? 'Location details unavailable' : 'Resolving full location details…'))
+                    : 'Waiting for GPS location…');
+            const context = currentPlaceContext || (waiting
+                ? 'Your place details will appear when GPS is available.'
+                : (enabled && youLatLng ? 'Resolving your barangay and municipality…' : 'Turn on My location to display your place.'));
             const accuracy = Number.isFinite(youAccuracyMeters)
                 ? `GPS accuracy ±${formatDistance(youAccuracyMeters)}`
                 : 'GPS accuracy unavailable';
             const updated = youPositionUpdatedAt
                 ? new Date(youPositionUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })
                 : '';
-            routeCurrentDetails.textContent = `Live · ${accuracy}${updated ? ` · Updated ${updated}` : ''}`;
+            const meta = youLatLng
+                ? `Live · ${accuracy}${updated ? ` · Updated ${updated}` : ''}${currentPlaceError ? ' · Address refresh failed' : ''}`
+                : (enabled ? 'Waiting for GPS permission and a location fix.' : 'Turn on My location to see your full location details.');
+
+            if (currentLocationCard) currentLocationCard.classList.toggle('d-none', !enabled);
+            if (currentLocationName) currentLocationName.textContent = address;
+            if (currentLocationContext) currentLocationContext.textContent = context;
+            if (currentLocationMeta) currentLocationMeta.textContent = meta;
+            if (routeCurrentAddress) routeCurrentAddress.textContent = address;
+            if (routeCurrentContext) routeCurrentContext.textContent = context;
+            if (routeCurrentDetails) routeCurrentDetails.textContent = meta;
+            updateYouMarkerPopup();
+        }
+
+        function updateYouMarkerPopup() {
+            if (!youMarker) return;
+            const address = currentPlaceName || (youLatLng ? 'Resolving full location details…' : 'Location details unavailable');
+            const context = currentPlaceContext ? `<br><small>${esc(currentPlaceContext)}</small>` : '';
+            youMarker.setPopupContent(`<strong>Your current location</strong><br>${esc(address)}${context}`);
+        }
+
+        function formatLocationName(data) {
+            const address = typeof data.location_address === 'string' ? data.location_address.trim() : '';
+            if (address) return address;
+            return [
+                data.barangay ? `Barangay ${data.barangay}` : null,
+                data.municipality,
+                data.province,
+                data.country,
+            ].filter((part) => typeof part === 'string' && part.trim()).join(', ');
+        }
+
+        function formatLocationContext(data) {
+            const locality = [
+                data.barangay ? `Barangay ${data.barangay}` : null,
+                data.municipality,
+                data.province,
+                data.country,
+            ].filter((part) => typeof part === 'string' && part.trim()).join(' · ');
+            const boundary = data.inside === true
+                ? 'Inside Pamplona response area'
+                : (data.inside === false ? 'Outside Pamplona response area' : '');
+            return [locality, boundary].filter(Boolean).join(' · ');
+        }
+
+        function schedulePlaceLookup(lat, lng) {
+            if (!layersOn().you) return;
+            if (!cfg.barangayUrl) {
+                currentPlaceError = true;
+                currentPlaceName = 'Full location details are unavailable.';
+                currentPlaceContext = 'The address lookup service is not configured.';
+                renderCurrentLocation();
+                setGeoStatus('Could not resolve full location details.', true);
+                return;
+            }
+
+            pendingPlaceLookup = leaflet.latLng(lat, lng);
+            if (placeLookupInFlight) return;
+
+            const movedEnough = !lastPlaceLookupLatLng
+                || haversineMeters(lastPlaceLookupLatLng, pendingPlaceLookup) >= PLACE_LOOKUP_MIN_MOVE_M;
+            if (currentPlaceName && !currentPlaceError && !movedEnough) {
+                pendingPlaceLookup = null;
+                return;
+            }
+
+            const wait = Math.max(0, PLACE_LOOKUP_MIN_INTERVAL_MS - (Date.now() - lastPlaceLookupAt));
+            if (wait > 0) {
+                if (placeLookupTimer == null) {
+                    placeLookupTimer = setTimeout(() => {
+                        placeLookupTimer = null;
+                        const pending = pendingPlaceLookup;
+                        pendingPlaceLookup = null;
+                        if (pending && layersOn().you) schedulePlaceLookup(pending.lat, pending.lng);
+                    }, wait);
+                }
+                return;
+            }
+
+            const point = pendingPlaceLookup;
+            pendingPlaceLookup = null;
+            resolvePlace(point);
+        }
+
+        async function resolvePlace(point) {
+            if (placeLookupInFlight || !point || !layersOn().you) return;
+            placeLookupInFlight = true;
+            lastPlaceLookupAt = Date.now();
+            lastPlaceLookupLatLng = point;
+            const requestSeq = ++placeLookupSeq;
+            currentPlaceContext = currentPlaceName
+                ? 'Updating your location details…'
+                : 'Resolving your barangay and municipality…';
+            renderCurrentLocation();
+
+            try {
+                const url = new URL(cfg.barangayUrl, window.location.href);
+                url.searchParams.set('lat', String(point.lat));
+                url.searchParams.set('lng', String(point.lng));
+                url.searchParams.set('include_address', '1');
+                const response = await fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                });
+                if (!response.ok) throw new Error('Location details lookup failed with HTTP status ' + response.status + '.');
+                const data = await response.json();
+                if (requestSeq !== placeLookupSeq || !layersOn().you) return;
+
+                currentPlaceName = formatLocationName(data);
+                currentPlaceContext = formatLocationContext(data);
+                currentPlaceError = !currentPlaceName;
+                if (currentPlaceError) {
+                    currentPlaceName = 'Full location details are unavailable.';
+                    currentPlaceContext = 'GPS is active, but no address details were returned.';
+                    setGeoStatus('Could not resolve full location details. Your GPS position is still shown on the map.', true);
+                } else {
+                    setGeoStatus('');
+                }
+            } catch (error) {
+                if (requestSeq !== placeLookupSeq || !layersOn().you) return;
+                currentPlaceError = true;
+                currentPlaceName = currentPlaceName || 'Location details unavailable';
+                currentPlaceContext = currentPlaceContext
+                    ? `${currentPlaceContext} · Address update unavailable`
+                    : 'GPS is active, but the address could not be resolved.';
+                setGeoStatus('Could not resolve full location details. Your GPS position is still shown on the map.', true);
+                console.warn('[public-hazard-map] Current-location address lookup failed.', error);
+            } finally {
+                placeLookupInFlight = false;
+                if (requestSeq === placeLookupSeq) renderCurrentLocation();
+                const pending = pendingPlaceLookup;
+                if (pending && layersOn().you) schedulePlaceLookup(pending.lat, pending.lng);
+            }
         }
 
         function formatDuration(seconds) {
@@ -432,6 +580,15 @@
                 lastNearestAt = 0;
                 lastNearestLatLng = null;
                 pendingNearestLatLng = null;
+                pendingPlaceLookup = null;
+                if (placeLookupTimer != null) {
+                    clearTimeout(placeLookupTimer);
+                    placeLookupTimer = null;
+                }
+                placeLookupSeq += 1;
+                currentPlaceName = '';
+                currentPlaceContext = '';
+                currentPlaceError = false;
                 chosenCenterId = null;
                 lastRouteCenterId = null;
                 renderRouteTargets();
@@ -1141,9 +1298,7 @@
             }
             if (youMarker) {
                 youMarker.setLatLng(youLatLng);
-                youMarker.setPopupContent(
-                    `<strong>Current location</strong><br>${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)}`
-                );
+                updateYouMarkerPopup();
             } else {
                 youMarker = leaflet.circleMarker(youLatLng, {
                     radius: 7,
@@ -1151,9 +1306,8 @@
                     weight: 2,
                     fillColor: '#0b5ed7',
                     fillOpacity: 1,
-                }).bindPopup(
-                    `<strong>Current location</strong><br>${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)}`
-                ).addTo(youGroup);
+                }).addTo(youGroup);
+                updateYouMarkerPopup();
             }
         }
 
@@ -1179,10 +1333,8 @@
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     upsertYou(lat, lng, pos.coords.accuracy || 40);
-                    const accuracy = Number.isFinite(Number(pos.coords.accuracy))
-                        ? `GPS accuracy ±${formatDistance(pos.coords.accuracy)}`
-                        : 'GPS accuracy unavailable';
-                    setGeoStatus(`Current location ${youLatLng.lat.toFixed(5)}, ${youLatLng.lng.toFixed(5)} · ${accuracy}. Updates as you move.`);
+                    setGeoStatus(currentPlaceName ? '' : 'Resolving your full location details…');
+                    schedulePlaceLookup(lat, lng);
                     fetchNearest(lat, lng).finally(() => {
                         if (!didInitialYouFit && layersOn().you && youLatLng) {
                             didInitialYouFit = true;

@@ -115,9 +115,12 @@ class HazardMapController extends Controller
         $address = config('raniag.address');
 
         if ($withinMunicipality !== false && ($name !== null || $withinMunicipality === true)) {
-            if ($name === null) {
+            $place = null;
+            if ($name === null || $request->boolean('include_address')) {
                 $place = $this->reverseGeocodedPlace($lat, $lng);
-                $name = $this->matchOfficialBarangay($place['barangay'], $place['location_address']);
+            }
+            if ($name === null) {
+                $name = $this->matchOfficialBarangay($place['barangay'] ?? null, $place['location_address'] ?? null);
             }
 
             return response()->json([
@@ -125,6 +128,9 @@ class HazardMapController extends Controller
                 'municipality' => $address['municipality'] ?? 'Pamplona',
                 'province' => $address['province'] ?? 'Cagayan',
                 'country' => $address['country'] ?? 'Philippines',
+                'location_address' => $request->boolean('include_address')
+                    ? $this->pamplonaLocationAddress($place ?? [], $name)
+                    : null,
                 'inside' => true,
             ])->header('Cache-Control', 'no-store');
         }
@@ -216,7 +222,7 @@ class HazardMapController extends Controller
     }
 
     /**
-     * @return array{barangay: ?string, municipality: ?string, province: ?string, country: ?string, location_address: ?string}
+     * @return array{barangay: ?string, municipality: ?string, province: ?string, country: ?string, location_address: ?string, house_number: ?string, road: ?string}
      */
     private function reverseGeocodedPlace(float $lat, float $lng): array
     {
@@ -226,6 +232,8 @@ class HazardMapController extends Controller
             'province' => null,
             'country' => null,
             'location_address' => null,
+            'house_number' => null,
+            'road' => null,
         ];
 
         try {
@@ -254,12 +262,14 @@ class HazardMapController extends Controller
         $municipality = $addr['municipality'] ?? $addr['town'] ?? $addr['city'] ?? $addr['county'] ?? null;
         $province = $addr['state'] ?? $addr['province'] ?? $addr['state_district'] ?? null;
         $country = $addr['country'] ?? null;
+        $houseNumber = $addr['house_number'] ?? null;
+        $road = $addr['road'] ?? $addr['residential'] ?? $addr['pedestrian'] ?? $addr['footway'] ?? $addr['path'] ?? null;
         $displayName = $response->json('display_name');
         $locationAddress = is_string($displayName) && trim($displayName) !== ''
             ? trim($displayName)
             : implode(', ', array_filter([
-                $addr['house_number'] ?? null,
-                $addr['road'] ?? null,
+                $houseNumber,
+                $road,
                 $barangay,
                 $municipality,
                 $province,
@@ -272,7 +282,29 @@ class HazardMapController extends Controller
             'province' => is_string($province) ? $province : null,
             'country' => is_string($country) ? $country : null,
             'location_address' => $locationAddress !== '' ? $locationAddress : null,
+            'house_number' => is_string($houseNumber) ? $houseNumber : null,
+            'road' => is_string($road) ? $road : null,
         ];
+    }
+
+    /**
+     * @param  array{house_number?: ?string, road?: ?string, barangay?: ?string}  $place
+     */
+    private function pamplonaLocationAddress(array $place, ?string $barangay): string
+    {
+        $address = config('raniag.address');
+        $street = implode(' ', array_filter([
+            $place['house_number'] ?? null,
+            $place['road'] ?? null,
+        ], fn ($part) => is_string($part) && trim($part) !== ''));
+
+        return implode(', ', array_filter([
+            $street !== '' ? $street : null,
+            $barangay ? 'Barangay '.$barangay : null,
+            $address['municipality'] ?? 'Pamplona',
+            $address['province'] ?? 'Cagayan',
+            $address['country'] ?? 'Philippines',
+        ], fn ($part) => is_string($part) && trim($part) !== ''));
     }
 
     /**

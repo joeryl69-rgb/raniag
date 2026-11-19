@@ -30,7 +30,11 @@ test('public hazard map page renders live risk chrome', function () {
         ->assertSee('id="route-distance-value"', false)
         ->assertSee('id="route-duration-value"', false)
         ->assertSee('Choose an open shelter only if you want to start a route.', false)
-        ->assertSee('id="route-current-coordinates"', false)
+        ->assertSee('id="hazard-current-location"', false)
+        ->assertSee('id="hazard-current-location-name"', false)
+        ->assertSee('id="route-current-address"', false)
+        ->assertDontSee('id="route-current-coordinates"', false)
+        ->assertSee('#route-summary { color:#e2ecef !important;', false)
         ->assertSee('data-lenis-prevent', false)
         ->assertSee('.rg-hazard-nearest-btn strong { color: #f0f5f6; }', false);
 
@@ -39,6 +43,9 @@ test('public hazard map page renders live risk chrome', function () {
         ->toContain('scheduleBoundaryRefresh')
         ->toContain('refreshBoundary(true)')
         ->toContain('renderBoundary(await response.json())')
+        ->toContain('function schedulePlaceLookup(lat, lng)')
+        ->toContain("url.searchParams.set('include_address', '1');")
+        ->not->toContain('youLatLng.lat.toFixed(5)')
         ->toContain('if (!chosenCenterId) return null;')
         ->not->toContain('return nearestData?.nearest_center || null;');
 });
@@ -103,6 +110,36 @@ test('outside-area GPS reverse geocoding returns full address and municipality d
         ->assertJsonPath('province', 'Cagayan')
         ->assertJsonPath('country', 'Philippines')
         ->assertJsonPath('location_address', '12 Main Road, Langagan, Sanchez Mira, Cagayan, Philippines');
+});
+
+test('live map location lookup returns a full address with the boundary-resolved barangay', function () {
+    $this->mock(GeofenceService::class, function ($mock) {
+        $mock->shouldReceive('isWithinPamplona')->once()->andReturn(true);
+        $mock->shouldReceive('resolveBarangay')->once()->andReturn('Centro');
+    });
+    Http::fake([
+        'https://nominatim.openstreetmap.org/reverse*' => Http::response([
+            'display_name' => '12 Main Road, Old Locality, Pamplona, Cagayan, Philippines',
+            'address' => [
+                'house_number' => '12',
+                'road' => 'Main Road',
+                'barangay' => 'Old Locality',
+                'municipality' => 'Pamplona',
+                'state' => 'Cagayan',
+                'country' => 'Philippines',
+            ],
+        ]),
+    ]);
+
+    $this->getJson(route('public.hazard.barangay', [
+        'lat' => 18.472,
+        'lng' => 121.325,
+        'include_address' => 1,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('inside', true)
+        ->assertJsonPath('barangay', 'Centro')
+        ->assertJsonPath('location_address', '12 Main Road, Barangay Centro, Pamplona, Cagayan, Philippines');
 });
 
 test('expanded municipal boundary can resolve an official barangay from reverse-geocoded address components', function () {

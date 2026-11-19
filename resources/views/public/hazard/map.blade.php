@@ -20,6 +20,16 @@
 .rg-route-destination span,.rg-route-stat span { color:#64748b;font-size:.67rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase; }
 .rg-route-destination strong { font-size:1rem; }
 .rg-route-destination small { color:#64748b;font-size:.75rem;line-height:1.4; }
+#route-summary { color:#e2ecef !important;font-size:.82rem;font-weight:650;line-height:1.45; }
+.rg-route-address { overflow-wrap:anywhere;line-height:1.4; }
+.rg-current-location {
+    display:grid;gap:4px;margin-top:.7rem;padding:.8rem .9rem;
+    border:1px solid #3c6675;border-left:4px solid #4bc6a8;border-radius:9px;
+    background:linear-gradient(125deg,#183b4c,#162e43);color:#e7f0f2;
+}
+.rg-current-location-label { color:#9ae4ce;font-size:.65rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase; }
+.rg-current-location-name { color:#fff;font-size:.9rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere; }
+.rg-current-location-context,.rg-current-location-meta { color:#c2d4db;font-size:.73rem;line-height:1.4; }
 .rg-route-stats { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
 .rg-route-stat { display:grid;gap:3px;padding:12px;border:1px solid #d6e0e5;border-radius:10px;background:#fff; }
 .rg-route-stat strong { color:#0f766e;font-size:1.12rem;font-variant-numeric:tabular-nums; }
@@ -89,7 +99,13 @@ html[data-theme="dark"] .rg-route-destination strong { color:#f0f6f5; }
                 <label class="btn btn-sm rg-hazard-chip" for="layer-you">My location</label>
             </div>
 
-            <p class="small text-muted d-none mb-0" id="hazard-geo-status" role="status"></p>
+            <section id="hazard-current-location" class="rg-current-location d-none" aria-label="Current location details" aria-live="polite">
+                <span class="rg-current-location-label">Your current location</span>
+                <strong class="rg-current-location-name" id="hazard-current-location-name">Waiting for GPS location…</strong>
+                <span class="rg-current-location-context" id="hazard-current-location-context"></span>
+                <span class="rg-current-location-meta" id="hazard-current-location-meta">Turn on My location to see your full location details.</span>
+            </section>
+            <p class="small text-muted d-none mb-0 mt-2" id="hazard-geo-status" role="status"></p>
             <div class="rg-hazard-legend" id="hazard-legend"></div>
 
             <div class="rg-hazard-tabs" role="tablist" aria-label="Map details">
@@ -159,7 +175,8 @@ html[data-theme="dark"] .rg-route-destination strong { color:#f0f6f5; }
                 <aside id="route-modal-details" aria-label="Route details">
                     <div class="rg-route-destination" id="route-current-location">
                         <span>Your current location</span>
-                        <strong id="route-current-coordinates">Waiting for location</strong>
+                        <strong class="rg-route-address" id="route-current-address">Waiting for GPS location…</strong>
+                        <small id="route-current-context"></small>
                         <small id="route-current-details">Turn on My location to show your live position.</small>
                     </div>
                     <div class="rg-route-destination">
@@ -220,6 +237,7 @@ window.RANIAG_HAZARD = {
     snapshotUrl: @json($snapshotUrl),
     boundaryUrl: @json($boundaryUrl),
     nearestUrl: @json($nearestUrl),
+    barangayUrl: @json(route('public.hazard.barangay')),
 };
 document.addEventListener('DOMContentLoaded', function () {
     window.RANIAG_HazardMap?.init(window.RANIAG_HAZARD);
