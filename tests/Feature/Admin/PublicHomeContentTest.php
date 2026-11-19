@@ -22,6 +22,9 @@ test('administrator can edit the public page copy and dynamic FAQ list without c
         ->get(route('admin.branding.index'))
         ->assertOk()
         ->assertSee('Public site content')
+        ->assertSee('Enter the words you want visitors to see.')
+        ->assertSee('Insert a live detail')
+        ->assertSee('data-copy-token-select', false)
         ->assertSee('home_content[faqs][0][question]', false)
         ->assertSee('Add a question');
 
@@ -39,6 +42,14 @@ test('administrator can edit the public page copy and dynamic FAQ list without c
         ->assertSessionHasNoErrors();
 
     expect(count(SystemSetting::current()->public_home_content['faqs']))->toBe(1);
+
+    $this->get(route('admin.branding.index'))
+        ->assertOk()
+        ->assertSee('data-copy-token="organization"', false)
+        ->assertSee('Organization name')
+        ->assertSee('value="How fast will Response Office respond?"', false)
+        ->assertDontSee('Text is escaped for safety')
+        ->assertDontSee('Use <code>{organization}</code>', false);
 
     $this->get(route('public.home'))
         ->assertOk()

@@ -161,7 +161,22 @@
         <p class="small text-muted mb-0">Customize the public home page, navigation labels, FAQs, and footer without changing its layout or working links.</p>
     </div>
     <div class="card-body">
-        <p class="form-text mb-3">Text is escaped for safety; HTML and custom URLs are not accepted. Use <code>{system_name}</code>, <code>{organization}</code>, <code>{municipality}</code>, <code>{province}</code>, <code>{region}</code>, and <code>{tagline}</code> to keep branding references dynamic.</p>
+        <p class="small text-muted mb-3">Enter the words you want visitors to see.</p>
+        <p class="small text-muted mb-3" data-copy-js-only hidden>To add a name or place that updates with your system settings, select a text field, place the cursor, and insert a live detail below.</p>
+        <div class="branding-copy-toolbar mb-4" data-copy-toolbar hidden>
+            <label for="branding-copy-detail" class="form-label fw-semibold mb-1">Insert a live detail</label>
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <select id="branding-copy-detail" class="form-select" data-copy-token-select>
+                    @foreach ($homePersonalizations as $key => $personalization)
+                        <option value="{{ $key }}">{{ $personalization['label'] }}</option>
+                    @endforeach
+                </select>
+                <button type="button" class="btn btn-outline-primary flex-shrink-0" data-copy-token-insert disabled>
+                    <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Insert into selected field
+                </button>
+            </div>
+            <div class="small text-muted mt-2" data-copy-active aria-live="polite">Choose a text field to begin.</div>
+        </div>
 
         @foreach ($copyGroups as $group)
             <details class="branding-copy-group" @if ($loop->first) open @endif>
@@ -181,12 +196,15 @@
                                 $fieldType = $field[3] ?? 'text';
                             @endphp
                             <div class="col-12 {{ $fieldType === 'textarea' ? '' : 'col-md-6' }}">
-                                <label for="{{ $fieldId }}" class="form-label fw-semibold">{{ $field[1] }}</label>
-                                @if ($fieldType === 'textarea')
-                                    <textarea id="{{ $fieldId }}" name="{{ $fieldName }}" class="form-control" rows="2" maxlength="{{ $field[2] }}" required>{{ $fieldValue }}</textarea>
-                                @else
-                                    <input id="{{ $fieldId }}" name="{{ $fieldName }}" class="form-control" maxlength="{{ $field[2] }}" required value="{{ $fieldValue }}">
-                                @endif
+                                @include('admin.branding._copy_editor', [
+                                    'fieldId' => $fieldId,
+                                    'fieldName' => $fieldName,
+                                    'fieldValue' => $fieldValue,
+                                    'fieldLabel' => $field[1],
+                                    'fieldMaxLength' => $field[2],
+                                    'fieldMultiline' => $fieldType === 'textarea',
+                                    'fieldRequired' => true,
+                                ])
                             </div>
                         @endforeach
                     </div>
@@ -218,16 +236,40 @@
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="home-faq-{{ $index }}-question" data-faq-label="question" class="form-label fw-semibold">Question</label>
-                                <input id="home-faq-{{ $index }}-question" name="home_content[faqs][{{ $index }}][question]" data-faq-key="question" class="form-control" maxlength="180" required value="{{ $faqQuestion }}">
+                                @include('admin.branding._copy_editor', [
+                                    'fieldId' => 'home-faq-' . $index . '-question',
+                                    'fieldName' => 'home_content[faqs][' . $index . '][question]',
+                                    'fieldValue' => $faqQuestion,
+                                    'fieldLabel' => 'Question',
+                                    'fieldMaxLength' => 180,
+                                    'fieldMultiline' => false,
+                                    'fieldRequired' => true,
+                                    'fieldKey' => 'question',
+                                ])
                             </div>
                             <div class="mb-3">
-                                <label for="home-faq-{{ $index }}-answer" data-faq-label="answer" class="form-label fw-semibold">Answer</label>
-                                <textarea id="home-faq-{{ $index }}-answer" name="home_content[faqs][{{ $index }}][answer]" data-faq-key="answer" class="form-control" rows="3" maxlength="2000" required>{{ $faqAnswer }}</textarea>
+                                @include('admin.branding._copy_editor', [
+                                    'fieldId' => 'home-faq-' . $index . '-answer',
+                                    'fieldName' => 'home_content[faqs][' . $index . '][answer]',
+                                    'fieldValue' => $faqAnswer,
+                                    'fieldLabel' => 'Answer',
+                                    'fieldMaxLength' => 2000,
+                                    'fieldMultiline' => true,
+                                    'fieldRequired' => true,
+                                    'fieldKey' => 'answer',
+                                ])
                             </div>
                             <div>
-                                <label for="home-faq-{{ $index }}-link_label" data-faq-label="link_label" class="form-label fw-semibold">Optional Community Dashboard link label</label>
-                                <input id="home-faq-{{ $index }}-link_label" name="home_content[faqs][{{ $index }}][link_label]" data-faq-key="link_label" class="form-control" maxlength="100" value="{{ $faqLinkLabel }}">
+                                @include('admin.branding._copy_editor', [
+                                    'fieldId' => 'home-faq-' . $index . '-link_label',
+                                    'fieldName' => 'home_content[faqs][' . $index . '][link_label]',
+                                    'fieldValue' => $faqLinkLabel,
+                                    'fieldLabel' => 'Optional Community Dashboard link label',
+                                    'fieldMaxLength' => 100,
+                                    'fieldMultiline' => false,
+                                    'fieldRequired' => false,
+                                    'fieldKey' => 'link_label',
+                                ])
                             </div>
                         </div>
                     @endforeach
@@ -251,21 +293,284 @@
             </div>
         </div>
         <div class="mb-3">
-            <label data-faq-label="question" class="form-label fw-semibold">Question</label>
-            <input name="home_content[faqs][__INDEX__][question]" data-faq-key="question" class="form-control" maxlength="180" required>
+            @include('admin.branding._copy_editor', [
+                'fieldId' => 'home-faq-__INDEX__-question',
+                'fieldName' => 'home_content[faqs][__INDEX__][question]',
+                'fieldValue' => '',
+                'fieldLabel' => 'Question',
+                'fieldMaxLength' => 180,
+                'fieldMultiline' => false,
+                'fieldRequired' => true,
+                'fieldKey' => 'question',
+            ])
         </div>
         <div class="mb-3">
-            <label data-faq-label="answer" class="form-label fw-semibold">Answer</label>
-            <textarea name="home_content[faqs][__INDEX__][answer]" data-faq-key="answer" class="form-control" rows="3" maxlength="2000" required></textarea>
+            @include('admin.branding._copy_editor', [
+                'fieldId' => 'home-faq-__INDEX__-answer',
+                'fieldName' => 'home_content[faqs][__INDEX__][answer]',
+                'fieldValue' => '',
+                'fieldLabel' => 'Answer',
+                'fieldMaxLength' => 2000,
+                'fieldMultiline' => true,
+                'fieldRequired' => true,
+                'fieldKey' => 'answer',
+            ])
         </div>
         <div>
-            <label data-faq-label="link_label" class="form-label fw-semibold">Optional Community Dashboard link label</label>
-            <input name="home_content[faqs][__INDEX__][link_label]" data-faq-key="link_label" class="form-control" maxlength="100">
+            @include('admin.branding._copy_editor', [
+                'fieldId' => 'home-faq-__INDEX__-link_label',
+                'fieldName' => 'home_content[faqs][__INDEX__][link_label]',
+                'fieldValue' => '',
+                'fieldLabel' => 'Optional Community Dashboard link label',
+                'fieldMaxLength' => 100,
+                'fieldMultiline' => false,
+                'fieldRequired' => false,
+                'fieldKey' => 'link_label',
+            ])
         </div>
     </div>
 </template>
 
 @push('scripts')
+    <script>
+        (() => {
+            const form = document.querySelector('[data-copy-root]');
+            const toolbar = form?.querySelector('[data-copy-toolbar]');
+            const tokenSelect = toolbar?.querySelector('[data-copy-token-select]');
+            const insertButton = toolbar?.querySelector('[data-copy-token-insert]');
+            const activeLabel = toolbar?.querySelector('[data-copy-active]');
+
+            if (!form || !toolbar || !tokenSelect || !insertButton || !activeLabel) return;
+
+            let activeEditor = null;
+            let savedRange = null;
+
+            const editorFrom = (target) => target instanceof Element
+                ? target.closest('[data-copy-editor]')
+                : null;
+
+            const serializeNode = (node) => {
+                if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+                if (!(node instanceof Element)) return '';
+                if (node.matches('[data-copy-token]')) return `{${node.dataset.copyToken}}`;
+                if (node.tagName === 'BR') return '\n';
+
+                let result = '';
+                node.childNodes.forEach((child) => {
+                    if (child instanceof Element && ['DIV', 'P'].includes(child.tagName)
+                        && result && !result.endsWith('\n')) result += '\n';
+                    result += serializeNode(child);
+                    if (child instanceof Element && ['DIV', 'P'].includes(child.tagName)
+                        && !result.endsWith('\n')) result += '\n';
+                });
+
+                return result;
+            };
+
+            const serialize = (editor) => {
+                const previousEditor = activeEditor;
+                activeEditor = editor;
+                const value = serializeNode(editor);
+                activeEditor = previousEditor;
+
+                return value;
+            };
+
+            const updateValue = (editor) => {
+                const hidden = editor.parentElement.querySelector('[data-copy-value]');
+                const error = editor.parentElement.querySelector('[data-copy-error]');
+                if (!hidden) return;
+
+                hidden.value = serialize(editor);
+                const requiredMissing = editor.dataset.copyRequired === 'true' && hidden.value.trim() === '';
+                const tooLong = hidden.value.length > Number(editor.dataset.copyMaxlength || 0);
+
+                if (requiredMissing || tooLong) {
+                    editor.setAttribute('aria-invalid', 'true');
+                    if (error) {
+                        error.hidden = false;
+                        error.textContent = requiredMissing
+                            ? 'Please enter text for this field.'
+                            : `Please keep this text within ${editor.dataset.copyMaxlength} characters.`;
+                    }
+                } else {
+                    editor.removeAttribute('aria-invalid');
+                    if (error) {
+                        error.hidden = true;
+                        error.textContent = '';
+                    }
+                }
+            };
+
+            const initializeEditor = (editor) => {
+                if (editor.dataset.copyInitialized === 'true') return;
+
+                const fallback = editor.parentElement.querySelector('[data-copy-fallback]');
+                const hidden = editor.parentElement.querySelector('[data-copy-value]');
+                const label = document.getElementById(editor.getAttribute('aria-labelledby'));
+                if (!fallback || !hidden || !fallback.name) return;
+
+                hidden.name = fallback.name;
+                fallback.removeAttribute('name');
+                fallback.removeAttribute('required');
+                fallback.hidden = true;
+                fallback.classList.add('d-none');
+                editor.hidden = false;
+                editor.classList.remove('d-none');
+                editor.dataset.copyInitialized = 'true';
+                if (label) label.htmlFor = editor.id;
+                updateValue(editor);
+            };
+
+            const saveSelection = () => {
+                const selection = window.getSelection();
+                if (activeEditor && selection?.rangeCount
+                    && activeEditor.contains(selection.anchorNode)) {
+                    savedRange = selection.getRangeAt(0).cloneRange();
+                }
+            };
+
+            const endRange = (editor) => {
+                const range = document.createRange();
+                range.selectNodeContents(editor);
+                range.collapse(false);
+
+                return range;
+            };
+
+            const insertNodes = (editor, nodes) => {
+                let range = savedRange && editor.contains(savedRange.commonAncestorContainer)
+                    ? savedRange.cloneRange()
+                    : endRange(editor);
+                editor.focus();
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                range.deleteContents();
+
+                const fragment = document.createDocumentFragment();
+                nodes.forEach((node) => fragment.append(node));
+                const lastNode = fragment.lastChild;
+                range.insertNode(fragment);
+                range = document.createRange();
+                if (lastNode?.parentNode) range.setStartAfter(lastNode);
+                else range.selectNodeContents(editor);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                savedRange = range.cloneRange();
+                updateValue(editor);
+            };
+
+            form.addEventListener('focusin', (event) => {
+                const editor = editorFrom(event.target);
+                if (!editor) return;
+
+                activeEditor = editor;
+                insertButton.disabled = false;
+                const label = document.getElementById(editor.getAttribute('aria-labelledby'));
+                activeLabel.textContent = label
+                    ? `Selected field: ${label.textContent.trim()}`
+                    : 'Text field selected.';
+                saveSelection();
+            });
+
+            form.addEventListener('keyup', (event) => {
+                if (editorFrom(event.target)) saveSelection();
+            });
+            form.addEventListener('mouseup', (event) => {
+                if (editorFrom(event.target)) saveSelection();
+            });
+            document.addEventListener('selectionchange', saveSelection);
+
+            form.addEventListener('input', (event) => {
+                const editor = editorFrom(event.target);
+                if (!editor) return;
+
+                activeEditor = editor;
+                updateValue(editor);
+                saveSelection();
+            });
+
+            form.addEventListener('paste', (event) => {
+                const editor = editorFrom(event.target);
+                if (!editor) return;
+
+                event.preventDefault();
+                let text = event.clipboardData?.getData('text/plain') || '';
+                if (editor.getAttribute('aria-multiline') !== 'true') {
+                    text = text.replace(/\r?\n/g, ' ');
+                }
+                const nodes = [];
+                text.split('\n').forEach((line, index) => {
+                    if (index > 0) nodes.push(document.createElement('br'));
+                    if (line) nodes.push(document.createTextNode(line));
+                });
+                insertNodes(editor, nodes);
+            });
+
+            form.addEventListener('keydown', (event) => {
+                const editor = editorFrom(event.target);
+                if (!editor || event.key !== 'Enter' || event.isComposing) return;
+
+                if (editor.getAttribute('aria-multiline') === 'true' && !(event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    insertNodes(editor, [document.createElement('br')]);
+                } else {
+                    event.preventDefault();
+                    form.requestSubmit();
+                }
+            });
+
+            form.addEventListener('beforeinput', (event) => {
+                if (editorFrom(event.target) && /^format|^insertHTML/.test(event.inputType)) {
+                    event.preventDefault();
+                }
+            });
+
+            form.addEventListener('drop', (event) => {
+                if (editorFrom(event.target)) event.preventDefault();
+            });
+
+            insertButton.addEventListener('mousedown', (event) => event.preventDefault());
+            insertButton.addEventListener('click', () => {
+                if (!activeEditor) return;
+
+                const key = tokenSelect.value;
+                const label = tokenSelect.selectedOptions[0]?.textContent?.trim() || key;
+                const token = document.createElement('span');
+                token.className = 'branding-copy-token';
+                token.contentEditable = 'false';
+                token.dataset.copyToken = key;
+                token.setAttribute('aria-label', `Automatic ${label}`);
+                token.textContent = label;
+                insertNodes(activeEditor, [token]);
+                activeLabel.textContent = `${label} will update when its system setting changes.`;
+            });
+
+            form.addEventListener('branding:copy-fields-added', () => {
+                form.querySelectorAll('[data-copy-editor]:not([data-copy-initialized])')
+                    .forEach(initializeEditor);
+            });
+
+            form.addEventListener('submit', (event) => {
+                for (const editor of form.querySelectorAll('[data-copy-editor]')) {
+                    updateValue(editor);
+                    if (editor.getAttribute('aria-invalid') === 'true') {
+                        event.preventDefault();
+                        editor.focus();
+                        return;
+                    }
+                }
+            });
+
+            form.querySelectorAll('[data-copy-editor]').forEach(initializeEditor);
+            toolbar.hidden = false;
+            form.querySelectorAll('[data-copy-js-only]').forEach((element) => {
+                element.hidden = false;
+            });
+        })();
+    </script>
     <script>
         (() => {
             const list = document.querySelector('[data-faq-list]');
@@ -281,11 +586,24 @@
                 rows.forEach((row, index) => {
                     row.querySelector('[data-faq-number]').textContent = String(index + 1);
                     row.querySelectorAll('[data-faq-key]').forEach((field) => {
-                        field.id = `home-faq-${index}-${field.dataset.faqKey}`;
+                        const fieldId = `home-faq-${index}-${field.dataset.faqKey}`;
                         field.name = `home_content[faqs][${index}][${field.dataset.faqKey}]`;
+                        field.id = field.hasAttribute('data-copy-fallback') ? fieldId : `${fieldId}-value`;
+                        const editor = Array.from(row.querySelectorAll('[data-copy-editor]'))
+                            .find((item) => item.dataset.copyEditorKey === field.dataset.faqKey);
+                        if (editor) {
+                            editor.id = `${fieldId}-editor`;
+                            editor.setAttribute('aria-labelledby', `${editor.id}-label`);
+                        }
                     });
                     row.querySelectorAll('[data-faq-label]').forEach((label) => {
-                        label.htmlFor = `home-faq-${index}-${label.dataset.faqLabel}`;
+                        const editor = Array.from(row.querySelectorAll('[data-copy-editor]'))
+                            .find((item) => item.dataset.copyEditorKey === label.dataset.faqLabel);
+                        const fallbackId = `home-faq-${index}-${label.dataset.faqLabel}`;
+                        label.htmlFor = editor?.dataset.copyInitialized === 'true'
+                            ? editor.id
+                            : fallbackId;
+                        label.id = editor ? `${editor.id}-label` : `${fallbackId}-label`;
                     });
                     row.querySelector('[data-faq-up]').disabled = index === 0;
                     row.querySelector('[data-faq-down]').disabled = index === rows.length - 1;
@@ -303,7 +621,8 @@
 
                 list.insertAdjacentHTML('beforeend', template.innerHTML.trim());
                 updateRows();
-                list.querySelector('[data-faq-row]:last-child [data-faq-key="question"]').focus();
+                list.closest('form').dispatchEvent(new Event('branding:copy-fields-added'));
+                list.querySelector('[data-faq-row]:last-child [data-copy-editor-key="question"]').focus();
             });
 
             list.addEventListener('click', (event) => {

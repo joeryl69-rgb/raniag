@@ -21,6 +21,7 @@ class SystemBrandingController extends Controller
             'setting' => $setting,
             'branding' => $setting->brandingValues(),
             'homeContent' => $setting->publicHomeContent(false),
+            'homePersonalizations' => $setting->publicHomePersonalizations(),
         ]);
     }
 

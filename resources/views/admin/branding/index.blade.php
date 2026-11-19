@@ -47,6 +47,38 @@
             }
             .branding-copy-group[open] > summary::after { content: "−"; }
             .branding-copy-group-body { padding: 1rem; }
+            .branding-copy-toolbar {
+                padding: .9rem 1rem;
+                border: 1px solid var(--raniag-border, #d7e0e3);
+                border-radius: .65rem;
+                background: color-mix(in srgb, var(--branding-panel-bg) 82%, var(--raniag-primary, #086b78) 18%);
+            }
+            .branding-copy-toolbar select { max-width: 22rem; }
+            .branding-copy-editor {
+                min-height: 2.45rem;
+                height: auto;
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+                cursor: text;
+            }
+            .branding-copy-editor-multiline { min-height: 5rem; }
+            .branding-copy-editor:focus {
+                border-color: var(--raniag-primary, #086b78);
+                box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--raniag-primary, #086b78) 18%, transparent);
+            }
+            .branding-copy-editor[aria-invalid="true"] { border-color: var(--bs-danger, #dc3545); }
+            .branding-copy-token {
+                display: inline-block;
+                margin: 0 .08rem;
+                padding: .04rem .4rem;
+                border: 1px solid color-mix(in srgb, var(--raniag-primary, #086b78) 34%, transparent);
+                border-radius: 999px;
+                background: color-mix(in srgb, var(--raniag-primary, #086b78) 12%, #fff);
+                color: var(--raniag-primary, #086b78);
+                font-size: .88em;
+                font-weight: 650;
+                white-space: nowrap;
+            }
             .branding-faq-row {
                 padding: 1rem;
                 border: 1px solid var(--raniag-border, #d7e0e3);
@@ -57,9 +89,15 @@
                 --branding-panel-bg: var(--raniag-card, #172635);
             }
             html[data-theme="dark"] .branding-copy-group > summary,
+            html[data-theme="dark"] .branding-copy-toolbar,
             html[data-theme="dark"] .branding-faq-row {
                 color: var(--raniag-text, #e7eef4);
                 background: color-mix(in srgb, var(--branding-panel-bg) 88%, var(--raniag-accent, #29aa96) 12%);
+            }
+            html[data-theme="dark"] .branding-copy-token {
+                border-color: color-mix(in srgb, var(--raniag-accent, #29aa96) 40%, transparent);
+                background: color-mix(in srgb, var(--raniag-accent, #29aa96) 18%, #172635);
+                color: var(--raniag-text, #e7eef4);
             }
         </style>
     @endpush
@@ -92,7 +130,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.branding.update') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('admin.branding.update') }}" enctype="multipart/form-data" data-copy-root>
             @csrf
             @method('PUT')
 

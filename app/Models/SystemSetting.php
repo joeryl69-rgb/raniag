@@ -146,15 +146,11 @@ class SystemSetting extends Model
             return $content;
         }
 
-        $branding = $this->brandingValues();
-        $tokens = [
-            '{system_name}' => $branding['system_name'],
-            '{organization}' => $branding['organization_name'],
-            '{municipality}' => $branding['municipality_label'],
-            '{province}' => $branding['province_label'],
-            '{region}' => $branding['response_area_label'],
-            '{tagline}' => (string) config('raniag.tagline', ''),
-        ];
+        $tokens = [];
+        foreach ($this->publicHomePersonalizations() as $personalization) {
+            $tokens[$personalization['marker']] = $personalization['value'];
+        }
+
         array_walk_recursive($content, static function (&$value) use ($tokens): void {
             if (is_string($value)) {
                 $value = strtr($value, $tokens);
@@ -162,6 +158,47 @@ class SystemSetting extends Model
         });
 
         return $content;
+    }
+
+    /**
+     * @return array<string, array{marker: string, label: string, value: string}>
+     */
+    public function publicHomePersonalizations(): array
+    {
+        $branding = $this->brandingValues();
+
+        return [
+            'system_name' => [
+                'marker' => '{system_name}',
+                'label' => 'System name',
+                'value' => $branding['system_name'],
+            ],
+            'organization' => [
+                'marker' => '{organization}',
+                'label' => 'Organization name',
+                'value' => $branding['organization_name'],
+            ],
+            'municipality' => [
+                'marker' => '{municipality}',
+                'label' => 'Municipality',
+                'value' => $branding['municipality_label'],
+            ],
+            'province' => [
+                'marker' => '{province}',
+                'label' => 'Province',
+                'value' => $branding['province_label'],
+            ],
+            'region' => [
+                'marker' => '{region}',
+                'label' => 'Response area',
+                'value' => $branding['response_area_label'],
+            ],
+            'tagline' => [
+                'marker' => '{tagline}',
+                'label' => 'Tagline',
+                'value' => (string) config('raniag.tagline', ''),
+            ],
+        ];
     }
 
     /**
