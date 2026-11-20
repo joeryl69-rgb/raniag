@@ -263,9 +263,7 @@ class IncidentPresentation
 
     private function incidentPlaceLabel(Incident $incident): string
     {
-        $outside = $incident->status === IncidentStatus::OutsideAor
-            || ($incident->meta['within_jurisdiction'] ?? null) === false
-            || ($incident->barangay && ! in_array($incident->barangay, config('raniag.barangays', []), true));
+        $outside = \App\Support\PlaceScope::currentJurisdiction($incident) === false;
 
         if ($outside) {
             $place = trim((string) ($incident->location_address ?: $incident->barangay));

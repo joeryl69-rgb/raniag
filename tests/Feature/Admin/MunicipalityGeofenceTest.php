@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
+use App\Models\Incident;
 use App\Models\IncidentType;
 use App\Models\SystemSetting;
 use App\Models\User;
@@ -139,6 +140,26 @@ test('administrators can reset the boundary to the original Pamplona GeoJSON', f
     Cache::flush();
 
     $admin = User::factory()->administrator()->create();
+    $type = IncidentType::factory()->create();
+    foreach ([
+        ['RAN-RESET-NOW-INSIDE', 18.47, 121.32, false],
+        ['RAN-RESET-NOW-OUTSIDE', 18.51, 121.41, true],
+    ] as [$tracking, $latitude, $longitude, $oldClassification]) {
+        Incident::query()->create([
+            'tracking_number' => $tracking,
+            'tracking_pin' => bcrypt('123456'),
+            'incident_type_id' => $type->id,
+            'status' => 'submitted',
+            'priority' => 'medium',
+            'description' => 'Municipal boundary reset regression test.',
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'is_anonymous' => true,
+            'meta' => ['within_jurisdiction' => $oldClassification],
+            'reported_at' => now(),
+        ]);
+    }
+
     $this->actingAs($admin)
         ->put(route('admin.geofence.update'), [
             'geometry' => json_encode(municipalityGeofenceSquare(121.40, 18.50, 121.43, 18.53), JSON_THROW_ON_ERROR),
@@ -152,6 +173,8 @@ test('administrators can reset the boundary to the original Pamplona GeoJSON', f
         ->and(app(GeofenceService::class)->hasCustomBoundary())->toBeFalse()
         ->and(app(GeofenceService::class)->isWithinPamplona(18.47, 121.32))->toBeTrue()
         ->and(app(GeofenceService::class)->isWithinPamplona(18.51, 121.41))->toBeFalse()
+        ->and(Incident::query()->where('tracking_number', 'RAN-RESET-NOW-INSIDE')->firstOrFail()->meta['within_jurisdiction'])->toBeTrue()
+        ->and(Incident::query()->where('tracking_number', 'RAN-RESET-NOW-OUTSIDE')->firstOrFail()->meta['within_jurisdiction'])->toBeFalse()
         ->and(ActivityLog::query()->where('event', 'municipality_boundary.reset')->count())->toBe(1);
 });
 
@@ -183,6 +206,71 @@ test('report submission does not assign a static Pamplona barangay outside the a
 
     expect($incident->fresh()->meta['within_jurisdiction'])->toBeFalse()
         ->and($incident->barangay)->toBe('Reported place label');
+});
+
+test('inside and outside report filters are recalculated when the municipality boundary changes', function () {
+    Cache::flush();
+    $admin = User::factory()->administrator()->create();
+    $type = IncidentType::factory()->create();
+
+    foreach ([
+        ['RAN-BOUNDARY-NOW-INSIDE', 18.51, 121.41, false, null, 'outside_aor'],
+        ['RAN-BOUNDARY-NOW-OUTSIDE', 18.47, 121.32, true, 'Bidduang', 'submitted'],
+        ['RAN-BOUNDARY-UNKNOWN-LOCATION', null, null, null, null, 'submitted'],
+    ] as [$tracking, $latitude, $longitude, $oldClassification, $barangay, $status]) {
+        Incident::query()->create([
+            'tracking_number' => $tracking,
+            'tracking_pin' => bcrypt('123456'),
+            'incident_type_id' => $type->id,
+            'status' => $status,
+            'priority' => 'medium',
+            'description' => 'Municipal boundary filter regression test.',
+            'barangay' => $barangay,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'is_anonymous' => true,
+            'meta' => ['within_jurisdiction' => $oldClassification],
+            'reported_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($admin)
+        ->put(route('admin.geofence.update'), [
+            'geometry' => json_encode(municipalityGeofenceSquare(121.40, 18.50, 121.43, 18.53), JSON_THROW_ON_ERROR),
+        ])
+        ->assertRedirect(route('admin.geofence.index'));
+
+    expect(Incident::query()->where('tracking_number', 'RAN-BOUNDARY-NOW-INSIDE')->firstOrFail()->meta['within_jurisdiction'])->toBeTrue()
+        ->and(Incident::query()->where('tracking_number', 'RAN-BOUNDARY-NOW-OUTSIDE')->firstOrFail()->meta['within_jurisdiction'])->toBeFalse();
+
+    $this->get(route('admin.reports.index', ['applied' => '1', 'barangay' => 'inside']))
+        ->assertOk()
+        ->assertSee('RAN-BOUNDARY-NOW-INSIDE', false)
+        ->assertDontSee('RAN-BOUNDARY-NOW-OUTSIDE', false);
+
+    $this->get(route('admin.reports.index', ['applied' => '1', 'barangay' => 'outside']))
+        ->assertOk()
+        ->assertSee('RAN-BOUNDARY-NOW-OUTSIDE', false)
+        ->assertDontSee('RAN-BOUNDARY-NOW-INSIDE', false);
+
+    $this->getJson(route('public.dashboard.data'))
+        ->assertOk()
+        ->assertJsonPath('total_all_time', 1);
+
+    $insideQueue = $this->get(route('admin.incidents.index', [
+        'status' => 'all',
+        'jurisdiction' => 'inside',
+    ]))->assertOk()->viewData('incidents');
+    expect($insideQueue->pluck('tracking_number')->all())->toContain('RAN-BOUNDARY-NOW-INSIDE')
+        ->not->toContain('RAN-BOUNDARY-NOW-OUTSIDE');
+
+    $outsideQueue = $this->get(route('admin.incidents.index', [
+        'status' => 'all',
+        'jurisdiction' => 'outside',
+    ]))->assertOk()->viewData('incidents');
+    expect($outsideQueue->pluck('tracking_number')->all())->toContain('RAN-BOUNDARY-NOW-OUTSIDE')
+        ->not->toContain('RAN-BOUNDARY-NOW-INSIDE', 'RAN-BOUNDARY-UNKNOWN-LOCATION');
+    expect($insideQueue->pluck('tracking_number')->all())->not->toContain('RAN-BOUNDARY-UNKNOWN-LOCATION');
 });
 
 test('only administrators can change the boundary and invalid open polygons are rejected', function () {

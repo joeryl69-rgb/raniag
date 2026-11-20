@@ -105,9 +105,9 @@ test('case documents can be filtered by Pamplona jurisdiction', function () {
     $type = IncidentType::factory()->create();
 
     foreach ([
-        ['RAN-DOC-INSIDE', true],
-        ['RAN-DOC-OUTSIDE', false],
-    ] as [$tracking, $withinJurisdiction]) {
+        ['RAN-DOC-INSIDE', false, 18.51, 121.41, null],
+        ['RAN-DOC-OUTSIDE', true, 18.47, 121.32, 'Bidduang'],
+    ] as [$tracking, $oldClassification, $latitude, $longitude, $barangay]) {
         Incident::query()->create([
             'tracking_number' => $tracking,
             'tracking_pin' => Hash::make('123456'),
@@ -115,11 +115,29 @@ test('case documents can be filtered by Pamplona jurisdiction', function () {
             'status' => 'resolved',
             'priority' => 'medium',
             'description' => 'Case jurisdiction filtering test',
+            'barangay' => $barangay,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'is_anonymous' => true,
-            'meta' => ['within_jurisdiction' => $withinJurisdiction],
+            'meta' => ['within_jurisdiction' => $oldClassification],
             'reported_at' => now(),
         ]);
     }
+
+    $this->actingAs($administrator)
+        ->put(route('admin.geofence.update'), [
+            'geometry' => json_encode([
+                'type' => 'Polygon',
+                'coordinates' => [[
+                    [121.40, 18.50],
+                    [121.40, 18.53],
+                    [121.43, 18.53],
+                    [121.43, 18.50],
+                    [121.40, 18.50],
+                ]],
+            ], JSON_THROW_ON_ERROR),
+        ])
+        ->assertRedirect(route('admin.geofence.index'));
 
     $insideResponse = $this->actingAs($administrator)
         ->get(route('admin.incident_documents.index', ['jurisdiction' => 'inside']))

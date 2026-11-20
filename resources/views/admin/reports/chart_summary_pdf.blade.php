@@ -80,18 +80,18 @@
     <div class="filters">
         <p><strong>Date Range:</strong> {{ \Carbon\Carbon::parse($filters['date_from'])->format('F d, Y') }} — {{ \Carbon\Carbon::parse($filters['date_to'])->format('F d, Y') }}</p>
         <p>
-            <strong>AOR Scope:</strong>
+            <strong>Response routing:</strong>
             <span class="aor-badge">
                 @switch($filters['aor_scope'])
-                    @case('outside_aor_only') All outside Pamplona @break
-                    @case('all') All barangays @break
-                    @default All inside Pamplona
+                    @case('outside_aor_only') Referred outside this response area @break
+                    @case('all') All routing statuses @break
+                    @default Not referred outside this response area
                 @endswitch
             </span>
         </p>
         <p><strong>Report View:</strong> {{ ucfirst($viewMode) }}{{ $viewMode !== 'periodic' ? ' (grouped by '.match ($viewMode) { 'monthly' => 'calendar month', 'yearly' => 'calendar year', default => 'calendar week' }.')' : '' }}</p>
         @if(!empty($filters['barangay']))
-            <p><strong>Barangay:</strong> {{ \App\Support\PlaceScope::label($filters['barangay']) }}</p>
+            <p><strong>Location:</strong> {{ \App\Support\PlaceScope::label($filters['barangay']) }}</p>
         @endif
         @if(!empty($filters['agency_id']))
             <p><strong>Agency:</strong> {{ $agencyName ?? 'N/A' }}</p>

@@ -70,7 +70,7 @@
                                 @if ($location['secondary'])
                                     <small class="rg-table-address">{{ $location['secondary'] }}</small>
                                 @endif
-                                @if (($inc->meta['within_jurisdiction'] ?? null) === false)
+                                @if (\App\Support\PlaceScope::currentJurisdiction($inc) === false)
                                     <small class="rg-table-outside">Outside {{ \App\Support\PlaceScope::municipalityLabel() }}</small>
                                 @endif
                             </td>

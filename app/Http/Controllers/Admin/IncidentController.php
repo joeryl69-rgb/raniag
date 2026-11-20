@@ -17,6 +17,7 @@ use App\Services\AssignmentService;
 use App\Services\IncidentService;
 use App\Services\NotificationService;
 use App\Support\FilterOptions;
+use App\Support\PlaceScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,7 +88,9 @@ class IncidentController extends Controller
             'in_progress' => $countStatus(IncidentStatus::InProgress),
             'resolved' => $countStatus(IncidentStatus::Resolved),
         ];
-        $incidentKpis['outside'] = Incident::query()->where('meta->within_jurisdiction', false)->count();
+        $outsideIncidents = Incident::query();
+        PlaceScope::applyBarangayFilter($outsideIncidents, 'outside');
+        $incidentKpis['outside'] = $outsideIncidents->count();
         $queueStatuses = FilterOptions::enums(IncidentStatus::cases(), $statusCounts->keys());
         $queuePriorities = FilterOptions::enums(
             IncidentPriority::cases(),

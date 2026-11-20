@@ -88,28 +88,33 @@ class GeofenceController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($geometry, $request, $ring): void {
-            $settings = SystemSetting::current();
-            $settings->forceFill([
-                'municipality_boundary' => $geometry,
-                'municipality_boundary_updated_by' => $request->user()->id,
-                'municipality_boundary_updated_at' => now(),
-            ])->save();
+        try {
+            DB::transaction(function () use ($geometry, $request, $ring): void {
+                $settings = SystemSetting::current();
+                $settings->forceFill([
+                    'municipality_boundary' => $geometry,
+                    'municipality_boundary_updated_by' => $request->user()->id,
+                    'municipality_boundary_updated_at' => now(),
+                ])->save();
 
-            ActivityLog::query()->create([
-                'user_id' => $request->user()->id,
-                'log_name' => 'municipality_boundary',
-                'description' => 'Updated the Pamplona municipal boundary.',
-                'subject_type' => SystemSetting::class,
-                'subject_id' => $settings->id,
-                'event' => 'municipality_boundary.updated',
-                'properties' => ['vertex_count' => count($ring) - 1],
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-        });
+                $this->geofence->clearBoundaryCache();
+                $this->geofence->refreshIncidentJurisdictions();
 
-        $this->geofence->clearBoundaryCache();
+                ActivityLog::query()->create([
+                    'user_id' => $request->user()->id,
+                    'log_name' => 'municipality_boundary',
+                    'description' => 'Updated the Pamplona municipal boundary.',
+                    'subject_type' => SystemSetting::class,
+                    'subject_id' => $settings->id,
+                    'event' => 'municipality_boundary.updated',
+                    'properties' => ['vertex_count' => count($ring) - 1],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+            });
+        } finally {
+            $this->geofence->clearBoundaryCache();
+        }
 
         return redirect()
             ->route('admin.geofence.index')
@@ -118,28 +123,33 @@ class GeofenceController extends Controller
 
     public function reset(Request $request): RedirectResponse
     {
-        DB::transaction(function () use ($request): void {
-            $settings = SystemSetting::current();
-            $settings->forceFill([
-                'municipality_boundary' => null,
-                'municipality_boundary_updated_by' => $request->user()->id,
-                'municipality_boundary_updated_at' => now(),
-            ])->save();
+        try {
+            DB::transaction(function () use ($request): void {
+                $settings = SystemSetting::current();
+                $settings->forceFill([
+                    'municipality_boundary' => null,
+                    'municipality_boundary_updated_by' => $request->user()->id,
+                    'municipality_boundary_updated_at' => now(),
+                ])->save();
 
-            ActivityLog::query()->create([
-                'user_id' => $request->user()->id,
-                'log_name' => 'municipality_boundary',
-                'description' => 'Restored the default Pamplona municipal boundary.',
-                'subject_type' => SystemSetting::class,
-                'subject_id' => $settings->id,
-                'event' => 'municipality_boundary.reset',
-                'properties' => ['source' => config('raniag.pamplona_boundary_path')],
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-        });
+                $this->geofence->clearBoundaryCache();
+                $this->geofence->refreshIncidentJurisdictions();
 
-        $this->geofence->clearBoundaryCache();
+                ActivityLog::query()->create([
+                    'user_id' => $request->user()->id,
+                    'log_name' => 'municipality_boundary',
+                    'description' => 'Restored the default Pamplona municipal boundary.',
+                    'subject_type' => SystemSetting::class,
+                    'subject_id' => $settings->id,
+                    'event' => 'municipality_boundary.reset',
+                    'properties' => ['source' => config('raniag.pamplona_boundary_path')],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+            });
+        } finally {
+            $this->geofence->clearBoundaryCache();
+        }
 
         return redirect()
             ->route('admin.geofence.index')

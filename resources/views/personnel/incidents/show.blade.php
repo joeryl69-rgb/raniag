@@ -547,7 +547,7 @@
             <script src="{{ asset('js/raniag-dispatch-map.js') }}?v={{ @filemtime(public_path('js/raniag-dispatch-map.js')) }}"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
-                    const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
+                    const withinJurisdiction = @json(\App\Support\PlaceScope::currentJurisdiction($incident));
                     window.RANIAG_DispatchMap?.init({
                         el: 'personnel-incident-map',
                         lat: {{ $incident->latitude }},

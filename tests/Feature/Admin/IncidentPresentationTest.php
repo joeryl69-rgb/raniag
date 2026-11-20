@@ -58,6 +58,7 @@ test('the report page shows the filtered rows and can switch the same rows to ca
         ->assertSee('js/filter-date-picker.js', false)
         ->assertDontSee('data-searchable-select-input', false)
         ->assertSee('RANIAG Incident Report', false)
+        ->assertSee('Inside and outside locations follow the current municipal boundary', false)
         ->assertSee('data-view-mode-choice="cards"', false)
         ->assertSee('/admin/reports/presentation/excel', false)
         ->assertSee('charts=0', false)

@@ -10,6 +10,8 @@ use App\Models\Incident;
 use App\Models\IncidentDocument;
 use App\Services\IncidentDocumentService;
 use App\Support\FilterOptions;
+use App\Support\Filters;
+use App\Support\PlaceScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,10 +33,8 @@ class IncidentDocumentController extends Controller
             ->with(['incidentType', 'incidentDocuments:id,incident_id,document_type']);
 
         $jurisdiction = $request->string('jurisdiction')->value();
-        if ($jurisdiction === 'inside') {
-            $query->where('meta->within_jurisdiction', true);
-        } elseif ($jurisdiction === 'outside') {
-            $query->where('meta->within_jurisdiction', false);
+        if (in_array($jurisdiction, ['inside', 'outside'], true)) {
+            PlaceScope::applyBarangayFilter($query, $jurisdiction);
         }
 
         $q = trim((string) $request->string('q'));
@@ -42,7 +42,7 @@ class IncidentDocumentController extends Controller
             $query->where('tracking_number', 'like', "%{$q}%");
         }
 
-        \App\Support\Filters::dateRange($query, 'created_at', [
+        Filters::dateRange($query, 'created_at', [
             'date_from' => $request->string('date_from')->trim()->value(),
             'date_to' => $request->string('date_to')->trim()->value(),
         ]);

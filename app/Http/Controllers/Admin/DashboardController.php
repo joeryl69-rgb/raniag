@@ -215,13 +215,11 @@ class DashboardController extends Controller
             fn (IncidentStatus $status) => $status->value,
             SituationalMapService::OPEN_STATUSES
         );
-        $barangayCounts = Incident::selectRaw('barangay, COUNT(*) as count')
+        $insideOpenIncidents = Incident::query()->whereIn('status', $openStatusValues);
+        \App\Support\PlaceScope::applyBarangayFilter($insideOpenIncidents, 'inside');
+        $barangayCounts = $insideOpenIncidents
             ->whereIn('barangay', config('raniag.barangays', []))
-            ->whereIn('status', $openStatusValues)
-            ->where(function ($inner) {
-                $inner->whereNull('meta->within_jurisdiction')
-                    ->orWhere('meta->within_jurisdiction', true);
-            })
+            ->selectRaw('barangay, COUNT(*) as count')
             ->groupBy('barangay')
             ->orderByDesc('count')
             ->limit(8)
@@ -273,7 +271,9 @@ class DashboardController extends Controller
             ]);
 
         // 7. Out-of-Jurisdiction Reports (pinned outside Pamplona municipality limits)
-        $outOfJurisdictionCount = Incident::where('meta->within_jurisdiction', false)->count();
+        $outsideIncidents = Incident::query();
+        \App\Support\PlaceScope::applyBarangayFilter($outsideIncidents, 'outside');
+        $outOfJurisdictionCount = $outsideIncidents->count();
 
         // 8. Redundancy Tracker (Hotspots by Barangay and Type)
         $redundancyData = Incident::selectRaw('barangay, incident_types.name as incident_type, COUNT(*) as count')

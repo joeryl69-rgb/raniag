@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Incident;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -119,6 +120,45 @@ class GeofenceService
     public function clearBoundaryCache(): void
     {
         Cache::forget(self::BOUNDARY_CACHE_KEY);
+    }
+
+    /**
+     * Recalculate saved report locations after the active boundary changes.
+     * This keeps all place filters consistent without depending on database
+     * specific spatial functions.
+     */
+    public function refreshIncidentJurisdictions(): int
+    {
+        $geometry = $this->loadBoundary();
+        if ($geometry === null) {
+            throw new \RuntimeException('The active municipality boundary is unavailable; incident jurisdictions were not refreshed.');
+        }
+
+        $updated = 0;
+        Incident::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderBy('id')
+            ->chunkById(250, function ($incidents) use ($geometry, &$updated): void {
+                foreach ($incidents as $incident) {
+                    $meta = $incident->meta ?? [];
+                    $withinJurisdiction = $this->pointInGeometry(
+                        (float) $incident->longitude,
+                        (float) $incident->latitude,
+                        $geometry,
+                    );
+
+                    if (($meta['within_jurisdiction'] ?? null) === $withinJurisdiction) {
+                        continue;
+                    }
+
+                    $meta['within_jurisdiction'] = $withinJurisdiction;
+                    $incident->forceFill(['meta' => $meta])->saveQuietly();
+                    $updated++;
+                }
+            });
+
+        return $updated;
     }
 
     /**

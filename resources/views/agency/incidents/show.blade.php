@@ -607,7 +607,7 @@
                 document.addEventListener('DOMContentLoaded', function () {
                     const lat = {{ $incident->latitude }};
                     const lng = {{ $incident->longitude }};
-                    const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
+                    const withinJurisdiction = @json(\App\Support\PlaceScope::currentJurisdiction($incident));
 
                     window.RANIAG_DispatchMap?.init({
                         el: 'agency-incident-map',

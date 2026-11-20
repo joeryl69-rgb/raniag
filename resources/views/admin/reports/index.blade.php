@@ -123,14 +123,14 @@
 
                     <details class="mt-3" @if(old('barangay') || old('agency_id') || old('incident_type_id') || old('aor_scope', 'aor_only') !== 'aor_only') open @endif>
                         <summary class="small fw-semibold">Limit the incident rows</summary>
-                        <p class="small text-muted mt-2 mb-0">Leave these as they are to include every report, office, and incident type.</p>
+                        <p class="small text-muted mt-2 mb-0">Location follows the current municipal boundary. Response routing is separate and reflects whether a report was referred to another response area.</p>
                         <div class="row g-3 mt-1">
                             <div class="col-md-6 col-xl-3">
-                                <label for="aor_scope" class="form-label">Which reports</label>
+                                <label for="aor_scope" class="form-label">Response routing</label>
                                 <select class="form-select @error('aor_scope') is-invalid @enderror" id="aor_scope" name="aor_scope">
-                                    <option value="all" {{ old('aor_scope') == 'all' ? 'selected' : '' }}>All barangays</option>
-                                    <option value="outside_aor_only" {{ old('aor_scope') == 'outside_aor_only' ? 'selected' : '' }}>All outside Pamplona</option>
-                                    <option value="aor_only" {{ old('aor_scope', 'aor_only') == 'aor_only' ? 'selected' : '' }}>All inside Pamplona</option>
+                                    <option value="all" {{ old('aor_scope') == 'all' ? 'selected' : '' }}>All routing statuses</option>
+                                    <option value="outside_aor_only" {{ old('aor_scope') == 'outside_aor_only' ? 'selected' : '' }}>Referred outside this response area</option>
+                                    <option value="aor_only" {{ old('aor_scope', 'aor_only') == 'aor_only' ? 'selected' : '' }}>Not referred outside this response area</option>
                                 </select>
                             </div>
                             <div class="col-md-6 col-xl-3">

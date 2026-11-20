@@ -228,7 +228,7 @@
                     @endif
 
                     @if ($incident->latitude && $incident->longitude)
-                        @php $withinJurisdiction = $incident->meta['within_jurisdiction'] ?? null; @endphp
+                        @php $withinJurisdiction = \App\Support\PlaceScope::currentJurisdiction($incident); @endphp
                         @if ($withinJurisdiction === false)
                             <div class="alert alert-warning py-2 px-3 mb-2 small">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
@@ -337,7 +337,7 @@
                                     <option value="outside_aor" @selected(old('action') === 'outside_aor')>Refer to Another Municipality</option>
                                     <option value="reject" @selected(old('action') === 'reject')>Reject Report</option>
                                 </select>
-                                @if(($incident->meta['within_jurisdiction'] ?? null) === false)
+                                @if(\App\Support\PlaceScope::currentJurisdiction($incident) === false)
                                     <div class="form-text text-warning">
                                         <i class="bi bi-exclamation-triangle-fill me-1"></i>Pinned location is outside {{ \App\Support\PlaceScope::municipalityLabel() }} municipality limits — consider "Outside AOR" if another LGU/agency should handle this.
                                     </div>
@@ -749,7 +749,7 @@
                     const lat = {{ $incident->latitude }};
                     const lng = {{ $incident->longitude }};
                     const mapConfig = @json(config('raniag.map'));
-                    const withinJurisdiction = @json($incident->meta['within_jurisdiction'] ?? null);
+                    const withinJurisdiction = @json(\App\Support\PlaceScope::currentJurisdiction($incident));
                     const hazardZones = @json($incident->meta['hazard_zones'] ?? []);
 
                     const statusBox = document.getElementById('dispatch-units-status');

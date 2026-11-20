@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EvacuationCenter;
 use App\Models\Incident;
 use App\Support\PeriodRange;
+use App\Support\PlaceScope;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -31,13 +32,8 @@ class PublicDashboardController extends Controller
         $completed = [IncidentStatus::Resolved->value, IncidentStatus::Closed->value];
 
         $insidePamplona = function (?Carbon $from = null, ?Carbon $to = null): Builder {
-            $query = Incident::query()
-                ->whereIn('barangay', config('raniag.barangays', []), 'and', false)
-                ->where('status', '!=', IncidentStatus::OutsideAor->value)
-                ->where(function (Builder $query) {
-                    $query->whereNull('meta->within_jurisdiction')
-                        ->orWhere('meta->within_jurisdiction', true);
-                });
+            $query = Incident::query();
+            PlaceScope::applyBarangayFilter($query, 'inside');
 
             if ($from && $to) {
                 $query->whereBetween('reported_at', [$from, $to]);

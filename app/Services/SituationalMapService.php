@@ -220,10 +220,7 @@ class SituationalMapService
             ->map(function (Incident $inc) {
                 $hazardZones = $inc->meta['hazard_zones'] ?? [];
                 $status = $inc->status instanceof \BackedEnum ? $inc->status->value : (string) $inc->status;
-                $jurisdiction = $inc->meta['within_jurisdiction'] ?? null;
-                $inside = $status !== IncidentStatus::OutsideAor->value
-                    && ($jurisdiction === true
-                        || ($jurisdiction === null && \App\Support\PlaceScope::isOfficial($inc->barangay)));
+                $inside = \App\Support\PlaceScope::currentJurisdiction($inc) === true;
 
                 return [
                     'id' => $inc->id,
@@ -347,12 +344,9 @@ class SituationalMapService
      */
     private function insidePamplona($query)
     {
-        return $query
-            ->whereIn('barangay', config('raniag.barangays', []))
-            ->where(function ($inner) {
-                $inner->whereNull('meta->within_jurisdiction')
-                    ->orWhere('meta->within_jurisdiction', true);
-            });
+        \App\Support\PlaceScope::applyBarangayFilter($query, 'inside');
+
+        return $query;
     }
 
     public function publicSnapshot(): array

@@ -32,7 +32,7 @@
             </span>
             <span class="rg-docket-ref">{{ $incident->tracking_number }}</span>
             @if ($isNew)<span class="rg-queue-new">NEW</span>@endif
-            @if ($showJurisdiction && ($incident->meta['within_jurisdiction'] ?? null) === false)
+            @if ($showJurisdiction && \App\Support\PlaceScope::currentJurisdiction($incident) === false)
                 <span class="rg-docket-outside"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> Outside {{ \App\Support\PlaceScope::municipalityLabel() }}</span>
             @endif
         </div>

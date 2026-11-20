@@ -10,7 +10,7 @@
             <h2 id="presentation-title">Gathered reports</h2>
         </div>
     </div>
-    <p>Choose a record set and refine it by place, shelter, incident type, dates, or search. Apply filters to show the matching rows.</p>
+    <p>Choose a record set and refine it by place, shelter, incident type, dates, or search. Inside and outside locations follow the current municipal boundary; reports without coordinates use their saved place details.</p>
 
     <x-filters.toolbar
         search-placeholder="Search tracking number, name, or place"
