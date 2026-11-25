@@ -46,6 +46,10 @@ return [
         'latitude' => '17° 27′ N',
         'longitude' => '121° 28′ E',
         'location_label' => '{municipality} · {province}',
+        'background_image_path' => null,
+        'background_position_x' => 50,
+        'background_position_y' => 54,
+        'background_overlay' => 100,
     ],
     'shortcuts' => [
         ['kicker' => 'Explore', 'title' => 'Live map'],

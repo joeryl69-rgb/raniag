@@ -3,6 +3,10 @@
     if (! is_array($copy)) {
         $copy = $homeContent;
     }
+    $savedHeroImagePath = data_get($homeContent, 'hero.background_image_path');
+    $savedHeroImageUrl = $savedHeroImagePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($savedHeroImagePath)
+        ? \Illuminate\Support\Facades\Storage::disk('public')->url($savedHeroImagePath)
+        : asset('images/pamplona-landmark.jpg');
     $copyGroups = [
         [
             'title' => 'Public header, navigation, and footer',
@@ -255,6 +259,45 @@
                             </div>
                         @endforeach
                     </div>
+                    @if ($group['key'] === 'home')
+                        <fieldset class="mt-4 p-3 border rounded-3" data-hero-image-controls>
+                            <legend class="float-none w-auto px-2 fs-6 fw-bold">Homepage municipality background</legend>
+                            <p class="small text-muted">Upload a JPG, PNG, or WebP image up to 8 MB. Adjust the focal point to choose which part remains visible as the hero resizes.</p>
+                            <div class="row g-3 align-items-start">
+                                <div class="col-12 col-lg-7">
+                                    <div class="position-relative border rounded-3 overflow-hidden bg-dark" style="aspect-ratio:16/7;">
+                                        <img src="{{ $savedHeroImageUrl }}" alt="Preview of the homepage municipality background" class="w-100 h-100" style="object-fit:cover;object-position:{{ data_get($copy, 'hero.background_position_x', 50) }}% {{ data_get($copy, 'hero.background_position_y', 54) }}%;" data-hero-preview-image>
+                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events:none;background:linear-gradient(90deg,rgba(7,20,31,.96),rgba(7,20,31,.32) 72%,rgba(7,20,31,.12));" data-hero-preview-overlay></div>
+                                    </div>
+                                    <div class="form-text">The dark overlay protects headline contrast on both desktop and mobile.</div>
+                                </div>
+                                <div class="col-12 col-lg-5">
+                                    <label for="hero_background_image" class="form-label fw-semibold">Replace background image</label>
+                                    <input id="hero_background_image" name="hero_background_image" type="file" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-hero-image-input>
+                                    @error('hero_background_image')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                                    @if ($savedHeroImagePath)
+                                        <label class="form-check mt-2">
+                                            <input class="form-check-input" type="checkbox" name="remove_hero_background_image" value="1" @checked(old('remove_hero_background_image'))>
+                                            <span class="form-check-label">Use the default municipality image</span>
+                                        </label>
+                                    @endif
+                                    <div class="mt-3">
+                                        <label for="hero_background_position_x" class="form-label fw-semibold">Horizontal focal point <output data-hero-value="x">{{ data_get($copy, 'hero.background_position_x', 50) }}%</output></label>
+                                        <input id="hero_background_position_x" type="range" class="form-range" min="0" max="100" step="1" name="home_content[hero][background_position_x]" value="{{ data_get($copy, 'hero.background_position_x', 50) }}" data-hero-position-x>
+                                    </div>
+                                    <div>
+                                        <label for="hero_background_position_y" class="form-label fw-semibold">Vertical focal point <output data-hero-value="y">{{ data_get($copy, 'hero.background_position_y', 54) }}%</output></label>
+                                        <input id="hero_background_position_y" type="range" class="form-range" min="0" max="100" step="1" name="home_content[hero][background_position_y]" value="{{ data_get($copy, 'hero.background_position_y', 54) }}" data-hero-position-y>
+                                    </div>
+                                    <div>
+                                        <label for="hero_background_overlay" class="form-label fw-semibold">Dark overlay <output data-hero-value="overlay">{{ data_get($copy, 'hero.background_overlay', 100) }}%</output></label>
+                                        <input id="hero_background_overlay" type="range" class="form-range" min="40" max="100" step="1" name="home_content[hero][background_overlay]" value="{{ data_get($copy, 'hero.background_overlay', 100) }}" data-hero-overlay>
+                                    </div>
+                                    <input type="hidden" name="home_content[hero][background_image_path]" value="{{ data_get($homeContent, 'hero.background_image_path', '') }}">
+                                </div>
+                            </div>
+                        </fieldset>
+                    @endif
                 </div>
             </details>
         @endforeach
@@ -379,6 +422,38 @@
 </template>
 
 @push('scripts')
+    <script>
+        (() => {
+            const controls = document.querySelector('[data-hero-image-controls]');
+            if (!controls) return;
+
+            const preview = controls.querySelector('[data-hero-preview-image]');
+            const fileInput = controls.querySelector('[data-hero-image-input]');
+            const horizontal = controls.querySelector('[data-hero-position-x]');
+            const vertical = controls.querySelector('[data-hero-position-y]');
+            const overlay = controls.querySelector('[data-hero-overlay]');
+            const overlayPreview = controls.querySelector('[data-hero-preview-overlay]');
+            let previewObjectUrl = null;
+
+            const updatePreview = () => {
+                preview.style.objectPosition = `${horizontal.value}% ${vertical.value}%`;
+                controls.querySelector('[data-hero-value="x"]').value = `${horizontal.value}%`;
+                controls.querySelector('[data-hero-value="y"]').value = `${vertical.value}%`;
+                controls.querySelector('[data-hero-value="overlay"]').value = `${overlay.value}%`;
+                overlayPreview.style.opacity = String(Number(overlay.value) / 100);
+            };
+
+            [horizontal, vertical, overlay].forEach((input) => input.addEventListener('input', updatePreview));
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files?.[0];
+                if (!file) return;
+                if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+                previewObjectUrl = URL.createObjectURL(file);
+                preview.src = previewObjectUrl;
+            });
+            updatePreview();
+        })();
+    </script>
     <script>
         (() => {
             const form = document.querySelector('[data-copy-root]');

@@ -26,6 +26,50 @@ test('incident model stores and presents addresses without redundant province la
         ->toBe('Langagan, Sanchez Mira, Cagayan Valley, Philippines');
 });
 
+test('legacy settings rows are consolidated into the fixed singleton without deleting source rows', function () {
+    $olderBoundary = [
+        'type' => 'Polygon',
+        'coordinates' => [[[121.3, 18.4], [121.4, 18.4], [121.4, 18.5], [121.3, 18.4]]],
+    ];
+    $latestBoundary = [
+        'type' => 'Polygon',
+        'coordinates' => [[[121.31, 18.41], [121.41, 18.41], [121.41, 18.51], [121.31, 18.41]]],
+    ];
+    SystemSetting::query()->create()->delete();
+    $brandingRow = SystemSetting::query()->create([
+        'system_name' => 'Recovered RANIAG',
+        'organization_name' => 'Recovered Response Office',
+        'primary_color' => '#123456',
+        'municipality_label' => 'Recovered Municipality',
+        'header_text' => 'Retained header',
+        'show_header_text' => true,
+        'public_home_content' => ['faqs' => []],
+    ]);
+    $oldBoundaryRow = SystemSetting::query()->create([
+        'municipality_boundary' => $olderBoundary,
+        'municipality_boundary_updated_at' => now()->subMinute(),
+    ]);
+    $latestBoundaryRow = SystemSetting::query()->create([
+        'municipality_boundary' => $latestBoundary,
+        'municipality_boundary_updated_at' => now(),
+    ]);
+
+    $migration = require database_path('migrations/2026_11_23_000000_consolidate_system_settings_singleton.php');
+    $migration->up();
+
+    $canonical = SystemSetting::query()->findOrFail(1);
+    expect($canonical->system_name)->toBe('Recovered RANIAG')
+        ->and($canonical->organization_name)->toBe('Recovered Response Office')
+        ->and($canonical->primary_color)->toBe('#123456')
+        ->and($canonical->municipality_label)->toBe('Recovered Municipality')
+        ->and($canonical->header_text)->toBe('Retained header')
+        ->and($canonical->municipality_boundary)->toBe($latestBoundary)
+        ->and(SystemSetting::query()->whereKey($brandingRow->id)->exists())->toBeTrue()
+        ->and(SystemSetting::query()->whereKey($oldBoundaryRow->id)->exists())->toBeTrue()
+        ->and(SystemSetting::query()->whereKey($latestBoundaryRow->id)->exists())->toBeTrue()
+        ->and(SystemSetting::current()->id)->toBe(1);
+});
+
 test('only administrators can open and update global branding settings', function () {
     $staff = User::factory()->agency()->create();
 
@@ -171,7 +215,9 @@ test('administrator can reset branding to configured defaults without changing t
     Storage::fake('public');
     $admin = User::factory()->administrator()->create();
     $logoPath = 'branding/custom-logo.png';
+    $heroImagePath = 'branding/home/custom-municipality.jpg';
     Storage::disk('public')->put($logoPath, 'logo-bytes');
+    Storage::disk('public')->put($heroImagePath, 'hero-image-bytes');
     $boundary = [
         'type' => 'Polygon',
         'coordinates' => [[[121.3, 18.4], [121.4, 18.4], [121.4, 18.5], [121.3, 18.4]]],
@@ -196,6 +242,7 @@ test('administrator can reset branding to configured defaults without changing t
         'province_label' => 'Custom Province',
         'response_area_label' => 'Custom Region',
         'public_home_content' => [
+            'hero' => ['background_image_path' => $heroImagePath],
             'faqs' => [[
                 'question' => 'Custom question',
                 'answer' => 'Custom answer',
@@ -231,6 +278,7 @@ test('administrator can reset branding to configured defaults without changing t
         ->and($setting->public_home_content)->toBeNull();
 
     Storage::disk('public')->assertMissing($logoPath);
+    Storage::disk('public')->assertMissing($heroImagePath);
 
     $this->get(route('public.home'))
         ->assertOk()

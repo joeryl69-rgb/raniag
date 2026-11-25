@@ -69,13 +69,13 @@ class SystemSetting extends Model
     public static function current(): self
     {
         return once(function () {
-            return static::firstOrCreate(['id' => 1], [
+            return static::unguarded(fn () => static::firstOrCreate(['id' => 1], [
                 'theme_key' => ThemePresets::DEFAULT_KEY,
                 'dark_mode' => false,
                 'follow_system' => false,
                 'font_key' => ThemePresets::DEFAULT_FONT_KEY,
                 'font_size' => ThemePresets::DEFAULT_FONT_SIZE,
-            ]);
+            ]));
         });
     }
 

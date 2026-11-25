@@ -56,8 +56,24 @@ class SystemBrandingController extends Controller
             'home_content.shell.navigation.*' => ['required', 'string', 'max:80'],
             'home_content.shell.footer' => ['required_with:home_content', 'array:desk_label,community_label,description,report_channel_label,default_report_text,report_section,file_report,track_report,how_it_works,access_section,staff_dashboard,staff_login,replay_tour,support,hotline_label'],
             'home_content.shell.footer.*' => ['required', 'string', 'max:500'],
-            'home_content.hero' => ['required_with:home_content', 'array:eyebrow,desk_label,title_lead,title_emphasis,tagline,description,report_button,track_button,latitude,longitude,location_label'],
-            'home_content.hero.*' => ['required', 'string', 'max:500'],
+            'home_content.hero' => ['required_with:home_content', 'array:eyebrow,desk_label,title_lead,title_emphasis,tagline,description,report_button,track_button,latitude,longitude,location_label,background_image_path,background_position_x,background_position_y,background_overlay'],
+            'home_content.hero.eyebrow' => ['required_with:home_content', 'string', 'max:120'],
+            'home_content.hero.desk_label' => ['required_with:home_content', 'string', 'max:100'],
+            'home_content.hero.title_lead' => ['required_with:home_content', 'string', 'max:140'],
+            'home_content.hero.title_emphasis' => ['required_with:home_content', 'string', 'max:120'],
+            'home_content.hero.tagline' => ['required_with:home_content', 'string', 'max:180'],
+            'home_content.hero.description' => ['required_with:home_content', 'string', 'max:500'],
+            'home_content.hero.report_button' => ['required_with:home_content', 'string', 'max:80'],
+            'home_content.hero.track_button' => ['required_with:home_content', 'string', 'max:80'],
+            'home_content.hero.latitude' => ['required_with:home_content', 'string', 'max:40'],
+            'home_content.hero.longitude' => ['required_with:home_content', 'string', 'max:40'],
+            'home_content.hero.location_label' => ['required_with:home_content', 'string', 'max:120'],
+            'home_content.hero.background_image_path' => ['nullable', 'string', 'max:255'],
+            'home_content.hero.background_position_x' => ['required_with:home_content', 'integer', 'between:0,100'],
+            'home_content.hero.background_position_y' => ['required_with:home_content', 'integer', 'between:0,100'],
+            'home_content.hero.background_overlay' => ['required_with:home_content', 'integer', 'between:40,100'],
+            'hero_background_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'remove_hero_background_image' => ['nullable', 'boolean'],
             'home_content.shortcuts' => ['required_with:home_content', 'array', 'size:3'],
             'home_content.shortcuts.*' => ['required', 'array:kicker,title'],
             'home_content.shortcuts.*.*' => ['required', 'string', 'max:100'],
@@ -100,13 +116,22 @@ class SystemBrandingController extends Controller
 
         $setting = SystemSetting::current();
         $oldLogoPath = $setting->logo_path;
+        $oldHeroImagePath = data_get($setting->public_home_content, 'hero.background_image_path');
         $newLogoPath = null;
+        $newHeroImagePath = null;
         if (isset($validated['logo'])) {
             $storedPath = $validated['logo']->storePublicly('branding', 'public');
             if (! is_string($storedPath)) {
                 throw new RuntimeException('The uploaded logo could not be stored.');
             }
             $newLogoPath = $storedPath;
+        }
+        if ($request->hasFile('hero_background_image')) {
+            $storedPath = $request->file('hero_background_image')->storePublicly('branding/home', 'public');
+            if (! is_string($storedPath)) {
+                throw new RuntimeException('The homepage background image could not be stored.');
+            }
+            $newHeroImagePath = $storedPath;
         }
 
         $setting->fill(Arr::only($validated, [
@@ -128,6 +153,8 @@ class SystemBrandingController extends Controller
         $setting->show_header_text = $request->boolean('show_header_text');
         $setting->show_footer_text = $request->boolean('show_footer_text');
         if (array_key_exists('home_content', $validated)) {
+            $validated['home_content']['hero']['background_image_path'] = $newHeroImagePath
+                ?? ($request->boolean('remove_hero_background_image') ? null : $oldHeroImagePath);
             $setting->public_home_content = $validated['home_content'];
         }
 
@@ -142,6 +169,9 @@ class SystemBrandingController extends Controller
         if ($oldLogoPath && ($newLogoPath !== null || $request->boolean('remove_logo'))) {
             Storage::disk('public')->delete($oldLogoPath);
         }
+        if ($oldHeroImagePath && ($newHeroImagePath !== null || $request->boolean('remove_hero_background_image'))) {
+            Storage::disk('public')->delete($oldHeroImagePath);
+        }
 
         return redirect()
             ->route('admin.branding.index')
@@ -152,6 +182,7 @@ class SystemBrandingController extends Controller
     {
         $setting = SystemSetting::current();
         $oldLogoPath = $setting->logo_path;
+        $oldHeroImagePath = data_get($setting->public_home_content, 'hero.background_image_path');
         $defaults = config('system_branding');
 
         $setting->fill([
@@ -177,6 +208,9 @@ class SystemBrandingController extends Controller
 
         if ($oldLogoPath) {
             Storage::disk('public')->delete($oldLogoPath);
+        }
+        if ($oldHeroImagePath) {
+            Storage::disk('public')->delete($oldHeroImagePath);
         }
 
         return redirect()

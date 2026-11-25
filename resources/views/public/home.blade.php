@@ -5,6 +5,13 @@
 @section('content')
 @php
     $home = $publicHomeContent;
+    $heroImagePath = data_get($home, 'hero.background_image_path');
+    $heroImageUrl = $heroImagePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($heroImagePath)
+        ? \Illuminate\Support\Facades\Storage::disk('public')->url($heroImagePath)
+        : asset('images/pamplona-landmark.jpg');
+    $heroPositionX = (int) data_get($home, 'hero.background_position_x', 50);
+    $heroPositionY = (int) data_get($home, 'hero.background_position_y', 54);
+    $heroOverlay = max(40, min(100, (int) data_get($home, 'hero.background_overlay', 100)));
     $journeyImages = [
         '/images/guide/jo-greeting.png?v=1',
         '/images/guide/jo-camera.png?v=1',
@@ -20,7 +27,9 @@
 @endphp
 <div class="container rg-home-container">
     <section class="rg-home-hero" aria-labelledby="home-title">
-        <div class="rg-home-hero-photo" aria-hidden="true"></div>
+        <div class="rg-home-hero-photo" aria-hidden="true" style="--rg-home-hero-x: {{ $heroPositionX }}%; --rg-home-hero-y: {{ $heroPositionY }}%; --rg-home-hero-overlay: {{ $heroOverlay / 100 }};">
+            <img src="{{ $heroImageUrl }}" alt="" fetchpriority="high">
+        </div>
         <div class="rg-home-hero-content">
             <p class="rg-home-kicker" data-rg-hero-eyebrow><span></span>{{ $home['hero']['eyebrow'] }} <b>/</b> {{ $home['hero']['desk_label'] }}</p>
             <h1 id="home-title" data-rg-hero-title>{{ $home['hero']['title_lead'] }}<br><em>{{ $home['hero']['title_emphasis'] }}</em></h1>
@@ -221,7 +230,9 @@
 <style>
 .rg-home-hero { min-height: 610px; position: relative; isolation: isolate; display: flex; align-items: end; overflow: hidden; margin: 0 calc((100vw - min(100vw - 2rem, 1320px))/ -2); padding: clamp(26px, 7vw, 88px) max(24px, calc((100vw - min(100vw - 2rem, 1320px))/2)); background: #0b1726; color: #f4f7f6; }
 .rg-home-container { position: relative; }
-.rg-home-hero-photo { position: absolute; z-index: -2; inset: 0; background: linear-gradient(90deg, rgba(7,20,31,.96) 0%, rgba(7,20,31,.83) 34%, rgba(7,20,31,.32) 72%, rgba(7,20,31,.12) 100%), linear-gradient(0deg, rgba(7,20,31,.52), transparent 54%), url('/images/pamplona-landmark.jpg') center 54% / cover no-repeat; transform: scale(1.025); }
+.rg-home-hero-photo { position: absolute; z-index: -2; inset: 0; overflow: hidden; transform: scale(1.025); }
+.rg-home-hero-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--rg-home-hero-x, 50%) var(--rg-home-hero-y, 54%); }
+.rg-home-hero-photo::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(7,20,31,.96) 0%,rgba(7,20,31,.83) 34%,rgba(7,20,31,.32) 72%,rgba(7,20,31,.12) 100%),linear-gradient(0deg,rgba(7,20,31,.52),transparent 54%); opacity:var(--rg-home-hero-overlay,1); }
 .rg-home-hero::before { content:""; position:absolute; z-index:-1; inset:0; opacity:.32; background-image:linear-gradient(rgba(173,213,218,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(173,213,218,.12) 1px,transparent 1px); background-size:44px 44px; mask-image:linear-gradient(90deg,#000 0%,transparent 76%); }
 .rg-home-hero-content { width: min(760px, 68%); position:relative; z-index:1; padding-bottom:24px; }
 .rg-home-kicker,.rg-section-index { display:flex; align-items:center; gap:10px; color:#a9c2c8; font:700 .68rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.15em; text-transform:uppercase; }
@@ -408,7 +419,7 @@ html[data-public-theme="dark"] .rg-home-qr-code { border-color:#38525e; backgrou
 }
 @media(max-width:767.98px) {
     .rg-home-hero { min-height:600px;margin-inline:-.75rem;padding:44px 24px;align-items:center; }
-    .rg-home-hero-photo { background-position:62% center;background-image:linear-gradient(90deg,rgba(7,20,31,.93),rgba(7,20,31,.65) 66%,rgba(7,20,31,.4)),linear-gradient(0deg,rgba(7,20,31,.38),transparent 70%),url('/images/pamplona-landmark.jpg'); }
+    .rg-home-hero-photo::after { background:linear-gradient(90deg,rgba(7,20,31,.93),rgba(7,20,31,.65) 66%,rgba(7,20,31,.4)),linear-gradient(0deg,rgba(7,20,31,.38),transparent 70%); }
     .rg-home-hero-content { width:100%;padding:0 0 52px; }
     .rg-home-hero h1 { margin-top:27px;font-size:clamp(3.1rem,13vw,5rem); }
     .rg-home-orbit { top:16px; right:14px; bottom:auto; width:92px; opacity:.92; }
